@@ -49,6 +49,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     text: "Le journal des versions se filtre par catégorie puis par sous-catégorie (Monde, Wiki, Carte…) ; chaque nouvelle entrée porte sa date du jour, et les entrées d’un mois tiennent dans une liste compacte.",
   },
   {
+    date: "2026-09-26",
+    category: "Interface",
+    area: "Monde",
+    text: "La chronologie d’un monde liste ses salons en lignes compactes, le jour en colonne ; au survol, seul le titre change de couleur.",
+  },
+  {
     date: "2026-09",
     category: "Fonctionnalité",
     area: "Membres",
