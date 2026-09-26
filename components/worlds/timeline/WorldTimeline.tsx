@@ -26,7 +26,7 @@ const RANGE_SPAN = 5;
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
  * grands chiffres, au centre un fil, et pour chaque salon un anneau sur le
  * fil, son titre puis sa date. Un filet sépare les
- * années, un filet chaque mois (son nom en petit, à gauche du fil) ; la date
+ * années, un filet chaque mois (son nom posé dessus, en capitales) ; la date
  * actuelle du monde barre la frise d'un trait rouge plein, à son mois, et la
  * frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
  * mènent à chaque tranche et suivent le défilement.
@@ -278,13 +278,14 @@ function EntryRow({
   return (
     <li className={cn("group/entry relative", newMonth && "pt-4")} data-new-month={newMonth || undefined}>
       {/* Le filet d'un nouveau mois, du fil jusqu'au bord, à mi-chemin du
-          salon précédent ; le nom du mois, en petit, à gauche du fil. */}
+          salon précédent ; le nom du mois posé dessus, en petites capitales,
+          dans l'alignement des titres. */}
       {newMonth && (
         <>
           <span className="absolute -left-7 right-0 top-0 h-px bg-border" aria-hidden />
           {monthName && (
             <span
-              className="absolute right-[calc(100%+2.25rem)] top-0 -translate-y-1/2 whitespace-nowrap text-[10px] leading-none text-muted-foreground"
+              className="absolute left-0 top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap bg-background px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
               data-testid="timeline-month-label"
               aria-hidden
             >

@@ -86,8 +86,13 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
     expect(ligne("Trois mars").querySelector(".h-px.bg-border")).not.toBeNull();
-    // Le nom du nouveau mois, en petit, à gauche du fil — un seul ici.
-    expect(screen.getAllByTestId("timeline-month-label").map((l) => l.textContent)).toEqual(["Mars"]);
+    // Le nom du nouveau mois — un seul ici.
+    const noms = screen.getAllByTestId("timeline-month-label");
+    expect(noms.map((l) => l.textContent)).toEqual(["Mars"]);
+    // Posé sur le filet (centré sur lui, fond qui le découpe), en capitales.
+    expect(noms[0].className.split(" ")).toEqual(
+      expect.arrayContaining(["top-0", "-translate-y-1/2", "bg-background", "uppercase"]),
+    );
     expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
   });
 
