@@ -157,6 +157,22 @@ describe("WorldTimeline — frise verticale", () => {
     expect(an1.innerHTML).not.toMatch(/text-4xl|text-6xl/);
   });
 
+  it("l'année en filigrane géant, très pâle, derrière les jours et les mois", () => {
+    frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 12, 0, 1)]);
+    const filigranes = screen.getAllByTestId("timeline-year-watermark");
+    expect(filigranes.map((f) => f.textContent)).toEqual(["1", "12"]);
+    const f = filigranes[0];
+    expect(f.className.split(" ")).toEqual(expect.arrayContaining(["text-[5.5rem]", "sm:text-[7rem]", "text-foreground/[0.06]"]));
+    // Décoratif : ni lu, ni cliquable, ni sélectionnable ; le titre reste la borne.
+    const calque = f.parentElement as HTMLElement;
+    expect(calque).toHaveAttribute("aria-hidden", "true");
+    expect(calque.className.split(" ")).toEqual(expect.arrayContaining(["pointer-events-none", "select-none", "overflow-hidden"]));
+    expect(annees().map((h) => h.textContent)).toEqual(["An 1", "An 12"]);
+    // Découpé par son propre calque : l'année elle-même ne coupe rien (la
+    // borne collée et les filets de mois en dépendent).
+    expect((calque.parentElement as HTMLElement).className).not.toMatch(/overflow-(hidden|clip)/);
+  });
+
   it("la borne de l'année se colle sous la tête au défilement, sans rien décaler", () => {
     frise([room("a", "Prologue", 1, 0, 1)]);
     const an1 = annees()[0];

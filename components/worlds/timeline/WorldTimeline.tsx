@@ -635,8 +635,20 @@ function YearBlock({
     <li
       data-year={section.year}
       // La colonne de gauche (6rem) ne porte plus que les jours et les mois.
-      className="border-t border-border pl-24 first:border-t-0"
+      className="relative border-t border-border pl-24 first:border-t-0"
     >
+      {/* L'année en filigrane : un chiffre géant et très pâle au fond de la
+          colonne des jours, que les mois et les jours recouvrent. Découpé
+          par l'année (un calque à part : `overflow-hidden` sur l'année elle-
+          même casserait la borne collée et couperait les filets de mois). */}
+      <div className="pointer-events-none absolute inset-0 select-none overflow-hidden" aria-hidden>
+        <span
+          className="absolute left-0 top-6 text-[5.5rem] font-bold leading-none tracking-tighter tabular-nums text-foreground/[0.06] sm:text-[7rem]"
+          data-testid="timeline-year-watermark"
+        >
+          {section.year}
+        </span>
+      </div>
       {/* 32px sous la bordure de l'année et au-dessus de la suivante : la
           même séparation qu'entre deux mois. */}
       <div className="relative py-8 pl-7">
