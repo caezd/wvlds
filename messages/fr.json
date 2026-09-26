@@ -677,7 +677,6 @@
         "completed": "Terminé",
         "abandoned": "Abandonné"
       },
-      "eventUntil": "Jusqu'à {date}",
       "eventEnds": "Fin : {title}",
       "holidayLabel": "Fête",
       "eventLasts": "Dure dans le temps",
@@ -952,7 +951,7 @@
       "maxChars": "{max} caractères max",
       "colorInvalid": "Couleur hex valide, p. ex. #1f2937",
       "timelineHolidays": "Fêtes du calendrier",
-      "timelineHolidaysHelp": "Des jours qui reviennent chaque année (« Fête des lanternes », le 9 du sixième mois). La frise les rappelle à leur date, dans les années qui ont déjà du contenu. Sans jour, une fête vaut pour tout le mois.",
+      "timelineHolidaysHelp": "Des jours qui reviennent chaque année (« Fête des lanternes », le 9 du sixième mois). La frise les rappelle à leur date, dans les mois qui ont déjà une entrée. Sans jour, une fête vaut pour tout le mois.",
       "holidayName": "Nom de la fête",
       "holidayDay": "Jour de {name}",
       "holidayMonth": "Mois de {name}",

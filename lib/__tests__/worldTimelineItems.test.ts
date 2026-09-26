@@ -116,7 +116,7 @@ describe("événements qui durent", () => {
 });
 
 describe("fêtes du calendrier", () => {
-  it("une fête par année donnée, à sa date ; sans nom ou hors calendrier, ignorée", () => {
+  it("une fête seulement dans les mois donnés (ceux qui ont une entrée), à sa date ; sans nom ou hors calendrier, ignorée", () => {
     const fetes = holidayItems(
       [
         { name: " Fête des lanternes ", month: 5, day: 9 },
@@ -124,19 +124,21 @@ describe("fêtes du calendrier", () => {
         { name: "Treizième lune", month: 12, day: 1 },
         { name: "Moisson", month: 8, day: null },
       ],
-      [1, 4],
+      // Juin de l'an 1 (deux fois : un mois ne donne ses fêtes qu'une fois),
+      // septembre de l'an 4 ; rien en juin de l'an 4.
+      [{ year: 1, month: 5 }, { year: 1, month: 5 }, { year: 4, month: 8 }],
       12,
     );
     expect(fetes.map((f) => [f.date.year, f.date.month, f.date.day, f.name])).toEqual([
-      [1, 5, 9, "Fête des lanternes"], [1, 8, null, "Moisson"],
-      [4, 5, 9, "Fête des lanternes"], [4, 8, null, "Moisson"],
+      [1, 5, 9, "Fête des lanternes"],
+      [4, 8, null, "Moisson"],
     ]);
-    expect(new Set(fetes.map((f) => f.id)).size).toBe(4);
-    expect(holidayItems(undefined, [1], 12)).toEqual([]);
+    expect(new Set(fetes.map((f) => f.id)).size).toBe(2);
+    expect(holidayItems(undefined, [{ year: 1, month: 5 }], 12)).toEqual([]);
   });
 
   it("en tête de sa date ; cachée par son type ou par la recherche, pas par les filtres de salon", () => {
-    const [fete] = holidayItems([{ name: "Fête des lanternes", month: 5, day: 9 }], [1], 12);
+    const [fete] = holidayItems([{ name: "Fête des lanternes", month: 5, day: 9 }], [{ year: 1, month: 5 }], 12);
     const sections = buildTimelineSections([salon("a", 1, 5, 9), evenement("e", 1, 5, 9), fete], null);
     expect(sections[0].groups[0].items.map((i) => i.kind)).toEqual(["holiday", "event", "room"]);
     expect(matchesTimelineFilters(fete, filtres({ kinds: new Set(["room", "event"]) }), CTX)).toBe(false);

@@ -217,11 +217,14 @@ export function WorldTimeline({
 
   // L'année actuelle du monde a toujours sa section — sauf si les filtres ne
   // laissent rien : la frise dit alors qu'aucun résultat ne correspond.
-  // Les fêtes du calendrier s'ajoutent ensuite, dans les années qui ont
-  // déjà du contenu : une fête seule ne crée pas d'année.
+  // Les fêtes du calendrier s'ajoutent ensuite, dans les mois qui ont déjà
+  // une entrée : une fête seule ne crée ni mois ni année.
   const sections = useMemo(() => {
     const base = buildTimelineSections(visible, config.current_year);
-    const holidays = holidayItems(config.holidays, base.map((s) => s.year), config.month_names.length)
+    const months = base.flatMap((s) =>
+      s.groups.filter((g) => g.month !== null).map((g) => ({ year: s.year, month: g.month! })),
+    );
+    const holidays = holidayItems(config.holidays, months, config.month_names.length)
       .filter((h) => matchesTimelineFilters(h, filters, ctx));
     return holidays.length > 0 ? buildTimelineSections([...visible, ...holidays], config.current_year) : base;
   }, [visible, config.current_year, config.holidays, config.month_names.length, filters, ctx]);
@@ -841,7 +844,6 @@ function DateGroupBlock({
                   key={item.id}
                   item={item as TimelineEvent}
                   day={day}
-                  endLabel={item.endDate ? formatTimelineLabel(config, item.endDate) : null}
                   canManage={canManage}
                   dimmed={dimmed}
                   onOpenWiki={onOpenWiki}
@@ -999,7 +1001,6 @@ function RoomRow({
 function EventRow({
   item,
   day,
-  endLabel,
   canManage,
   dimmed,
   onOpenWiki,
@@ -1007,8 +1008,6 @@ function EventRow({
 }: {
   item: TimelineEvent;
   day: number | null;
-  /** Un événement qui dure : sa date de fin, en toutes lettres. */
-  endLabel: string | null;
   canManage: boolean;
   dimmed: boolean;
   onOpenWiki: (slug: string) => void;
@@ -1030,11 +1029,6 @@ function EventRow({
             <span className="sr-only">{tv("eventLabel")} : </span>
             {item.title}
           </p>
-          {endLabel && (
-            <p className="text-xs text-muted-foreground" data-testid="timeline-event-until">
-              {tv("eventUntil", { date: endLabel })}
-            </p>
-          )}
           {item.description && (
             <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{item.description}</p>
           )}

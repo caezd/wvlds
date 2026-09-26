@@ -104,24 +104,32 @@ export function eventEndItems(events: readonly TimelineEventItem[]): TimelineEve
 }
 
 /**
- * Les fêtes du calendrier, rappelées dans les années données (celles qui
- * ont déjà du contenu : une fête seule ne crée pas d'année). Une fête sans
- * nom, ou dont le mois n'existe pas au calendrier, est ignorée.
+ * Les fêtes du calendrier, rappelées dans les mois donnés (ceux qui ont déjà
+ * une entrée : une fête seule ne crée ni mois ni année). Une fête sans nom,
+ * ou dont le mois n'existe pas au calendrier, est ignorée.
  */
 export function holidayItems(
   holidays: readonly WorldTimelineHoliday[] | undefined,
-  years: readonly number[],
+  months: readonly { year: number; month: number }[],
   monthCount: number,
 ): TimelineHolidayItem[] {
-  const valid = (holidays ?? []).filter((h) => h.name.trim() !== "" && h.month >= 0 && h.month < monthCount);
-  return years.flatMap((year) =>
-    valid.map((h, i) => ({
-      kind: "holiday" as const,
-      id: `holiday:${i}:${year}`,
-      date: { year, month: h.month, day: h.day },
-      name: h.name.trim(),
-    })),
-  );
+  const valid = (holidays ?? [])
+    .map((h, i) => ({ ...h, i }))
+    .filter((h) => h.name.trim() !== "" && h.month >= 0 && h.month < monthCount);
+  const seen = new Set<string>();
+  return months.flatMap(({ year, month }) => {
+    const key = `${year}:${month}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return valid
+      .filter((h) => h.month === month)
+      .map((h) => ({
+        kind: "holiday" as const,
+        id: `holiday:${h.i}:${year}`,
+        date: { year, month, day: h.day },
+        name: h.name.trim(),
+      }));
+  });
 }
 
 /**

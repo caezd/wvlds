@@ -544,14 +544,15 @@ describe("WorldTimeline — recherche et filtres", () => {
 });
 
 describe("WorldTimeline — événements qui durent, fêtes, statut des salons", () => {
-  it("un événement qui dure : « Jusqu'à … », sa fin à sa date, et une barre de l'un à l'autre", async () => {
+  it("un événement qui dure : sa fin à sa date, et une barre de l'un à l'autre", async () => {
     db.tables.world_timeline_events = [{
       id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 6 },
       end_date: { year: 2, month: 2, day: 12 }, wiki_page_id: null, wiki_page: null,
     }];
     frise([room("a", "Prologue", 1, 0, 6)]);
     const evenement = (await screen.findByText("Le siège")).closest("[data-event-id]") as HTMLElement;
-    expect(within(evenement).getByTestId("timeline-event-until")).toHaveTextContent("Jusqu'à 12 Mars, An 2");
+    // Pas de « Jusqu'à … » sous l'événement : la barre et la fin le disent.
+    expect(evenement).not.toHaveTextContent(/Jusqu/);
     // La fin paraît à sa date, dans une année qui n'a rien d'autre.
     const fin = screen.getByText("Fin : Le siège").closest("[data-event-end-id]") as HTMLElement;
     expect(fin).toHaveAttribute("data-event-end-id", "e1");
@@ -576,14 +577,15 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     expect(screen.queryByTestId("timeline-event-spans")).toBeNull();
   });
 
-  it("les fêtes du calendrier, dans chaque année qui a du contenu ; cachées d'une case", async () => {
+  it("les fêtes du calendrier, seulement dans les mois qui ont une entrée ; cachées d'une case", async () => {
     const user = userEvent.setup();
     frise(
-      [room("a", "Prologue", 1, 0, 6), room("b", "Épilogue", 3, 2, 1)],
+      [room("a", "Prologue", 1, 1, 6), room("b", "Épilogue", 3, 1, 20), room("c", "Ailleurs", 4, 2, 1), room("d", "Sans mois", 5, null, null)],
       { ...CONFIG, holidays: [{ name: "Fête des lanternes", month: 1, day: 9 }] },
     );
     const fetes = screen.getAllByText("Fête des lanternes").map((f) => f.closest("[data-holiday-id]") as HTMLElement);
-    // Les années 1 et 3, pas l'an 2 qui n'a rien.
+    // Février des ans 1 et 3 ; pas l'an 4 (rien en février), ni l'an 5
+    // (une date sans mois n'ouvre aucun mois).
     expect(fetes.map((f) => f.closest("[data-year]")!.getAttribute("data-year"))).toEqual(["1", "3"]);
     expect(within(fetes[0]).getByTestId("timeline-day")).toHaveTextContent("9");
     expect(within(fetes[0]).getByTestId("timeline-holiday-mark")).toBeInTheDocument();

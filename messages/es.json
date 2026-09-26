@@ -677,7 +677,6 @@
         "completed": "Terminado",
         "abandoned": "Abandonado"
       },
-      "eventUntil": "Hasta {date}",
       "eventEnds": "Fin: {title}",
       "holidayLabel": "Fiesta",
       "eventLasts": "Dura en el tiempo",
@@ -952,7 +951,7 @@
       "maxChars": "{max} caracteres máx.",
       "colorInvalid": "Color hex válido, p. ej. #1f2937",
       "timelineHolidays": "Fiestas del calendario",
-      "timelineHolidaysHelp": "Días que vuelven cada año (« Fiesta de los farolillos », el 9 del sexto mes). La cronología los recuerda en su fecha, en los años que ya tienen contenido. Sin día, una fiesta vale para todo el mes.",
+      "timelineHolidaysHelp": "Días que vuelven cada año (« Fiesta de los farolillos », el 9 del sexto mes). La cronología los recuerda en su fecha, en los meses que ya tienen una entrada. Sin día, una fiesta vale para todo el mes.",
       "holidayName": "Nombre de la fiesta",
       "holidayDay": "Día de {name}",
       "holidayMonth": "Mes de {name}",

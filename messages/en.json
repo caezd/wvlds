@@ -677,7 +677,6 @@
         "completed": "Completed",
         "abandoned": "Abandoned"
       },
-      "eventUntil": "Until {date}",
       "eventEnds": "End: {title}",
       "holidayLabel": "Holiday",
       "eventLasts": "Lasts over time",
@@ -952,7 +951,7 @@
       "maxChars": "{max} characters max",
       "colorInvalid": "Valid hex colour, e.g. #1f2937",
       "timelineHolidays": "Calendar holidays",
-      "timelineHolidaysHelp": "Days that come back every year (“Lantern Festival”, the 9th of the sixth month). The timeline recalls them on their date, in years that already have content. Without a day, a holiday covers the whole month.",
+      "timelineHolidaysHelp": "Days that come back every year (“Lantern Festival”, the 9th of the sixth month). The timeline recalls them on their date, in months that already have an entry. Without a day, a holiday covers the whole month.",
       "holidayName": "Holiday name",
       "holidayDay": "Day of {name}",
       "holidayMonth": "Month of {name}",
