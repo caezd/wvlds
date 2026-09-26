@@ -161,9 +161,9 @@ describe("WorldTimeline — frise verticale", () => {
     const bandeau = annees()[0];
     // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
     expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "top-[var(--tl-head,0px)]"]));
-    // Au-dessus des salons et des lignes de suite (z-[2]), qu'il ne couvre
-    // qu'une fois collé : au repos, il est transparent.
-    expect(bandeau.className.split(" ")).toContain("z-[3]");
+    // Au repos, transparent et sous les lignes de suite (z-[2]) : elles le
+    // traversent, ses traits compris.
+    expect(bandeau.className.split(" ")).toContain("z-[1]");
     expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
     expect(bandeau).not.toHaveAttribute("data-stuck");
     expect(bandeau.className).not.toMatch(/(^|\s)(lg:)?bg-/);
@@ -187,7 +187,8 @@ describe("WorldTimeline — frise verticale", () => {
     section2.getBoundingClientRect = () => rect(300, 800);
     fireEvent.scroll(scroll);
     expect(an1).toHaveAttribute("data-stuck", "true");
-    expect(an1.className.split(" ")).toEqual(expect.arrayContaining(["bg-body", "lg:bg-background"]));
+    expect(an1.className.split(" ")).toEqual(expect.arrayContaining(["z-[3]", "bg-body", "lg:bg-background"]));
+    expect(an1.className.split(" ")).not.toContain("z-[1]");
     expect(an2).not.toHaveAttribute("data-stuck");
     // Revenu en haut : plus rien de collé.
     section1.getBoundingClientRect = () => rect(100, 360);
@@ -195,6 +196,7 @@ describe("WorldTimeline — frise verticale", () => {
     fireEvent.scroll(scroll);
     expect(an1).not.toHaveAttribute("data-stuck");
     expect(an1.className).not.toMatch(/(^|\s)(lg:)?bg-/);
+    expect(an1.className.split(" ")).toContain("z-[1]");
   });
 
   it("le premier mois de l'année, sous le bandeau, calé sur le jour", () => {

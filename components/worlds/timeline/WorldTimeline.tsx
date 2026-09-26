@@ -659,17 +659,18 @@ function YearBlock({
     <li data-year={section.year}>
       {/* L'année, un bandeau sur toute la largeur du conteneur (marges de la
           liste comprises), collé sous la tête le temps de son année : on sait
-          toujours où l'on est, et deux années se séparent franchement. Au-
-          dessus des salons et des lignes de suite (z-[3] ; z-[2] pour les
-          lignes, voir SuiteLinks), sous la tête (z-10). Au repos, il est
-          transparent : les lignes de suite le traversent ; collé, il prend
-          le fond de la page et les couvre. Le fil s'y interrompt ; un
+          toujours où l'on est, et deux années se séparent franchement. Au
+          repos, transparent et sous les lignes de suite (z-[1] ; z-[2] pour
+          les lignes, voir SuiteLinks) : elles le traversent, ses traits
+          compris. Collé, il passe au-dessus d'elles et des salons (z-[3]),
+          prend le fond de la page et les couvre ; toujours sous la tête
+          (z-10). Le fil s'y interrompt ; un
           trait dessus et dessous (aucun au-dessus de la toute première
           année). */}
       <h3
         className={cn(
-          "sticky top-[var(--tl-head,0px)] z-[3] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-y border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)] leading-none",
-          stuck && AMBIENT_BG,
+          "sticky top-[var(--tl-head,0px)] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-y border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)] leading-none",
+          stuck ? cn("z-[3]", AMBIENT_BG) : "z-[1]",
         )}
         data-testid="timeline-year-band"
         data-stuck={stuck || undefined}
