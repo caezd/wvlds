@@ -47,7 +47,19 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Les joueurs relient leurs salons : un salon peut faire suite à un ou plusieurs autres, dès sa création (« Suite de… » dans « Nouveau jeu ») ou depuis ses réglages. Relier un salon où l’on ne joue pas en fait une suite proposée : ses participants reçoivent une demande à accepter, et la chronologie la trace en pointillés (à la couleur de l’arc quand elle rejoint sa chaîne) jusque-là. Une suite d’un arc à un autre relie les deux chaînes sans les fondre : chaque arc garde sa couleur, et le lien passe en fondu de l’une à l’autre. Une suite ne remonte jamais le temps : on ne relie un salon qu’à un salon situé au plus tard à sa date. Une nouvelle permission, « Relier des salons », donnée aux joueurs, encadre le tout. Filtrée par persona, la chronologie trace son fil, dans le style des suites (rail ou graphe) et avant elles : du premier au dernier salon où il a écrit, avec ses entrées de journal, dans la couleur de son groupe.",
+    text: "Suites entre salons :\n- « Suite de… » à la création d’un salon ou dans ses réglages\n- dans un salon où l’on ne joue pas : suite proposée, à accepter par ses participants\n- jamais à rebours de la chronologie\n- permission « Relier des salons », donnée aux joueurs",
+  },
+  {
+    date: "2026-09-26",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Chronologie d’un monde :\n- événements datés sans salon, liés à une page du wiki\n- arcs narratifs : salons teintés et numérotés dans l’ordre du récit\n- suites tracées en rail ou en graphe, en permanence ou au survol ; en pointillés tant qu’elles sont proposées ; d’un arc à l’autre sans fondre leurs chaînes\n- fil d’un persona quand on filtre par lui\n- journaux des personas, en option\n- recherche et filtres : type, persona, joueur, arc, catégorie\n- saisons du monde\n- mois séparés d’un bord à l’autre, leur nom contre le fil\n- permission « Gérer la chronologie »",
+  },
+  {
+    date: "2026-09-26",
+    category: "Correctif",
+    area: "Monde",
+    text: "Écrans étroits : en-tête des onglets d’un monde et chronologie sur le fond de la page.",
   },
   {
     date: "2026-09-26",

@@ -166,11 +166,15 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Six janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
-    // De l'air de part et d'autre du filet : 24px au-dessus (16 + mt-2), 24px
-    // dessous (pt-6).
-    expect(ligne("Trois mars").className.split(" ")).toEqual(expect.arrayContaining(["mt-2", "pt-6"]));
-    // Un filet en pointillés.
-    expect(ligne("Trois mars").querySelector(".border-dashed.border-border")).not.toBeNull();
+    // De l'air de part et d'autre du filet : 32px au-dessus (16 + mt-4), 32px
+    // dessous (pt-8).
+    expect(ligne("Trois mars").className.split(" ")).toEqual(expect.arrayContaining(["mt-4", "pt-8"]));
+    // Un filet en pointillés, d'un bord à l'autre du conteneur : colonne des
+    // années et marge des suites comprises.
+    const filet = within(ligne("Trois mars") as HTMLElement).getByTestId("timeline-month-rule");
+    expect(filet.className.split(" ")).toEqual(expect.arrayContaining([
+      "border-dashed", "border-border", "-left-[9rem]", "sm:-left-[12rem]", "-right-[var(--tl-right-pad,20px)]",
+    ]));
     // Le nom du nouveau mois — un seul ici.
     const noms = screen.getAllByTestId("timeline-month-label");
     expect(noms.map((l) => l.textContent)).toEqual(["Mars"]);
@@ -178,6 +182,9 @@ describe("WorldTimeline — frise verticale", () => {
     expect(noms[0].className.split(" ")).toEqual(
       expect.arrayContaining(["top-0", "-translate-y-1/2", "bg-body", "uppercase"]),
     );
+    // À gauche du fil, calé à droite de la colonne des années.
+    expect(noms[0].className.split(" ")).toEqual(expect.arrayContaining(["right-[calc(100%+1.75rem)]", "text-right"]));
+    expect(noms[0].className).not.toContain("--tl-graph-pad");
     expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
   });
 

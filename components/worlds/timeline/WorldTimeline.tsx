@@ -448,6 +448,8 @@ export function WorldTimeline({
                 style={{
                   paddingRight: rightPad,
                   ["--tl-graph-pad" as string]: `${graphPad}px`,
+                  // Pour qu'un filet de mois aille d'un bord à l'autre.
+                  ["--tl-right-pad" as string]: `${rightPad ?? 20}px`,
                 }}
               >
                 {sections.map((section, i) => {
@@ -669,19 +671,27 @@ function DateGroupBlock({
   const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
   return (
     <li
-      className={cn("relative", newMonth && "mt-2 pt-6")}
+      className={cn("relative", newMonth && "mt-4 pt-8")}
       data-date-group={group.key}
       data-new-month={newMonth || undefined}
     >
-      {/* Le filet d'un nouveau mois, en pointillés, du fil jusqu'au bord, à
+      {/* Le filet d'un nouveau mois, en pointillés, d'un bord à l'autre du
+          conteneur (colonne des années, marge des suites comprises), à
           mi-chemin de la date précédente ; le nom du mois posé dessus, en
-          petites capitales, dans l'alignement des titres. */}
+          petites capitales, à gauche, calé à droite de la colonne des années,
+          contre le fil. Les décalages du filet remontent la colonne des
+          années (6rem, 9rem dès sm), le retrait du fil (pl-7) et la marge de
+          la liste (px-5). */}
       {newMonth && (
         <>
-          <span className="absolute -left-7 right-0 top-0 border-t border-dashed border-border" aria-hidden />
+          <span
+            className="absolute -left-[9rem] -right-[var(--tl-right-pad,20px)] top-0 border-t border-dashed border-border sm:-left-[12rem]"
+            data-testid="timeline-month-rule"
+            aria-hidden
+          />
           {monthName && (
             <span
-              className={cn("absolute left-[var(--tl-graph-pad,0px)] top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+              className={cn("absolute right-[calc(100%+1.75rem)] top-0 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
               data-testid="timeline-month-label"
               aria-hidden
             >
