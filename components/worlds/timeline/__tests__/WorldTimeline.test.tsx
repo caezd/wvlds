@@ -150,6 +150,10 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Six janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
+    // De l'air de part et d'autre du filet : 24px au-dessus (16 + mt-2), 24px
+    // dessous (pt-6) ; l'anneau suit (24 + 6px).
+    expect(ligne("Trois mars").className.split(" ")).toEqual(expect.arrayContaining(["mt-2", "pt-6"]));
+    expect(ligne("Trois mars").querySelector("[data-testid='timeline-ring']")!.className).toContain("top-[30px]");
     // Un filet en pointillés.
     expect(ligne("Trois mars").querySelector(".border-dashed.border-border")).not.toBeNull();
     // Le nom du nouveau mois — un seul ici.

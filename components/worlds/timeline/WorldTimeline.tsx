@@ -345,7 +345,7 @@ function DateGroupBlock({
   const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
   return (
     <li
-      className={cn("group/entry relative", newMonth && "pt-4")}
+      className={cn("group/entry relative", newMonth && "mt-2 pt-6")}
       data-date-group={group.key}
       data-new-month={newMonth || undefined}
     >
@@ -373,7 +373,7 @@ function DateGroupBlock({
         className={cn(
           "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-foreground/35 transition-colors group-hover/entry:border-foreground",
           AMBIENT_BG,
-          newMonth ? "top-[22px]" : "top-1.5",
+          newMonth ? "top-[30px]" : "top-1.5",
         )}
         data-testid="timeline-ring"
         aria-hidden
