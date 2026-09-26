@@ -138,16 +138,17 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByTestId("timeline-branch")).toBeNull();
   });
 
-  it("l'année, un bandeau sur toute la largeur : le chiffre dans une pastille, sans rouge", () => {
+  it("l'année, un bandeau sur toute la largeur : le chiffre en gras, sans pastille ni rouge", () => {
     frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
     const titre = annees()[0];
     expect(titre.textContent).toBe("An 1 des Cendres");
     const bandeau = bandeaux()[0];
     expect(bandeau).toContainElement(titre);
-    // Le chiffre dans une pastille pleine, rounded-md ; sa légende appuyée.
-    const pastille = within(titre).getByTestId("timeline-year-number");
-    expect(pastille).toHaveTextContent("1");
-    expect(pastille.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "bg-foreground", "text-background", "font-bold"]));
+    // Le chiffre en gras, sans pastille ; sa légende appuyée.
+    const chiffre = within(titre).getByTestId("timeline-year-number");
+    expect(chiffre).toHaveTextContent("1");
+    expect(chiffre.className.split(" ")).toEqual(expect.arrayContaining(["font-bold", "text-foreground"]));
+    expect(chiffre.className).not.toMatch(/rounded|bg-/);
     expect(within(titre).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
     expect(bandeau.innerHTML).not.toMatch(/accent|red/);
     // D'un bord à l'autre du conteneur, marges de la liste comprises.

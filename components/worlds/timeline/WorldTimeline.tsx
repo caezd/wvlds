@@ -666,7 +666,7 @@ function YearBlock({
           prend le fond de la page et les couvre ; toujours sous la tête
           (z-10). Le fil s'y interrompt ; un trait dessus et dessous (aucun
           au-dessus de la toute première année).
-          Le titre à gauche, le chiffre dans une pastille. */}
+          Le titre à gauche, le chiffre en gras. */}
       <div
         className={cn(
           "sticky top-[var(--tl-head,0px)] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5",
@@ -675,12 +675,12 @@ function YearBlock({
         data-testid="timeline-year-band"
         data-stuck={stuck || undefined}
       >
-        <h3 className="flex min-w-0 items-center gap-1.5 leading-none">
+        <h3 className="flex min-w-0 items-baseline gap-1.5 leading-none">
           {/* Les espaces entre les parties : invisibles en flex, mais lus
               (« An 1 », pas « An1 »). */}
           <span className={YEAR_CAPTION}>{config.year_label}</span>{" "}
           <span
-            className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-foreground px-1.5 text-sm font-bold tabular-nums text-background"
+            className="text-lg font-bold leading-none tabular-nums text-foreground"
             data-testid="timeline-year-number"
           >
             {section.year}
