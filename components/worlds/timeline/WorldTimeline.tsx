@@ -371,7 +371,7 @@ function DateGroupBlock({
           survol. */}
       <span
         className={cn(
-          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-border transition-colors group-hover/entry:border-foreground",
+          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-foreground/35 transition-colors group-hover/entry:border-foreground",
           AMBIENT_BG,
           newMonth ? "top-[22px]" : "top-1.5",
         )}
