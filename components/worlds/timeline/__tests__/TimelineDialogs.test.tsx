@@ -94,13 +94,48 @@ describe("TimelineEventDialog", () => {
     expect(screen.getByLabelText("Numéro de l'année (An)")).toHaveValue(3);
   });
 
+  it("un événement qui dure : sa fin, partie du début, s'enregistre avec lui", async () => {
+    const user = userEvent.setup();
+    render(<TimelineEventDialog open onOpenChange={vi.fn()} supabase={fakeClient()} worldId="w1" config={CONFIG} event={null} onSaved={vi.fn()} />);
+    await user.type(screen.getByRole("textbox", { name: "Titre" }), "Le siège");
+    // Pas de fin tant qu'on ne la demande pas.
+    expect(screen.getAllByLabelText("Numéro de l'année (An)")).toHaveLength(1);
+    await user.click(screen.getByRole("checkbox", { name: "Dure dans le temps" }));
+    const [, fin] = screen.getAllByLabelText("Numéro de l'année (An)");
+    expect(fin).toHaveValue(3);
+    await user.clear(fin);
+    await user.type(fin, "5{Enter}");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: "world_timeline_events", op: "insert",
+      payload: expect.objectContaining({ title: "Le siège", timeline_date: { year: 3, month: 1, day: null }, end_date: { year: 5, month: 1, day: null } }),
+    }));
+  });
+
+  it("une fin avant le début est refusée, sans rien écrire", async () => {
+    const user = userEvent.setup();
+    const event = {
+      kind: "event" as const, id: "e1", title: "Le siège", description: null,
+      date: { year: 3, month: 0, day: 2 }, endDate: { year: 4, month: 0, day: 1 }, wikiPageId: null, wikiPage: null,
+    };
+    render(<TimelineEventDialog open onOpenChange={vi.fn()} supabase={fakeClient()} worldId="w1" config={CONFIG} event={event} onSaved={vi.fn()} />);
+    expect(screen.getByRole("checkbox", { name: "Dure dans le temps" })).toBeChecked();
+    const [, fin] = screen.getAllByLabelText("Numéro de l'année (An)");
+    expect(fin).toHaveValue(4);
+    await user.clear(fin);
+    await user.type(fin, "2{Enter}");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(toastError).toHaveBeenCalledWith("La fin doit venir après le début.");
+    expect(writes.filter((w) => w.op !== "select")).toHaveLength(0);
+  });
+
   it("modifier, lier une page du wiki, puis supprimer après confirmation", async () => {
     const user = userEvent.setup();
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
     const event = {
       kind: "event" as const, id: "e1", title: "Couronnement", description: null,
-      date: { year: 3, month: 0, day: 2 }, wikiPageId: null, wikiPage: null,
+      date: { year: 3, month: 0, day: 2 }, endDate: null, wikiPageId: null, wikiPage: null,
     };
     render(
       <TimelineEventDialog
@@ -113,7 +148,7 @@ describe("TimelineEventDialog", () => {
     await user.click(within(dialogue).getByRole("button", { name: "Enregistrer" }));
     expect(writes).toContainEqual(expect.objectContaining({
       table: "world_timeline_events", op: "update",
-      payload: { title: "Couronnement", description: null, timeline_date: { year: 3, month: 0, day: 2 }, wiki_page_id: "p1" },
+      payload: { title: "Couronnement", description: null, timeline_date: { year: 3, month: 0, day: 2 }, end_date: null, wiki_page_id: "p1" },
       eq: ["id", "e1"],
     }));
     expect(onSaved).toHaveBeenCalled();

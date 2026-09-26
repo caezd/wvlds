@@ -7,9 +7,11 @@ import { SlidersHorizontal } from "lucide-react";
 import {
   NO_TIMELINE_FILTERS,
   TIMELINE_ITEM_KINDS,
+  TIMELINE_ROOM_STATUSES,
   countActiveFilters,
+  type TimelineFilterKind,
   type TimelineFilters,
-  type TimelineItemKind,
+  type TimelineRoomStatus,
 } from "@/lib/worldTimelineItems";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,15 +22,16 @@ import { SUITE_STYLES, type SuiteStyle } from "@/components/worlds/timeline/Suit
 type Option = { id: string; label: string };
 
 /**
- * Les filtres de la frise : quoi montrer (salons, événements, journaux), et,
- * pour les salons, un persona qui y a écrit, le joueur qui les a ouverts, un
- * arc, une catégorie. Un filtre sans choix possible (aucun arc…) ne s'affiche
- * pas.
+ * Les filtres de la frise : quoi montrer (salons, événements, journaux,
+ * fêtes), et, pour les salons, un persona qui y a écrit, le joueur qui les a
+ * ouverts, un arc, une catégorie, un statut. Un filtre sans choix possible
+ * (aucun arc…) ne s'affiche pas.
  */
 export function TimelineFiltersPopover({
   filters,
   onChange,
   showJournals,
+  showHolidays,
   personas,
   players,
   arcs,
@@ -41,6 +44,8 @@ export function TimelineFiltersPopover({
   filters: TimelineFilters;
   onChange: (next: TimelineFilters) => void;
   showJournals: boolean;
+  /** Le monde a des fêtes au calendrier. */
+  showHolidays: boolean;
   personas: Option[];
   players: Option[];
   arcs: Option[];
@@ -52,9 +57,9 @@ export function TimelineFiltersPopover({
 }) {
   const t = useTranslations("worlds.timelineView");
   const active = countActiveFilters(filters);
-  const kinds = TIMELINE_ITEM_KINDS.filter((k) => k !== "journal" || showJournals);
+  const kinds = TIMELINE_ITEM_KINDS.filter((k) => (k !== "journal" || showJournals) && (k !== "holiday" || showHolidays));
 
-  function toggleKind(kind: TimelineItemKind, on: boolean) {
+  function toggleKind(kind: TimelineFilterKind, on: boolean) {
     const next = new Set(filters.kinds);
     if (on) next.add(kind);
     else next.delete(kind);
@@ -112,6 +117,21 @@ export function TimelineFiltersPopover({
             </select>
           </label>
         ))}
+
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">{t("filterStatus")}</span>
+          <select
+            value={filters.status ?? ""}
+            onChange={(e) => onChange({ ...filters, status: (e.target.value || null) as TimelineRoomStatus | null })}
+            className="h-8 w-full rounded-lg border border-border bg-transparent px-2 text-sm"
+            aria-label={t("filterStatus")}
+          >
+            <option value="">{t("filterAll")}</option>
+            {TIMELINE_ROOM_STATUSES.map((status) => (
+              <option key={status} value={status}>{t(`roomStatus.${status}`)}</option>
+            ))}
+          </select>
+        </label>
 
         {/* Une préférence de lecture, gardée dans le navigateur. */}
         <label className="block space-y-1 border-t border-border pt-3">

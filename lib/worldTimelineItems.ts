@@ -1,12 +1,23 @@
-import type { WorldTimelineAge, WorldTimelineDate } from "@/types/worlds";
+import type { WorldTimelineAge, WorldTimelineDate, WorldTimelineHoliday } from "@/types/worlds";
 
 /**
  * Ce que montre la frise d'un monde (voir WorldTimeline.tsx) : ses salons,
- * ses événements (des jalons sans salon, migration 193) et, si le monde le
- * veut, les entrées datées des journaux de personas. Tout se range par année,
- * puis par date (mois, jour) ; dans une même date, l'événement d'abord, puis
- * les salons, puis les journaux.
+ * ses événements (des jalons sans salon, migration 193 ; qui peuvent durer,
+ * migration 197), les fêtes de son calendrier et, si le monde le veut, les
+ * entrées datées des journaux de personas. Tout se range par année, puis par
+ * date (mois, jour) ; dans une même date, la fête d'abord, puis l'événement,
+ * les salons, les journaux, et enfin la fin des événements qui s'achèvent.
  */
+
+/**
+ * Le statut d'un salon sur la frise : en cours, terminé ou abandonné, tel
+ * qu'enregistré (migration 197) ; « en sommeil », déduit : un salon en cours
+ * sans message depuis un moment (voir `effectiveRoomStatus`).
+ */
+export type TimelineRoomStatus = "active" | "dormant" | "completed" | "abandoned";
+export const TIMELINE_ROOM_STATUSES: readonly TimelineRoomStatus[] = ["active", "dormant", "completed", "abandoned"];
+/** Sans réglage du monde, un salon s'endort après 30 jours sans message. */
+export const DEFAULT_DORMANT_DAYS = 30;
 
 export type TimelineRoomItem = {
   kind: "room";
@@ -17,14 +28,32 @@ export type TimelineRoomItem = {
   /** Les salons qu'il suit (liens acceptés ou proposés, migration 194). */
   previousIds: readonly string[];
   categoryId: string | null;
+  status: TimelineRoomStatus;
 };
 export type TimelineEventItem = {
   kind: "event";
   id: string;
   date: WorldTimelineDate;
+  /** Un événement qui dure : sa fin, après son début. */
+  endDate: WorldTimelineDate | null;
   title: string;
   description: string | null;
   wikiPageId: string | null;
+};
+/** La fin d'un événement qui dure, à sa date de fin. */
+export type TimelineEventEndItem = {
+  kind: "eventEnd";
+  id: string;
+  eventId: string;
+  date: WorldTimelineDate;
+  title: string;
+};
+/** Une fête du calendrier du monde, rappelée à sa date une année donnée. */
+export type TimelineHolidayItem = {
+  kind: "holiday";
+  id: string;
+  date: WorldTimelineDate;
+  name: string;
 };
 export type TimelineJournalItem = {
   kind: "journal";
@@ -34,23 +63,82 @@ export type TimelineJournalItem = {
   personaName: string;
   body: string;
 };
-export type TimelineItem = TimelineRoomItem | TimelineEventItem | TimelineJournalItem;
+export type TimelineItem =
+  | TimelineRoomItem
+  | TimelineEventItem
+  | TimelineEventEndItem
+  | TimelineHolidayItem
+  | TimelineJournalItem;
 export type TimelineItemKind = TimelineItem["kind"];
 
-export const TIMELINE_ITEM_KINDS: readonly TimelineItemKind[] = ["event", "room", "journal"];
+/** Ce que les filtres montrent ou cachent : la fin d'un événement suit l'événement. */
+export type TimelineFilterKind = Exclude<TimelineItemKind, "eventEnd">;
+export const TIMELINE_ITEM_KINDS: readonly TimelineFilterKind[] = ["event", "room", "journal", "holiday"];
+
+function filterKindOf(item: TimelineItem): TimelineFilterKind {
+  return item.kind === "eventEnd" ? "event" : item.kind;
+}
 
 export type TimelineDateGroup = { key: string; month: number | null; day: number | null; items: TimelineItem[] };
 export type TimelineYearSection = { year: number; groups: TimelineDateGroup[] };
 
-const KIND_ORDER: Record<TimelineItemKind, number> = { event: 0, room: 1, journal: 2 };
+const KIND_ORDER: Record<TimelineItemKind, number> = { holiday: 0, event: 1, room: 2, journal: 3, eventEnd: 4 };
+
+/** L'ordre de la frise : l'année, puis le mois (sans mois d'abord), puis le jour. */
+function compareDates(a: WorldTimelineDate, b: WorldTimelineDate): number {
+  return a.year - b.year || (a.month ?? -1) - (b.month ?? -1) || (a.day ?? 0) - (b.day ?? 0);
+}
 
 function compareItems(a: TimelineItem, b: TimelineItem): number {
-  return (
-    a.date.year - b.date.year ||
-    (a.date.month ?? -1) - (b.date.month ?? -1) ||
-    (a.date.day ?? 0) - (b.date.day ?? 0) ||
-    KIND_ORDER[a.kind] - KIND_ORDER[b.kind]
+  return compareDates(a.date, b.date) || KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
+}
+
+/**
+ * La fin de chaque événement qui dure, à placer sur la frise. Une fin qui
+ * ne vient pas après le début, dans l'ordre de la frise, ne s'affiche pas.
+ */
+export function eventEndItems(events: readonly TimelineEventItem[]): TimelineEventEndItem[] {
+  return events
+    .filter((e) => e.endDate && compareDates(e.endDate, e.date) > 0)
+    .map((e) => ({ kind: "eventEnd", id: `${e.id}:end`, eventId: e.id, date: e.endDate!, title: e.title }));
+}
+
+/**
+ * Les fêtes du calendrier, rappelées dans les années données (celles qui
+ * ont déjà du contenu : une fête seule ne crée pas d'année). Une fête sans
+ * nom, ou dont le mois n'existe pas au calendrier, est ignorée.
+ */
+export function holidayItems(
+  holidays: readonly WorldTimelineHoliday[] | undefined,
+  years: readonly number[],
+  monthCount: number,
+): TimelineHolidayItem[] {
+  const valid = (holidays ?? []).filter((h) => h.name.trim() !== "" && h.month >= 0 && h.month < monthCount);
+  return years.flatMap((year) =>
+    valid.map((h, i) => ({
+      kind: "holiday" as const,
+      id: `holiday:${i}:${year}`,
+      date: { year, month: h.month, day: h.day },
+      name: h.name.trim(),
+    })),
   );
+}
+
+/**
+ * Le statut d'un salon sur la frise : terminé ou abandonné, tel quel ; en
+ * cours, il s'endort sans message depuis `dormantDays` jours (0 : jamais).
+ * Sans message, on compte depuis sa création.
+ */
+export function effectiveRoomStatus(
+  stored: "active" | "completed" | "abandoned",
+  lastActivity: string | null,
+  dormantDays: number,
+  now: number,
+): TimelineRoomStatus {
+  if (stored !== "active") return stored;
+  if (dormantDays <= 0 || !lastActivity) return "active";
+  const idle = now - new Date(lastActivity).getTime();
+  return idle > dormantDays * 86_400_000 ? "dormant" : "active";
 }
 
 /**
@@ -81,11 +169,12 @@ export function buildTimelineSections(items: TimelineItem[], keepYear: number | 
 
 export type TimelineFilters = {
   query: string;
-  kinds: ReadonlySet<TimelineItemKind>;
+  kinds: ReadonlySet<TimelineFilterKind>;
   personaId: string | null;
   player: string | null;
   arcId: string | null;
   categoryId: string | null;
+  status: TimelineRoomStatus | null;
 };
 
 export const NO_TIMELINE_FILTERS: TimelineFilters = {
@@ -95,6 +184,7 @@ export const NO_TIMELINE_FILTERS: TimelineFilters = {
   player: null,
   arcId: null,
   categoryId: null,
+  status: null,
 };
 
 /** Ce que la frise sait de chaque salon, au-delà de sa ligne. */
@@ -113,7 +203,7 @@ export function normalizeSearch(text: string): string {
 export function countActiveFilters(f: TimelineFilters): number {
   return (
     (f.kinds.size < TIMELINE_ITEM_KINDS.length ? 1 : 0) +
-    (f.personaId ? 1 : 0) + (f.player ? 1 : 0) + (f.arcId ? 1 : 0) + (f.categoryId ? 1 : 0)
+    (f.personaId ? 1 : 0) + (f.player ? 1 : 0) + (f.arcId ? 1 : 0) + (f.categoryId ? 1 : 0) + (f.status ? 1 : 0)
   );
 }
 
@@ -129,31 +219,36 @@ function searchText(item: TimelineItem, ctx: TimelineRoomContext): string {
     }
     case "event":
       return [item.title, item.description].filter(Boolean).join(" ");
+    case "eventEnd":
+      return item.title;
+    case "holiday":
+      return item.name;
     case "journal":
       return `${item.personaName} ${item.body}`;
   }
 }
 
 /**
- * Un élément passe-t-il les filtres ? Les événements sont le contexte du
- * monde : les filtres propres aux salons (persona, joueur, arc, catégorie)
- * ne les masquent pas, seuls le type et la recherche le font. Un journal suit
- * le filtre par persona ; les filtres de salon (joueur, arc, catégorie) le
- * masquent.
+ * Un élément passe-t-il les filtres ? Les événements (et leur fin) et les
+ * fêtes sont le contexte du monde : les filtres propres aux salons (persona,
+ * joueur, arc, catégorie, statut) ne les masquent pas, seuls le type et la
+ * recherche le font. Un journal suit le filtre par persona ; les filtres de
+ * salon (joueur, arc, catégorie, statut) le masquent.
  */
 export function matchesTimelineFilters(item: TimelineItem, f: TimelineFilters, ctx: TimelineRoomContext): boolean {
-  if (!f.kinds.has(item.kind)) return false;
+  if (!f.kinds.has(filterKindOf(item))) return false;
   const q = normalizeSearch(f.query);
   if (q && !normalizeSearch(searchText(item, ctx)).includes(q)) return false;
-  if (item.kind === "event") return true;
+  if (item.kind === "event" || item.kind === "eventEnd" || item.kind === "holiday") return true;
   if (item.kind === "journal") {
-    if (f.player || f.arcId || f.categoryId) return false;
+    if (f.player || f.arcId || f.categoryId || f.status) return false;
     return !f.personaId || item.personaId === f.personaId;
   }
   if (f.personaId && !ctx.personas.get(item.id)?.has(f.personaId)) return false;
   if (f.player && ctx.openers.get(item.id)?.name !== f.player) return false;
   if (f.arcId && item.arcId !== f.arcId) return false;
   if (f.categoryId && item.categoryId !== f.categoryId) return false;
+  if (f.status && item.status !== f.status) return false;
   return true;
 }
 

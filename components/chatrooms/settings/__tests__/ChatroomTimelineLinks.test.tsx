@@ -35,7 +35,7 @@ function fakeClient() {
       const data =
         table === "world_timeline_arcs" ? [{ id: "arc", name: "L'exil" }]
         : table === "chatroom_sequels" ? sequels
-        : { arc_id: null };
+        : { arc_id: null, status: "completed" };
       return Promise.resolve({ data, error: null }).then(resolve);
     };
     return b;
@@ -66,6 +66,19 @@ function monter(onSaved = vi.fn()) {
 }
 
 describe("ChatroomTimelineLinks", () => {
+  it("le statut du salon : lu, puis changé ; « en sommeil » ne se choisit pas", async () => {
+    const onSaved = vi.fn();
+    monter(onSaved);
+    const user = userEvent.setup();
+    const statut = await screen.findByRole("combobox", { name: "Statut" });
+    await vi.waitFor(() => expect(statut).toHaveValue("completed"));
+    expect([...(statut as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(["En cours", "Terminé", "Abandonné"]);
+    await user.selectOptions(statut, "Abandonné");
+    expect(writes).toContainEqual(expect.objectContaining({ table: "chatrooms", op: "update", payload: { status: "abandoned" }, eq: ["id", "self"] }));
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(statut).toHaveValue("abandoned");
+  });
+
   it("les salons précédents possibles : les autres salons datés, ceux où l'on joue d'abord", async () => {
     monter();
     const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
@@ -127,7 +140,7 @@ describe("ChatroomTimelineLinks", () => {
     const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
     await screen.findByRole("option", { name: "Plus tôt — An 1" });
     await user.selectOptions(ajout, "Plus tôt — An 1");
-    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith("Impossible d'enregistrer l'arc ou la suite de ce salon."));
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith("Impossible d'enregistrer le statut, l'arc ou la suite de ce salon."));
     erreur.mockRestore();
   });
 });

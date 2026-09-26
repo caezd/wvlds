@@ -11,7 +11,15 @@ import type { WorldTimelineDate } from "@/types/worlds";
 export type TimelineOpener = { name: string; persona: string | null; personaColor: string | null };
 export type TimelineArc = { id: string; name: string; color: string; position: number };
 export type TimelineCategory = { id: string; title: string };
-export type TimelineRoomMeta = { arcId: string | null; categoryId: string | null };
+/** Ce que la frise lit d'un salon au-delà de sa date : son arc, sa catégorie,
+ *  son statut enregistré (migration 197) et sa dernière activité (dernier
+ *  message, sinon sa création), d'où se déduit « en sommeil ». */
+export type TimelineRoomMeta = {
+  arcId: string | null;
+  categoryId: string | null;
+  status: "active" | "completed" | "abandoned";
+  lastActivity: string | null;
+};
 /** Un lien de suite (migration 194) : `chatroomId` suit `previousId`. */
 export type TimelineSequel = {
   id: string;
@@ -29,11 +37,20 @@ type EventRow = {
   title: string;
   description: string | null;
   timeline_date: WorldTimelineDate;
+  end_date: WorldTimelineDate | null;
   wiki_page_id: string | null;
   wiki_page: { slug: string; title: string } | null;
 };
 type JournalRow = { id: string; persona_id: string; body: string; timeline_date: WorldTimelineDate; persona: { name: string } | null };
-type RoomRow = { id: string; arc_id: string | null; category_id: string | null };
+type RoomRow = {
+  id: string;
+  arc_id: string | null;
+  category_id: string | null;
+  status: TimelineRoomMeta["status"] | null;
+  created_at: string | null;
+  // Une ligne par salon (clé chat_id) : objet, ou tableau selon le client.
+  summary: { last_message_at: string | null } | { last_message_at: string | null }[] | null;
+};
 type SequelRow = {
   id: string;
   chatroom_id: string;
@@ -95,13 +112,14 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
   const reloadEvents = useCallback(async () => {
     const { data, error } = await supabase
       .from(TABLE.WORLD_TIMELINE_EVENTS)
-      .select("id, title, description, timeline_date, wiki_page_id, wiki_page:wiki_page_id(slug, title)")
+      .select("id, title, description, timeline_date, end_date, wiki_page_id, wiki_page:wiki_page_id(slug, title)")
       .eq("world_id", worldId);
     if (error) return logError("événements", error);
     setEvents(((data ?? []) as unknown as EventRow[]).map((e) => ({
       kind: "event",
       id: e.id,
       date: e.timeline_date,
+      endDate: e.end_date ?? null,
       title: e.title,
       description: e.description,
       wikiPageId: e.wiki_page_id,
@@ -123,14 +141,19 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
   const reloadRooms = useCallback(async () => {
     const { data, error } = await supabase
       .from(TABLE.CHATROOMS)
-      .select("id, arc_id, category_id")
+      .select("id, arc_id, category_id, status, created_at, summary:chatroom_summaries(last_message_at)")
       .eq("world_id", worldId)
       .not("timeline_date", "is", null);
     if (error) return logError("liens des salons", error);
-    setRoomMeta(new Map(((data ?? []) as RoomRow[]).map((r) => [
-      r.id,
-      { arcId: r.arc_id, categoryId: r.category_id },
-    ])));
+    setRoomMeta(new Map(((data ?? []) as unknown as RoomRow[]).map((r) => {
+      const summary = Array.isArray(r.summary) ? r.summary[0] : r.summary;
+      return [r.id, {
+        arcId: r.arc_id,
+        categoryId: r.category_id,
+        status: r.status ?? "active",
+        lastActivity: summary?.last_message_at ?? r.created_at ?? null,
+      }];
+    })));
   }, [supabase, worldId]);
 
   useEffect(() => {

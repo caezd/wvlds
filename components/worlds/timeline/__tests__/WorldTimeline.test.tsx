@@ -543,6 +543,117 @@ describe("WorldTimeline — recherche et filtres", () => {
   });
 });
 
+describe("WorldTimeline — événements qui durent, fêtes, statut des salons", () => {
+  it("un événement qui dure : « Jusqu'à … », sa fin à sa date, et une barre de l'un à l'autre", async () => {
+    db.tables.world_timeline_events = [{
+      id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 6 },
+      end_date: { year: 2, month: 2, day: 12 }, wiki_page_id: null, wiki_page: null,
+    }];
+    frise([room("a", "Prologue", 1, 0, 6)]);
+    const evenement = (await screen.findByText("Le siège")).closest("[data-event-id]") as HTMLElement;
+    expect(within(evenement).getByTestId("timeline-event-until")).toHaveTextContent("Jusqu'à 12 Mars, An 2");
+    // La fin paraît à sa date, dans une année qui n'a rien d'autre.
+    const fin = screen.getByText("Fin : Le siège").closest("[data-event-end-id]") as HTMLElement;
+    expect(fin).toHaveAttribute("data-event-end-id", "e1");
+    expect(fin.closest("[data-year]")).toHaveAttribute("data-year", "2");
+    expect(within(fin).getByTestId("timeline-day")).toHaveTextContent("12");
+    // La barre de durée, de l'événement à sa fin.
+    const barres = await screen.findByTestId("timeline-event-spans");
+    expect(barres.querySelector("[data-event-span='e1']")).not.toBeNull();
+  });
+
+  it("filtrer les événements cache aussi leur fin et leur barre", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_events = [{
+      id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 6 },
+      end_date: { year: 2, month: 2, day: 12 }, wiki_page_id: null, wiki_page: null,
+    }];
+    frise([room("a", "Prologue", 1, 0, 6)]);
+    await screen.findByText("Fin : Le siège");
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.click(await screen.findByRole("checkbox", { name: "Événements" }));
+    expect(screen.queryByText("Fin : Le siège")).toBeNull();
+    expect(screen.queryByTestId("timeline-event-spans")).toBeNull();
+  });
+
+  it("les fêtes du calendrier, dans chaque année qui a du contenu ; cachées d'une case", async () => {
+    const user = userEvent.setup();
+    frise(
+      [room("a", "Prologue", 1, 0, 6), room("b", "Épilogue", 3, 2, 1)],
+      { ...CONFIG, holidays: [{ name: "Fête des lanternes", month: 1, day: 9 }] },
+    );
+    const fetes = screen.getAllByText("Fête des lanternes").map((f) => f.closest("[data-holiday-id]") as HTMLElement);
+    // Les années 1 et 3, pas l'an 2 qui n'a rien.
+    expect(fetes.map((f) => f.closest("[data-year]")!.getAttribute("data-year"))).toEqual(["1", "3"]);
+    expect(within(fetes[0]).getByTestId("timeline-day")).toHaveTextContent("9");
+    expect(within(fetes[0]).getByTestId("timeline-holiday-mark")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.click(await screen.findByRole("checkbox", { name: "Fêtes" }));
+    expect(screen.queryByText("Fête des lanternes")).toBeNull();
+  });
+
+  it("sans fête au calendrier, pas de case « Fêtes » dans les filtres", async () => {
+    const user = userEvent.setup();
+    frise([room("a", "Prologue", 1, 0, 6)]);
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await screen.findByRole("checkbox", { name: "Salons" });
+    expect(screen.queryByRole("checkbox", { name: "Fêtes" })).toBeNull();
+  });
+
+  it("le statut d'un salon se lit sur son anneau ; « en sommeil » se déduit du dernier message", async () => {
+    const vieux = new Date(Date.now() - 90 * 86_400_000).toISOString();
+    const recent = new Date().toISOString();
+    db.tables.chatrooms = [
+      { id: "a", arc_id: null, category_id: null, status: "active", created_at: vieux, summary: { last_message_at: recent } },
+      { id: "b", arc_id: null, category_id: null, status: "active", created_at: vieux, summary: { last_message_at: vieux } },
+      { id: "c", arc_id: null, category_id: null, status: "completed", created_at: vieux, summary: null },
+      { id: "d", arc_id: null, category_id: null, status: "abandoned", created_at: vieux, summary: null },
+    ];
+    frise([room("a", "Vivant", 1, 0, 1), room("b", "Endormi", 1, 0, 2), room("c", "Clos", 1, 0, 3), room("d", "Laissé", 1, 0, 4)]);
+    const ligne = (id: string) => document.querySelector(`[data-room-id='${id}']`) as HTMLElement;
+    await vi.waitFor(() => expect(ligne("b")).toHaveAttribute("data-status", "dormant"));
+    expect(ligne("a")).toHaveAttribute("data-status", "active");
+    expect(ligne("c")).toHaveAttribute("data-status", "completed");
+    expect(ligne("d")).toHaveAttribute("data-status", "abandoned");
+
+    const anneau = (id: string) => within(ligne(id)).getByTestId("timeline-ring");
+    // En cours : creux. En sommeil : un quart plein. Terminé : plein. Abandonné : en pointillés.
+    // (Le quart plein est un `conic-gradient`, que jsdom ne sait pas lire :
+    // on vérifie qu'un salon en cours n'a pas de dégradé, et que l'anneau en
+    // sommeil garde le fond qui découpe le fil.)
+    expect(anneau("a").getAttribute("style") ?? "").not.toMatch(/gradient/);
+    expect(anneau("b").className).toContain("bg-body");
+    expect(anneau("c").className).toContain("bg-foreground/35");
+    expect(anneau("d").className.split(" ")).toContain("border-dashed");
+    // Le statut est lu, sauf « en cours ».
+    expect(within(ligne("d")).getByRole("button").getAttribute("aria-label")).toContain("Abandonné");
+    expect(within(ligne("a")).getByRole("button").getAttribute("aria-label")).not.toMatch(/En cours/);
+  });
+
+  it("le délai du monde règle la mise en sommeil ; 0 : jamais", async () => {
+    const vieux = new Date(Date.now() - 90 * 86_400_000).toISOString();
+    db.tables.chatrooms = [{ id: "b", arc_id: null, category_id: null, status: "active", created_at: vieux, summary: { last_message_at: vieux } }];
+    frise([room("b", "Endormi", 1, 0, 2)], { ...CONFIG, dormant_days: 0 });
+    await screen.findByText("Endormi");
+    await vi.waitFor(() => expect(document.querySelector("[data-room-id='b']")).toHaveAttribute("data-status", "active"));
+  });
+
+  it("filtrer par statut", async () => {
+    const user = userEvent.setup();
+    db.tables.chatrooms = [
+      { id: "a", arc_id: null, category_id: null, status: "completed", created_at: null, summary: null },
+      { id: "b", arc_id: null, category_id: null, status: "active", created_at: null, summary: null },
+    ];
+    frise([room("a", "Clos", 1, 0, 1), room("b", "Vivant", 1, 0, 2)]);
+    await vi.waitFor(() => expect(document.querySelector("[data-room-id='a']")).toHaveAttribute("data-status", "completed"));
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Statut" }), "Terminé");
+    expect(screen.getByText("Clos")).toBeInTheDocument();
+    expect(screen.queryByText("Vivant")).toBeNull();
+  });
+});
+
 describe("WorldTimeline — saisons", () => {
   it("les saisons remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau", () => {
     frise(

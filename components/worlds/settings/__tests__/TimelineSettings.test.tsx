@@ -150,3 +150,55 @@ describe("TimelineSettings — saisons et frise", () => {
     expect(onPersist).toHaveBeenCalledWith({ show_journals: true });
   });
 });
+
+describe("TimelineSettings — fêtes et mise en sommeil", () => {
+  it("ajoute une fête, triée dans l'année ; son jour se borne au mois", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, holidays: [{ name: "Nuit du Dégel", month: 1, day: 1 }] }} onPersist={onPersist} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Nouvelle fête" }), "Fête du Givre");
+    // Givre compte 30 jours : 40 devient 30.
+    await user.type(screen.getByRole("spinbutton", { name: "Jour" }), "40");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Mois de la nouvelle fête" }), "Givre");
+    await user.click(screen.getByRole("button", { name: "Ajouter la fête" }));
+
+    expect(onPersist).toHaveBeenLastCalledWith({
+      holidays: [
+        { name: "Fête du Givre", month: 0, day: 30 },
+        { name: "Nuit du Dégel", month: 1, day: 1 },
+      ],
+    });
+    expect(screen.getByRole("textbox", { name: "Nouvelle fête" })).toHaveValue("");
+  });
+
+  it("une fête sans jour vaut pour le mois ; elle se supprime", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, holidays: [{ name: "Nuit du Dégel", month: 1, day: 1 }] }} onPersist={onPersist} />);
+
+    await user.clear(screen.getByRole("spinbutton", { name: "Jour de Nuit du Dégel" }));
+    await user.tab();
+    expect(onPersist).toHaveBeenLastCalledWith({ holidays: [{ name: "Nuit du Dégel", month: 1, day: null }] });
+
+    await user.click(screen.getByRole("button", { name: "Supprimer la fête Nuit du Dégel" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ holidays: [] });
+    expect(screen.getByText("Aucune fête au calendrier.")).toBeInTheDocument();
+  });
+
+  it("la mise en sommeil : 30 jours par défaut, 0 pour jamais, bornée", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+    const delai = screen.getByRole("spinbutton", { name: "Mise en sommeil (jours)" });
+    expect(delai).toHaveValue(30);
+    await user.clear(delai);
+    await user.type(delai, "0");
+    await user.tab();
+    expect(onPersist).toHaveBeenLastCalledWith({ dormant_days: 0 });
+    await user.clear(delai);
+    await user.type(delai, "99999");
+    await user.tab();
+    expect(onPersist).toHaveBeenLastCalledWith({ dormant_days: 3650 });
+  });
+});

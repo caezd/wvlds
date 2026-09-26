@@ -7,9 +7,11 @@ import { toast } from "sonner";
 import type { createClient } from "@/lib/supabase/client";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { TABLE } from "@/lib/constants";
+import { compareTimelineDates } from "@/lib/worldTimeline";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,9 +22,10 @@ type WikiPageOption = { id: string; title: string };
 
 /**
  * Créer ou modifier un événement du monde : un jalon daté sans salon
- * (migration 193). La date n'obéit pas à la restriction à la période en
- * cours — elle vaut pour les salons, pas pour l'histoire du monde. La
- * suppression se confirme dans le dialogue même, sans en ouvrir un second.
+ * (migration 193), qui peut durer (une fin, migration 197). Les dates
+ * n'obéissent pas à la restriction à la période en cours — elle vaut pour
+ * les salons, pas pour l'histoire du monde. La suppression se confirme dans
+ * le dialogue même, sans en ouvrir un second.
  */
 export function TimelineEventDialog({
   open,
@@ -49,6 +52,8 @@ export function TimelineEventDialog({
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState<WorldTimelineDate>({ year: config.current_year, month: config.current_month, day: null });
+  // Un événement qui dure : sa fin, de même forme que son début.
+  const [endDate, setEndDate] = React.useState<WorldTimelineDate | null>(null);
   const [wikiPageId, setWikiPageId] = React.useState<string | null>(null);
   const [pages, setPages] = React.useState<WikiPageOption[]>([]);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -61,6 +66,7 @@ export function TimelineEventDialog({
     setTitle(event?.title ?? "");
     setDescription(event?.description ?? "");
     setDate(event?.date ?? { year: config.current_year, month: config.current_month, day: null });
+    setEndDate(event?.endDate ?? null);
     setWikiPageId(event?.wikiPageId ?? null);
     setConfirmDelete(false);
     let cancelled = false;
@@ -83,11 +89,17 @@ export function TimelineEventDialog({
       toast.error(t("eventTitleRequired"));
       return;
     }
+    // Même règle que la base (migration 197) : la fin ne précède pas le début.
+    if (endDate && compareTimelineDates(endDate, date) < 0) {
+      toast.error(t("eventEndBeforeStart"));
+      return;
+    }
     setBusy(true);
     const fields = {
       title: clean,
       description: description.trim() || null,
       timeline_date: date,
+      end_date: endDate,
       wiki_page_id: wikiPageId,
     };
     const { error } = event
@@ -138,6 +150,23 @@ export function TimelineEventDialog({
           <div className="space-y-1.5">
             <span className="text-sm font-medium">{t("eventDate")}</span>
             <TimelineDatePicker config={freeConfig} value={date} onCommit={setDate} />
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={endDate !== null}
+                onCheckedChange={(v) => setEndDate(v === true ? { ...date } : null)}
+                aria-label={t("eventLasts")}
+              />
+              {t("eventLasts")}
+            </label>
+            {endDate && (
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium">{t("eventEndDate")}</span>
+                <TimelineDatePicker config={freeConfig} value={endDate} onCommit={setEndDate} />
+              </div>
+            )}
           </div>
 
           <label className="block space-y-1.5">

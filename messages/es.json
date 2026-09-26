@@ -613,7 +613,8 @@
       "kind": {
         "room": "Salas",
         "event": "Eventos",
-        "journal": "Diarios"
+        "journal": "Diarios",
+        "holiday": "Fiestas"
       },
       "filterPersona": "Persona presente",
       "filterPlayer": "Abierta por",
@@ -668,7 +669,20 @@
       "sequelDecline": "Rechazar la continuación {chatroom}",
       "sequelAnswerFailed": "No se pudo responder a esta continuación propuesta.",
       "personaThread": "Hilo de {name}",
-      "personaThreadClear": "Quitar el hilo de {name}"
+      "personaThreadClear": "Quitar el hilo de {name}",
+      "filterStatus": "Estado",
+      "roomStatus": {
+        "active": "En curso",
+        "dormant": "Inactivo",
+        "completed": "Terminado",
+        "abandoned": "Abandonado"
+      },
+      "eventUntil": "Hasta {date}",
+      "eventEnds": "Fin: {title}",
+      "holidayLabel": "Fiesta",
+      "eventLasts": "Dura en el tiempo",
+      "eventEndDate": "Fin",
+      "eventEndBeforeStart": "El final debe llegar después del inicio."
     },
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",
@@ -936,7 +950,20 @@
       "deleteCategoryConfirm": "¿Eliminar «{title}»? Las salas de esta categoría volverán a «General».",
       "nameMin": "Al menos {min} caracteres",
       "maxChars": "{max} caracteres máx.",
-      "colorInvalid": "Color hex válido, p. ej. #1f2937"
+      "colorInvalid": "Color hex válido, p. ej. #1f2937",
+      "timelineHolidays": "Fiestas del calendario",
+      "timelineHolidaysHelp": "Días que vuelven cada año (« Fiesta de los farolillos », el 9 del sexto mes). La cronología los recuerda en su fecha, en los años que ya tienen contenido. Sin día, una fiesta vale para todo el mes.",
+      "holidayName": "Nombre de la fiesta",
+      "holidayDay": "Día de {name}",
+      "holidayMonth": "Mes de {name}",
+      "deleteHoliday": "Eliminar la fiesta {name}",
+      "noHolidaysHint": "Ninguna fiesta en el calendario.",
+      "holidayNamePlaceholder": "Nueva fiesta",
+      "holidayDayPlaceholder": "Día",
+      "holidayMonthPlaceholder": "Mes de la nueva fiesta",
+      "addHoliday": "Añadir la fiesta",
+      "dormantDays": "Inactividad (días)",
+      "dormantDaysHelp": "Un salón en curso sin mensajes durante este número de días aparece inactivo en la cronología. 0: nunca."
     },
     "timelinePicker": {
       "year": "Año",
@@ -1523,7 +1550,7 @@
     "settingsSuiteProposed": "Continuación propuesta: los participantes de la otra sala deben aceptarla.",
     "settingsSuiteRemove": "Quitar el enlace con {title}",
     "settingsSuiteUnknown": "Sala inaccesible",
-    "settingsTimelineLinksFailed": "No se pudo guardar el arco o la continuación de esta sala.",
+    "settingsTimelineLinksFailed": "No se pudo guardar el estado, el arco o la continuación de esta sala.",
     "settingsMonth": "Mes",
     "settingsDay": "Día",
     "settingsNoMonth": "Sin mes",
@@ -1680,7 +1707,8 @@
       "hereWarning": "Va a notificar a {count, plural, =0 {nadie} one {# miembro presente} other {# miembros presentes}} con @aquí.",
       "everyoneWarningUnknown": "Va a notificar a todos los miembros del mundo.",
       "hereWarningUnknown": "Va a notificar a los miembros presentes."
-    }
+    },
+    "settingsStatus": "Estado"
   },
   "changelog": {
     "title": "Historial de cambios",

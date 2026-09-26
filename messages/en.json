@@ -613,7 +613,8 @@
       "kind": {
         "room": "Chatrooms",
         "event": "Events",
-        "journal": "Journals"
+        "journal": "Journals",
+        "holiday": "Holidays"
       },
       "filterPersona": "Persona present",
       "filterPlayer": "Opened by",
@@ -668,7 +669,20 @@
       "sequelDecline": "Decline the sequel {chatroom}",
       "sequelAnswerFailed": "Could not answer this proposed sequel.",
       "personaThread": "{name}'s thread",
-      "personaThreadClear": "Clear {name}'s thread"
+      "personaThreadClear": "Clear {name}'s thread",
+      "filterStatus": "Status",
+      "roomStatus": {
+        "active": "In progress",
+        "dormant": "Dormant",
+        "completed": "Completed",
+        "abandoned": "Abandoned"
+      },
+      "eventUntil": "Until {date}",
+      "eventEnds": "End: {title}",
+      "holidayLabel": "Holiday",
+      "eventLasts": "Lasts over time",
+      "eventEndDate": "End",
+      "eventEndBeforeStart": "The end must come after the start."
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",
@@ -936,7 +950,20 @@
       "deleteCategoryConfirm": "Delete “{title}”? Chatrooms in this category will move back to “General”.",
       "nameMin": "At least {min} characters",
       "maxChars": "{max} characters max",
-      "colorInvalid": "Valid hex colour, e.g. #1f2937"
+      "colorInvalid": "Valid hex colour, e.g. #1f2937",
+      "timelineHolidays": "Calendar holidays",
+      "timelineHolidaysHelp": "Days that come back every year (“Lantern Festival”, the 9th of the sixth month). The timeline recalls them on their date, in years that already have content. Without a day, a holiday covers the whole month.",
+      "holidayName": "Holiday name",
+      "holidayDay": "Day of {name}",
+      "holidayMonth": "Month of {name}",
+      "deleteHoliday": "Delete the holiday {name}",
+      "noHolidaysHint": "No holidays on the calendar.",
+      "holidayNamePlaceholder": "New holiday",
+      "holidayDayPlaceholder": "Day",
+      "holidayMonthPlaceholder": "Month of the new holiday",
+      "addHoliday": "Add the holiday",
+      "dormantDays": "Dormant after (days)",
+      "dormantDaysHelp": "A room in progress with no message for this many days shows as dormant on the timeline. 0: never."
     },
     "timelinePicker": {
       "year": "Year",
@@ -1523,7 +1550,7 @@
     "settingsSuiteProposed": "Sequel proposed: the other chatroom's participants must accept it.",
     "settingsSuiteRemove": "Remove the link with {title}",
     "settingsSuiteUnknown": "Inaccessible chatroom",
-    "settingsTimelineLinksFailed": "Could not save this chatroom's arc or sequel.",
+    "settingsTimelineLinksFailed": "Could not save this chatroom's status, arc or sequel.",
     "settingsMonth": "Month",
     "settingsDay": "Day",
     "settingsNoMonth": "No month",
@@ -1680,7 +1707,8 @@
       "hereWarning": "You are about to notify {count, plural, =0 {nobody} one {# member here} other {# members here}} with @here.",
       "everyoneWarningUnknown": "You are about to notify every member of the world.",
       "hereWarningUnknown": "You are about to notify the members who are here."
-    }
+    },
+    "settingsStatus": "Status"
   },
   "changelog": {
     "title": "Changelog",

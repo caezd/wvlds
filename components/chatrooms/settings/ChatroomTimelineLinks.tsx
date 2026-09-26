@@ -11,12 +11,16 @@ import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type ArcOption = { id: string; name: string };
+/** Le statut enregistré d'un salon (migration 197) ; « en sommeil » se déduit. */
+type RoomStatus = "active" | "completed" | "abandoned";
+const ROOM_STATUSES: readonly RoomStatus[] = ["active", "completed", "abandoned"];
 type RoomOption = { id: string; title: string | null; timeline_date: WorldTimelineDate; mine: boolean };
 type SequelRow = { id: string; previous_id: string; status: "pending" | "accepted" };
 
 /**
- * L'arc d'un salon et les salons qu'il suit (migrations 193 et 194), sous
- * sa date dans ses réglages. Un salon peut en suivre plusieurs (deux scènes
+ * Le statut d'un salon (en cours, terminé, abandonné : migration 197), son
+ * arc et les salons qu'il suit (migrations 193 et 194), sous sa date dans
+ * ses réglages. Un salon peut en suivre plusieurs (deux scènes
  * qui se rejoignent), jamais un salon situé après lui sur la chronologie.
  * Relier à un salon où l'on ne joue pas en fait une suite proposée : elle
  * attend l'accord de ses participants.
@@ -37,6 +41,8 @@ export function ChatroomTimelineLinks({
   onSaved?: () => void;
 }) {
   const t = useTranslations("chatrooms");
+  const tv = useTranslations("worlds.timelineView");
+  const [status, setStatus] = React.useState<RoomStatus>("active");
   const [arcs, setArcs] = React.useState<ArcOption[]>([]);
   const [rooms, setRooms] = React.useState<RoomOption[]>([]);
   const [ownDate, setOwnDate] = React.useState<WorldTimelineDate | null>(null);
@@ -58,7 +64,7 @@ export function ChatroomTimelineLinks({
     void Promise.all([
       supabase.from(TABLE.WORLD_TIMELINE_ARCS).select("id, name").eq("world_id", worldId).order("position").order("name"),
       supabase.rpc(RPC.GET_LINKABLE_CHATROOMS, { p_world_id: worldId }),
-      supabase.from(TABLE.CHATROOMS).select("arc_id").eq("id", chatroomId).maybeSingle(),
+      supabase.from(TABLE.CHATROOMS).select("arc_id, status").eq("id", chatroomId).maybeSingle(),
     ]).then(([arcRes, roomRes, selfRes]) => {
       if (cancelled) return;
       if (arcRes.error || roomRes.error || selfRes.error) {
@@ -72,11 +78,26 @@ export function ChatroomTimelineLinks({
           .filter((r) => r.id !== chatroomId)
           .sort((a, b) => compareTimelineDates(a.timeline_date, b.timeline_date)),
       );
-      setArcId((selfRes.data as { arc_id: string | null } | null)?.arc_id ?? null);
+      const self = selfRes.data as { arc_id: string | null; status: RoomStatus | null } | null;
+      setArcId(self?.arc_id ?? null);
+      setStatus(self?.status ?? "active");
     });
     void loadSequels();
     return () => { cancelled = true; };
   }, [supabase, worldId, chatroomId, loadSequels]);
+
+  async function saveStatus(next: RoomStatus) {
+    setSaving(true);
+    const { error } = await supabase.from(TABLE.CHATROOMS).update({ status: next }).eq("id", chatroomId);
+    setSaving(false);
+    if (error) {
+      console.error("[ChatroomTimelineLinks] statut", error);
+      toast.error(t("settingsTimelineLinksFailed"));
+      return;
+    }
+    setStatus(next);
+    onSaved?.();
+  }
 
   async function saveArc(next: string | null) {
     setSaving(true);
@@ -136,6 +157,20 @@ export function ChatroomTimelineLinks({
 
   return (
     <div className="space-y-3">
+      <label className="block space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">{t("settingsStatus")}</span>
+        <select
+          value={status}
+          disabled={disabled || saving}
+          onChange={(e) => void saveStatus(e.target.value as RoomStatus)}
+          className={selectClass}
+        >
+          {ROOM_STATUSES.map((s) => (
+            <option key={s} value={s}>{tv(`roomStatus.${s}`)}</option>
+          ))}
+        </select>
+      </label>
+
       <label className="block space-y-1">
         <span className="text-xs font-medium text-muted-foreground">{t("settingsArc")}</span>
         <select

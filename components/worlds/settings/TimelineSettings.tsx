@@ -4,7 +4,8 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 
-import type { WorldTimelineAge, WorldTimelineConfig } from "@/types/worlds";
+import type { WorldTimelineAge, WorldTimelineConfig, WorldTimelineHoliday } from "@/types/worlds";
+import { DEFAULT_DORMANT_DAYS } from "@/lib/worldTimelineItems";
 import {
   clampDaysPerMonth,
   daysInMonth,
@@ -43,7 +44,9 @@ export function TimelineSettings({
   const tSettings = useTranslations("worlds.settings");
   const [newMonthName, setNewMonthName] = React.useState("");
   const [newAge, setNewAge] = React.useState<{ name: string; from: string }>({ name: "", from: "" });
+  const [newHoliday, setNewHoliday] = React.useState<{ name: string; month: number; day: string }>({ name: "", month: 0, day: "" });
   const ages = config.ages ?? [];
+  const holidays = config.holidays ?? [];
 
   const apercu = formatTimelineLabel(config, {
     year: config.current_year,
@@ -71,6 +74,27 @@ export function TimelineSettings({
     if (!name || Number.isNaN(from)) return;
     onPersist({ ages: [...ages, { name, from_year: from, to_year: null }].sort((a, b) => a.from_year - b.from_year) });
     setNewAge({ name: "", from: "" });
+  }
+
+  function majFete(i: number, patch: Partial<WorldTimelineHoliday>, persist: boolean) {
+    const next = holidays.map((h, j) => (j === i ? { ...h, ...patch } : h));
+    if (persist) onPersist({ holidays: next });
+    else onDraft({ holidays: next });
+  }
+
+  /** Un jour saisi : vide, aucun jour (tout le mois) ; sinon borné au mois. */
+  function jourDe(value: string, month: number): number | null {
+    const day = parseInt(value, 10);
+    if (Number.isNaN(day)) return null;
+    return Math.min(Math.max(day, 1), daysInMonth(config, month));
+  }
+
+  function ajouterFete() {
+    const name = newHoliday.name.trim();
+    if (!name || newHoliday.month >= nbMois) return;
+    const fete = { name, month: newHoliday.month, day: jourDe(newHoliday.day, newHoliday.month) };
+    onPersist({ holidays: [...holidays, fete].sort((a, b) => a.month - b.month || (a.day ?? 0) - (b.day ?? 0)) });
+    setNewHoliday({ name: "", month: newHoliday.month, day: "" });
   }
 
   function ajouterMois() {
@@ -393,7 +417,108 @@ export function TimelineSettings({
         </div>
       </SubOption>
 
-      {/* ── 5. Ce que montre la frise ── */}
+      {/* ── 5. Les fêtes du calendrier ── */}
+      {/* Des jours qui reviennent chaque année : la frise les rappelle à leur
+          date, dans les années qui ont déjà du contenu. */}
+      <SubOption title={tSettings("timelineHolidays")} help={tSettings("timelineHolidaysHelp")}>
+        {holidays.length > 0 ? (
+          <ol className="space-y-1" aria-label={tSettings("timelineHolidays")}>
+            {holidays.map((fete, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <Input
+                  value={fete.name}
+                  maxLength={HOLIDAY_NAME_MAX}
+                  aria-label={tSettings("holidayName")}
+                  className="h-8 min-w-0 flex-1 text-sm"
+                  onChange={(e) => majFete(i, { name: e.target.value }, false)}
+                  onBlur={(e) => majFete(i, { name: e.target.value }, true)}
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  value={fete.day ?? ""}
+                  placeholder="…"
+                  aria-label={tSettings("holidayDay", { name: fete.name })}
+                  className="h-8 w-16 text-sm"
+                  onChange={(e) => majFete(i, { day: e.target.value === "" ? null : Number(e.target.value) }, false)}
+                  onBlur={(e) => majFete(i, { day: jourDe(e.target.value, fete.month) }, true)}
+                />
+                <select
+                  value={fete.month}
+                  aria-label={tSettings("holidayMonth", { name: fete.name })}
+                  className="h-8 w-32 rounded-lg border border-border bg-transparent px-2 text-sm"
+                  onChange={(e) => {
+                    const month = Number(e.target.value);
+                    majFete(i, { month, day: fete.day === null ? null : Math.min(fete.day, daysInMonth(config, month)) }, true);
+                  }}
+                >
+                  {config.month_names.map((nom, m) => (
+                    <option key={m} value={m}>{nom}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  aria-label={tSettings("deleteHoliday", { name: fete.name })}
+                  onClick={() => onPersist({ holidays: holidays.filter((_, j) => j !== i) })}
+                  className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-xs italic text-muted-foreground">{tSettings("noHolidaysHint")}</p>
+        )}
+
+        {nbMois > 0 && (
+          <div className="flex items-center gap-1 rounded-lg border border-border-soft p-1">
+            <Input
+              value={newHoliday.name}
+              maxLength={HOLIDAY_NAME_MAX}
+              placeholder={tSettings("holidayNamePlaceholder")}
+              aria-label={tSettings("holidayNamePlaceholder")}
+              className="h-8 min-w-0 flex-1 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
+              onChange={(e) => setNewHoliday((h) => ({ ...h, name: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); ajouterFete(); }
+              }}
+            />
+            <Input
+              type="number"
+              min={1}
+              value={newHoliday.day}
+              placeholder={tSettings("holidayDayPlaceholder")}
+              aria-label={tSettings("holidayDayPlaceholder")}
+              className="h-8 w-16 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
+              onChange={(e) => setNewHoliday((h) => ({ ...h, day: e.target.value }))}
+            />
+            <select
+              value={newHoliday.month}
+              aria-label={tSettings("holidayMonthPlaceholder")}
+              className="h-8 w-32 rounded-lg border border-border bg-transparent px-2 text-sm"
+              onChange={(e) => setNewHoliday((h) => ({ ...h, month: Number(e.target.value) }))}
+            >
+              {config.month_names.map((nom, m) => (
+                <option key={m} value={m}>{nom}</option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 shrink-0 p-0"
+              disabled={!newHoliday.name.trim()}
+              aria-label={tSettings("addHoliday")}
+              onClick={ajouterFete}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </SubOption>
+
+      {/* ── 6. Ce que montre la frise ── */}
       <SubOption title={tSettings("timelineFrieze")} help={tSettings("timelineFriezeHelp")}>
         <label className="flex items-start justify-between gap-4">
           <span className="space-y-0.5">
@@ -407,9 +532,36 @@ export function TimelineSettings({
             className="mt-0.5 shrink-0"
           />
         </label>
+        {/* Un salon en cours sans message depuis ce délai paraît « en
+            sommeil » ; rien n'est modifié en base (voir effectiveRoomStatus). */}
+        <label className="flex items-start justify-between gap-4">
+          <span className="space-y-0.5">
+            <span className="block text-sm">{tSettings("dormantDays")}</span>
+            <span className="block text-xs text-muted-foreground leading-snug">{tSettings("dormantDaysHelp")}</span>
+          </span>
+          <Input
+            type="number"
+            min={0}
+            max={DORMANT_DAYS_MAX}
+            value={config.dormant_days ?? DEFAULT_DORMANT_DAYS}
+            aria-label={tSettings("dormantDays")}
+            className="h-8 w-20 shrink-0 text-sm"
+            onChange={(e) => onDraft({ dormant_days: clampDormantDays(e.target.value) })}
+            onBlur={(e) => onPersist({ dormant_days: clampDormantDays(e.target.value) })}
+          />
+        </label>
       </SubOption>
     </>
   );
+}
+
+const HOLIDAY_NAME_MAX = 60;
+const DORMANT_DAYS_MAX = 3650;
+
+/** Un délai de mise en sommeil saisi : entier, de 0 (jamais) à dix ans. */
+function clampDormantDays(value: string): number {
+  const days = parseInt(value, 10);
+  return Number.isNaN(days) ? 0 : Math.min(Math.max(days, 0), DORMANT_DAYS_MAX);
 }
 
 /** Une sous-option en retrait, au dessin de celles de la fiche par défaut. */

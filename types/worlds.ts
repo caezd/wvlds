@@ -17,7 +17,16 @@ export interface WorldTimelineConfig {
   show_journals?: boolean;
   /** Saisons : des âges nommés qui découpent les années de la frise. */
   ages?: WorldTimelineAge[];
+  /** Les fêtes du calendrier, rappelées chaque année à leur date. */
+  holidays?: WorldTimelineHoliday[];
+  /** Jours sans message après lesquels un salon en cours s'endort sur la
+   *  frise ; 0 : jamais. Absent : DEFAULT_DORMANT_DAYS (30). */
+  dormant_days?: number;
 }
+
+/** Une fête du calendrier (« Fête des lanternes », 9 du 6e mois) ; le mois
+ *  est l'index dans `month_names`, le jour peut manquer (tout le mois). */
+export type WorldTimelineHoliday = { name: string; month: number; day: number | null };
 
 /** Un âge nommé de la chronologie (« L'Âge des Cendres », an 1 à 40) ; sans
  *  année de fin, il court jusqu'à la suivante. */

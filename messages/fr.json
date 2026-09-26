@@ -613,7 +613,8 @@
       "kind": {
         "room": "Salons",
         "event": "Événements",
-        "journal": "Journaux"
+        "journal": "Journaux",
+        "holiday": "Fêtes"
       },
       "filterPersona": "Persona présent",
       "filterPlayer": "Ouvert par",
@@ -668,7 +669,20 @@
       "sequelDecline": "Refuser la suite {chatroom}",
       "sequelAnswerFailed": "Impossible de répondre à cette suite proposée.",
       "personaThread": "Fil de {name}",
-      "personaThreadClear": "Effacer le fil de {name}"
+      "personaThreadClear": "Effacer le fil de {name}",
+      "filterStatus": "Statut",
+      "roomStatus": {
+        "active": "En cours",
+        "dormant": "En sommeil",
+        "completed": "Terminé",
+        "abandoned": "Abandonné"
+      },
+      "eventUntil": "Jusqu'à {date}",
+      "eventEnds": "Fin : {title}",
+      "holidayLabel": "Fête",
+      "eventLasts": "Dure dans le temps",
+      "eventEndDate": "Fin",
+      "eventEndBeforeStart": "La fin doit venir après le début."
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",
@@ -936,7 +950,20 @@
       "deleteCategoryConfirm": "Supprimer « {title} » ? Les salons de cette catégorie repasseront dans « Général ».",
       "nameMin": "Au moins {min} caractères",
       "maxChars": "{max} caractères max",
-      "colorInvalid": "Couleur hex valide, p. ex. #1f2937"
+      "colorInvalid": "Couleur hex valide, p. ex. #1f2937",
+      "timelineHolidays": "Fêtes du calendrier",
+      "timelineHolidaysHelp": "Des jours qui reviennent chaque année (« Fête des lanternes », le 9 du sixième mois). La frise les rappelle à leur date, dans les années qui ont déjà du contenu. Sans jour, une fête vaut pour tout le mois.",
+      "holidayName": "Nom de la fête",
+      "holidayDay": "Jour de {name}",
+      "holidayMonth": "Mois de {name}",
+      "deleteHoliday": "Supprimer la fête {name}",
+      "noHolidaysHint": "Aucune fête au calendrier.",
+      "holidayNamePlaceholder": "Nouvelle fête",
+      "holidayDayPlaceholder": "Jour",
+      "holidayMonthPlaceholder": "Mois de la nouvelle fête",
+      "addHoliday": "Ajouter la fête",
+      "dormantDays": "Mise en sommeil (jours)",
+      "dormantDaysHelp": "Un salon en cours sans message depuis ce nombre de jours paraît en sommeil sur la frise. 0 : jamais."
     },
     "timelinePicker": {
       "year": "Année",
@@ -1523,7 +1550,7 @@
     "settingsSuiteProposed": "Suite proposée : les participants de l'autre salon doivent l'accepter.",
     "settingsSuiteRemove": "Retirer le lien avec {title}",
     "settingsSuiteUnknown": "Salon inaccessible",
-    "settingsTimelineLinksFailed": "Impossible d'enregistrer l'arc ou la suite de ce salon.",
+    "settingsTimelineLinksFailed": "Impossible d'enregistrer le statut, l'arc ou la suite de ce salon.",
     "settingsMonth": "Mois",
     "settingsDay": "Jour",
     "settingsNoMonth": "Aucun mois",
@@ -1680,7 +1707,8 @@
       "hereWarning": "Vous allez notifier {count, plural, =0 {personne} one {# membre présent} other {# membres présents}} avec @ici.",
       "everyoneWarningUnknown": "Vous allez notifier tous les membres du monde.",
       "hereWarningUnknown": "Vous allez notifier les membres présents."
-    }
+    },
+    "settingsStatus": "Statut"
   },
   "changelog": {
     "title": "Changelog",

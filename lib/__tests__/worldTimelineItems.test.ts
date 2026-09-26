@@ -5,20 +5,24 @@ import {
   buildTimelinePeriods,
   buildTimelineSections,
   countActiveFilters,
+  effectiveRoomStatus,
+  eventEndItems,
+  holidayItems,
   isFiltering,
   matchesTimelineFilters,
   normalizeAges,
   normalizeSearch,
+  type TimelineEventItem,
   type TimelineFilters,
   type TimelineItem,
   type TimelineRoomContext,
 } from "@/lib/worldTimelineItems";
 
 const salon = (id: string, year: number, month: number | null, day: number | null, extra: Partial<TimelineItem> = {}): TimelineItem => ({
-  kind: "room", id, date: { year, month, day }, title: id, arcId: null, previousIds: [], categoryId: null, ...extra,
+  kind: "room", id, date: { year, month, day }, title: id, arcId: null, previousIds: [], categoryId: null, status: "active", ...extra,
 } as TimelineItem);
-const evenement = (id: string, year: number, month: number | null, day: number | null): TimelineItem => ({
-  kind: "event", id, date: { year, month, day }, title: `Événement ${id}`, description: null, wikiPageId: null,
+const evenement = (id: string, year: number, month: number | null, day: number | null, endDate: TimelineEventItem["endDate"] = null): TimelineEventItem => ({
+  kind: "event", id, date: { year, month, day }, endDate, title: `Événement ${id}`, description: null, wikiPageId: null,
 });
 const journal = (id: string, personaId: string, year: number, month: number | null, day: number | null): TimelineItem => ({
   kind: "journal", id, date: { year, month, day }, personaId, personaName: "Tess", body: "Une nuit sans lune.",
@@ -89,6 +93,81 @@ describe("filtres et recherche", () => {
     expect(isFiltering(filtres({ query: "  " }))).toBe(false);
     expect(isFiltering(filtres({ query: "x" }))).toBe(true);
     expect(countActiveFilters(filtres({ kinds: new Set(["room"]), arcId: "a", personaId: "p" }))).toBe(3);
+  });
+});
+
+describe("événements qui durent", () => {
+  it("la fin d'un événement se place à sa date, après les salons du jour ; une fin qui ne suit pas le début n'est pas tracée", () => {
+    const siege = evenement("siege", 2, 2, 3, { year: 3, month: 7, day: 12 });
+    const bref = evenement("bref", 2, 2, 3, { year: 2, month: 2, day: 3 });
+    const flou = evenement("flou", 2, 2, 3, { year: 2, month: null, day: null });
+    const fins = eventEndItems([siege, bref, flou]);
+    expect(fins).toEqual([{ kind: "eventEnd", id: "siege:end", eventId: "siege", date: { year: 3, month: 7, day: 12 }, title: "Événement siege" }]);
+    const sections = buildTimelineSections([...fins, salon("a", 3, 7, 12)], null);
+    expect(sections[0].groups[0].items.map((i) => i.kind)).toEqual(["room", "eventEnd"]);
+  });
+
+  it("la fin suit les filtres de l'événement : le type et la recherche, pas les filtres de salon", () => {
+    const [fin] = eventEndItems([evenement("siege", 2, 2, 3, { year: 3, month: 7, day: 12 })]);
+    expect(matchesTimelineFilters(fin, filtres({ kinds: new Set(["room"]) }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(fin, filtres({ query: "siege" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(fin, filtres({ arcId: "arc", status: "completed" }), CTX)).toBe(true);
+  });
+});
+
+describe("fêtes du calendrier", () => {
+  it("une fête par année donnée, à sa date ; sans nom ou hors calendrier, ignorée", () => {
+    const fetes = holidayItems(
+      [
+        { name: " Fête des lanternes ", month: 5, day: 9 },
+        { name: "", month: 1, day: 1 },
+        { name: "Treizième lune", month: 12, day: 1 },
+        { name: "Moisson", month: 8, day: null },
+      ],
+      [1, 4],
+      12,
+    );
+    expect(fetes.map((f) => [f.date.year, f.date.month, f.date.day, f.name])).toEqual([
+      [1, 5, 9, "Fête des lanternes"], [1, 8, null, "Moisson"],
+      [4, 5, 9, "Fête des lanternes"], [4, 8, null, "Moisson"],
+    ]);
+    expect(new Set(fetes.map((f) => f.id)).size).toBe(4);
+    expect(holidayItems(undefined, [1], 12)).toEqual([]);
+  });
+
+  it("en tête de sa date ; cachée par son type ou par la recherche, pas par les filtres de salon", () => {
+    const [fete] = holidayItems([{ name: "Fête des lanternes", month: 5, day: 9 }], [1], 12);
+    const sections = buildTimelineSections([salon("a", 1, 5, 9), evenement("e", 1, 5, 9), fete], null);
+    expect(sections[0].groups[0].items.map((i) => i.kind)).toEqual(["holiday", "event", "room"]);
+    expect(matchesTimelineFilters(fete, filtres({ kinds: new Set(["room", "event"]) }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(fete, filtres({ query: "lanterne" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(fete, filtres({ query: "moisson" }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(fete, filtres({ personaId: "p-tess", status: "dormant" }), CTX)).toBe(true);
+  });
+});
+
+describe("statut des salons", () => {
+  const JOUR = 86_400_000;
+  const MAINTENANT = Date.UTC(2026, 8, 26);
+  const ilYA = (jours: number) => new Date(MAINTENANT - jours * JOUR).toISOString();
+
+  it("terminé et abandonné tels quels ; en cours, il s'endort après le délai du monde", () => {
+    expect(effectiveRoomStatus("completed", ilYA(400), 30, MAINTENANT)).toBe("completed");
+    expect(effectiveRoomStatus("abandoned", ilYA(1), 30, MAINTENANT)).toBe("abandoned");
+    expect(effectiveRoomStatus("active", ilYA(10), 30, MAINTENANT)).toBe("active");
+    expect(effectiveRoomStatus("active", ilYA(31), 30, MAINTENANT)).toBe("dormant");
+    // 0 : jamais ; sans date d'activité connue, en cours.
+    expect(effectiveRoomStatus("active", ilYA(400), 0, MAINTENANT)).toBe("active");
+    expect(effectiveRoomStatus("active", null, 30, MAINTENANT)).toBe("active");
+  });
+
+  it("filtre par statut : un filtre de salon, qui masque les journaux", () => {
+    const enSommeil = filtres({ status: "dormant" });
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1, { status: "dormant" } as Partial<TimelineItem>), enSommeil, CTX)).toBe(true);
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), enSommeil, CTX)).toBe(false);
+    expect(matchesTimelineFilters(journal("j", "p-tess", 1, 0, 1), enSommeil, CTX)).toBe(false);
+    expect(matchesTimelineFilters(evenement("x", 1, 0, 1), enSommeil, CTX)).toBe(true);
+    expect(countActiveFilters(enSommeil)).toBe(1);
   });
 });
 

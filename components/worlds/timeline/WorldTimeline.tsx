@@ -3,20 +3,26 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { BookOpen, BookText, Clock, Pencil, Plus, Search, Spline, X } from "lucide-react";
+import { BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
 import {
+  DEFAULT_DORMANT_DAYS,
   NO_TIMELINE_FILTERS,
   ageOf,
   arcRanks,
   buildTimelinePeriods,
   buildTimelineSections,
+  effectiveRoomStatus,
+  eventEndItems,
+  holidayItems,
   matchesTimelineFilters,
   normalizeAges,
   suiteChainOf,
   type TimelineDateGroup,
+  type TimelineEventEndItem,
   type TimelineFilters,
+  type TimelineHolidayItem,
   type TimelineItem,
   type TimelineJournalItem,
   type TimelineRoomContext,
@@ -33,6 +39,7 @@ import {
   type SuiteLink,
   type SuiteStyle,
 } from "@/components/worlds/timeline/SuiteLinks";
+import { EventSpans } from "@/components/worlds/timeline/EventSpans";
 import { TimelineArcsDialog } from "@/components/worlds/timeline/TimelineArcsDialog";
 import { TimelineEventDialog } from "@/components/worlds/timeline/TimelineEventDialog";
 import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
@@ -172,6 +179,10 @@ export function WorldTimeline({
     return map;
   }, [data.sequels]);
 
+  // « En sommeil » se compte à partir de l'ouverture de la frise.
+  const [now] = useState(() => Date.now());
+  const dormantDays = config.dormant_days ?? DEFAULT_DORMANT_DAYS;
+
   const allItems: TimelineItem[] = useMemo(() => {
     const roomItems: TimelineRoomItem[] = rooms
       .filter((r) => r.timeline_date !== null)
@@ -185,10 +196,11 @@ export function WorldTimeline({
           arcId: meta?.arcId ?? null,
           previousIds: previousOf.get(r.id) ?? [],
           categoryId: meta?.categoryId ?? null,
+          status: meta ? effectiveRoomStatus(meta.status, meta.lastActivity, dormantDays, now) : "active",
         };
       });
-    return [...roomItems, ...data.events, ...data.journals];
-  }, [rooms, data.roomMeta, data.events, data.journals, previousOf, t]);
+    return [...roomItems, ...data.events, ...eventEndItems(data.events), ...data.journals];
+  }, [rooms, data.roomMeta, data.events, data.journals, previousOf, t, dormantDays, now]);
 
   // Le rang de chaque salon dans son arc, sur tous les salons : il ne change
   // pas quand on filtre.
@@ -205,10 +217,20 @@ export function WorldTimeline({
 
   // L'année actuelle du monde a toujours sa section — sauf si les filtres ne
   // laissent rien : la frise dit alors qu'aucun résultat ne correspond.
-  const sections = useMemo(
-    () => buildTimelineSections(visible, config.current_year),
-    [visible, config.current_year],
-  );
+  // Les fêtes du calendrier s'ajoutent ensuite, dans les années qui ont
+  // déjà du contenu : une fête seule ne crée pas d'année.
+  const sections = useMemo(() => {
+    const base = buildTimelineSections(visible, config.current_year);
+    const holidays = holidayItems(config.holidays, base.map((s) => s.year), config.month_names.length)
+      .filter((h) => matchesTimelineFilters(h, filters, ctx));
+    return holidays.length > 0 ? buildTimelineSections([...visible, ...holidays], config.current_year) : base;
+  }, [visible, config.current_year, config.holidays, config.month_names.length, filters, ctx]);
+
+  // Les événements qui durent, dont le début et la fin sont à l'écran.
+  const spanIds = useMemo(() => {
+    const ends = new Set(visible.filter((i) => i.kind === "eventEnd").map((i) => (i as TimelineEventEndItem).eventId));
+    return visible.filter((i) => i.kind === "event" && ends.has(i.id)).map((i) => i.id);
+  }, [visible]);
 
   const ages = useMemo(() => normalizeAges(config.ages), [config.ages]);
   const { periods, periodOf } = useMemo(
@@ -279,8 +301,8 @@ export function WorldTimeline({
     return { ids, color: threadPersona.color };
   }, [threadPersona, visible, data.roomPersonas]);
   const layoutVersion = useMemo(
-    () => `${suiteStyle}:${threadPersona?.id ?? ""}:${visible.map((i) => i.id).join(",")}`,
-    [visible, suiteStyle, threadPersona],
+    () => `${suiteStyle}:${threadPersona?.id ?? ""}:${sections.flatMap((s) => s.groups.flatMap((g) => g.items.map((i) => i.id))).join(",")}`,
+    [sections, suiteStyle, threadPersona],
   );
   // Le graphe prend place entre le fil et les titres ; les autres styles, à droite.
   const graphPad = suiteStyle === "graph" && lanes > 0 ? GRAPH_OFFSET + (lanes - 1) * 8 + 10 : 0;
@@ -384,6 +406,7 @@ export function WorldTimeline({
                 filters={filters}
                 onChange={setFilters}
                 showJournals={!!config.show_journals}
+                showHolidays={(config.holidays ?? []).length > 0}
                 personas={data.personas.map((p) => ({ id: p.id, label: p.name }))}
                 players={players}
                 arcs={data.arcs.map((a) => ({ id: a.id, label: a.name }))}
@@ -517,6 +540,7 @@ export function WorldTimeline({
                 })}
               </ol>
               <SuiteLinks containerRef={listRef} links={suiteLinks} style={suiteStyle} only={onlyChain} thread={thread} version={layoutVersion} onLanes={onLanes} />
+              <EventSpans containerRef={listRef} ids={spanIds} version={layoutVersion} />
             </div>
           )}
         </div>
@@ -813,12 +837,17 @@ function DateGroupBlock({
                   key={item.id}
                   item={item as TimelineEvent}
                   day={day}
+                  endLabel={item.endDate ? formatTimelineLabel(config, item.endDate) : null}
                   canManage={canManage}
                   dimmed={dimmed}
                   onOpenWiki={onOpenWiki}
                   onEdit={() => onEditEvent(item.id)}
                 />
               );
+            case "eventEnd":
+              return <EventEndRow key={item.id} item={item} day={day} dimmed={dimmed} />;
+            case "holiday":
+              return <HolidayRow key={item.id} item={item} day={day} dimmed={dimmed} />;
             case "journal":
               return <JournalRow key={item.id} item={item} day={day} dimmed={dimmed} />;
           }
@@ -864,18 +893,30 @@ function RoomRow({
 }) {
   const t = useTranslations("worlds");
   const tv = useTranslations("worlds.timelineView");
+  const { status } = item;
   return (
-    <li className={cn("group/room relative transition-opacity", dimmed && "opacity-30")} data-room-id={item.id}>
+    <li
+      className={cn("group/room relative transition-opacity", dimmed && "opacity-30")}
+      data-room-id={item.id}
+      data-status={status}
+    >
       <DayGutter day={day} />
-      {/* Un anneau creux par salon, sur le fil, centré sur son titre (ligne
-          de 20px), à la couleur de son arc ; il fonce au survol. */}
+      {/* Un anneau par salon, sur le fil, centré sur son titre (ligne de
+          20px), à la couleur de son arc ; il fonce au survol. Son remplissage
+          dit le statut : creux en cours, un quart plein en sommeil, plein
+          terminé, en pointillés abandonné. */}
       <span
         className={cn(
           "absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] transition-colors",
-          !arc && "border-foreground/35 group-hover/room:border-foreground",
-          AMBIENT_BG,
+          !arc && "border-foreground/35 text-foreground/35 group-hover/room:border-foreground group-hover/room:text-foreground",
+          status === "abandoned" && "border-dashed",
+          status === "completed" && !arc ? "bg-foreground/35 group-hover/room:bg-foreground" : status !== "completed" && AMBIENT_BG,
         )}
-        style={arc ? { borderColor: arc.color } : undefined}
+        style={{
+          ...(arc ? { borderColor: arc.color } : {}),
+          ...(status === "completed" && arc ? { backgroundColor: arc.color } : {}),
+          ...(status === "dormant" ? { backgroundImage: `conic-gradient(${arc?.color ?? "currentColor"} 0 25%, transparent 0)` } : {}),
+        }}
         data-testid="timeline-ring"
         aria-hidden
       />
@@ -886,6 +927,7 @@ function RoomRow({
           item.title,
           opener && openerText(opener, (name) => t("timelineByName", { name })),
           arc && (rank ? tv("arcEpisode", { name: arc.name, rank }) : tv("arcOf", { name: arc.name })),
+          status !== "active" && tv(`roomStatus.${status}`),
           fullDate,
         ]
           .filter(Boolean)
@@ -907,7 +949,12 @@ function RoomRow({
               {rank}.
             </span>
           )}
-          <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/room:text-foreground">
+          <span
+            className={cn(
+              "text-sm font-medium transition-colors group-hover/room:text-foreground",
+              status === "abandoned" ? "text-foreground/40" : "text-foreground/75",
+            )}
+          >
             {item.title}
           </span>
           {/* « par Persona (@pseudo) » : le persona dans la couleur de son
@@ -948,6 +995,7 @@ function RoomRow({
 function EventRow({
   item,
   day,
+  endLabel,
   canManage,
   dimmed,
   onOpenWiki,
@@ -955,6 +1003,8 @@ function EventRow({
 }: {
   item: TimelineEvent;
   day: number | null;
+  /** Un événement qui dure : sa date de fin, en toutes lettres. */
+  endLabel: string | null;
   canManage: boolean;
   dimmed: boolean;
   onOpenWiki: (slug: string) => void;
@@ -970,12 +1020,17 @@ function EventRow({
         data-testid="timeline-event-mark"
         aria-hidden
       />
-      <div className="ml-[var(--tl-graph-pad,0px)] flex items-start gap-2">
+      <div className="ml-[var(--tl-graph-pad,0px)] flex items-start gap-2" data-event-text>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold leading-5 text-foreground">
             <span className="sr-only">{tv("eventLabel")} : </span>
             {item.title}
           </p>
+          {endLabel && (
+            <p className="text-xs text-muted-foreground" data-testid="timeline-event-until">
+              {tv("eventUntil", { date: endLabel })}
+            </p>
+          )}
           {item.description && (
             <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{item.description}</p>
           )}
@@ -1001,6 +1056,43 @@ function EventRow({
           </button>
         )}
       </div>
+    </li>
+  );
+}
+
+/** La fin d'un événement qui dure : un losange creux, « Fin : … ». */
+function EventEndRow({ item, day, dimmed }: { item: TimelineEventEndItem; day: number | null; dimmed: boolean }) {
+  const tv = useTranslations("worlds.timelineView");
+  return (
+    <li className={cn("relative transition-opacity", dimmed && "opacity-30")} data-event-end-id={item.eventId}>
+      <DayGutter day={day} />
+      <span
+        className={cn("absolute -left-[32px] top-[5px] size-2.5 rotate-45 border-[1.5px] border-foreground/60", AMBIENT_BG)}
+        data-testid="timeline-event-end-mark"
+        aria-hidden
+      />
+      <p className="ml-[var(--tl-graph-pad,0px)] text-xs leading-5 text-muted-foreground">
+        {tv("eventEnds", { title: item.title })}
+      </p>
+    </li>
+  );
+}
+
+/** Une fête du calendrier : une étincelle sur le fil, son nom en retrait. */
+function HolidayRow({ item, day, dimmed }: { item: TimelineHolidayItem; day: number | null; dimmed: boolean }) {
+  const tv = useTranslations("worlds.timelineView");
+  return (
+    <li className={cn("relative transition-opacity", dimmed && "opacity-30")} data-holiday-id={item.id}>
+      <DayGutter day={day} />
+      <Sparkles
+        className={cn("absolute -left-[34px] top-1 size-3 rounded-full text-muted-foreground", AMBIENT_BG)}
+        data-testid="timeline-holiday-mark"
+        aria-hidden
+      />
+      <p className="ml-[var(--tl-graph-pad,0px)] text-xs italic leading-5 text-muted-foreground">
+        <span className="sr-only">{tv("holidayLabel")} : </span>
+        {item.name}
+      </p>
     </li>
   );
 }
