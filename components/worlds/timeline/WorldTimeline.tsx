@@ -26,6 +26,16 @@ type YearSection = { year: number; rooms: TimelineRoom[] };
 type Opener = { name: string; persona: string | null; personaColor: string | null };
 type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
 
+/**
+ * Le fond ambiant de la page, pour ce qui découpe le fil ou les filets (le
+ * nom d'un mois, un anneau) et pour la barre des périodes : sous `lg`, c'est
+ * celui du `<body>` qu'on voit ; `<main>` ne pose `bg-background` qu'à partir
+ * de `lg` (voir AppShell.tsx). Un `bg-background` seul faisait des pavés
+ * visibles sur mobile.
+ */
+const AMBIENT_BG = "bg-body lg:bg-background";
+const AMBIENT_BG_TRANSLUCENT = "bg-body/90 lg:bg-background/90";
+
 /** Années regroupées par tranches de RANGE_SPAN pour les pastilles de tête. */
 const RANGE_SPAN = 5;
 
@@ -165,7 +175,7 @@ export function WorldTimeline({
             <nav
               ref={navRef}
               aria-label={t("timelineRanges")}
-              className="sticky top-0 z-10 flex gap-2 overflow-x-auto bg-background/90 px-5 py-3 backdrop-blur"
+              className={cn("sticky top-0 z-10 flex gap-2 overflow-x-auto px-5 py-3 backdrop-blur", AMBIENT_BG_TRANSLUCENT)}
             >
               {ranges.map((r) => (
                 <button
@@ -317,7 +327,7 @@ function EntryRow({
           <span className="absolute -left-7 right-0 top-0 border-t border-dashed border-border" aria-hidden />
           {monthName && (
             <span
-              className="absolute left-0 top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap bg-background px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
+              className={cn("absolute left-0 top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
               data-testid="timeline-month-label"
               aria-hidden
             >
@@ -330,7 +340,8 @@ function EntryRow({
           ou le titre quand il n'y en a pas — et qui fonce au survol. */}
       <span
         className={cn(
-          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-border bg-background transition-colors group-hover/entry:border-foreground",
+          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-border transition-colors group-hover/entry:border-foreground",
+          AMBIENT_BG,
           short ? (newMonth ? "top-[18px]" : "top-0.5") : (newMonth ? "top-5" : "top-1"),
         )}
         data-testid="timeline-ring"

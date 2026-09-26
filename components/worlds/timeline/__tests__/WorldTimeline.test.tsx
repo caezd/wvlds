@@ -120,7 +120,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(noms.map((l) => l.textContent)).toEqual(["Mars"]);
     // Posé sur le filet (centré sur lui, fond qui le découpe), en capitales.
     expect(noms[0].className.split(" ")).toEqual(
-      expect.arrayContaining(["top-0", "-translate-y-1/2", "bg-background", "uppercase"]),
+      expect.arrayContaining(["top-0", "-translate-y-1/2", "bg-body", "uppercase"]),
     );
     expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
   });
@@ -244,5 +244,24 @@ describe("WorldTimeline — qui a ouvert le salon", () => {
     expect(screen.getByRole("button", { name: /Prologue/ })).toBeInTheDocument();
     expect(screen.queryByTestId("timeline-opener")).toBeNull();
     erreur.mockRestore();
+  });
+});
+
+describe("WorldTimeline — fond ambiant", () => {
+  // Sous `lg`, `<main>` est transparent : c'est le `<body>` qu'on voit. Ce qui
+  // découpe le fil ou les filets doit peindre ce fond-là, pas `bg-background`.
+  const ambiant = (el: Element) => {
+    const classes = el.className.split(" ");
+    expect(classes).toContain("lg:bg-background");
+    expect(classes.some((c) => c.startsWith("bg-body"))).toBe(true);
+    expect(classes).not.toContain("bg-background");
+  };
+
+  it("anneaux, nom du mois et barre des périodes suivent le fond de la page", () => {
+    frise([room("a", "Début", 1, 0, 1), room("b", "Mars", 1, 2, 1), room("c", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
+    for (const anneau of screen.getAllByTestId("timeline-ring")) ambiant(anneau);
+    ambiant(screen.getByTestId("timeline-month-label"));
+    const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
+    expect(nav.className.split(" ")).toEqual(expect.arrayContaining(["bg-body/90", "lg:bg-background/90"]));
   });
 });

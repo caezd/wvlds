@@ -24,7 +24,11 @@ export function WorldPanelHeader({
   right?: ReactNode;
 }) {
   return (
-    <div className="flex h-header-height shrink-0 items-center gap-1 bg-background border-b p-2 touch:p-2.5">
+    // Le fond ambiant, pas `bg-background` seul : sous `lg`, `<main>` est
+    // transparent et c'est le `<body>` qu'on voit (voir AppShell.tsx) — les
+    // panneaux, transparents eux aussi, le laissent paraître ; un en-tête en
+    // `bg-background` y faisait une bande plus claire.
+    <div className="flex h-header-height shrink-0 items-center gap-1 bg-body lg:bg-background border-b p-2 touch:p-2.5">
       <MobileDrawerOpenButton />
       <div className="h-8 w-8 flex items-center justify-center">{icon}</div>
       <span className="text-sm font-semibold">{title}</span>

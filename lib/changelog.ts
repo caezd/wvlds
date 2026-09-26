@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09-26",
+    category: "Correctif",
+    area: "Monde",
+    text: "Sur les écrans étroits, l’en-tête des onglets d’un monde et la chronologie reprennent le fond de la page, sans bandes ni pavés plus clairs.",
+  },
+  {
+    date: "2026-09-26",
     category: "Interface",
     text: "Le journal des versions se filtre par catégorie puis par sous-catégorie (Monde, Wiki, Carte…) ; chaque nouvelle entrée porte sa date du jour, et les entrées d’un mois tiennent dans une liste compacte.",
   },
