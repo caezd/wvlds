@@ -641,9 +641,9 @@
       "suiteStyles": {
         "rail": "Rail continu",
         "graph": "Graphe à côté du fil",
-        "hover": "Au survol seulement",
-        "dashed": "Pointillés fléchés"
-      }
+        "hover": "Au survol seulement"
+      },
+      "suiteDashed": "Pointillés fléchés"
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",

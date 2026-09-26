@@ -64,6 +64,15 @@ const AMBIENT_BG_TRANSLUCENT = "bg-body/90 lg:bg-background/90";
 /** Le style des lignes de suite, choisi par chacun et gardé dans son
  *  navigateur (une préférence de lecture, pas un réglage du monde). */
 const SUITE_STYLE_KEY = "wvlds:timeline-suite-style";
+const SUITE_DASHED_KEY = "wvlds:timeline-suite-dashed";
+
+function readSuiteDashed(): boolean {
+  try {
+    return window.localStorage.getItem(SUITE_DASHED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 function readSuiteStyle(): SuiteStyle {
   try {
@@ -117,8 +126,16 @@ export function WorldTimeline({
   const [arcsOpen, setArcsOpen] = useState(false);
   const [lanes, setLanes] = useState(0);
   const [suiteStyle, setSuiteStyleState] = useState<SuiteStyle>("rail");
+  const [suiteDashed, setSuiteDashedState] = useState(false);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
-  useEffect(() => { setSuiteStyleState(readSuiteStyle()); }, []);
+  useEffect(() => {
+    setSuiteStyleState(readSuiteStyle());
+    setSuiteDashedState(readSuiteDashed());
+  }, []);
+  function setSuiteDashed(next: boolean) {
+    setSuiteDashedState(next);
+    try { window.localStorage.setItem(SUITE_DASHED_KEY, next ? "1" : "0"); } catch { /* navigation privée */ }
+  }
   function setSuiteStyle(next: SuiteStyle) {
     setSuiteStyleState(next);
     setHoveredRoom(null);
@@ -268,6 +285,8 @@ export function WorldTimeline({
                 categories={data.categories.map((c) => ({ id: c.id, label: c.title }))}
                 suiteStyle={suiteStyle}
                 onSuiteStyle={setSuiteStyle}
+                suiteDashed={suiteDashed}
+                onSuiteDashed={setSuiteDashed}
               />
               {canManage && (
                 <>
@@ -365,7 +384,7 @@ export function WorldTimeline({
                   );
                 })}
               </ol>
-              <SuiteLinks containerRef={listRef} links={drawnLinks} style={suiteStyle} version={layoutVersion} onLanes={onLanes} />
+              <SuiteLinks containerRef={listRef} links={drawnLinks} style={suiteStyle} dashed={suiteDashed} version={layoutVersion} onLanes={onLanes} />
             </div>
           )}
         </div>

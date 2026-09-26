@@ -8,15 +8,17 @@ export type SuiteLink = SuitePair;
 /**
  * Comment la frise relie un salon à sa suite (choisi par chacun, voir
  * WorldTimeline) :
- * - `rail`   : un trait par chaîne dans la marge droite, une pastille par
- *              salon — façon plan de métro ;
- * - `graph`  : des couloirs entre le fil et les titres, où chaque anneau se
- *              branche — façon historique git ;
- * - `hover`  : rien au repos ; la chaîne du salon survolé s'allume ;
- * - `dashed` : une fine accolade pointillée par paire, fléchée vers la suite.
+ * - `rail`  : un trait par chaîne dans la marge droite, une pastille par
+ *             salon — façon plan de métro ;
+ * - `graph` : des couloirs entre le fil et les titres, où chaque anneau se
+ *             branche — façon historique git ;
+ * - `hover` : rien au repos ; la chaîne du salon survolé s'allume, une
+ *             accolade par paire.
+ * Indépendamment du style, `dashed` passe les traits en pointillés et fléche
+ * chaque salon qui est une suite.
  */
-export type SuiteStyle = "rail" | "graph" | "hover" | "dashed";
-export const SUITE_STYLES: readonly SuiteStyle[] = ["rail", "graph", "hover", "dashed"];
+export type SuiteStyle = "rail" | "graph" | "hover";
+export const SUITE_STYLES: readonly SuiteStyle[] = ["rail", "graph", "hover"];
 
 type Point = { id: string; y: number };
 type Drawn =
@@ -27,7 +29,7 @@ const EDGE = 12;
 const STUB = 14;
 const RADIUS = 6;
 /** Écart entre couloirs, par style. */
-const LANE_GAP: Record<SuiteStyle, number> = { rail: 10, graph: 8, hover: 10, dashed: 6 };
+const LANE_GAP: Record<SuiteStyle, number> = { rail: 10, graph: 8, hover: 10 };
 /** Distance entre le fil et le premier couloir du graphe. */
 export const GRAPH_OFFSET = 14;
 
@@ -41,12 +43,15 @@ export function SuiteLinks({
   containerRef,
   links,
   style,
+  dashed = false,
   version,
   onLanes,
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
   links: SuiteLink[];
   style: SuiteStyle;
+  /** Traits pointillés, et une flèche vers chaque salon qui est une suite. */
+  dashed?: boolean;
   /** Change quand la frise change (filtres, données) : force une mesure. */
   version: string;
   onLanes: (count: number) => void;
@@ -121,9 +126,14 @@ export function SuiteLinks({
 
   if (drawn.length === 0) return null;
   const gap = LANE_GAP[style];
+  // Les salons qui sont une suite : eux reçoivent la flèche.
+  const suites = new Set(links.map((l) => l.to));
+  const dash = dashed ? "3 3" : undefined;
+  const arrowTo = (id: string) => (dashed && suites.has(id) ? "url(#suite-arrow)" : undefined);
   const strokeProps = (color: string | null) => ({
     className: color ? undefined : "stroke-foreground/30",
     style: color ? { stroke: color, opacity: 0.85 } : undefined,
+    strokeDasharray: dash,
   });
   const fillProps = (color: string | null) => ({
     className: color ? undefined : "fill-foreground/40",
@@ -136,11 +146,13 @@ export function SuiteLinks({
       aria-hidden
       data-testid="timeline-suite-links"
       data-style={style}
+      data-dashed={dashed || undefined}
     >
-      {style === "dashed" && (
+      {dashed && (
         <defs>
-          <marker id="suite-arrow" viewBox="0 0 6 6" refX="1" refY="3" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 6 0 L 0 3 L 6 6 z" className="fill-foreground/50" />
+          {/* Une pointe dans le sens du trait : chaque trait fléché finit sur la suite. */}
+          <marker id="suite-arrow" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 6 3 L 0 6 z" className="fill-foreground/60" />
           </marker>
         </defs>
       )}
@@ -153,7 +165,15 @@ export function SuiteLinks({
               <path d={`M ${x} ${d.top} V ${d.bottom}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color)} />
               {d.points.map((p) => (
                 <g key={p.id}>
-                  <path d={`M ${box.filX + 6} ${p.y} H ${x}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color)} />
+                  {/* Du couloir vers l'anneau : la flèche, s'il y en a une, y aboutit. */}
+                  <path
+                    d={`M ${x} ${p.y} H ${box.filX + 7}`}
+                    fill="none"
+                    strokeWidth={1.5}
+                    markerEnd={arrowTo(p.id)}
+                    data-arrow={arrowTo(p.id) ? "" : undefined}
+                    {...strokeProps(d.color)}
+                  />
                   <circle cx={x} cy={p.y} r={2.5} {...fillProps(d.color)} />
                 </g>
               ))}
@@ -168,14 +188,22 @@ export function SuiteLinks({
               <path d={`M ${x} ${d.top} V ${d.bottom}`} fill="none" strokeWidth={2} strokeLinecap="round" {...strokeProps(d.color)} />
               {d.points.map((p) => (
                 <g key={p.id}>
-                  <path d={`M ${x - STUB} ${p.y} H ${x}`} fill="none" strokeWidth={1} {...strokeProps(d.color)} />
+                  {/* Du rail vers le salon : la flèche, s'il y en a une, y aboutit. */}
+                  <path
+                    d={`M ${x} ${p.y} H ${x - STUB}`}
+                    fill="none"
+                    strokeWidth={1}
+                    markerEnd={arrowTo(p.id)}
+                    data-arrow={arrowTo(p.id) ? "" : undefined}
+                    {...strokeProps(d.color)}
+                  />
                   <circle cx={x} cy={p.y} r={3.5} {...fillProps(d.color)} />
                 </g>
               ))}
             </g>
           );
         }
-        // Une accolade par paire : pleine (survol), ou pointillée et fléchée.
+        // Une accolade par paire (survol) ; pointillée, elle finit fléchée sur la suite.
         const x = box.width - EDGE - d.lane * gap;
         const x0 = x - STUB;
         const r = Math.min(RADIUS, (d.bottom - d.top) / 2);
@@ -187,7 +215,6 @@ export function SuiteLinks({
           `Q ${x} ${d.bottom} ${x - r} ${d.bottom}`,
           `H ${x0}`,
         ].join(" ");
-        const dashed = style === "dashed";
         // La flèche pointe vers la suite : le chemin doit finir sur elle.
         const endsOnSuite = d.toY === d.bottom;
         const reversed = [
@@ -205,7 +232,6 @@ export function SuiteLinks({
             data-suite={d.key}
             fill="none"
             strokeWidth={dashed ? 1 : 1.5}
-            strokeDasharray={dashed ? "3 3" : undefined}
             markerEnd={dashed ? "url(#suite-arrow)" : undefined}
             {...strokeProps(d.color)}
           />

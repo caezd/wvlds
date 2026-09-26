@@ -641,9 +641,9 @@
       "suiteStyles": {
         "rail": "Continuous rail",
         "graph": "Graph beside the line",
-        "hover": "On hover only",
-        "dashed": "Dotted arrows"
-      }
+        "hover": "On hover only"
+      },
+      "suiteDashed": "Dotted arrows"
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",
