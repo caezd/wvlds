@@ -61,18 +61,25 @@ describe("WorldTimeline — frise verticale", () => {
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
   });
 
-  it("la date, dans une pastille avant le titre, à sa hauteur", () => {
+  it("la date au-dessus du titre, l'anneau centré sur elle", () => {
     frise([room("a", "Prologue", 1, 1, 19), room("b", "Une année entière", 3, null, null)]);
     const ligne = screen.getByRole("button", { name: /Prologue/ });
-    const pastille = within(ligne).getByTestId("timeline-date-pill");
-    expect(pastille).toHaveTextContent("19 Février");
-    // Avant le titre, sur sa première ligne, d'une largeur fixe pour que les
-    // titres s'alignent en colonne.
-    expect(pastille.compareDocumentPosition(within(ligne).getByText("Prologue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(pastille.className.split(" ")).toEqual(expect.arrayContaining(["top-0", "h-5", "w-[5.5rem]", "rounded-full"]));
-    // Une date qui s'arrête à l'année : un tiret.
+    const date = within(ligne).getByTestId("timeline-date");
+    expect(date).toHaveTextContent("19 Février");
+    // Avant le titre, sur une ligne de 16px…
+    expect(date.compareDocumentPosition(within(ligne).getByText("Prologue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(date.className).toContain("leading-4");
+    // …sur laquelle l'anneau (12px) se centre : 2px au-dessus.
+    const anneau = ligne.closest("li")!.querySelector("[data-testid='timeline-ring']")!;
+    expect(anneau.className.split(" ")).toEqual(expect.arrayContaining(["size-3", "top-0.5"]));
+    // Plus de pastille de date.
+    expect(screen.queryByTestId("timeline-date-pill")).toBeNull();
+
+    // Une date qui s'arrête à l'année : pas de ligne de date, l'anneau se
+    // centre sur le titre.
     const annee = screen.getByRole("button", { name: /Une année entière/ });
-    expect(within(annee).getByTestId("timeline-date-pill")).toHaveTextContent("—");
+    expect(within(annee).queryByTestId("timeline-date")).toBeNull();
+    expect(annee.closest("li")!.querySelector("[data-testid='timeline-ring']")!.className.split(" ")).toContain("top-1");
   });
 
   it("l'année en très grands chiffres, sa légende en exposant, sans rouge", () => {

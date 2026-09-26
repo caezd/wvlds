@@ -31,8 +31,8 @@ const RANGE_SPAN = 5;
 
 /**
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
- * grands chiffres, au centre un fil, et pour chaque salon sa date dans une
- * pastille à cheval sur le fil, puis son titre. Un filet sépare les
+ * grands chiffres, au centre un fil, et pour chaque salon un anneau sur le
+ * fil, sa date puis son titre. Un filet sépare les
  * années, un filet chaque mois (son nom posé dessus, en capitales) ; la date
  * actuelle du monde barre la frise d'un trait rouge plein, à son mois, et la
  * frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
@@ -305,12 +305,10 @@ function EntryRow({
   const label = room.title ?? room.name ?? t("timelineUntitled");
   const date = room.timeline_date!;
   const monthName = date.month !== null ? (config.month_names[date.month] ?? null) : null;
-  // « 19 Février » ; un tiret quand la date s'arrête à l'année.
-  const short = [date.day, monthName].filter((v) => v !== null && v !== undefined).join(" ") || "—";
+  // « 19 Février » ; rien quand la date s'arrête à l'année.
+  const short = [date.day, monthName].filter((v) => v !== null && v !== undefined).join(" ");
   return (
-    // `pl-[3.75rem]` : la place de la pastille de date, posée à cheval sur le
-    // fil — les titres s'alignent ainsi en colonne, quelle que soit la date.
-    <li className={cn("group/entry relative pl-[3.75rem]", newMonth && "pt-4")} data-new-month={newMonth || undefined}>
+    <li className={cn("group/entry relative", newMonth && "pt-4")} data-new-month={newMonth || undefined}>
       {/* Le filet d'un nouveau mois, en pointillés, du fil jusqu'au bord, à
           mi-chemin du salon précédent ; le nom du mois posé dessus, en petites
           capitales, dans l'alignement des titres. */}
@@ -319,7 +317,7 @@ function EntryRow({
           <span className="absolute -left-7 right-0 top-0 border-t border-dashed border-border" aria-hidden />
           {monthName && (
             <span
-              className="absolute left-[3.75rem] top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap bg-background px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
+              className="absolute left-0 top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap bg-background px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
               data-testid="timeline-month-label"
               aria-hidden
             >
@@ -328,6 +326,16 @@ function EntryRow({
           )}
         </>
       )}
+      {/* Un anneau creux sur le fil, centré sur la première ligne — la date,
+          ou le titre quand il n'y en a pas — et qui fonce au survol. */}
+      <span
+        className={cn(
+          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-foreground/40 bg-background transition-colors group-hover/entry:border-foreground",
+          short ? (newMonth ? "top-[18px]" : "top-0.5") : (newMonth ? "top-5" : "top-1"),
+        )}
+        data-testid="timeline-ring"
+        aria-hidden
+      />
       <button
         type="button"
         onClick={onClick}
@@ -340,20 +348,13 @@ function EntryRow({
           .join(", ")}
         className="flex max-w-full flex-col items-start rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {/* La date, dans une pastille allongée à cheval sur le fil, à la
-            hauteur du titre ; elle fonce au survol. */}
-        <span
-          className={cn(
-            "absolute -left-[38px] flex h-5 w-[5.5rem] items-center justify-center rounded-full border border-foreground/30 bg-background px-2",
-            "truncate text-[11px] font-medium tabular-nums text-muted-foreground transition-colors",
-            "group-hover/entry:border-foreground group-hover/entry:text-foreground",
-            newMonth ? "top-4" : "top-0",
-          )}
-          data-testid="timeline-date-pill"
-          aria-hidden
-        >
-          {short}
-        </span>
+        {/* La date, au-dessus du titre, sur une ligne de 16px : l'anneau
+            se centre dessus. */}
+        {short && (
+          <span className="text-xs leading-4 tabular-nums text-muted-foreground" data-testid="timeline-date" aria-hidden>
+            {short}
+          </span>
+        )}
         {/* Au survol, la ligne s’éclaircit seulement (titre atténué au repos) : pas de fond. */}
         <span className="min-w-0 break-words">
           <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/entry:text-foreground">
