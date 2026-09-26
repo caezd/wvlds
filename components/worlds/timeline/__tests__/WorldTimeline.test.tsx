@@ -81,7 +81,7 @@ describe("WorldTimeline — frise verticale", () => {
   it("une section par année, dans l'ordre, les salons triés par mois puis jour", () => {
     frise([room("c", "Retour", 3, 0, 4), room("b", "Suite", 1, 2, 2), room("a", "Prologue", 1, 0, 9)]);
 
-    expect(annees().map((h) => h.textContent)).toEqual(["1An", "3An"]);
+    expect(annees().map((h) => h.textContent)).toEqual(["An 1", "An 3"]);
     const an1 = annees()[0].closest("li")!;
     const titres = within(an1).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
@@ -136,15 +136,23 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByTestId("timeline-branch")).toBeNull();
   });
 
-  it("l'année en très grands chiffres, sa légende en petites capitales sur la ligne de base, sans rouge", () => {
+  it("l'année, une borne sur le fil : un carré plein, « An 1 » posé sur la bordure, sans rouge", () => {
     frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
     const an1 = annees()[0];
-    expect(within(an1).getByText("1").className).toMatch(/text-4xl.*sm:text-6xl/);
-    expect(an1.className.split(" ")).toContain("items-baseline");
-    const legende = within(an1).getByTestId("timeline-year-caption");
-    expect(legende).toHaveTextContent("An des Cendres");
-    expect(legende.className.split(" ")).toEqual(expect.arrayContaining(["uppercase", "text-muted-foreground"]));
-    expect(legende.className).not.toMatch(/accent|red/);
+    expect(an1.textContent).toBe("An 1 des Cendres");
+    // Sur la bordure (centrée sur elle, fond qui la découpe), dans
+    // l'alignement des titres, graphe compris.
+    expect(an1.className.split(" ")).toEqual(expect.arrayContaining([
+      "top-0", "-translate-y-1/2", "bg-body", "left-[calc(1.75rem+var(--tl-graph-pad,0px))]",
+    ]));
+    expect(within(an1).getByText("1").className.split(" ")).toEqual(expect.arrayContaining(["text-sm", "font-semibold", "text-foreground"]));
+    expect(within(an1).getByText("An").className).toContain("text-muted-foreground");
+    expect(an1.innerHTML).not.toMatch(/accent|red/);
+    // Le carré, sur le fil, à la hauteur de la bordure.
+    const borne = within(an1.closest("[data-year]") as HTMLElement).getByTestId("timeline-year-marker");
+    expect(borne.className.split(" ")).toEqual(expect.arrayContaining(["-left-[5px]", "top-0", "-translate-y-1/2", "bg-foreground"]));
+    // Plus de très grands chiffres.
+    expect(an1.innerHTML).not.toMatch(/text-4xl|text-6xl/);
   });
 
   it("le premier mois de l'année, posé sur sa bordure, calé sur le jour, avec la séparation des autres mois", () => {
@@ -195,7 +203,7 @@ describe("WorldTimeline — frise verticale", () => {
     // années et marge des suites comprises.
     const filet = within(ligne("Trois mars") as HTMLElement).getByTestId("timeline-month-rule");
     expect(filet.className.split(" ")).toEqual(expect.arrayContaining([
-      "border-dashed", "border-border", "-left-[9rem]", "sm:-left-[12rem]", "-right-[var(--tl-right-pad,20px)]",
+      "border-dashed", "border-border", "-left-[9rem]", "-right-[var(--tl-right-pad,20px)]",
     ]));
     // Le nom du nouveau mois — un seul ici.
     const noms = screen.getAllByTestId("timeline-month-label");
@@ -242,7 +250,7 @@ describe("WorldTimeline — frise verticale", () => {
 
   it("l'année actuelle a sa section même sans salon, pour porter son repère", () => {
     frise([room("a", "Jadis", 0, 0, 1)], { ...CONFIG, current_year: 4 });
-    expect(annees().map((h) => h.textContent)).toEqual(["0An", "4An"]);
+    expect(annees().map((h) => h.textContent)).toEqual(["An 0", "An 4"]);
     expect(screen.getByTestId("timeline-now")).toBeInTheDocument();
   });
 
