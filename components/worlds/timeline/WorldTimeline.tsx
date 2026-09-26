@@ -313,7 +313,28 @@ export function WorldTimeline({
 
   // Les périodes suivent le défilement : celle de la dernière année passée
   // sous la tête.
+  // Le bandeau de l'année collé sous la tête : celle dont le haut est passé
+  // sous la tête et le bas pas encore. Au repos, un bandeau est transparent
+  // et laisse voir les lignes de suite ; collé, il les couvre.
+  const [stuckYear, setStuckYear] = useState<number | null>(null);
+  function updateStuckYear() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const headBottom = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0);
+    let stuck: number | null = null;
+    for (const s of sections) {
+      const r = sectionEl(s.year)?.getBoundingClientRect();
+      if (r && r.top < headBottom - 0.5 && r.bottom > headBottom) stuck = s.year;
+    }
+    setStuckYear(stuck);
+  }
+  useEffect(() => {
+    updateStuckYear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- quand la frise ou la tête changent
+  }, [sections, headHeight]);
+
   function onScroll() {
+    updateStuckYear();
     const el = scrollRef.current;
     if (!el || periods.length < 2) return;
     const seuil = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0) + 8;
@@ -483,6 +504,7 @@ export function WorldTimeline({
                         ranks={ranks}
                         canManage={canManage}
                         highlight={highlight}
+                        stuck={stuckYear === section.year}
                         onOpenRoom={(id) => router.push(`/c/${id}`)}
                         onOpenWiki={(slug) => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`)}
                         onEditEvent={(id) => {
@@ -567,6 +589,7 @@ function YearBlock({
   ranks,
   canManage,
   highlight,
+  stuck,
   onOpenRoom,
   onOpenWiki,
   onEditEvent,
@@ -579,6 +602,8 @@ function YearBlock({
   ranks: ReadonlyMap<string, number>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
+  /** Le bandeau de l'année est collé sous la tête. */
+  stuck: boolean;
   onOpenRoom: (id: string) => void;
   onOpenWiki: (slug: string) => void;
   onEditEvent: (id: string) => void;
@@ -635,16 +660,19 @@ function YearBlock({
       {/* L'année, un bandeau sur toute la largeur du conteneur (marges de la
           liste comprises), collé sous la tête le temps de son année : on sait
           toujours où l'on est, et deux années se séparent franchement. Au-
-          dessus des salons qui défilent dessous (z-[1]), mais sous les lignes
-          de suite (z-[2], voir SuiteLinks) et sous la tête (z-10). Le fil
-          s'y interrompt ; un trait dessus et dessous (aucun au-dessus de la
-          toute première année). */}
+          dessus des salons et des lignes de suite (z-[3] ; z-[2] pour les
+          lignes, voir SuiteLinks), sous la tête (z-10). Au repos, il est
+          transparent : les lignes de suite le traversent ; collé, il prend
+          le fond de la page et les couvre. Le fil s'y interrompt ; un
+          trait dessus et dessous (aucun au-dessus de la toute première
+          année). */}
       <h3
         className={cn(
-          "sticky top-[var(--tl-head,0px)] z-[1] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-y border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)] leading-none backdrop-blur",
-          AMBIENT_BG_TRANSLUCENT,
+          "sticky top-[var(--tl-head,0px)] z-[3] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-y border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)] leading-none",
+          stuck && AMBIENT_BG,
         )}
         data-testid="timeline-year-band"
+        data-stuck={stuck || undefined}
       >
         {/* Les espaces entre les parties : invisibles en flex, mais lus
             (« An 1 », pas « An1 »). */}

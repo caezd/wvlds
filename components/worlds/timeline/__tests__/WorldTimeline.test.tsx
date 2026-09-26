@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
@@ -159,18 +159,42 @@ describe("WorldTimeline — frise verticale", () => {
     db.tables.chatroom_sequels = [suite("a", "b")];
     frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
     const bandeau = annees()[0];
-    // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head` ;
-    // translucide, comme elle.
-    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining([
-      "sticky", "top-[var(--tl-head,0px)]", "backdrop-blur",
-    ]));
-    // Au-dessus des salons (z-[1]), sous les lignes de suite (z-[2]).
-    expect(bandeau.className.split(" ")).toContain("z-[1]");
+    // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
+    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "top-[var(--tl-head,0px)]"]));
+    // Au-dessus des salons et des lignes de suite (z-[2]), qu'il ne couvre
+    // qu'une fois collé : au repos, il est transparent.
+    expect(bandeau.className.split(" ")).toContain("z-[3]");
     expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
+    expect(bandeau).not.toHaveAttribute("data-stuck");
+    expect(bandeau.className).not.toMatch(/(^|\s)(lg:)?bg-/);
     // Le fil ne le traverse pas.
     expect(within(bandeau).queryByTestId("timeline-year-band-fil")).toBeNull();
     expect(bandeau.querySelector(".w-px")).toBeNull();
     expect(screen.getByTestId("timeline-scroll").style.getPropertyValue("--tl-head")).toMatch(/^\d+px$/);
+  });
+
+  it("collé, le bandeau prend le fond de la page et couvre les lignes ; revenu au repos, il redevient transparent", () => {
+    frise([room("a", "Prologue", 1, 0, 1), room("b", "Plus tard", 2, 0, 1)]);
+    const scroll = screen.getByTestId("timeline-scroll");
+    const [an1, an2] = annees();
+    const section1 = an1.closest("[data-year]") as HTMLElement;
+    const section2 = an2.closest("[data-year]") as HTMLElement;
+    // La tête mesure 0 sous jsdom : son bas est le haut du défilement (100).
+    const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+    scroll.getBoundingClientRect = () => rect(100, 600);
+    // L'an 1 est passé sous la tête, l'an 2 pas encore.
+    section1.getBoundingClientRect = () => rect(40, 300);
+    section2.getBoundingClientRect = () => rect(300, 800);
+    fireEvent.scroll(scroll);
+    expect(an1).toHaveAttribute("data-stuck", "true");
+    expect(an1.className.split(" ")).toEqual(expect.arrayContaining(["bg-body", "lg:bg-background"]));
+    expect(an2).not.toHaveAttribute("data-stuck");
+    // Revenu en haut : plus rien de collé.
+    section1.getBoundingClientRect = () => rect(100, 360);
+    section2.getBoundingClientRect = () => rect(360, 860);
+    fireEvent.scroll(scroll);
+    expect(an1).not.toHaveAttribute("data-stuck");
+    expect(an1.className).not.toMatch(/(^|\s)(lg:)?bg-/);
   });
 
   it("le premier mois de l'année, sous le bandeau, calé sur le jour", () => {
