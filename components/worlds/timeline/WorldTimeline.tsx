@@ -541,7 +541,12 @@ function SectionWithAge({
     : `${config.year_label} ${age.from_year} – ${age.to_year}`;
   return (
     <>
-      <li className="border-t border-border pb-1 pt-6 first:border-t-0 first:pt-2" data-testid="timeline-age">
+      <li
+        // 32px jusqu'à la bordure de sa première année, où se pose la borne :
+        // la même séparation qu'entre deux mois.
+        className="border-t border-border pb-8 pt-6 first:border-t-0 first:pt-2"
+        data-testid="timeline-age"
+      >
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{age.name}</p>
         <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">{bounds}</p>
       </li>
@@ -549,6 +554,10 @@ function SectionWithAge({
     </>
   );
 }
+
+/** La légende d'une année (« Eon », le nom d'ère) : petites capitales,
+ *  plus appuyées que celles des mois. */
+const YEAR_CAPTION = "text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground/60";
 
 function YearBlock({
   section,
@@ -645,21 +654,21 @@ function YearBlock({
           data-testid="timeline-year-sticky"
         >
           <span
-            className="absolute -left-[5px] top-0 size-2.5 -translate-y-1/2 rounded-[2px] bg-foreground"
+            className="absolute -left-[7px] top-0 size-3.5 -translate-y-1/2 rounded-[3px] bg-foreground"
             data-testid="timeline-year-marker"
             aria-hidden
           />
           <h3
-            className={cn("absolute left-[calc(1.75rem+var(--tl-graph-pad,0px))] top-0 flex -translate-x-2 -translate-y-1/2 items-baseline gap-1 whitespace-nowrap px-2 leading-none", AMBIENT_BG)}
+            className={cn("absolute left-[calc(1.75rem+var(--tl-graph-pad,0px))] top-0 flex -translate-x-2 -translate-y-1/2 items-baseline gap-1.5 whitespace-nowrap px-2 leading-none", AMBIENT_BG)}
           >
             {/* Les espaces entre les parties : invisibles en flex, mais lus
                 (« An 1 », pas « An1 »). */}
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{config.year_label}</span>{" "}
-            <span className="text-sm font-semibold tabular-nums text-foreground">{section.year}</span>
+            <span className={YEAR_CAPTION}>{config.year_label}</span>{" "}
+            <span className="text-lg font-bold leading-none tabular-nums text-foreground">{section.year}</span>
             {config.era_name && (
               <>
                 {" "}
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{config.era_name}</span>
+                <span className={YEAR_CAPTION}>{config.era_name}</span>
               </>
             )}
           </h3>

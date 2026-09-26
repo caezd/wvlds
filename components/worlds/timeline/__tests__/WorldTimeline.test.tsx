@@ -145,12 +145,14 @@ describe("WorldTimeline — frise verticale", () => {
     expect(an1.className.split(" ")).toEqual(expect.arrayContaining([
       "top-0", "-translate-y-1/2", "bg-body", "left-[calc(1.75rem+var(--tl-graph-pad,0px))]",
     ]));
-    expect(within(an1).getByText("1").className.split(" ")).toEqual(expect.arrayContaining(["text-sm", "font-semibold", "text-foreground"]));
-    expect(within(an1).getByText("An").className).toContain("text-muted-foreground");
+    // Bien visible : un chiffre plus grand, en gras ; sa légende appuyée.
+    expect(within(an1).getByText("1").className.split(" ")).toEqual(expect.arrayContaining(["text-lg", "font-bold", "text-foreground"]));
+    expect(within(an1).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
+    expect(within(an1).getByText("des Cendres").className).toBe(within(an1).getByText("An").className);
     expect(an1.innerHTML).not.toMatch(/accent|red/);
     // Le carré, sur le fil, à la hauteur de la bordure.
     const borne = within(an1.closest("[data-year]") as HTMLElement).getByTestId("timeline-year-marker");
-    expect(borne.className.split(" ")).toEqual(expect.arrayContaining(["-left-[5px]", "top-0", "-translate-y-1/2", "bg-foreground"]));
+    expect(borne.className.split(" ")).toEqual(expect.arrayContaining(["size-3.5", "-left-[7px]", "top-0", "-translate-y-1/2", "bg-foreground"]));
     // Plus de très grands chiffres.
     expect(an1.innerHTML).not.toMatch(/text-4xl|text-6xl/);
   });
@@ -526,6 +528,8 @@ describe("WorldTimeline — saisons", () => {
     expect(bandeaux).toHaveLength(1);
     expect(bandeaux[0]).toHaveTextContent("Âge des Cendres");
     expect(bandeaux[0]).toHaveTextContent("An 10 – 19");
+    // 32px jusqu'à la bordure de l'année, où se pose sa borne.
+    expect(bandeaux[0].className.split(" ")).toContain("pb-8");
   });
 });
 
