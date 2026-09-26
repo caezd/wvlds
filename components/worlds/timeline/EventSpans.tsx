@@ -56,6 +56,11 @@ export function EventSpans({
   React.useLayoutEffect(() => {
     measure();
   }, [measure, version]);
+  // Au montage, la référence du conteneur (un parent) n'est pas encore posée
+  // pendant les effets de mise en page de ses enfants : on remesure après.
+  React.useEffect(() => {
+    measure();
+  }, [measure]);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -71,6 +76,7 @@ export function EventSpans({
       className="pointer-events-none absolute inset-0 z-[2] h-full w-full overflow-visible"
       aria-hidden
       data-testid="timeline-event-spans"
+      data-layout={version}
     >
       {spans.map((s) => (
         <path

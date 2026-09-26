@@ -540,7 +540,11 @@ export function WorldTimeline({
                 })}
               </ol>
               <SuiteLinks containerRef={listRef} links={suiteLinks} style={suiteStyle} only={onlyChain} thread={thread} version={layoutVersion} onLanes={onLanes} />
-              <EventSpans containerRef={listRef} ids={spanIds} version={layoutVersion} />
+              {/* Se remesure aussi quand la place des lignes de suite change
+                  (style, « au survol seulement ») : les titres, sur lesquels
+                  se calent les barres, se décalent alors sans que la frise
+                  ni la taille de la liste ne changent. */}
+              <EventSpans containerRef={listRef} ids={spanIds} version={`${layoutVersion}:${graphPad}:${rightPad ?? 0}`} />
             </div>
           )}
         </div>

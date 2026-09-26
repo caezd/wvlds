@@ -699,6 +699,32 @@ describe("WorldTimeline — styles des suites", () => {
     });
   });
 
+  it("la barre d'un événement qui dure se remesure quand la place des lignes de suite change", async () => {
+    // Le décalage des titres (graphe, « au survol seulement ») fait partie de
+    // la clé de mesure des barres : rien d'autre ne change alors dans la
+    // frise. (Le calcul lui-même : EventSpans.test.tsx. Ici, le mock de
+    // next-intl rend à chaque fois des fonctions neuves, ce qui remesure tout
+    // de toute façon : seule la clé dit ce que ferait le vrai.)
+    memoire.set("wvlds:timeline-suite-style", "graph");
+    db.tables.chatroom_sequels = [suite("a", "c"), suite("b", "d")];
+    db.tables.world_timeline_events = [{
+      id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 1 },
+      end_date: { year: 1, month: 2, day: 5 }, wiki_page_id: null, wiki_page: null,
+    }];
+    frise([room("a", "Prologue", 1, 0, 2), room("b", "Suite", 1, 1, 2), room("c", "Trois", 1, 1, 3), room("d", "Quatre", 1, 2, 2)]);
+    const cle = () => screen.queryByTestId("timeline-event-spans")?.getAttribute("data-layout") ?? "";
+    // Graphe, deux couloirs (a → c et b → d se chevauchent) : 14 + 8 + 10 = 32px.
+    await vi.waitFor(() => expect(cle()).toMatch(/:32:0$/));
+    // Au survol seulement, un seul couloir réservé : 24px.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.click(await screen.findByRole("checkbox", { name: "Au survol seulement" }));
+    await vi.waitFor(() => expect(cle()).toMatch(/:24:0$/));
+    // En rail, la marge droite réservée change aussi la clé.
+    await user.selectOptions(screen.getByRole("combobox", { name: "Style des suites" }), "Rail continu");
+    await vi.waitFor(() => expect(cle()).toMatch(/:0:\d+$/));
+  });
+
   it("relit le style gardé à l'ouverture", async () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
     db.tables.chatroom_sequels = CHAINE;

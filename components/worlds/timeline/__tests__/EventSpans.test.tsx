@@ -1,0 +1,56 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as React from "react";
+import { render } from "@testing-library/react";
+
+import { EventSpans } from "@/components/worlds/timeline/EventSpans";
+
+// jsdom ne met rien en page : la position du texte de l'événement se règle
+// à la main, comme si les titres se décalaient (graphe des suites).
+let textLeft = 100;
+beforeEach(() => {
+  textLeft = 100;
+  const original = Element.prototype.getBoundingClientRect;
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+    const rect = (top: number, left: number) => ({ top, bottom: top + 20, left, right: left, width: 0, height: 20, x: left, y: top, toJSON: () => ({}) });
+    if (this.hasAttribute("data-event-text")) return rect(0, textLeft);
+    if (this.hasAttribute("data-event-id")) return rect(0, 0);
+    if (this.hasAttribute("data-event-end-id")) return rect(200, 0);
+    return original.call(this);
+  });
+  return () => vi.restoreAllMocks();
+});
+
+/** Une frise réduite : un événement, sa fin, et le calque des barres. */
+function Frise({ version }: { version: string }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const ids = React.useMemo(() => ["e1"], []);
+  return (
+    <div ref={ref}>
+      <ul>
+        <li data-event-id="e1"><div data-event-text>Le siège</div></li>
+        <li data-event-end-id="e1">Fin : Le siège</li>
+      </ul>
+      <EventSpans containerRef={ref} ids={ids} version={version} />
+    </div>
+  );
+}
+
+const barre = () => document.querySelector("[data-event-span='e1']")?.getAttribute("d");
+
+describe("EventSpans", () => {
+  it("une barre de la ligne de l'événement à celle de sa fin, 9px avant le texte", () => {
+    render(<Frise version="v1" />);
+    expect(barre()).toBe("M 91 10 V 210");
+  });
+
+  it("se remesure quand sa clé change, pas à un simple rendu : la frise doit y mettre ce qui décale les titres", () => {
+    const { rerender } = render(<Frise version="graphe:32" />);
+    expect(barre()).toBe("M 91 10 V 210");
+    // Les titres se décalent (place des couloirs), sans autre changement.
+    textLeft = 124;
+    rerender(<Frise version="graphe:32" />);
+    expect(barre()).toBe("M 91 10 V 210");
+    rerender(<Frise version="graphe:24" />);
+    expect(barre()).toBe("M 115 10 V 210");
+  });
+});
