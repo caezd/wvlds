@@ -123,6 +123,17 @@ export function WorldTimeline({
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
+  // La hauteur de la tête collée (recherche, filtres, périodes) : les bornes
+  // des années se collent juste dessous (`--tl-head`).
+  const [headHeight, setHeadHeight] = useState(0);
+  useEffect(() => {
+    const head = headRef.current;
+    if (!head || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setHeadHeight(head.offsetHeight));
+    observer.observe(head);
+    setHeadHeight(head.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const data = useTimelineData(worldId, !!config.show_journals);
 
@@ -327,7 +338,13 @@ export function WorldTimeline({
       {empty && !canManage ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
       ) : (
-        <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto" data-testid="timeline-scroll">
+        <div
+          ref={scrollRef}
+          onScroll={onScroll}
+          className="relative flex-1 overflow-y-auto"
+          style={{ ["--tl-head" as string]: `${headHeight}px` }}
+          data-testid="timeline-scroll"
+        >
           <div ref={headRef} className={cn("sticky top-0 z-10 space-y-3 px-5 py-3 backdrop-blur", AMBIENT_BG_TRANSLUCENT)}>
             {/* Recherche, filtres, gestion */}
             <div className="flex flex-wrap items-center gap-2">
@@ -618,26 +635,35 @@ function YearBlock({
         <span className="absolute inset-y-0 left-0 w-px bg-border" aria-hidden />
         {/* L'année, une borne sur le fil : un carré plein sur la bordure, et
             « Eon 4 » posé dessus, dans l'alignement des titres ; le premier
-            mois, de l'autre côté du fil, reste calé sur le jour. */}
-        <span
-          className="absolute -left-[5px] top-0 size-2.5 -translate-y-1/2 rounded-[2px] bg-foreground"
-          data-testid="timeline-year-marker"
-          aria-hidden
-        />
-        <h3
-          className={cn("absolute left-[calc(1.75rem+var(--tl-graph-pad,0px))] top-0 flex -translate-x-2 -translate-y-1/2 items-baseline gap-1 whitespace-nowrap px-2 leading-none", AMBIENT_BG)}
+            mois, de l'autre côté du fil, reste calé sur le jour.
+            La borne se colle sous la tête au défilement, le temps de son
+            année : un repère sans hauteur (-mt-8 mb-8 le ramènent sur la
+            bordure sans rien décaler), ramené au fil (-ml-7), au-dessus des
+            lignes de suite mais sous la tête (z-[5]). */}
+        <div
+          className="sticky top-[calc(var(--tl-head,0px)+0.75rem)] z-[5] -ml-7 -mt-8 mb-8 h-0"
+          data-testid="timeline-year-sticky"
         >
-          {/* Les espaces entre les parties : invisibles en flex, mais lus
-              (« An 1 », pas « An1 »). */}
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{config.year_label}</span>{" "}
-          <span className="text-sm font-semibold tabular-nums text-foreground">{section.year}</span>
-          {config.era_name && (
-            <>
-              {" "}
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{config.era_name}</span>
-            </>
-          )}
-        </h3>
+          <span
+            className="absolute -left-[5px] top-0 size-2.5 -translate-y-1/2 rounded-[2px] bg-foreground"
+            data-testid="timeline-year-marker"
+            aria-hidden
+          />
+          <h3
+            className={cn("absolute left-[calc(1.75rem+var(--tl-graph-pad,0px))] top-0 flex -translate-x-2 -translate-y-1/2 items-baseline gap-1 whitespace-nowrap px-2 leading-none", AMBIENT_BG)}
+          >
+            {/* Les espaces entre les parties : invisibles en flex, mais lus
+                (« An 1 », pas « An1 »). */}
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{config.year_label}</span>{" "}
+            <span className="text-sm font-semibold tabular-nums text-foreground">{section.year}</span>
+            {config.era_name && (
+              <>
+                {" "}
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{config.era_name}</span>
+              </>
+            )}
+          </h3>
+        </div>
         {/* Le premier mois de l'année, posé sur sa bordure comme les autres
             sur leur filet, calé sur le jour (le texte finit 0.75rem avant le
             fil : 0.25rem + px-2). */}

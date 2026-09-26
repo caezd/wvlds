@@ -155,6 +155,19 @@ describe("WorldTimeline — frise verticale", () => {
     expect(an1.innerHTML).not.toMatch(/text-4xl|text-6xl/);
   });
 
+  it("la borne de l'année se colle sous la tête au défilement, sans rien décaler", () => {
+    frise([room("a", "Prologue", 1, 0, 1)]);
+    const an1 = annees()[0];
+    const colle = an1.parentElement as HTMLElement;
+    expect(colle).toHaveAttribute("data-testid", "timeline-year-sticky");
+    expect(within(colle).getByTestId("timeline-year-marker")).toBeInTheDocument();
+    // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
+    expect(colle.className.split(" ")).toEqual(expect.arrayContaining([
+      "sticky", "top-[calc(var(--tl-head,0px)+0.75rem)]", "h-0", "-mt-8", "mb-8", "-ml-7",
+    ]));
+    expect(screen.getByTestId("timeline-scroll").style.getPropertyValue("--tl-head")).toMatch(/^\d+px$/);
+  });
+
   it("le premier mois de l'année, posé sur sa bordure, calé sur le jour, avec la séparation des autres mois", () => {
     frise([room("a", "Prologue", 1, 0, 3), room("b", "Sans mois", 2, null, null)]);
     const [an1, an2] = annees().map((h) => h.closest("[data-year]") as HTMLElement);
