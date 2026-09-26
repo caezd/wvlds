@@ -185,8 +185,10 @@ describe("WorldTimeline — frise verticale", () => {
     expect(noms[0].className.split(" ")).toEqual(
       expect.arrayContaining(["top-4", "-translate-y-1/2", "bg-body", "uppercase"]),
     );
-    // À gauche du fil, calé à droite de la colonne des années.
-    expect(noms[0].className.split(" ")).toEqual(expect.arrayContaining(["right-[calc(100%+1.75rem)]", "text-right"]));
+    // À gauche du fil, calé à droite sur le jour : le texte finit au même
+    // retrait (2rem + px-2 = 2.5rem, celui du jour).
+    expect(noms[0].className.split(" ")).toEqual(expect.arrayContaining(["right-[calc(100%+2rem)]", "px-2", "text-right"]));
+    expect(screen.getAllByTestId("timeline-day")[0].className).toContain("right-[calc(100%+2.5rem)]");
     expect(noms[0].className).not.toContain("--tl-graph-pad");
     expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
   });

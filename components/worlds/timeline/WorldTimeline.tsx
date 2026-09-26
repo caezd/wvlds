@@ -681,8 +681,8 @@ function DateGroupBlock({
           marge : la marge basse de `space-y-4` sur la date précédente
           fusionnait avec une marge haute, et le haut restait plus serré
           (16 + 16 au-dessus du filet, 48 − 16 dessous). Le nom du mois posé dessus, en
-          petites capitales, à gauche, calé à droite de la colonne des années,
-          contre le fil. Les décalages du filet remontent la colonne des
+          petites capitales, à gauche du fil, calé à droite sur le jour : même
+          retrait que lui depuis le fil (2.5rem, dont les 0.5rem de son fond). Les décalages du filet remontent la colonne des
           années (6rem, 9rem dès sm), le retrait du fil (pl-7) et la marge de
           la liste (px-5). */}
       {newMonth && (
@@ -694,7 +694,7 @@ function DateGroupBlock({
           />
           {monthName && (
             <span
-              className={cn("absolute right-[calc(100%+1.75rem)] top-4 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+              className={cn("absolute right-[calc(100%+2rem)] top-4 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
               data-testid="timeline-month-label"
               aria-hidden
             >
