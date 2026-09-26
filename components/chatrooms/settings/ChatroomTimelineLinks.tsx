@@ -17,8 +17,9 @@ type SequelRow = { id: string; previous_id: string; status: "pending" | "accepte
 /**
  * L'arc d'un salon et les salons qu'il suit (migrations 193 et 194), sous
  * sa date dans ses réglages. Un salon peut en suivre plusieurs (deux scènes
- * qui se rejoignent). Relier à un salon où l'on ne joue pas en fait une
- * suite proposée : elle attend l'accord de ses participants.
+ * qui se rejoignent), jamais un salon situé après lui sur la chronologie.
+ * Relier à un salon où l'on ne joue pas en fait une suite proposée : elle
+ * attend l'accord de ses participants.
  */
 export function ChatroomTimelineLinks({
   chatroomId,
@@ -38,6 +39,7 @@ export function ChatroomTimelineLinks({
   const t = useTranslations("chatrooms");
   const [arcs, setArcs] = React.useState<ArcOption[]>([]);
   const [rooms, setRooms] = React.useState<RoomOption[]>([]);
+  const [ownDate, setOwnDate] = React.useState<WorldTimelineDate | null>(null);
   const [arcId, setArcId] = React.useState<string | null>(null);
   const [sequels, setSequels] = React.useState<SequelRow[]>([]);
   const [saving, setSaving] = React.useState(false);
@@ -63,8 +65,10 @@ export function ChatroomTimelineLinks({
         console.error("[ChatroomTimelineLinks] chargement", arcRes.error ?? roomRes.error ?? selfRes.error);
       }
       setArcs((arcRes.data ?? []) as ArcOption[]);
+      const all = (roomRes.data ?? []) as RoomOption[];
+      setOwnDate(all.find((r) => r.id === chatroomId)?.timeline_date ?? null);
       setRooms(
-        ((roomRes.data ?? []) as RoomOption[])
+        all
           .filter((r) => r.id !== chatroomId)
           .sort((a, b) => compareTimelineDates(a.timeline_date, b.timeline_date)),
       );
@@ -122,7 +126,11 @@ export function ChatroomTimelineLinks({
 
   const byId = new Map(rooms.map((r) => [r.id, r]));
   const linked = new Set(sequels.map((s) => s.previous_id));
-  const candidates = rooms.filter((r) => !linked.has(r.id));
+  // Pas de suite à rebours : seuls les salons situés au plus tard à la date
+  // de celui-ci (la base le refuse aussi, migration 195).
+  const candidates = rooms.filter(
+    (r) => !linked.has(r.id) && !(ownDate && compareTimelineDates(r.timeline_date, ownDate) === 1),
+  );
   const label = (r: RoomOption) => `${r.title ?? ""} — ${formatTimelineLabel(config, r.timeline_date)}`;
   const selectClass = "h-8 w-full rounded-lg border border-border bg-transparent px-2 text-sm disabled:opacity-50";
 

@@ -29,8 +29,9 @@ const CONFIG: WorldTimelineConfig = {
 };
 
 const LINKABLE = [
-  { id: "vieux", title: "Un vieux salon", mine: false, last_at: "2026-01-01T00:00:00Z" },
-  { id: "recent", title: "Mon salon récent", mine: true, last_at: "2026-09-01T00:00:00Z" },
+  { id: "vieux", title: "Un vieux salon", timeline_date: { year: 1, month: 0, day: 1 }, mine: false, last_at: "2026-01-01T00:00:00Z" },
+  { id: "recent", title: "Mon salon récent", timeline_date: { year: 3, month: null, day: null }, mine: true, last_at: "2026-09-01T00:00:00Z" },
+  { id: "futur", title: "Un salon à venir", timeline_date: { year: 9, month: 0, day: 1 }, mine: true, last_at: "2026-09-10T00:00:00Z" },
 ];
 
 function setup(sequelResult: { data?: unknown; error?: unknown } = { data: { status: "accepted" } }) {
@@ -62,8 +63,22 @@ describe("WorldChatComposer — « Suite de… »", () => {
     const suite = await screen.findByRole("combobox", { name: "Suite de…" });
     const groupes = suite.querySelectorAll("optgroup");
     expect([...groupes].map((g) => g.getAttribute("label"))).toEqual(["Où vous jouez", "Autres salons"]);
-    expect(within(groupes[0] as HTMLElement).getByRole("option").textContent).toBe("Mon salon récent");
+    // Sans date encore, tous les salons datés.
+    expect(within(groupes[0] as HTMLElement).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Un salon à venir", "Mon salon récent",
+    ]);
     expect(suite).toHaveValue("");
+  });
+
+  it("une fois le salon daté, pas de suite d'un salon situé après lui", async () => {
+    setup();
+    const user = userEvent.setup();
+    // La date exigée s'ouvre sur l'an 4 : le salon de l'an 9 n'est pas proposé.
+    render(<WorldChatComposer worldId="w1" timelineConfig={{ ...CONFIG, require_date: true }} />);
+    await user.click(screen.getByText(/Nouveau jeu/i));
+    const suite = await screen.findByRole("combobox", { name: "Suite de…" });
+    expect(within(suite).queryByRole("option", { name: "Un salon à venir" })).toBeNull();
+    expect(within(suite).getByRole("option", { name: "Mon salon récent" })).toBeInTheDocument();
   });
 
   it("le salon naît relié à celui qu'il suit ; proposé, on est prévenu", async () => {

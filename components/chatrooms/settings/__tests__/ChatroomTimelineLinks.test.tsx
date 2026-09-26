@@ -44,7 +44,8 @@ function fakeClient() {
     data: [
       { id: "self", title: "Moi", timeline_date: { year: 2, month: 0, day: 1 }, mine: true, last_at: null },
       { id: "b", title: "La grande crue", timeline_date: { year: 1, month: 1, day: 3 }, mine: true, last_at: null },
-      { id: "c", title: "Plus tard", timeline_date: { year: 5, month: null, day: null }, mine: false, last_at: null },
+      { id: "c", title: "Plus tôt", timeline_date: { year: 1, month: null, day: null }, mine: false, last_at: null },
+      { id: "d", title: "Plus tard", timeline_date: { year: 5, month: null, day: null }, mine: false, last_at: null },
     ],
     error: null,
   });
@@ -72,9 +73,10 @@ describe("ChatroomTimelineLinks", () => {
     const groupes = ajout.querySelectorAll("optgroup");
     expect([...groupes].map((g) => g.getAttribute("label"))).toEqual(["Où vous jouez", "Autres salons"]);
     expect(within(groupes[0] as HTMLElement).getByRole("option").textContent).toBe("La grande crue — 3 Février, An 1");
-    expect(within(groupes[1] as HTMLElement).getByRole("option").textContent).toBe("Plus tard — An 5");
-    // Pas lui-même.
+    expect(within(groupes[1] as HTMLElement).getByRole("option").textContent).toBe("Plus tôt — An 1");
+    // Pas lui-même, ni un salon situé après lui : ce serait une suite à rebours.
     expect(screen.queryByRole("option", { name: /^Moi/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Plus tard/ })).toBeNull();
   });
 
   it("choisir un arc l'enregistre aussitôt", async () => {
@@ -93,8 +95,8 @@ describe("ChatroomTimelineLinks", () => {
     insertedStatus = "pending";
     monter();
     const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
-    await screen.findByRole("option", { name: "Plus tard — An 5" });
-    await user.selectOptions(ajout, "Plus tard — An 5");
+    await screen.findByRole("option", { name: "Plus tôt — An 1" });
+    await user.selectOptions(ajout, "Plus tôt — An 1");
     expect(writes).toContainEqual(expect.objectContaining({
       table: "chatroom_sequels", op: "insert", payload: { world_id: "w1", chatroom_id: "self", previous_id: "c" },
     }));
@@ -113,7 +115,7 @@ describe("ChatroomTimelineLinks", () => {
     // Déjà reliés : plus dans la liste d'ajout.
     expect(screen.queryByRole("option", { name: "La grande crue — 3 Février, An 1" })).toBeNull();
 
-    await user.click(within(lignes[1]).getByRole("button", { name: "Retirer le lien avec Plus tard" }));
+    await user.click(within(lignes[1]).getByRole("button", { name: "Retirer le lien avec Plus tôt" }));
     expect(writes).toContainEqual(expect.objectContaining({ table: "chatroom_sequels", op: "delete", eq: ["id", "s2"] }));
   });
 
@@ -123,8 +125,8 @@ describe("ChatroomTimelineLinks", () => {
     const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
     monter();
     const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
-    await screen.findByRole("option", { name: "Plus tard — An 5" });
-    await user.selectOptions(ajout, "Plus tard — An 5");
+    await screen.findByRole("option", { name: "Plus tôt — An 1" });
+    await user.selectOptions(ajout, "Plus tôt — An 1");
     await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith("Impossible d'enregistrer l'arc ou la suite de ce salon."));
     erreur.mockRestore();
   });

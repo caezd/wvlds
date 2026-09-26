@@ -50,7 +50,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
-import { clampTimelineDate } from "@/lib/worldTimeline";
+import { clampTimelineDate, compareTimelineDates } from "@/lib/worldTimeline";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
@@ -85,7 +85,22 @@ export function WorldChatComposer({
   const [timelineDate, setTimelineDate] = useState<WorldTimelineDate | null>(null);
   // Le salon que celui-ci suit (migration 194) : ceux où l'on joue d'abord.
   const [previousId, setPreviousId] = useState<string | null>(null);
-  const [linkable, setLinkable] = useState<{ id: string; title: string | null; mine: boolean; last_at: string | null }[]>([]);
+  const [linkable, setLinkable] = useState<{
+    id: string;
+    title: string | null;
+    timeline_date: WorldTimelineDate | null;
+    mine: boolean;
+    last_at: string | null;
+  }[]>([]);
+  // Pas de suite à rebours : une fois le salon daté, seuls les salons situés
+  // au plus tard à sa date (la base le refuse aussi, migration 195).
+  const sequelChoices = useMemo(
+    () => linkable.filter((r) => !(timelineDate && r.timeline_date && compareTimelineDates(r.timeline_date, timelineDate) === 1)),
+    [linkable, timelineDate],
+  );
+  useEffect(() => {
+    if (previousId && !sequelChoices.some((r) => r.id === previousId)) setPreviousId(null);
+  }, [previousId, sequelChoices]);
   const [mapPins, setMapPins] = useState<MapPinOption[]>([]);
   const [mapPinId, setMapPinId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -244,7 +259,7 @@ export function WorldChatComposer({
   }
 
   // « Suite de… » : sous le titre, dès qu'il y a un salon daté à suivre.
-  const sequelRow = timelineConfig && linkable.length > 0 ? (
+  const sequelRow = timelineConfig && sequelChoices.length > 0 ? (
     <label
       className="flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5"
       title={t("composer.sequelOf")}
@@ -257,16 +272,16 @@ export function WorldChatComposer({
         className="h-7 min-w-0 flex-1 bg-transparent text-sm outline-none"
       >
         <option value="">{t("composer.sequelNone")}</option>
-        {linkable.some((r) => r.mine) && (
+        {sequelChoices.some((r) => r.mine) && (
           <optgroup label={t("composer.sequelMine")}>
-            {linkable.filter((r) => r.mine).map((r) => (
+            {sequelChoices.filter((r) => r.mine).map((r) => (
               <option key={r.id} value={r.id}>{r.title ?? ""}</option>
             ))}
           </optgroup>
         )}
-        {linkable.some((r) => !r.mine) && (
+        {sequelChoices.some((r) => !r.mine) && (
           <optgroup label={t("composer.sequelOthers")}>
-            {linkable.filter((r) => !r.mine).map((r) => (
+            {sequelChoices.filter((r) => !r.mine).map((r) => (
               <option key={r.id} value={r.id}>{r.title ?? ""}</option>
             ))}
           </optgroup>

@@ -624,22 +624,38 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
     db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c", "pending", "Mojkkin")];
     frise(SALONS());
 
-    const chaine = await vi.waitFor(() => {
-      const g = screen.getByTestId("timeline-suite-links").querySelector("[data-suite='a>b>c']");
-      expect(g).not.toBeNull();
-      return g!;
+    const calque = await vi.waitFor(() => {
+      const c = screen.getByTestId("timeline-suite-links");
+      expect(c.querySelector("[data-suite='b>c']")).not.toBeNull();
+      return c;
     });
-    // Le salon c ne tient à la chaîne que par une suite proposée : son trait
-    // est pointillé, et à la couleur de l'arc, comme le reste de la chaîne.
-    const pointilles = chaine.querySelectorAll("[data-pending]");
-    expect(pointilles.length).toBeGreaterThan(0);
-    for (const trait of pointilles) {
+    // La chaîne acceptée a → b reste pleine.
+    const chaine = calque.querySelector("[data-suite='a>b']")!;
+    expect(chaine).not.toHaveAttribute("data-pending-link");
+    expect(chaine.querySelector("[data-pending]")).toBeNull();
+    // La suite proposée b → c se trace à part, en pointillés, à la couleur
+    // de l'arc de la chaîne qu'elle rejoint.
+    const proposee = calque.querySelector("[data-suite='b>c']")!;
+    expect(proposee).toHaveAttribute("data-pending-link", "true");
+    const traits = proposee.querySelectorAll("path");
+    expect(traits.length).toBeGreaterThan(0);
+    for (const trait of traits) {
       expect(trait.getAttribute("stroke-dasharray")).toBe("3 3");
       expect((trait as SVGElement).style.stroke).toBe("rgb(34, 197, 94)");
     }
-    // Le lien accepté, lui, reste plein.
-    const pleins = [...chaine.querySelectorAll("path")].filter((p) => !p.hasAttribute("data-pending"));
-    expect(pleins.length).toBeGreaterThan(0);
+  });
+
+  it("une suite proposée entre deux salons déjà dans la même chaîne reste visible", async () => {
+    // a → b → c accepté, et c proposé comme suite de a : sans tracé à part,
+    // le pointillé se perdait sous le rail plein.
+    db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c"), suite("a", "c", "pending")];
+    frise(SALONS());
+    const calque = await vi.waitFor(() => {
+      const c = screen.getByTestId("timeline-suite-links");
+      expect(c.querySelector("[data-suite='a>c'][data-pending-link]")).not.toBeNull();
+      return c;
+    });
+    expect(calque.querySelector("[data-suite='a>b>c']")).not.toHaveAttribute("data-pending-link");
   });
 
   it("qui joue dans le salon précédent voit la demande, et l'accepte", async () => {

@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Les joueurs relient leurs salons : un salon peut faire suite à un ou plusieurs autres, dès sa création (« Suite de… » dans « Nouveau jeu ») ou depuis ses réglages. Relier un salon où l’on ne joue pas en fait une suite proposée : ses participants reçoivent une demande à accepter, et la chronologie la trace en pointillés (à la couleur de l’arc quand elle rejoint sa chaîne) jusque-là. Une nouvelle permission, « Relier des salons », donnée aux joueurs, encadre le tout.",
+    text: "Les joueurs relient leurs salons : un salon peut faire suite à un ou plusieurs autres, dès sa création (« Suite de… » dans « Nouveau jeu ») ou depuis ses réglages. Relier un salon où l’on ne joue pas en fait une suite proposée : ses participants reçoivent une demande à accepter, et la chronologie la trace en pointillés (à la couleur de l’arc quand elle rejoint sa chaîne) jusque-là. Une suite ne remonte jamais le temps : on ne relie un salon qu’à un salon situé au plus tard à sa date. Une nouvelle permission, « Relier des salons », donnée aux joueurs, encadre le tout.",
   },
   {
     date: "2026-09-26",
