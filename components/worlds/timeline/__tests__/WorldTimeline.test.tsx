@@ -563,6 +563,48 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     expect(barres.querySelector("[data-event-span='e1']")).not.toBeNull();
   });
 
+  it("pendant ce temps : au survol d'un événement qui dure, ce qui se passe pendant reste net, le reste s'estompe", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_events = [
+      {
+        id: "e1", title: "L'hiver", description: null, timeline_date: { year: 1, month: 1, day: 1 },
+        end_date: { year: 2, month: 0, day: 15 }, wiki_page_id: null, wiki_page: null,
+      },
+      {
+        id: "e2", title: "Le sacre", description: null, timeline_date: { year: 3, month: 0, day: 1 },
+        end_date: null, wiki_page_id: null, wiki_page: null,
+      },
+    ];
+    frise([
+      room("avant", "Avant", 1, 0, 6),
+      room("pendant", "Pendant", 1, 2, 1),
+      room("flou", "Un jour de l'an 2", 2, null, null),
+      room("apres", "Après", 2, 2, 1),
+    ]);
+    const hiver = (await screen.findByText("L'hiver")).closest("[data-event-id]") as HTMLElement;
+    const ligne = (id: string) => document.querySelector(`[data-room-id='${id}']`) as HTMLElement;
+    const estompe = (el: Element) => el.className.split(" ").includes("opacity-30");
+
+    await user.hover(hiver);
+    // Pendant : net ; une date « an 2 » tombe pendant un hiver qui finit en l'an 2.
+    expect(estompe(ligne("pendant"))).toBe(false);
+    expect(estompe(ligne("flou"))).toBe(false);
+    expect(estompe(hiver)).toBe(false);
+    expect(estompe(document.querySelector("[data-event-end-id='e1']")!)).toBe(false);
+    // Avant et après : estompés.
+    expect(estompe(ligne("avant"))).toBe(true);
+    expect(estompe(ligne("apres"))).toBe(true);
+    // Sa barre ressort.
+    expect(document.querySelector("[data-event-span='e1']")).toHaveAttribute("data-active", "true");
+
+    // La fin aussi déclenche ; un événement sans durée, non.
+    await user.hover(document.querySelector("[data-event-end-id='e1']")!);
+    expect(estompe(ligne("avant"))).toBe(true);
+    await user.hover(screen.getByText("Le sacre"));
+    expect(estompe(ligne("avant"))).toBe(false);
+    await user.unhover(screen.getByText("Le sacre"));
+  });
+
   it("filtrer les événements cache aussi leur fin et leur barre", async () => {
     const user = userEvent.setup();
     db.tables.world_timeline_events = [{

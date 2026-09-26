@@ -6,6 +6,7 @@ import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
+import { WorldHolidaysWidget } from "./widgets/WorldHolidaysWidget";
 import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
@@ -250,6 +251,13 @@ function renderBlock(
           worldId={ctx.worldId}
           days={widgetOptionValue("birthdays", "days", item.options)}
           initialMembers={ctx.widgetData.birthdays}
+        />
+      );
+    case "holidays":
+      return (
+        <WorldHolidaysWidget
+          config={ctx.timelineConfig}
+          limit={widgetOptionValue("holidays", "limit", item.options)}
         />
       );
     case "timeline_shortcuts":

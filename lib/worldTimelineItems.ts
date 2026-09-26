@@ -132,6 +132,36 @@ export function holidayItems(
   });
 }
 
+/** Une fête à venir : sa prochaine date, et dans combien de mois du monde. */
+export type UpcomingHoliday = { name: string; year: number; month: number; day: number | null; monthsAway: number };
+
+/**
+ * Les prochaines fêtes du calendrier, à partir de la date actuelle du monde
+ * (`current_year`, `current_month` ; sans mois, le premier). Le monde n'a pas
+ * de jour courant : une fête du mois en cours est « ce mois-ci » (0 mois),
+ * qu'elle soit déjà passée ou non. Triées par éloignement, puis par jour.
+ */
+export function upcomingHolidays(
+  holidays: readonly WorldTimelineHoliday[] | undefined,
+  current: { year: number; month: number | null },
+  monthCount: number,
+  limit: number,
+): UpcomingHoliday[] {
+  if (monthCount <= 0) return [];
+  const now = Math.min(Math.max(current.month ?? 0, 0), monthCount - 1);
+  return (holidays ?? [])
+    .filter((h) => h.name.trim() !== "" && h.month >= 0 && h.month < monthCount)
+    .map((h) => ({
+      name: h.name.trim(),
+      month: h.month,
+      day: h.day,
+      year: current.year + (h.month < now ? 1 : 0),
+      monthsAway: (h.month - now + monthCount) % monthCount,
+    }))
+    .sort((a, b) => a.monthsAway - b.monthsAway || (a.day ?? 0) - (b.day ?? 0))
+    .slice(0, Math.max(0, limit));
+}
+
 /**
  * Le statut d'un salon sur la frise : terminé ou abandonné, tel quel ; en
  * cours, il s'endort sans message depuis `dormantDays` jours (0 : jamais).

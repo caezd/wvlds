@@ -487,7 +487,8 @@
         "personas_recent": "Personas récents",
         "timeline_shortcuts": "Raccourcis chronologie",
         "map": "Carte",
-        "birthdays": "Anniversaires"
+        "birthdays": "Anniversaires",
+        "holidays": "Prochaines fêtes"
       },
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
       "noneOnline": "Personne en ligne pour le moment",
@@ -576,6 +577,12 @@
         "title": "Anniversaires",
         "none": "Aucun anniversaire dans les {days} prochains jours.",
         "today": "Aujourd'hui !"
+      },
+      "holidays": {
+        "title": "Prochaines fêtes",
+        "none": "Aucune fête au calendrier.",
+        "thisMonth": "ce mois-ci",
+        "inMonths": "{count, plural, one {dans # mois} other {dans # mois}}"
       }
     },
     "namePlaceholder": "Ex. Monde de Veldis",

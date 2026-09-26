@@ -8,6 +8,7 @@ import {
   effectiveRoomStatus,
   eventEndItems,
   holidayItems,
+  upcomingHolidays,
   isFiltering,
   matchesTimelineFilters,
   normalizeAges,
@@ -145,6 +146,32 @@ describe("fêtes du calendrier", () => {
     expect(matchesTimelineFilters(fete, filtres({ query: "lanterne" }), CTX)).toBe(true);
     expect(matchesTimelineFilters(fete, filtres({ query: "moisson" }), CTX)).toBe(false);
     expect(matchesTimelineFilters(fete, filtres({ personaId: "p-tess", status: "dormant" }), CTX)).toBe(true);
+  });
+});
+
+describe("prochaines fêtes", () => {
+  const FETES = [
+    { name: "Premier de l'an", month: 0, day: 1 },
+    { name: "Fête des lanternes", month: 5, day: 9 },
+    { name: "Lune rousse", month: 5, day: 2 },
+    { name: " ", month: 3, day: 1 },
+    { name: "Hors calendrier", month: 14, day: 1 },
+  ];
+
+  it("de la plus proche à la plus lointaine, l'année suivante pour celles déjà passées", () => {
+    expect(upcomingHolidays(FETES, { year: 4, month: 5 }, 12, 10)).toEqual([
+      { name: "Lune rousse", year: 4, month: 5, day: 2, monthsAway: 0 },
+      { name: "Fête des lanternes", year: 4, month: 5, day: 9, monthsAway: 0 },
+      { name: "Premier de l'an", year: 5, month: 0, day: 1, monthsAway: 7 },
+    ]);
+  });
+
+  it("sans mois courant, depuis le premier ; bornées par la limite ; sans mois au calendrier, aucune", () => {
+    expect(upcomingHolidays(FETES, { year: 4, month: null }, 12, 1)).toEqual([
+      { name: "Premier de l'an", year: 4, month: 0, day: 1, monthsAway: 0 },
+    ]);
+    expect(upcomingHolidays(FETES, { year: 4, month: 0 }, 0, 5)).toEqual([]);
+    expect(upcomingHolidays(undefined, { year: 4, month: 0 }, 12, 5)).toEqual([]);
   });
 });
 

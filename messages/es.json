@@ -487,7 +487,8 @@
         "personas_recent": "Personajes recientes",
         "timeline_shortcuts": "Accesos directos de la línea de tiempo",
         "map": "Mapa",
-        "birthdays": "Cumpleaños"
+        "birthdays": "Cumpleaños",
+        "holidays": "Próximas fiestas"
       },
       "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
       "noneOnline": "Nadie en línea por ahora",
@@ -576,6 +577,12 @@
         "title": "Cumpleaños",
         "none": "Ningún cumpleaños en los próximos {days} días.",
         "today": "¡Hoy!"
+      },
+      "holidays": {
+        "title": "Próximas fiestas",
+        "none": "Ninguna fiesta en el calendario.",
+        "thisMonth": "este mes",
+        "inMonths": "{count, plural, one {en # mes} other {en # meses}}"
       }
     },
     "namePlaceholder": "Ej. Mundo de Veldis",

@@ -487,7 +487,8 @@
         "personas_recent": "Recent personas",
         "timeline_shortcuts": "Timeline shortcuts",
         "map": "Map",
-        "birthdays": "Birthdays"
+        "birthdays": "Birthdays",
+        "holidays": "Upcoming holidays"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
@@ -576,6 +577,12 @@
         "title": "Birthdays",
         "none": "No birthdays in the next {days} days.",
         "today": "Today!"
+      },
+      "holidays": {
+        "title": "Upcoming holidays",
+        "none": "No holidays on the calendar.",
+        "thisMonth": "this month",
+        "inMonths": "{count, plural, one {in # month} other {in # months}}"
       }
     },
     "namePlaceholder": "E.g. World of Veldis",

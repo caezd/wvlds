@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatTimelineLabel } from "@/lib/worldTimeline";
+import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import {
   DEFAULT_DORMANT_DAYS,
   NO_TIMELINE_FILTERS,
@@ -151,6 +151,8 @@ export function WorldTimeline({
   const [suiteStyle, setSuiteStyleState] = useState<SuiteStyle>("rail");
   const [hoverOnly, setHoverOnlyState] = useState(false);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
+  // « Pendant ce temps » : l'événement qui dure survolé (ou sa fin).
+  const [hoveredSpan, setHoveredSpan] = useState<string | null>(null);
   useEffect(() => {
     setSuiteStyleState(readSuiteStyle());
     setHoverOnlyState(readSuiteHoverOnly());
@@ -285,11 +287,40 @@ export function WorldTimeline({
   );
   // Au survol seulement : rien au repos ; la chaîne du salon survolé
   // s'allume, dans le style choisi, et le reste de la frise s'estompe.
-  const highlight = useMemo(
+  const suiteHighlight = useMemo(
     () => (hoverOnly && hoveredRoom ? suiteChainOf(suiteLinks, hoveredRoom) : null),
     [hoverOnly, hoveredRoom, suiteLinks],
   );
-  const onlyChain = hoverOnly ? (highlight ?? new Set<string>()) : null;
+  const onlyChain = hoverOnly ? (suiteHighlight ?? new Set<string>()) : null;
+
+  // « Pendant ce temps » : au survol d'un événement qui dure, ce qui se passe
+  // entre son début et sa fin reste net, le reste s'estompe — à la finesse
+  // des deux dates (une date « an 3 » est pendant un hiver de l'an 3).
+  const duringSpan = useMemo(() => {
+    const event = hoveredSpan ? data.events.find((e) => e.id === hoveredSpan) : null;
+    if (!event?.endDate) return null;
+    const ids = new Set<string>([event.id, `${event.id}:end`]);
+    for (const s of sections) {
+      for (const g of s.groups) {
+        for (const i of g.items) {
+          if (compareTimelineDates(i.date, event.date) >= 0 && compareTimelineDates(i.date, event.endDate) <= 0) ids.add(i.id);
+        }
+      }
+    }
+    return ids;
+  }, [hoveredSpan, data.events, sections]);
+  const highlight = duringSpan ?? suiteHighlight;
+
+  /** L'événement qui dure sous le pointeur ou le focus (sa ligne ou sa fin). */
+  function spanUnder(target: HTMLElement): string | null {
+    const row = target.closest<HTMLElement>("[data-event-id], [data-event-end-id]");
+    const id = row?.dataset.eventId ?? row?.dataset.eventEndId ?? null;
+    return id && spanIds.includes(id) ? id : null;
+  }
+  function trackHover(target: HTMLElement) {
+    setHoveredSpan(spanUnder(target));
+    if (hoverOnly) setHoveredRoom(target.closest<HTMLElement>("[data-room-id]")?.dataset.roomId ?? null);
+  }
 
   // Le fil du persona filtré : les salons où il a écrit et ses entrées de
   // journal, reliés sur le fil de la frise, dans la couleur de son groupe.
@@ -493,17 +524,12 @@ export function WorldTimeline({
               ref={listRef}
               className="relative"
               data-suite-style={suiteStyle}
-              onMouseOver={(e) => {
-                if (!hoverOnly) return;
-                const row = (e.target as HTMLElement).closest<HTMLElement>("[data-room-id]");
-                setHoveredRoom(row?.dataset.roomId ?? null);
+              onMouseOver={(e) => trackHover(e.target as HTMLElement)}
+              onMouseLeave={() => {
+                setHoveredRoom(null);
+                setHoveredSpan(null);
               }}
-              onMouseLeave={() => setHoveredRoom(null)}
-              onFocus={(e) => {
-                if (!hoverOnly) return;
-                const row = (e.target as HTMLElement).closest<HTMLElement>("[data-room-id]");
-                setHoveredRoom(row?.dataset.roomId ?? null);
-              }}
+              onFocus={(e) => trackHover(e.target as HTMLElement)}
             >
               <ol
                 className="px-5 pb-6"
@@ -547,7 +573,12 @@ export function WorldTimeline({
                   (style, « au survol seulement ») : les titres, sur lesquels
                   se calent les barres, se décalent alors sans que la frise
                   ni la taille de la liste ne changent. */}
-              <EventSpans containerRef={listRef} ids={spanIds} version={`${layoutVersion}:${graphPad}:${rightPad ?? 0}`} />
+              <EventSpans
+                containerRef={listRef}
+                ids={spanIds}
+                active={duringSpan ? hoveredSpan : null}
+                version={`${layoutVersion}:${graphPad}:${rightPad ?? 0}`}
+              />
             </div>
           )}
         </div>

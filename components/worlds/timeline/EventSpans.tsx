@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { assignSuiteLanes } from "@/lib/worldTimelineItems";
 
 type Span = { id: string; top: number; bottom: number; x: number };
@@ -16,16 +17,21 @@ const TITLE_GAP = 9;
  * fin (`[data-event-end-id]`), juste avant les titres — graphe des suites
  * compris, puisqu'on se cale sur le début du texte de l'événement. Deux
  * durées qui se chevauchent prennent chacune leur couloir, vers le fil.
- * Les positions se mesurent dans le DOM, comme les lignes de suite.
+ * Les positions se mesurent dans le DOM, comme les lignes de suite. Au
+ * survol d'un événement (« pendant ce temps », voir WorldTimeline), sa barre
+ * fonce et les autres s'estompent.
  */
 export function EventSpans({
   containerRef,
   ids,
+  active = null,
   version,
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
   /** Les événements dont le début et la fin sont à l'écran. */
   ids: readonly string[];
+  /** L'événement survolé : sa barre ressort. */
+  active?: string | null;
   /** Change quand la frise change : force une mesure. */
   version: string;
 }) {
@@ -85,8 +91,13 @@ export function EventSpans({
           fill="none"
           strokeWidth={2}
           strokeLinecap="round"
-          className="stroke-foreground/40"
+          className={cn(
+            "transition-opacity",
+            active === s.id ? "stroke-foreground" : "stroke-foreground/40",
+            active && active !== s.id && "opacity-30",
+          )}
           data-event-span={s.id}
+          data-active={active === s.id || undefined}
         />
       ))}
     </svg>
