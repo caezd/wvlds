@@ -236,30 +236,32 @@ export function WorldChatComposer({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t("composer.titlePlaceholder")}
-          className={cn("pr-7", isMobile && "text-sm")}
+          className={cn("pr-16", isMobile && "text-sm")}
           autoFocus={!isMobile}
         />
-        {title && (
+        {/* Effacer, puis tirer un titre au hasard : tous deux dans le champ. */}
+        <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center">
+          {title && (
+            <button
+              type="button"
+              onClick={() => setTitle("")}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t("composer.titleClear")}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setTitle("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={t("composer.titleClear")}
+            onClick={() => setTitle(randomTitle())}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label={t("composer.titleRandomize")}
+            title={t("composer.titleRandomize")}
           >
-            <X className="h-3.5 w-3.5" />
+            <Shuffle className="h-3.5 w-3.5" />
           </button>
-        )}
+        </div>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        className="rounded-md"
-        size="icon"
-        title={t("composer.titleRandomize")}
-        onClick={() => setTitle(randomTitle())}
-      >
-        <Shuffle className="h-4 w-4" />
-      </Button>
       {!isMobile && dateRow}
       {categories.length > 0 && (
         <DropdownMenu>

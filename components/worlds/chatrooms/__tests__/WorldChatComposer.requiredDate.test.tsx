@@ -97,6 +97,26 @@ describe("WorldChatComposer — date exigée à la création", () => {
     expect(section.parentElement).toBe(titre.parentElement?.parentElement);
   });
 
+  it("effacer puis tirer au hasard : les deux boutons dans le champ du titre", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldChatComposer worldId="w1" timelineConfig={CONFIG} />);
+    await user.click(screen.getByText(/Nouveau jeu/i));
+
+    const titre = screen.getByPlaceholderText("Titre de la conversation");
+    const champ = titre.parentElement!;
+    const effacer = within(champ).getByRole("button", { name: "Effacer le titre" });
+    const hasard = within(champ).getByRole("button", { name: "Générer un titre aléatoire" });
+    // Le hasard à droite de la croix.
+    expect(effacer.compareDocumentPosition(hasard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(effacer);
+    expect(titre).toHaveValue("");
+    // Sans titre, la croix s'efface mais le hasard reste.
+    await user.click(within(champ).getByRole("button", { name: "Générer un titre aléatoire" }));
+    expect(titre).not.toHaveValue("");
+  });
+
   it("sur mobile, la date passe sous le titre", async () => {
     setup();
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
