@@ -111,10 +111,11 @@ describe("WorldTimeline — frise verticale", () => {
     // d'écran, et au survol.
     expect(trait).toHaveAttribute("title", "Date actuelle du monde : Février, An 1");
     expect(within(trait).getByText("Date actuelle du monde : Février, An 1")).toHaveClass("sr-only");
-    // Un trait rouge plein, qui déborde sur la colonne des années.
+    // Un trait rouge plein, du fil jusqu'au bord : pas sur la colonne des années.
     const barre = trait.querySelector(".h-0\\.5")!;
     expect(barre.className).toContain("bg-red-600");
-    expect(barre.className).toContain("-left-[7.75rem]");
+    expect(barre.className.split(" ")).toContain("-left-7");
+    expect(barre.className).not.toMatch(/rem\]/);
   });
 
   it("l'année actuelle a sa section même sans salon, pour porter son repère", () => {

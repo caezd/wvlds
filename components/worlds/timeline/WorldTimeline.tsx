@@ -225,10 +225,10 @@ function YearBlock({
   if (insertAt >= 0) {
     entries.splice(insertAt, 0, (
       <li key="now" className="relative h-2" data-testid="timeline-now" title={nowText}>
-        {/* Un trait plein, sans texte, qui barre toute la largeur — colonne
-            des années comprise ; un carré rouge sur le fil. */}
+        {/* Un trait plein, sans texte, du fil jusqu'au bord — la colonne des
+            années reste libre ; un carré rouge sur le fil. */}
         <span
-          className={cn("absolute -left-[7.75rem] right-0 top-1/2 h-0.5 -translate-y-1/2 sm:-left-[10.75rem]", RED_BG)}
+          className={cn("absolute -left-7 right-0 top-1/2 h-0.5 -translate-y-1/2", RED_BG)}
           aria-hidden
         />
         <span className={cn("absolute -left-[32.5px] top-1/2 size-2.5 -translate-y-1/2", RED_BG)} aria-hidden />
