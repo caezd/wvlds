@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { generate } from "boring-name-generator";
-import { ChevronDown, Plus, Shuffle, Tag, X, CalendarDays } from "lucide-react";
+import { ChevronDown, Plus, Shuffle, Tag, X, CalendarDays, Spline } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import type { Persona } from "@/types/db";
 import { toast } from "sonner";
-import { TABLE } from "@/lib/constants";
+import { RPC, TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { ChatroomComposer, type ChatroomComposerHandle } from "@/components/chatrooms/composer/ChatroomComposer";
@@ -83,6 +83,9 @@ export function WorldChatComposer({
 
   const [persona, setPersona] = useState<Persona | null>(null);
   const [timelineDate, setTimelineDate] = useState<WorldTimelineDate | null>(null);
+  // Le salon que celui-ci suit (migration 194) : ceux où l'on joue d'abord.
+  const [previousId, setPreviousId] = useState<string | null>(null);
+  const [linkable, setLinkable] = useState<{ id: string; title: string | null; mine: boolean; last_at: string | null }[]>([]);
   const [mapPins, setMapPins] = useState<MapPinOption[]>([]);
   const [mapPinId, setMapPinId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -134,6 +137,19 @@ export function WorldChatComposer({
   function openDialog() {
     setTitle(randomTitle());
     setHasContent(false);
+    setPreviousId(null);
+    if (timelineConfig) {
+      void supabase
+        .rpc(RPC.GET_LINKABLE_CHATROOMS, { p_world_id: worldId })
+        .then(({ data, error }: { data: typeof linkable | null; error: unknown }) => {
+          if (error) {
+            console.error("[WorldChatComposer] salons à relier", error);
+            return;
+          }
+          // Les plus récemment joués d'abord.
+          setLinkable([...(data ?? [])].sort((a, b) => (b.last_at ?? "").localeCompare(a.last_at ?? "")));
+        });
+    }
     if (dateRequired && timelineConfig) {
       setTimelineDate((d) => d ?? clampTimelineDate(timelineConfig, {
         year: timelineConfig.current_year,
@@ -208,8 +224,56 @@ export function WorldChatComposer({
       toast.error(error?.message ?? t("composer.errorCreateFailed"));
       return null;
     }
+
+    // La suite, une fois le salon créé. Un échec ne retient pas le salon :
+    // le lien se refait depuis ses réglages.
+    if (previousId) {
+      const { data: link, error: linkError } = await supabase
+        .from(TABLE.CHATROOM_SEQUELS)
+        .insert({ world_id: worldId, chatroom_id: room.id, previous_id: previousId })
+        .select("status")
+        .maybeSingle();
+      if (linkError) {
+        console.error("[WorldChatComposer] suite", linkError);
+        toast.error(t("composer.sequelFailed"));
+      } else if ((link as { status: string } | null)?.status === "pending") {
+        toast.success(t("composer.sequelProposed"));
+      }
+    }
     return { chatId: room.id };
   }
+
+  // « Suite de… » : sous le titre, dès qu'il y a un salon daté à suivre.
+  const sequelRow = timelineConfig && linkable.length > 0 ? (
+    <label
+      className="flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5"
+      title={t("composer.sequelOf")}
+    >
+      <Spline className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <select
+        value={previousId ?? ""}
+        onChange={(e) => setPreviousId(e.target.value || null)}
+        aria-label={t("composer.sequelOf")}
+        className="h-7 min-w-0 flex-1 bg-transparent text-sm outline-none"
+      >
+        <option value="">{t("composer.sequelNone")}</option>
+        {linkable.some((r) => r.mine) && (
+          <optgroup label={t("composer.sequelMine")}>
+            {linkable.filter((r) => r.mine).map((r) => (
+              <option key={r.id} value={r.id}>{r.title ?? ""}</option>
+            ))}
+          </optgroup>
+        )}
+        {linkable.some((r) => !r.mine) && (
+          <optgroup label={t("composer.sequelOthers")}>
+            {linkable.filter((r) => !r.mine).map((r) => (
+              <option key={r.id} value={r.id}>{r.title ?? ""}</option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+    </label>
+  ) : null;
 
   // La date, quand le monde n'en laisse pas créer sans : à droite du titre
   // dans le dialogue, dessous sur mobile où la largeur manque.
@@ -355,6 +419,7 @@ export function WorldChatComposer({
               >
                 {titleRow}
                 {dateRow}
+                {sequelRow}
               </div>
               <div className="flex-1 min-h-0">
                 {composerBlock}
@@ -371,6 +436,7 @@ export function WorldChatComposer({
               <DialogDescription className="sr-only">{t("composer.placeholder")}</DialogDescription>
             </DialogHeader>
             {titleRow}
+            {sequelRow}
             {composerBlock}
           </DialogContent>
         </Dialog>

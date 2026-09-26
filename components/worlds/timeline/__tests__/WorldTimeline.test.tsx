@@ -29,6 +29,10 @@ vi.mock("@/lib/supabase/client", () => {
   const client = { rpc, from: (table: string) => builder(table) };
   return { createClient: () => client };
 });
+/** Un lien de suite (migration 194) : `to` suit `from`. */
+function suite(from: string, to: string, status: "accepted" | "pending" = "accepted", by: string | null = null) {
+  return { id: `${from}>${to}`, chatroom_id: to, previous_id: from, status, creator: by ? { username: by } : null };
+}
 function ouvreurs(rows: OpenerRow[]) {
   db.rpcs.get_chatroom_openers = { data: rows, error: null };
 }
@@ -384,7 +388,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
 
   it("un arc teinte l'anneau et s'affiche après le titre", async () => {
     db.tables.world_timeline_arcs = [{ id: "arc", name: "L'exil", color: "#22c55e", position: 0 }];
-    db.tables.chatrooms = [{ id: "a", arc_id: "arc", previous_chatroom_id: null, category_id: null }];
+    db.tables.chatrooms = [{ id: "a", arc_id: "arc", category_id: null }];
     frise([room("a", "Exil à l'est", 1, 0, 6)]);
 
     const etiquette = await screen.findByTestId("timeline-arc");
@@ -398,10 +402,11 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
     const user = userEvent.setup();
     db.tables.world_timeline_arcs = [{ id: "arc", name: "L'exil", color: "#22c55e", position: 0 }];
     db.tables.chatrooms = [
-      { id: "a", arc_id: "arc", previous_chatroom_id: null, category_id: null },
-      { id: "b", arc_id: "arc", previous_chatroom_id: "a", category_id: null },
-      { id: "c", arc_id: null, previous_chatroom_id: null, category_id: null },
+      { id: "a", arc_id: "arc", category_id: null },
+      { id: "b", arc_id: "arc", category_id: null },
+      { id: "c", arc_id: null, category_id: null },
     ];
+    db.tables.chatroom_sequels = [suite("a", "b")];
     frise([room("a", "Le départ", 1, 0, 6), room("b", "La frontière", 2, 0, 1), room("c", "Hors arc", 2, 1, 1)]);
 
     const depart = await screen.findByRole("button", { name: "Le départ, arc L'exil, n° 1, 6 Janvier, An 1" });
@@ -419,10 +424,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
   });
 
   it("une suite se relie d'une ligne quand les deux salons sont à l'écran", async () => {
-    db.tables.chatrooms = [
-      { id: "a", arc_id: null, previous_chatroom_id: null, category_id: null },
-      { id: "b", arc_id: null, previous_chatroom_id: "a", category_id: null },
-    ];
+    db.tables.chatroom_sequels = [suite("a", "b")];
     frise([room("a", "La grande crue", 1, 0, 6), room("b", "Les digues cèdent", 3, 0, 1)]);
     const liens = await screen.findByTestId("timeline-suite-links");
     expect(liens.querySelector("[data-suite='a>b']")).not.toBeNull();
@@ -476,11 +478,7 @@ describe("WorldTimeline — saisons", () => {
 });
 
 describe("WorldTimeline — styles des suites", () => {
-  const CHAINE = [
-    { id: "a", arc_id: null, previous_chatroom_id: null, category_id: null },
-    { id: "b", arc_id: null, previous_chatroom_id: "a", category_id: null },
-    { id: "c", arc_id: null, previous_chatroom_id: "b", category_id: null },
-  ];
+  const CHAINE = [suite("a", "b"), suite("b", "c")];
   const SALONS = () => [room("a", "La grande crue", 1, 0, 6), room("b", "Les digues cèdent", 1, 2, 1), room("c", "Ce que charrie l'eau", 3, 0, 1), room("z", "Hors chaîne", 3, 1, 1)];
 
   async function choisirStyle(nom: string) {
@@ -507,13 +505,13 @@ describe("WorldTimeline — styles des suites", () => {
 
   it("relit le style gardé à l'ouverture", async () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
-    db.tables.chatrooms = CHAINE;
+    db.tables.chatroom_sequels = CHAINE;
     frise(SALONS());
     await vi.waitFor(() => expect(screen.getByTestId("timeline-suite-links")).toHaveAttribute("data-style", "graph"));
   });
 
   it("par défaut, un rail par chaîne, une pastille par salon", async () => {
-    db.tables.chatrooms = CHAINE;
+    db.tables.chatroom_sequels = CHAINE;
     frise(SALONS());
     const calque = await screen.findByTestId("timeline-suite-links");
     expect(calque).toHaveAttribute("data-style", "rail");
@@ -523,7 +521,7 @@ describe("WorldTimeline — styles des suites", () => {
   });
 
   it("graphe : les titres se décalent pour laisser les couloirs entre le fil et eux", async () => {
-    db.tables.chatrooms = CHAINE;
+    db.tables.chatroom_sequels = CHAINE;
     frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
     await choisirStyle("Graphe à côté du fil");
@@ -537,7 +535,7 @@ describe("WorldTimeline — styles des suites", () => {
   });
 
   it("au survol seulement : une option du rail ; rien au repos, la chaîne survolée s'allume, le reste s'estompe", async () => {
-    db.tables.chatrooms = CHAINE;
+    db.tables.chatroom_sequels = CHAINE;
     frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
     const user = userEvent.setup();
@@ -557,7 +555,7 @@ describe("WorldTimeline — styles des suites", () => {
   it("au survol seulement avec le graphe : la place des couloirs reste réservée", async () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
     memoire.set("wvlds:timeline-suite-hover", "1");
-    db.tables.chatrooms = CHAINE;
+    db.tables.chatroom_sequels = CHAINE;
     frise(SALONS());
     const user = userEvent.setup();
     const liste = await vi.waitFor(() => {
@@ -577,11 +575,7 @@ describe("WorldTimeline — styles des suites", () => {
   it("au survol seulement, un seul couloir est réservé, quel que soit le nombre de chaînes", async () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
     // Deux chaînes : a → b → c et z → y.
-    db.tables.chatrooms = [
-      ...CHAINE,
-      { id: "z", arc_id: null, previous_chatroom_id: null, category_id: null },
-      { id: "y", arc_id: null, previous_chatroom_id: "z", category_id: null },
-    ];
+    db.tables.chatroom_sequels = [...CHAINE, suite("z", "y")];
     const salons = [...SALONS(), room("y", "Suite hors chaîne", 3, 2, 1)];
     const { unmount } = frise(salons);
     const padDe = async () => {
@@ -606,7 +600,7 @@ describe("WorldTimeline — styles des suites", () => {
   });
 
   it("deux styles seulement : rail continu et graphe", async () => {
-    db.tables.chatrooms = CHAINE;
+    db.tables.chatroom_sequels = CHAINE;
     frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
     const user = userEvent.setup();
@@ -614,5 +608,74 @@ describe("WorldTimeline — styles des suites", () => {
     const styles = await screen.findByRole("combobox", { name: "Style des suites" });
     expect([...(styles as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(["Rail continu", "Graphe à côté du fil"]);
     expect(screen.queryByRole("checkbox", { name: "Pointillés fléchés" })).toBeNull();
+  });
+});
+
+describe("WorldTimeline — suites proposées par les joueurs", () => {
+  const SALONS = () => [room("a", "Le départ", 1, 0, 6), room("b", "La frontière", 2, 0, 1), room("c", "L'exil", 3, 0, 1)];
+
+  it("une suite proposée se trace en pointillés ; reliée à la chaîne d'un arc, elle en prend la couleur", async () => {
+    db.tables.world_timeline_arcs = [{ id: "arc", name: "L'exil", color: "#22c55e", position: 0 }];
+    db.tables.chatrooms = [
+      { id: "a", arc_id: "arc", category_id: null },
+      { id: "b", arc_id: "arc", category_id: null },
+      { id: "c", arc_id: null, category_id: null },
+    ];
+    db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c", "pending", "Mojkkin")];
+    frise(SALONS());
+
+    const chaine = await vi.waitFor(() => {
+      const g = screen.getByTestId("timeline-suite-links").querySelector("[data-suite='a>b>c']");
+      expect(g).not.toBeNull();
+      return g!;
+    });
+    // Le salon c ne tient à la chaîne que par une suite proposée : son trait
+    // est pointillé, et à la couleur de l'arc, comme le reste de la chaîne.
+    const pointilles = chaine.querySelectorAll("[data-pending]");
+    expect(pointilles.length).toBeGreaterThan(0);
+    for (const trait of pointilles) {
+      expect(trait.getAttribute("stroke-dasharray")).toBe("3 3");
+      expect((trait as SVGElement).style.stroke).toBe("rgb(34, 197, 94)");
+    }
+    // Le lien accepté, lui, reste plein.
+    const pleins = [...chaine.querySelectorAll("path")].filter((p) => !p.hasAttribute("data-pending"));
+    expect(pleins.length).toBeGreaterThan(0);
+  });
+
+  it("qui joue dans le salon précédent voit la demande, et l'accepte", async () => {
+    const user = userEvent.setup();
+    db.tables.chatroom_sequels = [suite("a", "b", "pending", "Mojkkin")];
+    db.rpcs.get_linkable_chatrooms = { data: [{ id: "a", mine: true }, { id: "b", mine: false }], error: null };
+    frise(SALONS());
+
+    await user.click(await screen.findByRole("button", { name: /Suites proposées/ }));
+    const liste = await screen.findByRole("list", { name: "Suites proposées" });
+    expect(liste).toHaveTextContent("La frontière ferait suite à Le départ");
+    expect(liste).toHaveTextContent("proposé par @Mojkkin");
+    await user.click(within(liste).getByRole("button", { name: "Accepter la suite La frontière" }));
+    expect(db.writes).toContainEqual(expect.objectContaining({ table: "chatroom_sequels", op: "update", payload: { status: "accepted" } }));
+  });
+
+  it("refuser une suite proposée la supprime", async () => {
+    const user = userEvent.setup();
+    db.tables.chatroom_sequels = [suite("a", "b", "pending", "Mojkkin")];
+    db.rpcs.get_linkable_chatrooms = { data: [{ id: "a", mine: true }], error: null };
+    frise(SALONS());
+    await user.click(await screen.findByRole("button", { name: /Suites proposées/ }));
+    await user.click(await screen.findByRole("button", { name: "Refuser la suite La frontière" }));
+    expect(db.writes).toContainEqual(expect.objectContaining({ table: "chatroom_sequels", op: "delete" }));
+  });
+
+  it("sans jouer dans le salon précédent, pas de demande à décider ; qui gère les salons les voit toutes", async () => {
+    db.tables.chatroom_sequels = [suite("a", "b", "pending", "Mojkkin")];
+    db.rpcs.get_linkable_chatrooms = { data: [{ id: "a", mine: false }], error: null };
+    const { unmount } = frise(SALONS());
+    await screen.findByText("Le départ");
+    await vi.waitFor(() => expect(rpc).toHaveBeenCalledWith("get_linkable_chatrooms", { p_world_id: "w1" }));
+    expect(screen.queryByRole("button", { name: /Suites proposées/ })).toBeNull();
+    unmount();
+
+    render(<WorldTimeline worldId="w1" rooms={SALONS()} config={CONFIG} canManageLinks />);
+    expect(await screen.findByTestId("timeline-sequel-count")).toHaveTextContent("1");
   });
 });

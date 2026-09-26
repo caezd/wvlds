@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
 const toastError = vi.hoisted(() => vi.fn());
-vi.mock("sonner", () => ({ toast: { error: toastError, success: vi.fn() } }));
+const toastInfo = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError, success: vi.fn(), info: toastInfo } }));
 
 import { ChatroomTimelineLinks } from "@/components/chatrooms/settings/ChatroomTimelineLinks";
 
@@ -12,72 +13,119 @@ const CONFIG: WorldTimelineConfig = {
   year_label: "An", era_name: null, month_names: ["Janvier", "Février"], current_year: 1, current_month: 0,
 };
 
-let updateError: unknown = null;
-const updates: { payload: unknown; eq: unknown[] }[] = [];
+// Un faux client : lectures par table, écritures notées ; l'insertion d'une
+// suite renvoie le statut que la base aurait décidé.
+let writeError: unknown = null;
+let insertedStatus: "pending" | "accepted" = "accepted";
+let sequels: { id: string; previous_id: string; status: string }[] = [];
+const writes: { table: string; op: string; payload?: unknown; eq?: unknown[] }[] = [];
 function fakeClient() {
   function builder(table: string) {
-    let single = false;
-    let payload: unknown = undefined;
+    const entry: { table: string; op: string; payload?: unknown; eq?: unknown[] } = { table, op: "select" };
     const b: Record<string, unknown> = {};
-    for (const m of ["select", "order", "not"]) b[m] = () => b;
-    b.eq = (...args: unknown[]) => { if (payload !== undefined) updates.push({ payload, eq: args }); return b; };
-    b.maybeSingle = () => { single = true; return b; };
-    b.update = (p: unknown) => { payload = p; return b; };
+    for (const m of ["select", "order", "not", "maybeSingle"]) b[m] = () => b;
+    b.eq = (...args: unknown[]) => { entry.eq = args; return b; };
+    for (const op of ["insert", "update", "delete"]) {
+      b[op] = (payload?: unknown) => { entry.op = op; entry.payload = payload; writes.push(entry); return b; };
+    }
     b.then = (resolve: (v: unknown) => unknown) => {
-      if (payload !== undefined) return Promise.resolve({ data: null, error: updateError }).then(resolve);
+      if (entry.op !== "select") {
+        return Promise.resolve({ data: entry.op === "insert" ? { status: insertedStatus } : null, error: writeError }).then(resolve);
+      }
       const data =
         table === "world_timeline_arcs" ? [{ id: "arc", name: "L'exil" }]
-        : single ? { arc_id: null, previous_chatroom_id: "b" }
-        : [
-            { id: "self", title: "Moi", name: null, timeline_date: { year: 2, month: 0, day: 1 } },
-            { id: "b", title: "La grande crue", name: null, timeline_date: { year: 1, month: 1, day: 3 } },
-            { id: "c", title: "Plus tard", name: null, timeline_date: { year: 5, month: null, day: null } },
-          ];
+        : table === "chatroom_sequels" ? sequels
+        : { arc_id: null };
       return Promise.resolve({ data, error: null }).then(resolve);
     };
     return b;
   }
-  return { from: (t: string) => builder(t) } as never;
+  const rpc = () => Promise.resolve({
+    data: [
+      { id: "self", title: "Moi", timeline_date: { year: 2, month: 0, day: 1 }, mine: true, last_at: null },
+      { id: "b", title: "La grande crue", timeline_date: { year: 1, month: 1, day: 3 }, mine: true, last_at: null },
+      { id: "c", title: "Plus tard", timeline_date: { year: 5, month: null, day: null }, mine: false, last_at: null },
+    ],
+    error: null,
+  });
+  return { from: (t: string) => builder(t), rpc } as never;
 }
 
 beforeEach(() => {
-  updateError = null;
-  updates.length = 0;
+  writeError = null;
+  insertedStatus = "accepted";
+  sequels = [];
+  writes.length = 0;
   toastError.mockReset();
+  toastInfo.mockReset();
 });
 
+function monter(onSaved = vi.fn()) {
+  render(<ChatroomTimelineLinks chatroomId="self" worldId="w1" config={CONFIG} supabase={fakeClient()} onSaved={onSaved} />);
+}
+
 describe("ChatroomTimelineLinks", () => {
-  it("montre l'arc et la suite actuels ; les autres salons datés, dans l'ordre du récit, sans lui-même", async () => {
-    render(<ChatroomTimelineLinks chatroomId="self" worldId="w1" config={CONFIG} supabase={fakeClient()} />);
-    const suite = await screen.findByRole("combobox", { name: "Suite de" });
-    await vi.waitFor(() => expect(suite).toHaveValue("b"));
-    const options = [...(suite as HTMLSelectElement).options].map((o) => o.textContent);
-    expect(options).toEqual(["Aucun salon", "La grande crue — 3 Février, An 1", "Plus tard — An 5"]);
-    expect(screen.getByRole("combobox", { name: "Arc" })).toHaveValue("");
+  it("les salons précédents possibles : les autres salons datés, ceux où l'on joue d'abord", async () => {
+    monter();
+    const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
+    await screen.findByRole("option", { name: "La grande crue — 3 Février, An 1" });
+    const groupes = ajout.querySelectorAll("optgroup");
+    expect([...groupes].map((g) => g.getAttribute("label"))).toEqual(["Où vous jouez", "Autres salons"]);
+    expect(within(groupes[0] as HTMLElement).getByRole("option").textContent).toBe("La grande crue — 3 Février, An 1");
+    expect(within(groupes[1] as HTMLElement).getByRole("option").textContent).toBe("Plus tard — An 5");
+    // Pas lui-même.
+    expect(screen.queryByRole("option", { name: /^Moi/ })).toBeNull();
   });
 
   it("choisir un arc l'enregistre aussitôt", async () => {
     const user = userEvent.setup();
     const onSaved = vi.fn();
-    render(<ChatroomTimelineLinks chatroomId="self" worldId="w1" config={CONFIG} supabase={fakeClient()} onSaved={onSaved} />);
+    monter(onSaved);
     const arc = await screen.findByRole("combobox", { name: "Arc" });
     await screen.findByRole("option", { name: "L'exil" });
     await user.selectOptions(arc, "L'exil");
-    expect(updates).toContainEqual({ payload: { arc_id: "arc" }, eq: ["id", "self"] });
+    expect(writes).toContainEqual(expect.objectContaining({ table: "chatrooms", op: "update", payload: { arc_id: "arc" }, eq: ["id", "self"] }));
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
   });
 
-  it("une suite refusée (boucle) : un message, sans le texte brut de la base", async () => {
+  it("ajouter un salon précédent crée un lien ; proposé, on est prévenu qu'il attend un accord", async () => {
     const user = userEvent.setup();
-    updateError = { message: "Cette suite formerait une boucle." };
+    insertedStatus = "pending";
+    monter();
+    const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
+    await screen.findByRole("option", { name: "Plus tard — An 5" });
+    await user.selectOptions(ajout, "Plus tard — An 5");
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: "chatroom_sequels", op: "insert", payload: { world_id: "w1", chatroom_id: "self", previous_id: "c" },
+    }));
+    await vi.waitFor(() => expect(toastInfo).toHaveBeenCalledWith("Suite proposée : les participants de l'autre salon doivent l'accepter."));
+  });
+
+  it("liste les salons suivis, marque ceux proposés, et en retire un", async () => {
+    const user = userEvent.setup();
+    sequels = [{ id: "s1", previous_id: "b", status: "accepted" }, { id: "s2", previous_id: "c", status: "pending" }];
+    monter();
+    const liste = await screen.findByRole("list", { name: "Suite de" });
+    await vi.waitFor(() => expect(liste).toHaveTextContent("La grande crue — 3 Février, An 1"));
+    const lignes = within(liste).getAllByRole("listitem");
+    expect(lignes[0]).not.toHaveTextContent("proposée");
+    expect(lignes[1]).toHaveTextContent("proposée");
+    // Déjà reliés : plus dans la liste d'ajout.
+    expect(screen.queryByRole("option", { name: "La grande crue — 3 Février, An 1" })).toBeNull();
+
+    await user.click(within(lignes[1]).getByRole("button", { name: "Retirer le lien avec Plus tard" }));
+    expect(writes).toContainEqual(expect.objectContaining({ table: "chatroom_sequels", op: "delete", eq: ["id", "s2"] }));
+  });
+
+  it("un lien refusé (boucle, droits) : un message, sans le texte brut de la base", async () => {
+    const user = userEvent.setup();
+    writeError = { message: "Cette suite formerait une boucle." };
     const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
-    render(<ChatroomTimelineLinks chatroomId="self" worldId="w1" config={CONFIG} supabase={fakeClient()} />);
-    const suite = await screen.findByRole("combobox", { name: "Suite de" });
-    await vi.waitFor(() => expect(suite).toHaveValue("b"));
-    await user.selectOptions(suite, "Plus tard — An 5");
+    monter();
+    const ajout = await screen.findByRole("combobox", { name: "Ajouter un salon précédent…" });
+    await screen.findByRole("option", { name: "Plus tard — An 5" });
+    await user.selectOptions(ajout, "Plus tard — An 5");
     await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith("Impossible d'enregistrer l'arc ou la suite de ce salon."));
-    // La valeur affichée reste l'ancienne.
-    expect(suite).toHaveValue("b");
     erreur.mockRestore();
   });
 });

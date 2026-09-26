@@ -226,7 +226,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention' | 'persona_submitted' | 'persona_reviewed';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention' | 'persona_submitted' | 'persona_reviewed' | 'sequel_request';
 
 export type WorldInvitation = {
   id: string;
@@ -260,6 +260,10 @@ export type NotificationMeta = {
   persona_id?: string;
   decision?: PersonaReviewStatus;
   comment?: string | null;
+  /** Demande de suite (migration 194) : le lien proposé, la suite et le salon qu'elle suivrait. */
+  sequel_id?: string;
+  chatroom_title?: string | null;
+  previous_title?: string | null;
 };
 
 export type AppNotification = {

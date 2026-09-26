@@ -36,6 +36,7 @@ import {
 import { TimelineArcsDialog } from "@/components/worlds/timeline/TimelineArcsDialog";
 import { TimelineEventDialog } from "@/components/worlds/timeline/TimelineEventDialog";
 import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
+import { TimelineSequelRequests, type SequelRequest } from "@/components/worlds/timeline/TimelineSequelRequests";
 import {
   useTimelineData,
   type TimelineArc,
@@ -107,12 +108,15 @@ export function WorldTimeline({
   rooms,
   config,
   canManage = false,
+  canManageLinks = false,
 }: {
   worldId: string;
   rooms: TimelineRoom[];
   config: WorldTimelineConfig;
   /** `timeline.manage` : événements et arcs. */
   canManage?: boolean;
+  /** `chatrooms.manage` ou `timeline.manage` : accepter toute suite proposée. */
+  canManageLinks?: boolean;
 }) {
   const t = useTranslations("worlds");
   const tv = useTranslations("worlds.timelineView");
@@ -147,6 +151,16 @@ export function WorldTimeline({
   const arcsById = useMemo(() => new Map(data.arcs.map((a) => [a.id, a])), [data.arcs]);
   const eventsById = useMemo(() => new Map(data.events.map((e) => [e.id, e])), [data.events]);
 
+  // Les salons que chaque salon suit (liens acceptés ou proposés).
+  const previousOf = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const s of data.sequels) {
+      if (!map.has(s.chatroomId)) map.set(s.chatroomId, []);
+      map.get(s.chatroomId)!.push(s.previousId);
+    }
+    return map;
+  }, [data.sequels]);
+
   const allItems: TimelineItem[] = useMemo(() => {
     const roomItems: TimelineRoomItem[] = rooms
       .filter((r) => r.timeline_date !== null)
@@ -158,12 +172,12 @@ export function WorldTimeline({
           date: r.timeline_date!,
           title: r.title ?? r.name ?? t("timelineUntitled"),
           arcId: meta?.arcId ?? null,
-          previousId: meta?.previousId ?? null,
+          previousIds: previousOf.get(r.id) ?? [],
           categoryId: meta?.categoryId ?? null,
         };
       });
     return [...roomItems, ...data.events, ...data.journals];
-  }, [rooms, data.roomMeta, data.events, data.journals, t]);
+  }, [rooms, data.roomMeta, data.events, data.journals, previousOf, t]);
 
   // Le rang de chaque salon dans son arc, sur tous les salons : il ne change
   // pas quand on filtre.
@@ -192,13 +206,41 @@ export function WorldTimeline({
   );
   const [activePeriod, setActivePeriod] = useState(() => periodOf(config.current_year));
 
-  // Les suites dont les deux salons sont à l'écran.
+  // Les suites dont les deux salons sont à l'écran. Proposées, elles se
+  // tracent en pointillés ; reliées à la chaîne d'un arc, elles en prennent
+  // la couleur (voir SuiteLinks).
   const suiteLinks: SuiteLink[] = useMemo(() => {
-    const shown = new Set(visible.filter((i) => i.kind === "room").map((i) => i.id));
-    return visible
-      .filter((i): i is TimelineRoomItem => i.kind === "room" && !!i.previousId && shown.has(i.previousId))
-      .map((i) => ({ from: i.previousId!, to: i.id, color: i.arcId ? arcsById.get(i.arcId)?.color ?? null : null }));
-  }, [visible, arcsById]);
+    const shown = new Map(
+      visible.filter((i): i is TimelineRoomItem => i.kind === "room").map((i) => [i.id, i]),
+    );
+    const colorOf = (id: string) => {
+      const arcId = shown.get(id)?.arcId;
+      return arcId ? arcsById.get(arcId)?.color ?? null : null;
+    };
+    return data.sequels
+      .filter((s) => shown.has(s.chatroomId) && shown.has(s.previousId))
+      .map((s) => ({
+        from: s.previousId,
+        to: s.chatroomId,
+        color: colorOf(s.chatroomId) ?? colorOf(s.previousId),
+        pending: s.status === "pending",
+      }));
+  }, [visible, arcsById, data.sequels]);
+
+  // Les suites proposées que l'on peut accepter : accrochées à un salon où
+  // l'on joue, ou toutes pour qui gère les salons ou la chronologie.
+  const titleOf = useMemo(() => new Map(rooms.map((r) => [r.id, r.title ?? r.name ?? t("timelineUntitled")])), [rooms, t]);
+  const requests: SequelRequest[] = useMemo(
+    () => data.sequels
+      .filter((s) => s.status === "pending" && (canManageLinks || data.mine.has(s.previousId)))
+      .map((s) => ({
+        id: s.id,
+        chatroomTitle: titleOf.get(s.chatroomId) ?? t("timelineUntitled"),
+        previousTitle: titleOf.get(s.previousId) ?? t("timelineUntitled"),
+        createdByName: s.createdByName,
+      })),
+    [data.sequels, data.mine, canManageLinks, titleOf, t],
+  );
   // Au survol seulement : rien au repos ; la chaîne du salon survolé
   // s'allume, dans le style choisi, et le reste de la frise s'estompe.
   const highlight = useMemo(
@@ -291,6 +333,7 @@ export function WorldTimeline({
                 hoverOnly={hoverOnly}
                 onHoverOnly={setHoverOnly}
               />
+              <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reloadSequels()} />
               {canManage && (
                 <>
                   <Button

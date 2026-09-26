@@ -14,7 +14,8 @@ export type TimelineRoomItem = {
   date: WorldTimelineDate;
   title: string;
   arcId: string | null;
-  previousId: string | null;
+  /** Les salons qu'il suit (liens acceptés ou proposés, migration 194). */
+  previousIds: readonly string[];
   categoryId: string | null;
 };
 export type TimelineEventItem = {
@@ -228,7 +229,8 @@ export function assignSuiteLanes(spans: readonly { top: number; bottom: number }
 
 // ── Chaînes de suites ────────────────────────────────────────
 
-export type SuitePair = { from: string; to: string; color: string | null };
+/** Un lien de suite : `to` suit `from`. Proposé (`pending`), il se trace en pointillés. */
+export type SuitePair = { from: string; to: string; color: string | null; pending?: boolean };
 export type SuiteChain = { ids: string[]; color: string | null };
 
 /**
@@ -289,7 +291,7 @@ export function arcRanks(items: readonly TimelineItem[]): Map<string, number> {
       a.date.year - b.date.year ||
       (a.date.month ?? -1) - (b.date.month ?? -1) ||
       (a.date.day ?? 0) - (b.date.day ?? 0) ||
-      (a.previousId === b.id ? 1 : b.previousId === a.id ? -1 : 0) ||
+      (a.previousIds.includes(b.id) ? 1 : b.previousIds.includes(a.id) ? -1 : 0) ||
       a.title.localeCompare(b.title),
     );
     rooms.forEach((room, i) => ranks.set(room.id, i + 1));

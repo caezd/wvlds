@@ -18,8 +18,18 @@ export type SuiteLink = SuitePair;
 export type SuiteStyle = "rail" | "graph";
 export const SUITE_STYLES: readonly SuiteStyle[] = ["rail", "graph"];
 
-type Point = { id: string; y: number };
-type Drawn = { key: string; points: Point[]; top: number; bottom: number; lane: number; color: string | null };
+type Point = { id: string; y: number; pending: boolean };
+/** Un tronçon du trait vertical, entre deux salons voisins de la chaîne. */
+type Segment = { top: number; bottom: number; pending: boolean };
+type Drawn = {
+  key: string;
+  points: Point[];
+  segments: Segment[];
+  top: number;
+  bottom: number;
+  lane: number;
+  color: string | null;
+};
 
 const EDGE = 12;
 const STUB = 14;
@@ -74,11 +84,31 @@ export function SuiteLinks({
     const ringRect = ring?.getBoundingClientRect();
     const filX = ringRect ? ringRect.left - rect.left + ringRect.width / 2 : 0;
 
+    // Un lien proposé se trace en pointillés : un salon que seuls des liens
+    // proposés rattachent, et un tronçon qu'aucun lien accepté ne couvre.
+    const pairY = links
+      .map((l) => ({ ...l, a: yOf(l.from), b: yOf(l.to) }))
+      .filter((l): l is typeof l & { a: number; b: number } => l.a !== null && l.b !== null)
+      .map((l) => ({ ...l, top: Math.min(l.a, l.b), bottom: Math.max(l.a, l.b) }));
     const chains = buildSuiteChains(links)
-      .map((c) => ({
-        color: c.color,
-        points: c.ids.map((id) => ({ id, y: yOf(id) })).filter((p): p is Point => p.y !== null),
-      }))
+      .map((c) => {
+        const points = c.ids
+          .map((id) => {
+            const y = yOf(id);
+            const own = pairY.filter((l) => l.from === id || l.to === id);
+            return y === null ? null : { id, y, pending: own.length > 0 && own.every((l) => l.pending) };
+          })
+          .filter((p): p is Point => p !== null)
+          .sort((a, b) => a.y - b.y);
+        const members = new Set(points.map((p) => p.id));
+        const segments: Segment[] = points.slice(1).map((p, i) => {
+          const top = points[i].y;
+          const bottom = p.y;
+          const covering = pairY.filter((l) => members.has(l.from) && l.top <= top && l.bottom >= bottom);
+          return { top, bottom, pending: covering.length > 0 && covering.every((l) => l.pending) };
+        });
+        return { color: c.color, points, segments };
+      })
       .filter((c) => c.points.length > 1);
     const spans = chains.map((c) => ({
       top: Math.min(...c.points.map((p) => p.y)),
@@ -88,6 +118,7 @@ export function SuiteLinks({
     setDrawn(chains.map((c, i) => ({
       key: c.points.map((p) => p.id).join(">"),
       points: c.points,
+      segments: c.segments,
       top: spans[i].top,
       bottom: spans[i].bottom,
       lane: lanes[i],
@@ -115,9 +146,11 @@ export function SuiteLinks({
     : drawn;
   if (shown.length === 0) return null;
   const gap = LANE_GAP[style];
-  const strokeProps = (color: string | null) => ({
+  const strokeProps = (color: string | null, pending = false) => ({
     className: color ? undefined : "stroke-foreground/30",
     style: color ? { stroke: color, opacity: 0.85 } : undefined,
+    strokeDasharray: pending ? "3 3" : undefined,
+    "data-pending": pending ? "" : undefined,
   });
   const fillProps = (color: string | null) => ({
     className: color ? undefined : "fill-foreground/40",
@@ -137,10 +170,12 @@ export function SuiteLinks({
           const x = box.filX + GRAPH_OFFSET + d.lane * gap;
           return (
             <g key={d.key} data-suite={d.key}>
-              <path d={`M ${x} ${d.top} V ${d.bottom}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color)} />
+              {d.segments.map((s) => (
+                <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color, s.pending)} />
+              ))}
               {d.points.map((p) => (
                 <g key={p.id}>
-                  <path d={`M ${x} ${p.y} H ${box.filX + 7}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color)} />
+                  <path d={`M ${x} ${p.y} H ${box.filX + 7}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color, p.pending)} />
                   <circle cx={x} cy={p.y} r={2.5} {...fillProps(d.color)} />
                 </g>
               ))}
@@ -151,10 +186,12 @@ export function SuiteLinks({
         const x = box.width - EDGE - d.lane * gap;
         return (
           <g key={d.key} data-suite={d.key}>
-            <path d={`M ${x} ${d.top} V ${d.bottom}`} fill="none" strokeWidth={2} strokeLinecap="round" {...strokeProps(d.color)} />
+            {d.segments.map((s) => (
+              <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={2} strokeLinecap={s.pending ? "butt" : "round"} {...strokeProps(d.color, s.pending)} />
+            ))}
             {d.points.map((p) => (
               <g key={p.id}>
-                <path d={`M ${x} ${p.y} H ${x - STUB}`} fill="none" strokeWidth={1} {...strokeProps(d.color)} />
+                <path d={`M ${x} ${p.y} H ${x - STUB}`} fill="none" strokeWidth={1} {...strokeProps(d.color, p.pending)} />
                 <circle cx={x} cy={p.y} r={3.5} {...fillProps(d.color)} />
               </g>
             ))}

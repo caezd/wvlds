@@ -11,7 +11,15 @@ import type { WorldTimelineDate } from "@/types/worlds";
 export type TimelineOpener = { name: string; persona: string | null; personaColor: string | null };
 export type TimelineArc = { id: string; name: string; color: string; position: number };
 export type TimelineCategory = { id: string; title: string };
-export type TimelineRoomMeta = { arcId: string | null; previousId: string | null; categoryId: string | null };
+export type TimelineRoomMeta = { arcId: string | null; categoryId: string | null };
+/** Un lien de suite (migration 194) : `chatroomId` suit `previousId`. */
+export type TimelineSequel = {
+  id: string;
+  chatroomId: string;
+  previousId: string;
+  status: "pending" | "accepted";
+  createdByName: string | null;
+};
 export type TimelineEvent = TimelineEventItem & { wikiPage: { slug: string; title: string } | null };
 
 type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
@@ -25,7 +33,15 @@ type EventRow = {
   wiki_page: { slug: string; title: string } | null;
 };
 type JournalRow = { id: string; persona_id: string; body: string; timeline_date: WorldTimelineDate; persona: { name: string } | null };
-type RoomRow = { id: string; arc_id: string | null; previous_chatroom_id: string | null; category_id: string | null };
+type RoomRow = { id: string; arc_id: string | null; category_id: string | null };
+type SequelRow = {
+  id: string;
+  chatroom_id: string;
+  previous_id: string;
+  status: "pending" | "accepted";
+  creator: { username: string | null } | null;
+};
+type LinkableRow = { id: string; mine: boolean };
 
 function logError(what: string, error: unknown) {
   console.error(`[WorldTimeline] ${what}`, error);
@@ -49,6 +65,32 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
   const [openers, setOpeners] = useState<ReadonlyMap<string, TimelineOpener>>(new Map());
   const [roomPersonas, setRoomPersonas] = useState<ReadonlyMap<string, ReadonlySet<string>>>(new Map());
   const [personas, setPersonas] = useState<{ id: string; name: string }[]>([]);
+  const [sequels, setSequels] = useState<TimelineSequel[]>([]);
+  const [mine, setMine] = useState<ReadonlySet<string>>(new Set());
+
+  // Les liens de suite, et les salons où l'on joue (pour savoir quelles
+  // demandes on peut accepter).
+  const reloadSequels = useCallback(async () => {
+    const [seqRes, mineRes] = await Promise.all([
+      supabase
+        .from(TABLE.CHATROOM_SEQUELS)
+        .select("id, chatroom_id, previous_id, status, creator:created_by(username)")
+        .eq("world_id", worldId),
+      supabase.rpc(RPC.GET_LINKABLE_CHATROOMS, { p_world_id: worldId }),
+    ]);
+    if (seqRes.error) logError("liens de suite", seqRes.error);
+    else {
+      setSequels(((seqRes.data ?? []) as unknown as SequelRow[]).map((s) => ({
+        id: s.id,
+        chatroomId: s.chatroom_id,
+        previousId: s.previous_id,
+        status: s.status,
+        createdByName: s.creator?.username ?? null,
+      })));
+    }
+    if (mineRes.error) logError("salons où l'on joue", mineRes.error);
+    else setMine(new Set(((mineRes.data ?? []) as LinkableRow[]).filter((r) => r.mine).map((r) => r.id)));
+  }, [supabase, worldId]);
 
   const reloadEvents = useCallback(async () => {
     const { data, error } = await supabase
@@ -81,13 +123,13 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
   const reloadRooms = useCallback(async () => {
     const { data, error } = await supabase
       .from(TABLE.CHATROOMS)
-      .select("id, arc_id, previous_chatroom_id, category_id")
+      .select("id, arc_id, category_id")
       .eq("world_id", worldId)
       .not("timeline_date", "is", null);
     if (error) return logError("liens des salons", error);
     setRoomMeta(new Map(((data ?? []) as RoomRow[]).map((r) => [
       r.id,
-      { arcId: r.arc_id, previousId: r.previous_chatroom_id, categoryId: r.category_id },
+      { arcId: r.arc_id, categoryId: r.category_id },
     ])));
   }, [supabase, worldId]);
 
@@ -96,6 +138,7 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
     void reloadEvents();
     void reloadArcs();
     void reloadRooms();
+    void reloadSequels();
 
     void supabase
       .from(TABLE.CHATROOM_CATEGORIES)
@@ -139,7 +182,7 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
       });
 
     return () => { cancelled = true; };
-  }, [supabase, worldId, reloadEvents, reloadArcs, reloadRooms]);
+  }, [supabase, worldId, reloadEvents, reloadArcs, reloadRooms, reloadSequels]);
 
   // Les journaux : seulement si le monde les montre.
   useEffect(() => {
@@ -178,6 +221,9 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
     openers,
     roomPersonas,
     personas,
+    sequels,
+    mine,
+    reloadSequels,
     reloadEvents,
     reloadArcs,
     reloadRooms,

@@ -243,7 +243,8 @@
       "role_mention": "Mentions of my roles",
       "everyone_mention": "@everyone and @here",
       "persona_submitted": "Sheets submitted for review",
-      "persona_reviewed": "Reviews of my sheets"
+      "persona_reviewed": "Reviews of my sheets",
+      "sequel_request": "Sequel requests between chatrooms"
     },
     "text": {
       "someone": "Someone",
@@ -277,9 +278,18 @@
       "personaSubmitted": "<b>{actor}</b> submitted <b>{persona}</b>'s sheet for review",
       "personaApproved": "<b>{actor}</b> approved <b>{persona}</b>'s sheet",
       "personaSentBack": "<b>{actor}</b> sent <b>{persona}</b>'s sheet back to draft",
-      "personaFallback": "a persona"
+      "personaFallback": "a persona",
+      "sequelRequest": "<b>{actor}</b> proposes <b>{chatroom}</b> as a sequel to <b>{previous}</b>"
     },
-    "back": "Back"
+    "back": "Back",
+    "sequelRequest": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "Sequel accepted.",
+      "declined": "Sequel declined.",
+      "expired": "This request is no longer valid.",
+      "failed": "Could not answer this request."
+    }
   },
   "dms": {
     "title": "Direct messages",
@@ -447,7 +457,13 @@
       "categoryPlaceholder": "Category",
       "categoryNone": "None",
       "dateSection": "Date on the timeline",
-      "dateRequired": "This world requires a date for every new chatroom."
+      "dateRequired": "This world requires a date for every new chatroom.",
+      "sequelOf": "Sequel to…",
+      "sequelNone": "Sequel to… (optional)",
+      "sequelMine": "Where you play",
+      "sequelOthers": "Other chatrooms",
+      "sequelProposed": "Chatroom created. The sequel is proposed: the other chatroom's participants must accept it.",
+      "sequelFailed": "The chatroom is created, but not the sequel link: add it again from its settings."
     },
     "home": {
       "addWidget": "Add a widget",
@@ -643,7 +659,14 @@
         "rail": "Continuous rail",
         "graph": "Graph beside the line"
       },
-      "suiteHoverOnly": "On hover only"
+      "suiteHoverOnly": "On hover only",
+      "sequelRequests": "Proposed sequels",
+      "sequelRequestsHelp": "These chatrooms would like to follow a chatroom you play in. Accept to link them on the timeline.",
+      "sequelRequestLine": "<b>{chatroom}</b> would follow <b>{previous}</b>",
+      "sequelRequestBy": "proposed by @{name}",
+      "sequelAccept": "Accept the sequel {chatroom}",
+      "sequelDecline": "Decline the sequel {chatroom}",
+      "sequelAnswerFailed": "Could not answer this proposed sequel."
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",
@@ -733,6 +756,10 @@
         "chatrooms_manage": {
           "label": "Manage other members' chatrooms",
           "help": "Edit or delete chatrooms created by other members."
+        },
+        "chatrooms_link": {
+          "label": "Link chatrooms",
+          "help": "Declare that a chatroom you play in follows another one. If you don't play in the other chatroom, its participants must accept."
         },
         "categories_manage": {
           "label": "Manage categories",
@@ -1487,7 +1514,13 @@
     "settingsArc": "Arc",
     "settingsArcNone": "No arc",
     "settingsSuiteOf": "Sequel to",
-    "settingsSuiteNone": "No chatroom",
+    "settingsSuiteAdd": "Add a previous chatroom…",
+    "settingsSuiteMine": "Where you play",
+    "settingsSuiteOthers": "Other chatrooms",
+    "settingsSuitePending": "proposed",
+    "settingsSuiteProposed": "Sequel proposed: the other chatroom's participants must accept it.",
+    "settingsSuiteRemove": "Remove the link with {title}",
+    "settingsSuiteUnknown": "Inaccessible chatroom",
     "settingsTimelineLinksFailed": "Could not save this chatroom's arc or sequel.",
     "settingsMonth": "Month",
     "settingsDay": "Day",

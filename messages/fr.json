@@ -244,7 +244,8 @@
       "role_mention": "Mentions de mes rôles",
       "everyone_mention": "@tous et @ici",
       "persona_submitted": "Fiches soumises à validation",
-      "persona_reviewed": "Relecture de mes fiches"
+      "persona_reviewed": "Relecture de mes fiches",
+      "sequel_request": "Demandes de suite entre salons"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -278,7 +279,16 @@
       "personaSubmitted": "<b>{actor}</b> a soumis la fiche de <b>{persona}</b> à validation",
       "personaApproved": "<b>{actor}</b> a validé la fiche de <b>{persona}</b>",
       "personaSentBack": "<b>{actor}</b> a renvoyé la fiche de <b>{persona}</b> en brouillon",
-      "personaFallback": "un persona"
+      "personaFallback": "un persona",
+      "sequelRequest": "<b>{actor}</b> propose que <b>{chatroom}</b> fasse suite à <b>{previous}</b>"
+    },
+    "sequelRequest": {
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "accepted": "Suite acceptée.",
+      "declined": "Suite refusée.",
+      "expired": "Cette demande n'est plus valide.",
+      "failed": "Impossible de répondre à cette demande."
     }
   },
   "dms": {
@@ -447,7 +457,13 @@
       "categoryPlaceholder": "Catégorie",
       "categoryNone": "Aucune",
       "dateSection": "Date dans la chronologie",
-      "dateRequired": "Ce monde exige une date pour chaque nouveau salon."
+      "dateRequired": "Ce monde exige une date pour chaque nouveau salon.",
+      "sequelOf": "Suite de…",
+      "sequelNone": "Suite de… (facultatif)",
+      "sequelMine": "Où vous jouez",
+      "sequelOthers": "Autres salons",
+      "sequelProposed": "Salon créé. La suite est proposée : les participants de l'autre salon doivent l'accepter.",
+      "sequelFailed": "Le salon est créé, mais pas le lien de suite : refaites-le depuis ses réglages."
     },
     "home": {
       "addWidget": "Ajouter un widget",
@@ -643,7 +659,14 @@
         "rail": "Rail continu",
         "graph": "Graphe à côté du fil"
       },
-      "suiteHoverOnly": "Au survol seulement"
+      "suiteHoverOnly": "Au survol seulement",
+      "sequelRequests": "Suites proposées",
+      "sequelRequestsHelp": "Ces salons voudraient faire suite à un salon où vous jouez. Acceptez pour les relier sur la chronologie.",
+      "sequelRequestLine": "<b>{chatroom}</b> ferait suite à <b>{previous}</b>",
+      "sequelRequestBy": "proposé par @{name}",
+      "sequelAccept": "Accepter la suite {chatroom}",
+      "sequelDecline": "Refuser la suite {chatroom}",
+      "sequelAnswerFailed": "Impossible de répondre à cette suite proposée."
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",
@@ -733,6 +756,10 @@
         "chatrooms_manage": {
           "label": "Gérer les salons des autres",
           "help": "Modifier ou supprimer les salons créés par d'autres membres."
+        },
+        "chatrooms_link": {
+          "label": "Relier des salons",
+          "help": "Déclarer qu'un salon où l'on joue fait suite à un autre. Si l'on ne joue pas dans l'autre salon, ses participants doivent accepter."
         },
         "categories_manage": {
           "label": "Gérer les catégories",
@@ -1487,7 +1514,13 @@
     "settingsArc": "Arc",
     "settingsArcNone": "Aucun arc",
     "settingsSuiteOf": "Suite de",
-    "settingsSuiteNone": "Aucun salon",
+    "settingsSuiteAdd": "Ajouter un salon précédent…",
+    "settingsSuiteMine": "Où vous jouez",
+    "settingsSuiteOthers": "Autres salons",
+    "settingsSuitePending": "proposée",
+    "settingsSuiteProposed": "Suite proposée : les participants de l'autre salon doivent l'accepter.",
+    "settingsSuiteRemove": "Retirer le lien avec {title}",
+    "settingsSuiteUnknown": "Salon inaccessible",
     "settingsTimelineLinksFailed": "Impossible d'enregistrer l'arc ou la suite de ce salon.",
     "settingsMonth": "Mois",
     "settingsDay": "Jour",

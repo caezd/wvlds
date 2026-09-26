@@ -243,7 +243,8 @@
       "role_mention": "Menciones de mis roles",
       "everyone_mention": "@todos y @aquí",
       "persona_submitted": "Fichas enviadas a validación",
-      "persona_reviewed": "Revisión de mis fichas"
+      "persona_reviewed": "Revisión de mis fichas",
+      "sequel_request": "Solicitudes de continuación entre salas"
     },
     "text": {
       "someone": "Alguien",
@@ -277,9 +278,18 @@
       "personaSubmitted": "<b>{actor}</b> envió la ficha de <b>{persona}</b> a validación",
       "personaApproved": "<b>{actor}</b> validó la ficha de <b>{persona}</b>",
       "personaSentBack": "<b>{actor}</b> devolvió la ficha de <b>{persona}</b> a borrador",
-      "personaFallback": "un persona"
+      "personaFallback": "un persona",
+      "sequelRequest": "<b>{actor}</b> propone que <b>{chatroom}</b> continúe <b>{previous}</b>"
     },
-    "back": "Volver"
+    "back": "Volver",
+    "sequelRequest": {
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "accepted": "Continuación aceptada.",
+      "declined": "Continuación rechazada.",
+      "expired": "Esta solicitud ya no es válida.",
+      "failed": "No se pudo responder a esta solicitud."
+    }
   },
   "dms": {
     "title": "Mensajes privados",
@@ -447,7 +457,13 @@
       "categoryPlaceholder": "Categoría",
       "categoryNone": "Ninguna",
       "dateSection": "Fecha en la cronología",
-      "dateRequired": "Este mundo exige una fecha para cada sala nueva."
+      "dateRequired": "Este mundo exige una fecha para cada sala nueva.",
+      "sequelOf": "Continuación de…",
+      "sequelNone": "Continuación de… (opcional)",
+      "sequelMine": "Donde usted juega",
+      "sequelOthers": "Otras salas",
+      "sequelProposed": "Sala creada. La continuación está propuesta: los participantes de la otra sala deben aceptarla.",
+      "sequelFailed": "La sala está creada, pero no el enlace de continuación: vuelva a añadirlo desde sus ajustes."
     },
     "home": {
       "addWidget": "Añadir un widget",
@@ -643,7 +659,14 @@
         "rail": "Raíl continuo",
         "graph": "Gráfico junto al hilo"
       },
-      "suiteHoverOnly": "Solo al pasar el cursor"
+      "suiteHoverOnly": "Solo al pasar el cursor",
+      "sequelRequests": "Continuaciones propuestas",
+      "sequelRequestsHelp": "Estas salas quieren continuar una sala en la que usted juega. Acepte para enlazarlas en la cronología.",
+      "sequelRequestLine": "<b>{chatroom}</b> continuaría <b>{previous}</b>",
+      "sequelRequestBy": "propuesta por @{name}",
+      "sequelAccept": "Aceptar la continuación {chatroom}",
+      "sequelDecline": "Rechazar la continuación {chatroom}",
+      "sequelAnswerFailed": "No se pudo responder a esta continuación propuesta."
     },
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",
@@ -733,6 +756,10 @@
         "chatrooms_manage": {
           "label": "Gestionar las salas de otros",
           "help": "Modificar o eliminar las salas creadas por otros miembros."
+        },
+        "chatrooms_link": {
+          "label": "Enlazar salas",
+          "help": "Declarar que una sala en la que juega continúa otra. Si no juega en la otra sala, sus participantes deben aceptar."
         },
         "categories_manage": {
           "label": "Gestionar las categorías",
@@ -1487,7 +1514,13 @@
     "settingsArc": "Arco",
     "settingsArcNone": "Ningún arco",
     "settingsSuiteOf": "Continuación de",
-    "settingsSuiteNone": "Ninguna sala",
+    "settingsSuiteAdd": "Añadir una sala anterior…",
+    "settingsSuiteMine": "Donde usted juega",
+    "settingsSuiteOthers": "Otras salas",
+    "settingsSuitePending": "propuesta",
+    "settingsSuiteProposed": "Continuación propuesta: los participantes de la otra sala deben aceptarla.",
+    "settingsSuiteRemove": "Quitar el enlace con {title}",
+    "settingsSuiteUnknown": "Sala inaccesible",
     "settingsTimelineLinksFailed": "No se pudo guardar el arco o la continuación de esta sala.",
     "settingsMonth": "Mes",
     "settingsDay": "Día",

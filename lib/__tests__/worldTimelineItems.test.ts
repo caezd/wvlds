@@ -15,7 +15,7 @@ import {
 } from "@/lib/worldTimelineItems";
 
 const salon = (id: string, year: number, month: number | null, day: number | null, extra: Partial<TimelineItem> = {}): TimelineItem => ({
-  kind: "room", id, date: { year, month, day }, title: id, arcId: null, previousId: null, categoryId: null, ...extra,
+  kind: "room", id, date: { year, month, day }, title: id, arcId: null, previousIds: [], categoryId: null, ...extra,
 } as TimelineItem);
 const evenement = (id: string, year: number, month: number | null, day: number | null): TimelineItem => ({
   kind: "event", id, date: { year, month, day }, title: `Événement ${id}`, description: null, wikiPageId: null,
@@ -155,7 +155,7 @@ describe("arcRanks", () => {
     const { arcRanks } = await import("@/lib/worldTimelineItems");
     const ranks = arcRanks([
       salon("c", 3, 0, 1, { arcId: "exil" } as Partial<TimelineItem>),
-      salon("b", 1, 2, 9, { arcId: "exil", previousId: "a" } as Partial<TimelineItem>),
+      salon("b", 1, 2, 9, { arcId: "exil", previousIds: ["a"] } as Partial<TimelineItem>),
       salon("a", 1, 2, 9, { arcId: "exil" } as Partial<TimelineItem>),
       salon("x", 1, 0, 1, { arcId: "crue" } as Partial<TimelineItem>),
       salon("libre", 1, 0, 1),
