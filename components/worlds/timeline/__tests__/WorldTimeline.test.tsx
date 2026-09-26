@@ -68,18 +68,21 @@ describe("WorldTimeline — frise verticale", () => {
     expect(date).toHaveTextContent("19 Février");
     // Avant le titre, sur une ligne de 16px…
     expect(date.compareDocumentPosition(within(groupe as HTMLElement).getByText("Prologue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(date.className).toContain("leading-4");
-    // …sur laquelle l'anneau (12px) se centre : 2px au-dessus.
+    expect(date.className.split(" ")).toContain("h-6");
+    // Le jour en grand, le mois en petites capitales.
+    expect(within(date).getByText("19").className).toContain("text-xl");
+    expect(within(date).getByText("Février").className).toContain("uppercase");
+    // …sur laquelle (24px) l'anneau (12px) se centre : 6px au-dessus.
     const anneau = groupe.querySelector("[data-testid='timeline-ring']")!;
-    expect(anneau.className.split(" ")).toEqual(expect.arrayContaining(["size-3", "top-0.5", "border-border"]));
+    expect(anneau.className.split(" ")).toEqual(expect.arrayContaining(["size-3", "top-1.5", "border-border"]));
     // Plus de pastille de date.
     expect(screen.queryByTestId("timeline-date-pill")).toBeNull();
 
     // Une date qui s'arrête à l'année : pas de ligne de date, l'anneau se
-    // centre sur le titre.
+    // centre sur le premier titre (sa ligne fait aussi 24px).
     const annee = screen.getByRole("button", { name: /Une année entière/ }).closest("[data-date-group]")!;
     expect(within(annee as HTMLElement).queryByTestId("timeline-date")).toBeNull();
-    expect(annee.querySelector("[data-testid='timeline-ring']")!.className.split(" ")).toContain("top-1");
+    expect(annee.querySelector("[data-testid='timeline-ring']")!.className.split(" ")).toContain("top-1.5");
   });
 
   it("les salons d'une même date se réunissent : une date, un anneau, leurs titres dessous", () => {
@@ -99,6 +102,11 @@ describe("WorldTimeline — frise verticale", () => {
     // Chacun garde sa date complète pour les lecteurs d'écran.
     expect(within(neufMars).getByRole("button", { name: "Deux lettres, 9 Mars, An 2" })).toBeInTheDocument();
     expect(within(juin).getAllByRole("button")).toHaveLength(1);
+
+    // En branche : un coude par salon, la branche s'arrête au dernier.
+    const coudes = [...within(neufMars).getByTestId("timeline-branch").querySelectorAll("[data-branch]")];
+    expect(coudes.map((c) => c.getAttribute("data-branch"))).toEqual(["tee", "tee", "end"]);
+    expect(juin.querySelector("[data-branch]")!.getAttribute("data-branch")).toBe("end");
   });
 
   it("l'année en très grands chiffres, sa légende en exposant, sans rouge", () => {

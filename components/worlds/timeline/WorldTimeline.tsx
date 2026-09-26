@@ -42,7 +42,7 @@ const RANGE_SPAN = 5;
 /**
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
  * grands chiffres, au centre un fil, et pour chaque date un anneau sur le
- * fil, la date une fois, puis les titres des salons qu'elle réunit. Un filet sépare les
+ * fil, le jour en grand, puis les salons qu'elle réunit, en branche. Un filet sépare les
  * années, un filet chaque mois (son nom posé dessus, en capitales) ; la date
  * actuelle du monde barre la frise d'un trait rouge plein, à son mois, et la
  * frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
@@ -335,8 +335,7 @@ function DateGroupBlock({
   onOpen: (id: string) => void;
 }) {
   const monthName = group.month !== null ? (config.month_names[group.month] ?? null) : null;
-  // « 19 Février » ; rien quand la date s'arrête à l'année.
-  const short = [group.day, monthName].filter((v) => v !== null && v !== undefined).join(" ");
+  const hasDate = group.day !== null || monthName !== null;
   const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
   return (
     <li
@@ -361,30 +360,50 @@ function DateGroupBlock({
           )}
         </>
       )}
-      {/* Un anneau creux sur le fil, centré sur la première ligne — la date,
-          ou le premier titre quand il n'y en a pas — et qui fonce au survol. */}
+      {/* Un anneau creux sur le fil, centré sur la première ligne (24px) —
+          la date, ou le premier titre quand il n'y en a pas — et qui fonce au
+          survol. */}
       <span
         className={cn(
           "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-border transition-colors group-hover/entry:border-foreground",
           AMBIENT_BG,
-          short ? (newMonth ? "top-[18px]" : "top-0.5") : (newMonth ? "top-5" : "top-1"),
+          newMonth ? "top-[22px]" : "top-1.5",
         )}
         data-testid="timeline-ring"
         aria-hidden
       />
-      {/* La date, une fois pour tous ses salons, sur une ligne de 16px :
-          l'anneau se centre dessus. */}
-      {short && (
-        <p className="text-xs leading-4 tabular-nums text-muted-foreground" data-testid="timeline-date" aria-hidden>
-          {short}
+      {/* La date, une fois pour tous ses salons : le jour en grand, le mois
+          en petites capitales à côté, sur une ligne de 24px. */}
+      {hasDate && (
+        <p className="flex h-6 items-baseline gap-1.5 tabular-nums" data-testid="timeline-date" aria-hidden>
+          {group.day !== null && (
+            <span className="text-xl font-semibold leading-6 text-foreground">{group.day}</span>
+          )}
+          {group.day !== null && monthName ? " " : null}
+          {monthName && (
+            <span className="text-[10px] font-medium uppercase leading-6 tracking-wider text-muted-foreground">
+              {monthName}
+            </span>
+          )}
         </p>
       )}
-      <ul className="space-y-0.5">
-        {group.rooms.map((room) => (
-          <li key={room.id}>
-            <RoomLink room={room} fullDate={fullDate} opener={openers.get(room.id) ?? null} onClick={() => onOpen(room.id)} />
-          </li>
-        ))}
+      {/* Les salons en branche : un coude chacun (├ └), la branche s'arrête
+          au dernier. */}
+      <ul data-testid="timeline-branch">
+        {group.rooms.map((room, i) => {
+          const last = i === group.rooms.length - 1;
+          return (
+            <li key={room.id} className="relative py-0.5 pl-5">
+              <span
+                className={cn("absolute left-1 top-0 w-px bg-border", last ? "h-3" : "bottom-0")}
+                data-branch={last ? "end" : "tee"}
+                aria-hidden
+              />
+              <span className="absolute left-1 top-3 h-px w-2.5 bg-border" aria-hidden />
+              <RoomLink room={room} fullDate={fullDate} opener={openers.get(room.id) ?? null} onClick={() => onOpen(room.id)} />
+            </li>
+          );
+        })}
       </ul>
     </li>
   );
