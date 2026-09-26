@@ -85,6 +85,35 @@ describe("WorldChatComposer — date exigée à la création", () => {
     );
   });
 
+  it("dans le dialogue, la date se tient à droite du titre", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldChatComposer worldId="w1" timelineConfig={{ ...CONFIG, require_date: true }} />);
+    await user.click(screen.getByText(/Nouveau jeu/i));
+
+    const section = await screen.findByRole("region", { name: "Date dans la chronologie" });
+    const titre = screen.getByPlaceholderText("Titre de la conversation");
+    // Même ligne : le titre et la date partagent leur conteneur flex.
+    expect(section.parentElement).toBe(titre.parentElement?.parentElement);
+  });
+
+  it("sur mobile, la date passe sous le titre", async () => {
+    setup();
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true, media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    const user = userEvent.setup();
+    render(<WorldChatComposer worldId="w1" timelineConfig={{ ...CONFIG, require_date: true }} />);
+    await user.click(screen.getByText(/Nouveau jeu/i));
+
+    const section = await screen.findByRole("region", { name: "Date dans la chronologie" });
+    const titre = screen.getByPlaceholderText("Titre de la conversation");
+    expect(section.parentElement).not.toBe(titre.parentElement?.parentElement);
+    // Placée après la ligne du titre.
+    expect(titre.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("exigée : sans date, le salon n'est pas créé", async () => {
     const mock = setup();
     const user = userEvent.setup();

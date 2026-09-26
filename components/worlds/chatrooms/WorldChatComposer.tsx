@@ -211,6 +211,24 @@ export function WorldChatComposer({
     return { chatId: room.id };
   }
 
+  // La date, quand le monde n'en laisse pas créer sans : à droite du titre
+  // dans le dialogue, dessous sur mobile où la largeur manque.
+  const dateRow = dateRequired && timelineConfig && timelineDate ? (
+    <section
+      aria-label={t("composer.dateSection")}
+      title={t("composer.dateSection")}
+      className={cn(
+        "flex h-9 items-center gap-2 rounded-lg border border-border-soft pl-2.5 pr-1",
+        !isMobile && "shrink-0",
+      )}
+    >
+      <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <TimelineDatePicker dense config={timelineConfig} value={timelineDate} onCommit={setTimelineDate} />
+      </div>
+    </section>
+  ) : null;
+
   const titleRow = (
     <div className="flex gap-2">
       <div className="relative flex-1">
@@ -242,6 +260,7 @@ export function WorldChatComposer({
       >
         <Shuffle className="h-4 w-4" />
       </Button>
+      {!isMobile && dateRow}
       {categories.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -277,20 +296,6 @@ export function WorldChatComposer({
       )}
     </div>
   );
-
-  // La date, sous le titre, quand le monde n'en laisse pas créer sans.
-  const dateRow = dateRequired && timelineConfig && timelineDate ? (
-    <section
-      aria-label={t("composer.dateSection")}
-      title={t("composer.dateSection")}
-      className="flex items-center gap-2 rounded-lg border border-border-soft py-1 pl-2.5 pr-1"
-    >
-      <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-      <div className="min-w-0 flex-1">
-        <TimelineDatePicker dense config={timelineConfig} value={timelineDate} onCommit={setTimelineDate} />
-      </div>
-    </section>
-  ) : null;
 
   // onInput remonte depuis le contenteditable du composer.
   const composerBlock = (
@@ -359,7 +364,6 @@ export function WorldChatComposer({
               <DialogDescription className="sr-only">{t("composer.placeholder")}</DialogDescription>
             </DialogHeader>
             {titleRow}
-            {dateRow}
             {composerBlock}
           </DialogContent>
         </Dialog>
