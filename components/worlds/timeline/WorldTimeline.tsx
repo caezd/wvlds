@@ -705,18 +705,64 @@ export function WorldTimeline({
   );
 }
 
-/** La place de la frise pendant son chargement : quelques lignes muettes. */
+/**
+ * Ce que le squelette esquisse : deux années, chacune avec ses mois et, pour
+ * chaque date, la largeur de son titre (en %) et de son « par … ».
+ */
+const SKELETON_YEARS: { months: { title: number; by: number }[][] }[] = [
+  { months: [[{ title: 38, by: 16 }, { title: 52, by: 12 }], [{ title: 44, by: 18 }]] },
+  { months: [[{ title: 56, by: 14 }], [{ title: 34, by: 20 }, { title: 48, by: 12 }]] },
+];
+const SKELETON_BAR = "animate-pulse rounded bg-muted";
+
+/**
+ * La place de la frise pendant son chargement, dessinée comme elle : le
+ * bandeau de l'année (légende et chiffre), la colonne des jours et des mois,
+ * le fil et ses anneaux, les titres suivis de leur « par … », les filets
+ * pointillés des mois — aux mêmes retraits, pour que la frise s'y pose sans
+ * que rien ne saute.
+ */
 function TimelineSkeleton({ label }: { label: string }) {
   return (
-    <div className="space-y-5 px-5 py-8" role="status" aria-busy="true" data-testid="timeline-loading">
+    <div className="px-5 pb-6" role="status" aria-busy="true" data-testid="timeline-loading">
       <span className="sr-only">{label}</span>
-      {[40, 64, 52, 72, 48, 60].map((w, i) => (
-        <div key={i} className="flex items-center gap-4" aria-hidden>
-          <div className="h-4 w-16 shrink-0 animate-pulse rounded bg-muted" />
-          <div className="size-3 shrink-0 rounded-full bg-muted" />
-          <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${w}%` }} />
-        </div>
-      ))}
+      <ol aria-hidden>
+        {SKELETON_YEARS.map((year, y) => (
+          <li key={y}>
+            <div className={cn("-mx-5 flex items-center gap-1.5 border-y border-border px-5 py-2", y === 0 && "border-t-0")}>
+              <span className={cn(SKELETON_BAR, "h-2.5 w-7")} />
+              <span className={cn(SKELETON_BAR, "h-4 w-5")} />
+            </div>
+            <div className="relative ml-24 py-8 pl-7">
+              <span className="absolute inset-y-0 left-0 w-px bg-border" />
+              <ul className="space-y-4">
+                {year.months.map((dates, m) => (
+                  <li key={m} className={cn("relative", m > 0 && "pt-12")}>
+                    {/* Le nom du mois, calé sur les jours ; au-delà du premier,
+                        posé sur son filet pointillé. */}
+                    {m > 0 && (
+                      <span className="absolute -left-[9rem] -right-5 top-4 border-t border-dashed border-border" />
+                    )}
+                    <span
+                      className={cn(SKELETON_BAR, "absolute right-[calc(100%+2.5rem)] h-2 w-12", m > 0 ? "top-[0.75rem]" : "-top-5")}
+                    />
+                    <ul className="space-y-1.5">
+                      {dates.map((d, i) => (
+                        <li key={i} className="relative flex h-5 items-center gap-2">
+                          <span className={cn(SKELETON_BAR, "absolute right-[calc(100%+2.5rem)] top-0.5 h-4 w-4")} />
+                          <span className={cn("absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] border-border", AMBIENT_BG)} />
+                          <span className={cn(SKELETON_BAR, "h-3.5")} style={{ width: `${d.title}%` }} />
+                          <span className={cn(SKELETON_BAR, "h-2.5 opacity-60")} style={{ width: `${d.by}%` }} />
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

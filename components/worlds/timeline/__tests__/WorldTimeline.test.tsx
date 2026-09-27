@@ -797,7 +797,14 @@ describe("WorldTimeline — chargement et pagination", () => {
     rpc.mockImplementationOnce(() => new Promise((r) => { repondre = r; }));
     db.rooms = [room("a", "Prologue", 1, 0, 6)];
     render(<WorldTimeline worldId="w1" config={CONFIG} />);
-    expect(screen.getByTestId("timeline-loading")).toHaveTextContent("Chargement de la chronologie…");
+    const squelette = screen.getByTestId("timeline-loading");
+    expect(squelette).toHaveTextContent("Chargement de la chronologie…");
+    // Dessiné comme la frise : deux bandeaux d'année bordés, le fil, un
+    // anneau par date, un filet pointillé par mois qui n'ouvre pas l'année.
+    expect(squelette.querySelectorAll(".border-y")).toHaveLength(2);
+    expect(squelette.querySelectorAll(".w-px.bg-border")).toHaveLength(2);
+    expect(squelette.querySelectorAll(".rounded-full.border-border")).toHaveLength(6);
+    expect(squelette.querySelectorAll(".border-dashed")).toHaveLength(2);
     expect(screen.queryByText("Prologue")).toBeNull();
     // Pas de « rien ici » pendant le chargement.
     expect(screen.queryByText(/Aucune conversation/)).toBeNull();
