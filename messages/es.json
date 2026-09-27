@@ -687,6 +687,8 @@
         "abandoned": "Abandonado"
       },
       "eventEnds": "Fin: {title}",
+      "eventUntil": "hasta {date}",
+      "eventArcs": "Arcos en curso: {names}",
       "holidayLabel": "Fiesta",
       "eventLasts": "Dura en el tiempo",
       "eventEndDate": "Fin",

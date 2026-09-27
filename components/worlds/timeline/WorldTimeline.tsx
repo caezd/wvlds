@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useDeferredValue, useEffect, useLayoutEffe
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
+import { ArrowDown, BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import {
@@ -13,6 +13,7 @@ import {
   TIMELINE_PAGE,
   ageOf,
   arcRanks,
+  eventArcIds,
   buildTimelinePeriods,
   buildTimelineSections,
   effectiveRoomStatus,
@@ -216,6 +217,8 @@ export function WorldTimeline({
   // Le rang de chaque salon dans son arc, sur tous les salons : il ne change
   // pas quand on filtre.
   const ranks = useMemo(() => arcRanks(allItems), [allItems]);
+  // Les arcs en cours pendant chaque événement, sur tous les salons aussi.
+  const eventArcs = useMemo(() => eventArcIds(allItems, data.arcs.map((a) => a.id)), [allItems, data.arcs]);
 
   const ctx: TimelineRoomContext = useMemo(
     () => ({ personas: data.roomPersonas, openers: data.openers }),
@@ -666,6 +669,7 @@ export function WorldTimeline({
                         openers={data.openers}
                         arcsById={arcsById}
                         ranks={ranks}
+                        eventArcs={eventArcs}
                         canManage={canManage}
                         highlight={highlight}
                         stuck={stuckYear === section.year}
@@ -830,6 +834,7 @@ function YearBlock({
   openers,
   arcsById,
   ranks,
+  eventArcs,
   canManage,
   highlight,
   stuck,
@@ -843,6 +848,7 @@ function YearBlock({
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
   ranks: ReadonlyMap<string, number>;
+  eventArcs: ReadonlyMap<string, readonly string[]>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
   /** Le bandeau de l'année est collé sous la tête. */
@@ -872,6 +878,7 @@ function YearBlock({
       openers={openers}
       arcsById={arcsById}
       ranks={ranks}
+      eventArcs={eventArcs}
       canManage={canManage}
       highlight={highlight}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
@@ -975,6 +982,7 @@ function DateGroupBlock({
   openers,
   arcsById,
   ranks,
+  eventArcs,
   canManage,
   highlight,
   newMonth,
@@ -988,6 +996,7 @@ function DateGroupBlock({
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
   ranks: ReadonlyMap<string, number>;
+  eventArcs: ReadonlyMap<string, readonly string[]>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
   newMonth: boolean;
@@ -1056,6 +1065,8 @@ function DateGroupBlock({
                   key={item.id}
                   item={item as TimelineEvent}
                   day={day}
+                  until={lastsUntil(config, item as TimelineEvent)}
+                  arcs={(eventArcs.get(item.id) ?? []).flatMap((id) => arcsById.get(id) ?? [])}
                   canManage={canManage}
                   dimmed={dimmed}
                   onOpenWiki={onOpenWiki}
@@ -1211,9 +1222,21 @@ function RoomRow({
   );
 }
 
+/** La fin d'un événement qui dure, en toutes lettres ; rien pour un jalon. */
+function lastsUntil(config: WorldTimelineConfig, event: TimelineEvent): string | null {
+  return event.endDate && compareTimelineDates(event.endDate, event.date) > 0 ? formatTimelineLabel(config, event.endDate) : null;
+}
+
+/**
+ * Un événement : une carte, son losange sur le fil en face du titre. La fin
+ * d'un événement qui dure en pastille à côté du titre ; les arcs en cours
+ * pendant l'événement en puces de leur couleur, à droite.
+ */
 function EventRow({
   item,
   day,
+  until,
+  arcs,
   canManage,
   dimmed,
   onOpenWiki,
@@ -1221,6 +1244,8 @@ function EventRow({
 }: {
   item: TimelineEvent;
   day: number | null;
+  until: string | null;
+  arcs: readonly TimelineArc[];
   canManage: boolean;
   dimmed: boolean;
   onOpenWiki: (slug: string) => void;
@@ -1230,40 +1255,70 @@ function EventRow({
   return (
     <li className={cn("group/event relative transition-opacity", dimmed && "opacity-30")} data-event-id={item.id}>
       <DayGutter day={day} />
-      {/* Un losange plein sur le fil : un jalon du monde, pas un salon. */}
+      {/* Un losange plein sur le fil : un jalon du monde, pas un salon. En
+          face du titre, dans la carte (bordure et marge haute : 9px) ; la
+          barre de durée part de lui (`data-row-anchor`, voir TimelineLayout). */}
       <span
-        className="absolute -left-[32px] top-[5px] size-2.5 rotate-45 bg-foreground"
+        className="absolute -left-[32px] top-[14px] size-2.5 rotate-45 bg-foreground"
         data-testid="timeline-event-mark"
+        data-row-anchor
         aria-hidden
       />
-      <div className="ml-[var(--tl-graph-pad,0px)] flex items-start gap-2" data-title-start>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-5 text-foreground">
+      <div
+        className="ml-[var(--tl-graph-pad,0px)] rounded-md border border-border-soft bg-muted/40 px-3 py-2"
+        data-title-start
+        data-testid="timeline-event-card"
+      >
+        <div className="flex items-start gap-2">
+          <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold leading-5 text-foreground">
             <span className="sr-only">{tv("eventLabel")} : </span>
-            {item.title}
+            <span className="min-w-0 break-words">{item.title}</span>
+            {until && (
+              <span
+                className="inline-flex items-center gap-1 rounded-md border border-border-soft bg-background/60 px-1.5 text-[11px] font-normal leading-[18px] text-muted-foreground"
+                data-testid="timeline-event-until"
+              >
+                <ArrowDown className="size-3 shrink-0" aria-hidden />
+                {tv("eventUntil", { date: until })}
+              </span>
+            )}
           </p>
-          {item.description && (
-            <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{item.description}</p>
+          {arcs.length > 0 && (
+            <span className="flex shrink-0 items-center gap-1 pt-[5px]" data-testid="timeline-event-arcs">
+              <span className="sr-only">{tv("eventArcs", { names: arcs.map((a) => a.name).join(", ") })}</span>
+              {arcs.map((arc) => (
+                <span
+                  key={arc.id}
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: arc.color }}
+                  title={arc.name}
+                  aria-hidden
+                />
+              ))}
+            </span>
           )}
-          {item.wikiPage && (
+          {canManage && (
             <button
               type="button"
-              onClick={() => onOpenWiki(item.wikiPage!.slug)}
-              className="mt-1 inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={onEdit}
+              aria-label={tv("editEventNamed", { title: item.title })}
+              className="-my-0.5 shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/event:opacity-100"
             >
-              <BookOpen className="h-3 w-3" aria-hidden />
-              {item.wikiPage.title}
+              <Pencil className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        {canManage && (
+        {item.description && (
+          <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{item.description}</p>
+        )}
+        {item.wikiPage && (
           <button
             type="button"
-            onClick={onEdit}
-            aria-label={tv("editEventNamed", { title: item.title })}
-            className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/event:opacity-100"
+            onClick={() => onOpenWiki(item.wikiPage!.slug)}
+            className="mt-1 inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <BookOpen className="h-3 w-3" aria-hidden />
+            {item.wikiPage.title}
           </button>
         )}
       </div>

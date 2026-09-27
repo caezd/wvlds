@@ -6,6 +6,7 @@ import {
   buildTimelineSections,
   countActiveFilters,
   effectiveRoomStatus,
+  eventArcIds,
   eventEndItems,
   holidayItems,
   initialTimelineWindow,
@@ -322,5 +323,31 @@ describe("arcRanks", () => {
       evenement("e", 1, 0, 1),
     ]);
     expect(Object.fromEntries(ranks)).toEqual({ a: 1, b: 2, c: 3, x: 1 });
+  });
+});
+
+describe("eventArcIds", () => {
+  // Arc A : an 1, mois 2 → an 1, mois 6 ; arc B : an 2 ; arc C : aucun salon.
+  const ITEMS: TimelineItem[] = [
+    salon("a1", 1, 2, 1, { arcId: "A" }),
+    salon("a2", 1, 6, 10, { arcId: "A" }),
+    salon("b1", 2, 0, 5, { arcId: "B" }),
+    salon("libre", 1, 4, 1),
+  ];
+
+  it("un événement ponctuel : les arcs dont la période le contient", () => {
+    const m = eventArcIds([...ITEMS, evenement("e", 1, 4, 1)], ["C", "B", "A"]);
+    expect(m.get("e")).toEqual(["A"]);
+  });
+
+  it("un événement qui dure : tous les arcs qu'il chevauche, dans l'ordre des arcs", () => {
+    const m = eventArcIds([...ITEMS, evenement("e", 1, 5, 1, { year: 2, month: 3, day: null })], ["B", "A"]);
+    expect(m.get("e")).toEqual(["B", "A"]);
+  });
+
+  it("aucun arc en cours : pas d'entrée ; les bornes comptent", () => {
+    const m = eventArcIds([...ITEMS, evenement("avant", 1, 1, 1), evenement("borne", 1, 6, 10)], ["A", "B"]);
+    expect(m.has("avant")).toBe(false);
+    expect(m.get("borne")).toEqual(["A"]);
   });
 });

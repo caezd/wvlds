@@ -531,3 +531,38 @@ export function arcRanks(items: readonly TimelineItem[]): Map<string, number> {
   }
   return ranks;
 }
+
+// ── Arcs en cours pendant un événement ───────────────────────
+
+/**
+ * Les arcs que chaque événement traverse : ceux dont les salons, du premier
+ * au dernier, chevauchent sa période (du début à la fin s'il dure, sa seule
+ * date sinon). Dans l'ordre des arcs donnés. À calculer sur tous les salons,
+ * pas sur ceux qu'un filtre laisse.
+ */
+export function eventArcIds(
+  items: readonly TimelineItem[],
+  arcOrder: readonly string[],
+): Map<string, string[]> {
+  const spans = new Map<string, { start: WorldTimelineDate; end: WorldTimelineDate }>();
+  for (const item of items) {
+    if (item.kind !== "room" || !item.arcId) continue;
+    const span = spans.get(item.arcId);
+    if (!span) spans.set(item.arcId, { start: item.date, end: item.date });
+    else {
+      if (compareDates(item.date, span.start) < 0) span.start = item.date;
+      if (compareDates(item.date, span.end) > 0) span.end = item.date;
+    }
+  }
+  const result = new Map<string, string[]>();
+  for (const item of items) {
+    if (item.kind !== "event") continue;
+    const end = item.endDate && compareDates(item.endDate, item.date) > 0 ? item.endDate : item.date;
+    const ids = arcOrder.filter((id) => {
+      const span = spans.get(id);
+      return !!span && compareDates(span.start, end) <= 0 && compareDates(span.end, item.date) >= 0;
+    });
+    if (ids.length > 0) result.set(item.id, ids);
+  }
+  return result;
+}

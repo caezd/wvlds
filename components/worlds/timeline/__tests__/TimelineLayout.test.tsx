@@ -60,6 +60,22 @@ describe("measureTimeline", () => {
   });
 });
 
+describe("measureTimeline — marque décalée", () => {
+  it("une ligne à `data-row-anchor` (la carte d'un événement) se relève sur sa marque, centrée sur 20px", () => {
+    render(
+      <div data-frise data-top="100" data-left="0" data-h="800">
+        <li data-event-id="e" data-top="220" data-h="60">
+          {/* Le losange (10px) à 14px du haut de la carte : centre à 239. */}
+          <span data-row-anchor data-top="234" data-h="10" />
+        </li>
+      </div>,
+    );
+    const r = measureTimeline(document.querySelector("[data-frise]") as HTMLElement);
+    // 239 − 10 − 100 : la barre de durée (top + 10) part du centre du losange.
+    expect(r.rows.get("e")).toEqual({ top: 129, height: 60 });
+  });
+});
+
 describe("useTimelineLayout", () => {
   it("remesure quand sa clé change, pas à chaque rendu", () => {
     const onLayout = vi.fn();

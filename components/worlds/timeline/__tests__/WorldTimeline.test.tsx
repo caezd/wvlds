@@ -611,8 +611,9 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     }];
     await frise([room("a", "Prologue", 1, 0, 6)]);
     const evenement = (await screen.findByText("Le siège")).closest("[data-event-id]") as HTMLElement;
-    // Pas de « Jusqu'à … » sous l'événement : la barre et la fin le disent.
-    expect(evenement).not.toHaveTextContent(/Jusqu/);
+    // Une carte ; sa fin en pastille à côté du titre.
+    expect(within(evenement).getByTestId("timeline-event-card")).toBeInTheDocument();
+    expect(within(evenement).getByTestId("timeline-event-until")).toHaveTextContent("jusqu’à 12 Mars, An 2");
     // La fin paraît à sa date, dans une année qui n'a rien d'autre.
     const fin = screen.getByText("Fin : Le siège").closest("[data-event-end-id]") as HTMLElement;
     expect(fin).toHaveAttribute("data-event-end-id", "e1");
@@ -621,6 +622,30 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     // La barre de durée, de l'événement à sa fin.
     const barres = await screen.findByTestId("timeline-event-spans");
     expect(barres.querySelector("[data-event-span='e1']")).not.toBeNull();
+  });
+
+  it("un jalon n'a pas de « jusqu'à » ; les arcs en cours pendant l'événement paraissent en puces", async () => {
+    db.tables.world_timeline_arcs = [
+      { id: "exil", name: "L'exil", color: "#22c55e", position: 0 },
+      { id: "sacre", name: "Le sacre", color: "#ef4444", position: 1 },
+    ];
+    db.tables.chatrooms = [
+      { id: "a", arc_id: "exil", category_id: null },
+      { id: "b", arc_id: "exil", category_id: null },
+      { id: "c", arc_id: "sacre", category_id: null },
+    ];
+    db.tables.world_timeline_events = [{
+      id: "e1", title: "La comète", description: null, timeline_date: { year: 1, month: 1, day: 3 },
+      end_date: null, wiki_page_id: null, wiki_page: null,
+    }];
+    await frise([room("a", "Départ", 1, 0, 6), room("b", "Retour", 1, 2, 1), room("c", "Couronne", 2, 0, 1)]);
+    const evenement = (await screen.findByText("La comète")).closest("[data-event-id]") as HTMLElement;
+    expect(within(evenement).queryByTestId("timeline-event-until")).toBeNull();
+    // L'exil court de janvier à mars de l'an 1 : il passe sous la comète ; le sacre, en l'an 2, non.
+    const puces = within(evenement).getByTestId("timeline-event-arcs");
+    expect(puces).toHaveTextContent("Arcs en cours : L'exil");
+    expect(puces.querySelectorAll("[title]")).toHaveLength(1);
+    expect(puces.querySelector("[title]")).toHaveAttribute("title", "L'exil");
   });
 
   it("pendant ce temps : au survol d'un événement qui dure, ce qui se passe pendant reste net, le reste s'estompe", async () => {

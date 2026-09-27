@@ -38,7 +38,11 @@ export function measureTimeline(container: HTMLElement): TimelineLayout {
     const id = roomId ?? journalId ?? eventId ?? (eventEndId ? `${eventEndId}:end` : undefined);
     if (!id) continue;
     const r = el.getBoundingClientRect();
-    rows.set(id, { top: r.top - rect.top, height: r.height });
+    // Une ligne dont la marque n'est pas en haut (la carte d'un événement) :
+    // on la relève comme si sa ligne de titre (20px) était centrée sur elle.
+    const anchor = el.querySelector<HTMLElement>("[data-row-anchor]")?.getBoundingClientRect();
+    const top = anchor ? anchor.top + anchor.height / 2 - 10 : r.top;
+    rows.set(id, { top: top - rect.top, height: r.height });
   }
   const mark = container.querySelector<HTMLElement>(MARK)?.getBoundingClientRect();
   const title = container.querySelector<HTMLElement>("[data-title-start]")?.getBoundingClientRect();
