@@ -61,14 +61,35 @@ describe("TimelineMinimap", () => {
     expect(within(nav).getByRole("button", { name: "Janvier, Eon 1 · 4 salons" })).toBeInTheDocument();
   });
 
-  it("le mois lu en ce moment ressort (aria-current, barre pleine) ; son année aussi", () => {
+  it("le mois lu est annoncé (aria-current), pas surligné ; son année ressort", () => {
     const { nav } = monter();
     const mars = within(nav).getByRole("button", { name: /^Mars, Eon 1/ });
     expect(mars).toHaveAttribute("aria-current", "true");
-    expect(mars.querySelector("[data-testid='timeline-minimap-bar']")!.className).toContain("bg-foreground");
+    expect(mars.className.split(" ")).not.toContain("bg-muted");
+    expect(mars.querySelector("[data-testid='timeline-minimap-bar']")!.className).not.toContain("bg-foreground");
     expect(within(nav).getAllByRole("button").filter((b) => b.getAttribute("aria-current"))).toHaveLength(1);
     expect(within(nav).getByRole("button", { name: "Eon 1" }).className.split(" ")).toContain("text-foreground");
     expect(within(nav).getByRole("button", { name: "Eon 2" }).className.split(" ")).toContain("text-muted-foreground");
+  });
+
+  it("une zone encadrée couvre les mois que montre la frise, du mois lu au dernier visible", () => {
+    const props = { config: CONFIG, years: ANNEES, max: 4, isolatedArc: null, onYear: vi.fn(), onMonth: vi.fn() };
+    const { rerender } = render(<TimelineMinimap {...props} current={{ year: 1, month: 2 }} />);
+    const nav = screen.getByRole("navigation", { name: "Aperçu de la frise" });
+    // Sans fin donnée : le seul mois lu.
+    expect(screen.getByTestId("timeline-minimap-area")).toHaveAttribute("aria-hidden");
+    const place = (el: HTMLElement, top: number) => {
+      Object.defineProperty(el, "offsetTop", { value: top, configurable: true });
+      Object.defineProperty(el, "offsetHeight", { value: 10, configurable: true });
+    };
+    place(within(nav).getByRole("button", { name: /^Mars, Eon 1/ }), 40);
+    place(within(nav).getByRole("button", { name: /^Février, Eon 2/ }), 120);
+    rerender(<TimelineMinimap {...props} current={{ year: 1, month: 2 }} viewEnd={{ year: 2, month: 1 }} />);
+    const zone = screen.getByTestId("timeline-minimap-area");
+    // De 2px au-dessus de mars (an 1) à 2px sous février (an 2) : 38 → 132.
+    expect(zone.style.top).toBe("38px");
+    expect(zone.style.height).toBe("94px");
+    expect(zone.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border", "pointer-events-none"]));
   });
 
   it("un trait rouge barre le mois actuel du monde ; la date du jour dans son info-bulle", () => {

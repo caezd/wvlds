@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
@@ -11,18 +11,20 @@ import type { WorldTimelineConfig } from "@/types/worlds";
  * La mini-carte de la frise, à sa droite : chaque année (son numéro), et
  * dessous chacun de ses mois, une ligne de 10px dont la barre dit combien
  * de salons il réunit. Elle commence en face du bandeau de position de la
- * frise (bordée dessus comme lui), et défile avec elle : le mois lu reste au milieu, et
- * ressort ; un trait rouge barre le mois actuel du monde ; un arc isolé
- * (survolé ou filtré) teinte les mois où il a un épisode. Un clic mène à
- * l'année ou au mois.
+ * frise (bordée dessus comme lui). Une zone encadrée couvre les mois que
+ * la frise montre, du premier sous sa tête au dernier en bas ; la mini-carte
+ * défile avec la frise pour la garder au milieu. Un trait rouge barre le
+ * mois actuel du monde ; un arc isolé (survolé ou filtré) teinte les mois où
+ * il a un épisode. Un clic mène à l'année ou au mois.
  *
- * Elle ne mesure pas la frise : le mois lu vient de son défilement.
+ * Elle ne mesure pas la frise : ce qu'elle montre vient de son défilement.
  */
 export function TimelineMinimap({
   config,
   years,
   max,
   current,
+  viewEnd = null,
   isolatedArc,
   onYear,
   onMonth,
@@ -32,28 +34,47 @@ export function TimelineMinimap({
   years: readonly TimelineMinimapYear[];
   /** Le plus de salons sur un mois (au moins 1). */
   max: number;
-  /** Le mois lu en ce moment. */
+  /** Le mois lu en ce moment : le premier sous la tête de la frise. */
   current: { year: number; month: number | null } | null;
+  /** Le dernier mois visible en bas de la frise (le mois lu, à défaut). */
+  viewEnd?: { year: number; month: number | null } | null;
   isolatedArc: { id: string; color: string } | null;
   onYear: (year: number) => void;
   onMonth: (year: number, month: number) => void;
   className?: string;
 }) {
   const tv = useTranslations("worlds.timelineView");
-  // Le mois lu, gardé au milieu : la mini-carte suit le défilement de la frise.
+  // La zone de ce que montre la frise, relevée sur les lignes de la
+  // mini-carte ; la mini-carte défile pour la garder au milieu.
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const currentYear = current?.year ?? null;
-  const currentMonth = current?.month ?? null;
-  useEffect(() => {
+  const [area, setArea] = useState<{ top: number; height: number } | null>(null);
+  const from = current;
+  const to = viewEnd ?? current;
+  useLayoutEffect(() => {
     const scroller = scrollerRef.current;
-    if (!scroller || currentYear === null) return;
-    const target =
-      scroller.querySelector<HTMLElement>("[aria-current='true']") ??
-      scroller.querySelector<HTMLElement>(`[data-minimap-year='${currentYear}']`);
-    if (!target || typeof scroller.scrollTo !== "function") return;
-    const top = target.offsetTop - scroller.clientHeight / 2 + target.offsetHeight / 2;
-    scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-  }, [currentYear, currentMonth]);
+    if (!scroller || !from || !to) {
+      setArea(null);
+      return;
+    }
+    // Un mois, ou le numéro de l'année pour une date sans mois.
+    const line = (p: { year: number; month: number | null }) =>
+      p.month === null
+        ? scroller.querySelector<HTMLElement>(`[data-minimap-year='${p.year}'] > button`)
+        : scroller.querySelector<HTMLElement>(`[data-minimap-year='${p.year}'] [data-minimap-month='${p.month}']`);
+    const first = line(from);
+    const last = line(to) ?? first;
+    if (!first || !last) {
+      setArea(null);
+      return;
+    }
+    const top = first.offsetTop - 2;
+    const next = { top, height: Math.max(last.offsetTop + last.offsetHeight + 2 - top, first.offsetHeight + 4) };
+    setArea((cur) => (cur && cur.top === next.top && cur.height === next.height ? cur : next));
+    if (typeof scroller.scrollTo === "function") {
+      scroller.scrollTo({ top: Math.max(0, next.top + next.height / 2 - scroller.clientHeight / 2), behavior: "smooth" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- relevé à chaque changement des bornes ou des lignes
+  }, [from?.year, from?.month, to?.year, to?.month, years]);
   const yearName = (year: number) => `${config.year_label} ${year}${config.era_name ? ` ${config.era_name}` : ""}`;
   return (
     <nav
@@ -85,6 +106,7 @@ export function TimelineMinimap({
             </button>
             <div className="flex flex-col gap-px">
               {months.map((m, month) => {
+                // Le mois lu : annoncé, pas surligné (la zone le montre).
                 const isCurrent = isCurrentYear && current?.month === month;
                 const isToday = year === config.current_year && month === config.current_month;
                 const arcColor = isolatedArc && m.arcIds.has(isolatedArc.id) ? isolatedArc.color : null;
@@ -106,7 +128,6 @@ export function TimelineMinimap({
                     title={isToday ? `${label} · ${tv("today")}` : label}
                     className={cn(
                       "relative flex h-2.5 shrink-0 items-center justify-end rounded-[2px] hover:bg-muted",
-                      isCurrent && "bg-muted",
                       m.items > 0 ? "cursor-pointer" : "cursor-default",
                     )}
                     data-minimap-month={month}
@@ -114,9 +135,7 @@ export function TimelineMinimap({
                     <span
                       className={cn(
                         "h-[60%] rounded-[1px]",
-                        !arcColor && (isCurrent
-                          ? "bg-foreground"
-                          : m.hasEvent ? "bg-zinc-500 dark:bg-zinc-400" : "bg-zinc-300 dark:bg-zinc-600"),
+                        !arcColor && (m.hasEvent ? "bg-zinc-500 dark:bg-zinc-400" : "bg-zinc-300 dark:bg-zinc-600"),
                       )}
                       style={{ width: `${width}%`, ...(arcColor ? { backgroundColor: arcColor } : {}) }}
                       data-testid="timeline-minimap-bar"
@@ -136,6 +155,15 @@ export function TimelineMinimap({
           </div>
         );
       })}
+      {/* En dernier : pas de marge de `space-y` sous elle. */}
+      {area && (
+        <div
+          className="pointer-events-none absolute left-0.5 right-1 rounded-md border border-foreground/40 bg-foreground/[0.04] transition-[top,height] duration-150"
+          style={{ top: area.top, height: area.height }}
+          data-testid="timeline-minimap-area"
+          aria-hidden
+        />
+      )}
       </div>
     </nav>
   );

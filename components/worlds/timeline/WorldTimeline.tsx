@@ -526,6 +526,7 @@ export function WorldTimeline({
   // Où l'on en est : l'année et le mois passés en dernier sous la tête. Les
   // périodes suivent aussi le défilement.
   const [position, setPosition] = useState<{ year: number; month: number | null } | null>(null);
+  const [viewEnd, setViewEnd] = useState<{ year: number; month: number | null } | null>(null);
   function updatePosition(scrolled: boolean) {
     const el = scrollRef.current;
     if (!el || shown.length === 0) return;
@@ -541,6 +542,22 @@ export function WorldTimeline({
       if (i === 0 || g.getBoundingClientRect().top <= seuil) month = g.dataset.month === "none" ? null : Number(g.dataset.month);
     });
     setPosition((cur) => (cur && cur.year === year && cur.month === month ? cur : { year, month }));
+    // Le dernier mois visible, en bas : la fin de la zone de la mini-carte.
+    const bas = el.getBoundingClientRect().bottom;
+    let endYear = year;
+    for (const s of shown) {
+      const node = sectionEl(s.year);
+      if (node && s.year > year && node.getBoundingClientRect().top < bas) endYear = s.year;
+    }
+    let endMonth: number | null = endYear === year ? month : null;
+    sectionEl(endYear)?.querySelectorAll<HTMLElement>("[data-date-group]").forEach((g, i) => {
+      if ((i === 0 && endYear !== year) || g.getBoundingClientRect().top < bas) {
+        const m = g.dataset.month === "none" ? null : Number(g.dataset.month);
+        // Pas avant le mois lu, dans la même année.
+        if (endYear !== year || (m ?? -1) >= (month ?? -1)) endMonth = m;
+      }
+    });
+    setViewEnd((cur) => (cur && cur.year === endYear && cur.month === endMonth ? cur : { year: endYear, month: endMonth }));
     // Au défilement seulement : une pastille choisie reste choisie jusque-là.
     if (scrolled && periods.length > 1) setActivePeriod(periodOf(year));
   }
@@ -857,6 +874,7 @@ export function WorldTimeline({
             years={minimap.years}
             max={minimap.max}
             current={position}
+            viewEnd={viewEnd}
             isolatedArc={isolatedArc}
             onYear={(year) => scrollToYear(year, true)}
             onMonth={goToMonth}
