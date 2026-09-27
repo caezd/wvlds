@@ -90,6 +90,24 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("");
   });
 
+  it("imbriqué sous le wiki, dans un encadré d'option ; absent quand le wiki est désactivé", async () => {
+    setup();
+    const user = userEvent.setup();
+    const { unmount } = render(<WorldSettingsView world={BASE_WORLD} />);
+    await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    const encadre = screen.getByPlaceholderText("Annexes").closest(".ml-4") as HTMLElement;
+    expect(encadre.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border-border-soft", "bg-muted/20"]));
+    // Tous les encadrés d'options imbriquées de l'onglet : rounded-md.
+    for (const el of document.querySelectorAll(".ml-4.border-border-soft")) {
+      expect(el.className).not.toMatch(/rounded-xl/);
+    }
+    unmount();
+
+    render(<WorldSettingsView world={{ ...BASE_WORLD, enable_wiki: false }} />);
+    await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    expect(screen.queryByPlaceholderText("Annexes")).toBeNull();
+  });
+
   it("préremplit le champ avec le libellé déjà enregistré", async () => {
     setup();
     const user = userEvent.setup();

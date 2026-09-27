@@ -224,7 +224,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableInventory && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft bg-muted/20 p-3">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {t("restrictToCatalogue")}
                                                     <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictInventoryHelp")}</HelpHint>
@@ -254,7 +254,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableSkills && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft bg-muted/20 p-3">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {t("restrictToCatalogue")}
                                                     <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictSkillsHelp")}</HelpHint>
@@ -284,7 +284,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableFaceclaims && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft bg-muted/20 p-3">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {tSettings("requireFaceclaim")}
                                                     <HelpHint title={tSettings("requireFaceclaim")}>{tSettings("requireFaceclaimHelp")}</HelpHint>
@@ -332,30 +332,36 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             className="shrink-0 mt-0.5"
                                         />
                                     </div>
-                                    <FormField
-                                        control={form.control}
-                                        name="wiki_label"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    <LabelWithHelp help={t("wikiLabelHelp")}>
-                                                        {tSettings("wikiLinkName")}
-                                                    </LabelWithHelp>
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder={t("nav.wiki")}
-                                                        {...field}
-                                                        onBlur={(e) => {
-                                                            field.onBlur();
-                                                            void persistField("wiki_label", e.target.value.trim());
-                                                        }}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    {/* Le nom du lien, imbriqué sous le wiki comme les options
+                                        du catalogue sous le leur : sans wiki, il n'a pas lieu d'être. */}
+                                    {enableWiki && (
+                                        <div className="ml-4 rounded-md border border-border-soft bg-muted/20 p-3">
+                                            <FormField
+                                                control={form.control}
+                                                name="wiki_label"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>
+                                                            <LabelWithHelp help={t("wikiLabelHelp")}>
+                                                                {tSettings("wikiLinkName")}
+                                                            </LabelWithHelp>
+                                                        </FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder={t("nav.wiki")}
+                                                                {...field}
+                                                                onBlur={(e) => {
+                                                                    field.onBlur();
+                                                                    void persistField("wiki_label", e.target.value.trim());
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* -- Fiche de persona par défaut -------------- */}
