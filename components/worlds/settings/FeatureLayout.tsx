@@ -13,11 +13,20 @@ import { HelpHint } from "@/components/ui/help-hint";
  * description sous les titres : l'explication est derrière l'aide (voir
  * HelpHint), à côté du titre.
  *
+ * Deux surfaces, partout : les cartes (`SURFACE` : fond des cartes, bordure
+ * douce) et les champs qu'elles contiennent (`FIELD` : fond de la page, plus
+ * sombre, comme creusés dans la carte, même bordure douce).
+ *
  * La page est un conteneur (`@container`) : ses sections passent en deux
  * colonnes selon la place qu'elle a, pas selon la fenêtre — entre les
  * barres latérales de l'application et la colonne des catégories, elle peut
  * être étroite sur un grand écran.
  */
+
+/** Une carte : encadré de réglages, liste, tuile. */
+export const SURFACE = "border border-border-soft bg-card";
+/** Un champ dans une carte ou sur la page : saisie, sélecteur, petite case. */
+export const FIELD = "border-border-soft bg-background shadow-none dark:bg-background dark:hover:bg-background";
 
 /** Un titre suivi de son aide. */
 function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {
@@ -56,7 +65,7 @@ export function FeaturePage({
           <TitleWithHelp title={title} help={help} />
         </h3>
         {toggle && (
-          <label className="flex shrink-0 cursor-pointer items-center gap-3 rounded-md border border-border-soft px-3 py-2 text-sm">
+          <label className={cn("flex shrink-0 cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm", SURFACE)}>
             {toggle.label}
             <Switch
               checked={toggle.checked}
@@ -110,7 +119,7 @@ export function SettingsSection({
 /** Une liste bordée de réglages, une ligne chacun. */
 export function ToggleList({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("divide-y divide-border-soft rounded-md border border-border-soft", className)}>
+    <div className={cn("divide-y divide-border-soft rounded-md", SURFACE, className)}>
       {children}
     </div>
   );

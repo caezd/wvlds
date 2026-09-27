@@ -181,7 +181,7 @@ export function WorldPersonaTemplateSection({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 shrink-0 rounded-md border-border-soft bg-transparent"
+                className="h-8 shrink-0 rounded-md border-border-soft bg-card dark:bg-card"
                 onClick={() => void openEditor()}
               >
                 <Pencil className="mr-1 h-3.5 w-3.5" />

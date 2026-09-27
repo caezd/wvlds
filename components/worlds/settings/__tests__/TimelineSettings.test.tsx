@@ -218,6 +218,26 @@ describe("TimelineSettings — sélecteurs shadcn", () => {
   });
 });
 
+describe("TimelineSettings — couleurs", () => {
+  it("deux surfaces : les cartes sur le fond des cartes, les champs sur celui de la page ; des bordures douces", () => {
+    render(<Harnais />);
+    const cartes = [
+      screen.getByTestId("timeline-preview").parentElement as HTMLElement,
+      screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }).closest(".divide-y") as HTMLElement,
+    ];
+    for (const c of cartes) expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-card", "border-border-soft"]));
+    const champs = [
+      screen.getByLabelText("Libellé d'année"),
+      screen.getByLabelText("Mois actuel"),
+      screen.getByRole("button", { name: "Année suivante" }).parentElement as HTMLElement,
+      screen.getByRole("spinbutton", { name: "Jours du mois Givre" }).parentElement as HTMLElement,
+    ];
+    for (const c of champs) {
+      expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-background", "border-border-soft", "dark:bg-background"]));
+    }
+  });
+});
+
 describe("TimelineSettings — responsive", () => {
   it("s'adapte à la place de sa page (requêtes de conteneur), pas à la fenêtre", () => {
     render(<Harnais />);

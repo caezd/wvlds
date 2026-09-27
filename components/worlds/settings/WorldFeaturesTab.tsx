@@ -45,7 +45,7 @@ import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
  * Onglet « Fonctions » des réglages d'un monde : inventaire et compétences,
@@ -335,7 +335,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             <Input
                                                 placeholder={t("nav.wiki")}
                                                 aria-label={tSettings("wikiLinkName")}
-                                                className="h-10 max-w-sm rounded-md text-sm"
+                                                className={cn("h-10 max-w-sm rounded-md text-sm", FIELD)}
                                                 {...field}
                                                 onBlur={(e) => {
                                                     field.onBlur();

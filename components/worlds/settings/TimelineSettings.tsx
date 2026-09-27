@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { HelpHint } from "@/components/ui/help-hint";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, SURFACE, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Le rouge de la date actuelle, comme sur la frise : l'accent en sombre, un rouge franc en clair. */
 const NOW_RED_BG = "bg-red-600 dark:bg-accent";
@@ -31,11 +31,11 @@ const NOW_RED_BORDER = "border-red-600/40 dark:border-accent/40";
 /** Un champ sans cadre, dans une ligne bordée. */
 const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0";
 /** Une ligne d'une liste (saison, fête) : bordée, sur le fond des cartes. */
-const LIST_ROW = "flex h-12 items-center gap-2 rounded-md border border-border-soft bg-card pl-2 pr-1.5";
+const LIST_ROW = cn("flex h-12 items-center gap-2 rounded-md pl-2 pr-1.5", SURFACE);
 /** Une petite case de saisie dans une ligne : une année, un jour. */
-const SMALL_BOX = "h-8 rounded-md border border-border-soft bg-background px-2 text-center text-sm shadow-none focus-visible:ring-1";
+const SMALL_BOX = cn("h-8 rounded-md border px-2 text-center text-sm focus-visible:ring-1", FIELD);
 /** Un sélecteur (shadcn) dans une ligne : aux mesures des petites cases. */
-const SMALL_SELECT = "h-8 w-32 rounded-md border-border-soft bg-background px-2 text-sm shadow-none data-[size=default]:h-8";
+const SMALL_SELECT = cn("h-8 w-32 rounded-md px-2 text-sm data-[size=default]:h-8", FIELD);
 /** « Aucun mois » : Radix n'accepte pas de valeur vide pour une option. */
 const NO_MONTH = "none";
 /** Un champ numérique sans flèches. */
@@ -139,7 +139,7 @@ export function TimelineSettings({
   return (
     <div className="space-y-6">
       {/* ── En tête : la date actuelle du monde, et où en est le récit ── */}
-      <div className="grid overflow-hidden rounded-md border border-border-soft bg-card @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className={cn("grid overflow-hidden rounded-md @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]", SURFACE)}>
         <div className="flex flex-col p-5" data-testid="timeline-preview">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Hourglass className="size-3.5" aria-hidden />
@@ -177,7 +177,7 @@ export function TimelineSettings({
           </p>
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-current-year" className="text-xs font-normal text-muted-foreground">{t("currentYear")}</Label>
-            <div className="flex h-10 items-center rounded-md border border-border">
+            <div className={cn("flex h-10 items-center rounded-md border", FIELD)}>
               <button
                 type="button"
                 aria-label={tSettings("previousYear")}
@@ -215,7 +215,7 @@ export function TimelineSettings({
               disabled={nbMois === 0}
               onValueChange={(v) => onPersist({ current_month: v === NO_MONTH ? null : Number(v) })}
             >
-              <SelectTrigger id="timeline-current-month" className="h-10 w-full rounded-md border-border data-[size=default]:h-10">
+              <SelectTrigger id="timeline-current-month" className={cn("h-10 w-full rounded-md data-[size=default]:h-10", FIELD)}>
                 <SelectValue placeholder={tSettings("noMonths")}>
                   {nbMois === 0 ? tSettings("noMonths") : moisCourant === null ? "—" : config.month_names[moisCourant]}
                 </SelectValue>
@@ -240,7 +240,7 @@ export function TimelineSettings({
               id="timeline-year-label"
               value={config.year_label}
               placeholder={tSettings("yearPlaceholder")}
-              className="h-10 rounded-md text-sm"
+              className={cn("h-10 rounded-md text-sm", FIELD)}
               onChange={(e) => onDraft({ year_label: e.target.value })}
               onBlur={(e) => onPersist({ year_label: e.target.value || tSettings("yearPlaceholder") })}
             />
@@ -254,7 +254,7 @@ export function TimelineSettings({
               id="timeline-era"
               value={config.era_name ?? ""}
               placeholder={t("eraPlaceholder")}
-              className="h-10 rounded-md text-sm"
+              className={cn("h-10 rounded-md text-sm", FIELD)}
               onChange={(e) => onDraft({ era_name: e.target.value || null })}
               onBlur={(e) => onPersist({ era_name: e.target.value || null })}
             />
@@ -304,7 +304,7 @@ export function TimelineSettings({
             variant="outline"
             size="sm"
             onClick={() => onPersist({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-            className="mt-3 h-8 gap-1.5 rounded-md border-border-soft bg-transparent text-xs font-normal"
+            className="mt-3 h-8 gap-1.5 rounded-md border-border-soft bg-card text-xs font-normal dark:bg-card"
           >
             <RotateCcw className="size-3.5" aria-hidden />
             {tSettings("useRealMonths")}
@@ -340,7 +340,7 @@ export function TimelineSettings({
                     onPersist({ month_names: noms });
                   }}
                 />
-                <span className="flex h-8 shrink-0 items-center rounded-md border border-border-soft bg-background pr-2">
+                <span className={cn("flex h-8 shrink-0 items-center rounded-md border pr-2", FIELD)}>
                   <Input
                     type="number"
                     aria-label={tSettings("daysInMonth", { month: m || `${i + 1}` })}
@@ -596,7 +596,7 @@ export function TimelineSettings({
             title={tSettings("dormantDays")}
             help={tSettings("dormantDaysHelp")}
             control={
-              <span className="flex h-9 shrink-0 items-center rounded-md border border-border-soft bg-background pr-3">
+              <span className={cn("flex h-9 shrink-0 items-center rounded-md border pr-3", FIELD)}>
                 <Input
                   type="number"
                   min={0}
@@ -641,7 +641,7 @@ function AddRow({
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 shrink-0 gap-1 rounded-md border-border-soft bg-card font-normal"
+        className="h-8 shrink-0 gap-1 rounded-md border-border-soft bg-card font-normal dark:bg-card"
         disabled={disabled}
         aria-label={addLabel}
         onClick={onAdd}
