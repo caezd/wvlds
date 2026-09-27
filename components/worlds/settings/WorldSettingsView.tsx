@@ -561,7 +561,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
                         {/* ── Relations ────────────────────────────────── */}
                         <TabsContent value="relations" className="mt-0">
-                            <div className="mx-auto max-w-xl">
+                            <div className="mx-auto max-w-4xl">
                                 <WorldRelationsSettings worldId={world.id} />
                             </div>
                         </TabsContent>

@@ -1777,7 +1777,7 @@
       "solid": "Continu",
       "dashed": "Tirets",
       "dotted": "Pointillés",
-      "long": "Long",
+      "long": "Longs tirets",
       "mixed": "Mixte"
     },
     "changeGroup": "Changer le groupe",
@@ -1810,7 +1810,19 @@
     "hideGroup": "Masquer le groupe « {name} »",
     "showAll": "Tout afficher",
     "hideRetired": "Masquer les retirés et décédés",
-    "showRetired": "Afficher les retirés et décédés"
+    "showRetired": "Afficher les retirés et décédés",
+    "settingsTitle": "Relations",
+    "groupsHelp": "Les groupes réunissent des personas sous une couleur, sur le graphe et dans les listes.",
+    "relTypesHelp": "Les liens que les personas tissent entre eux : leur couleur et leur trait sur le graphe. Un type réciproque attend l'accord du joueur d'en face, puis existe dans les deux sens ; un type en couple ou marié règle aussi le statut marital des fiches.",
+    "groupsCount": "{count, plural, one {# groupe} other {# groupes}}",
+    "typesCount": "{count, plural, one {# type} other {# types}}",
+    "groupName": "Nom du groupe",
+    "typeName": "Nom du type",
+    "deleteGroup": "Supprimer le groupe {name}",
+    "deleteType": "Supprimer le type {name}",
+    "dashFor": "Trait de {name}",
+    "reciprocityFor": "Réciprocité de {name}",
+    "notMutual": "Non réciproque"
   },
   "wiki": {
     "changeIcon": "Changer l'icône",

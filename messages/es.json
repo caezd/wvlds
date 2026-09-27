@@ -1777,7 +1777,7 @@
       "solid": "Continuo",
       "dashed": "Guiones",
       "dotted": "Punteado",
-      "long": "Largo",
+      "long": "Guiones largos",
       "mixed": "Mixto"
     },
     "changeGroup": "Cambiar el grupo",
@@ -1810,7 +1810,19 @@
     "hideGroup": "Ocultar el grupo «{name}»",
     "showAll": "Mostrar todo",
     "hideRetired": "Ocultar retirados y fallecidos",
-    "showRetired": "Mostrar retirados y fallecidos"
+    "showRetired": "Mostrar retirados y fallecidos",
+    "settingsTitle": "Relaciones",
+    "groupsHelp": "Los grupos reúnen personajes bajo un color, en el grafo y en las listas.",
+    "relTypesHelp": "Los vínculos que los personajes tejen entre sí: su color y su trazo en el grafo. Un tipo recíproco espera el acuerdo del otro jugador y luego existe en ambos sentidos; un tipo en pareja o casado también fija el estado civil de las fichas.",
+    "groupsCount": "{count, plural, one {# grupo} other {# grupos}}",
+    "typesCount": "{count, plural, one {# tipo} other {# tipos}}",
+    "groupName": "Nombre del grupo",
+    "typeName": "Nombre del tipo",
+    "deleteGroup": "Eliminar el grupo {name}",
+    "deleteType": "Eliminar el tipo {name}",
+    "dashFor": "Trazo de {name}",
+    "reciprocityFor": "Reciprocidad de {name}",
+    "notMutual": "No recíproco"
   },
   "wiki": {
     "changeIcon": "Cambiar icono",

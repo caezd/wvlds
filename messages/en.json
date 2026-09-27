@@ -1777,7 +1777,7 @@
       "solid": "Solid",
       "dashed": "Dashed",
       "dotted": "Dotted",
-      "long": "Long",
+      "long": "Long dashes",
       "mixed": "Mixed"
     },
     "changeGroup": "Change the group",
@@ -1810,7 +1810,19 @@
     "hideGroup": "Hide the “{name}” group",
     "showAll": "Show all",
     "hideRetired": "Hide retired and deceased",
-    "showRetired": "Show retired and deceased"
+    "showRetired": "Show retired and deceased",
+    "settingsTitle": "Relations",
+    "groupsHelp": "Groups gather personas under one color, on the graph and in lists.",
+    "relTypesHelp": "The links personas weave between them: their color and line on the graph. A mutual type waits for the other player's consent, then exists both ways; an in-a-relationship or married type also sets the sheets' marital status.",
+    "groupsCount": "{count, plural, one {# group} other {# groups}}",
+    "typesCount": "{count, plural, one {# type} other {# types}}",
+    "groupName": "Group name",
+    "typeName": "Type name",
+    "deleteGroup": "Delete the group {name}",
+    "deleteType": "Delete the type {name}",
+    "dashFor": "Line of {name}",
+    "reciprocityFor": "Reciprocity of {name}",
+    "notMutual": "Not mutual"
   },
   "wiki": {
     "changeIcon": "Change icon",
