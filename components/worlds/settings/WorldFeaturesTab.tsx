@@ -335,7 +335,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             <Input
                                                 placeholder={t("nav.wiki")}
                                                 aria-label={tSettings("wikiLinkName")}
-                                                className="h-10 max-w-sm text-sm"
+                                                className="h-10 max-w-sm rounded-md text-sm"
                                                 {...field}
                                                 onBlur={(e) => {
                                                     field.onBlur();

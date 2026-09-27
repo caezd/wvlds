@@ -56,7 +56,7 @@ export function FeaturePage({
           <TitleWithHelp title={title} help={help} />
         </h3>
         {toggle && (
-          <label className="flex shrink-0 cursor-pointer items-center gap-3 rounded-lg border border-border-soft px-3 py-2 text-sm">
+          <label className="flex shrink-0 cursor-pointer items-center gap-3 rounded-md border border-border-soft px-3 py-2 text-sm">
             {toggle.label}
             <Switch
               checked={toggle.checked}
@@ -110,7 +110,7 @@ export function SettingsSection({
 /** Une liste bordée de réglages, une ligne chacun. */
 export function ToggleList({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("divide-y divide-border-soft rounded-lg border border-border-soft", className)}>
+    <div className={cn("divide-y divide-border-soft rounded-md border border-border-soft", className)}>
       {children}
     </div>
   );

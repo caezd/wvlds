@@ -30,7 +30,7 @@ const NOW_RED_BORDER = "border-red-600/40 dark:border-accent/40";
 /** Un champ sans cadre, dans une ligne bordée. */
 const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0";
 /** Une ligne d'une liste (saison, fête) : bordée, sur le fond des cartes. */
-const LIST_ROW = "flex h-12 items-center gap-2 rounded-lg border border-border-soft bg-card pl-2 pr-1.5";
+const LIST_ROW = "flex h-12 items-center gap-2 rounded-md border border-border-soft bg-card pl-2 pr-1.5";
 /** Une petite case de saisie dans une ligne : une année, un jour. */
 const SMALL_BOX = "h-8 rounded-md border border-border-soft bg-background px-2 text-center text-sm shadow-none focus-visible:ring-1";
 /** Un champ numérique sans flèches. */
@@ -134,7 +134,7 @@ export function TimelineSettings({
   return (
     <div className="space-y-6">
       {/* ── En tête : la date actuelle du monde, et où en est le récit ── */}
-      <div className="grid overflow-hidden rounded-xl border border-border-soft bg-card @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="grid overflow-hidden rounded-md border border-border-soft bg-card @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
         <div className="flex flex-col p-5" data-testid="timeline-preview">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Hourglass className="size-3.5" aria-hidden />
@@ -172,7 +172,7 @@ export function TimelineSettings({
           </p>
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-current-year" className="text-xs font-normal text-muted-foreground">{t("currentYear")}</Label>
-            <div className="flex h-10 items-center rounded-lg border border-border">
+            <div className="flex h-10 items-center rounded-md border border-border">
               <button
                 type="button"
                 aria-label={tSettings("previousYear")}
@@ -209,7 +209,7 @@ export function TimelineSettings({
               id="timeline-current-month"
               value={config.current_month ?? ""}
               disabled={nbMois === 0}
-              className="h-10 w-full rounded-lg border border-border bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 w-full rounded-md border border-border bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               onChange={(e) => onPersist({ current_month: e.target.value === "" ? null : Number(e.target.value) })}
             >
               <option value="">{nbMois === 0 ? tSettings("noMonths") : "—"}</option>
@@ -230,7 +230,7 @@ export function TimelineSettings({
               id="timeline-year-label"
               value={config.year_label}
               placeholder={tSettings("yearPlaceholder")}
-              className="h-10 text-sm"
+              className="h-10 rounded-md text-sm"
               onChange={(e) => onDraft({ year_label: e.target.value })}
               onBlur={(e) => onPersist({ year_label: e.target.value || tSettings("yearPlaceholder") })}
             />
@@ -244,7 +244,7 @@ export function TimelineSettings({
               id="timeline-era"
               value={config.era_name ?? ""}
               placeholder={t("eraPlaceholder")}
-              className="h-10 text-sm"
+              className="h-10 rounded-md text-sm"
               onChange={(e) => onDraft({ era_name: e.target.value || null })}
               onBlur={(e) => onPersist({ era_name: e.target.value || null })}
             />
@@ -294,7 +294,7 @@ export function TimelineSettings({
             variant="outline"
             size="sm"
             onClick={() => onPersist({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-            className="mt-3 h-8 gap-1.5 border-border-soft bg-transparent text-xs font-normal"
+            className="mt-3 h-8 gap-1.5 rounded-md border-border-soft bg-transparent text-xs font-normal"
           >
             <RotateCcw className="size-3.5" aria-hidden />
             {tSettings("useRealMonths")}
@@ -307,7 +307,7 @@ export function TimelineSettings({
               <li
                 key={i}
                 className={cn(
-                  "flex h-11 items-center gap-2 rounded-lg border bg-card pl-3 pr-1.5",
+                  "flex h-11 items-center gap-2 rounded-md border bg-card pl-3 pr-1.5",
                   i === moisCourant ? NOW_RED_BORDER : "border-border-soft",
                 )}
                 data-current={i === moisCourant || undefined}
@@ -369,7 +369,7 @@ export function TimelineSettings({
         <button
           type="button"
           onClick={ajouterMois}
-          className="flex h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-soft text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+          className="flex h-10 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border-soft text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
         >
           <Plus className="size-4" aria-hidden />
           {tSettings("addMonth")}
@@ -619,13 +619,13 @@ function AddRow({
 }) {
   return (
     // Sur une page étroite, ses champs passent à la ligne plutôt que de déborder.
-    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-lg border border-dashed border-border-soft py-1.5 pl-2 pr-1.5">
+    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-md border border-dashed border-border-soft py-1.5 pl-2 pr-1.5">
       {children}
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 shrink-0 gap-1 border-border-soft bg-card font-normal"
+        className="h-8 shrink-0 gap-1 rounded-md border-border-soft bg-card font-normal"
         disabled={disabled}
         aria-label={addLabel}
         onClick={onAdd}

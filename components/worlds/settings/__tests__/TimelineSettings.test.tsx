@@ -198,6 +198,11 @@ describe("TimelineSettings — responsive", () => {
     const section = screen.getByRole("region", { name: "Mois du calendrier" });
     expect(section.className).toMatch(/@2xl:grid-cols-/);
     expect(section.querySelector("ol")!.className).toMatch(/@lg:grid-cols-2/);
+    // Cartes et bordures en rounded-md : aucun élément bordé n'arrondit plus.
+    const bordes = [...document.querySelectorAll<HTMLElement>("[class*='border']")]
+      .filter((el) => !el.className.split(" ").includes("border-0"));
+    expect(bordes.length).toBeGreaterThan(5);
+    for (const el of bordes) expect(el.className).not.toMatch(/(^|\s)rounded-(lg|xl)(\s|$)/);
     // Les lignes d'ajout passent à la ligne plutôt que de déborder.
     const ajout = screen.getByRole("button", { name: "Ajouter la saison" }).parentElement as HTMLElement;
     expect(ajout.className.split(" ")).toContain("flex-wrap");
