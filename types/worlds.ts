@@ -8,7 +8,29 @@ export interface WorldTimelineConfig {
    *  (tableau absent, ou plus court que `month_names`) retombe sur
    *  DEFAULT_DAYS_PER_MONTH, voir daysInMonth() dans lib/worldTimeline.ts. */
   days_per_month?: number[];
+  /** Les salons ne se situent que dans la période en cours : l'année
+   *  courante, et le mois courant s'il y en a un. Voir `currentPeriodLock`. */
+  restrict_to_current?: boolean;
+  /** Un salon ne se crée pas sans date : le choix paraît sous son titre. */
+  require_date?: boolean;
+  /** Les entrées datées des journaux de personas paraissent sur la frise. */
+  show_journals?: boolean;
+  /** Saisons : des âges nommés qui découpent les années de la frise. */
+  ages?: WorldTimelineAge[];
+  /** Les fêtes du calendrier, rappelées chaque année à leur date. */
+  holidays?: WorldTimelineHoliday[];
+  /** Jours sans message après lesquels un salon en cours s'endort sur la
+   *  frise ; 0 : jamais. Absent : DEFAULT_DORMANT_DAYS (30). */
+  dormant_days?: number;
 }
+
+/** Une fête du calendrier (« Fête des lanternes », 9 du 6e mois) ; le mois
+ *  est l'index dans `month_names`, le jour peut manquer (tout le mois). */
+export type WorldTimelineHoliday = { name: string; month: number; day: number | null };
+
+/** Un âge nommé de la chronologie (« L'Âge des Cendres », an 1 à 40) ; sans
+ *  année de fin, il court jusqu'à la suivante. */
+export type WorldTimelineAge = { name: string; from_year: number; to_year: number | null };
 
 export interface WorldTimelineDate {
   year: number;
@@ -130,6 +152,8 @@ export type World = {
   enable_inventory?: boolean | null;
   enable_skills?: boolean | null;
   enable_faceclaims?: boolean | null;
+  /** Une fiche sans faceclaim n'est pas « terminée » (migration 191). */
+  require_faceclaim?: boolean | null;
   /** Carte du monde. Absent = activée (défaut en base). */
   enable_map?: boolean | null;
   /** Wiki du monde. Absent = activé (défaut en base). */

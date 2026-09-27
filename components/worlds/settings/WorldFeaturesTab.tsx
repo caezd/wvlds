@@ -6,13 +6,14 @@ import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
 import { TabsContent } from "@/components/ui/tabs";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import type { World } from "@/types/worlds";
-import { LabelWithHelp } from "./LabelWithHelp";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
+
+/** Les catégories de fonctions, dans la colonne de gauche. */
+type FeatureSectionId = "catalogue" | "map" | "wiki" | "personas" | "timeline";
 
 type ProprietesOnglet = {
   world: World;
@@ -20,7 +21,6 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,18 +35,17 @@ import {
   setWorldFeature,
   setWorldRestriction,
   setWorldFaceclaims,
+    setWorldRequireFaceclaim,
   setWorldTimeline,
 } from "@/app/actions/worldCatalog";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
+import { TimelineSettings } from "./TimelineSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
-import {
-  clampDaysPerMonth,
-  DEFAULT_DAYS_PER_MONTH,
-  REAL_DAYS_PER_MONTH,
-  REAL_MONTH_NAMES,
-} from "@/lib/worldTimeline";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { FIELD, FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
  * Onglet « Fonctions » des réglages d'un monde : inventaire et compétences,
@@ -65,6 +64,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
   onUpdated?: (world: World) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
+  const tCatalogue = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const { world_timeline } = useFeatureFlags();
 
@@ -78,6 +79,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
 
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
+    const [requireFaceclaim, setRequireFaceclaim] = React.useState(!!world.require_faceclaim);
+    const [togglingRequireFaceclaim, setTogglingRequireFaceclaim] = React.useState(false);
 
     // `!== false` et non `=== true` : le monde reçu peut être un objet partiel
     // où la colonne n'a pas été chargée. En base elle est NOT NULL DEFAULT true.
@@ -100,7 +103,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         world.timeline_config ?? defaultConfig,
     );
     const [togglingTimeline, setTogglingTimeline] = React.useState(false);
-    const [newMonthName, setNewMonthName] = React.useState("");
+    // La catégorie affichée, et l'état de celle des personas (sa section le
+    // charge elle-même).
+    const [sectionId, setSectionId] = React.useState<FeatureSectionId>("catalogue");
+    const [personasActive, setPersonasActive] = React.useState(false);
 
     async function handleEnableToggle(field: "inventory" | "skills", enabled: boolean) {
         setTogglingEnable(true);
@@ -157,6 +163,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
     }
 
+    async function handleRequireFaceclaimToggle(required: boolean) {
+        setTogglingRequireFaceclaim(true);
+        const res = await setWorldRequireFaceclaim(world.id, required);
+        setTogglingRequireFaceclaim(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setRequireFaceclaim(required);
+        onUpdated?.({ ...world, require_faceclaim: required } as World);
+    }
+
     async function handleMapToggle(enabled: boolean) {
         setTogglingMap(true);
         const res = await setWorldFeature(world.id, "enable_map", enabled);
@@ -194,366 +209,256 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         else onUpdated?.({ ...world, timeline_config: next } as World);
     }
 
+    const on = tSettings("statusOn");
+    const off = tSettings("statusOff");
+    const sections: { id: FeatureSectionId; icon: LucideIcon; label: string; active: boolean; page: React.ReactNode }[] = [
+        {
+            id: "catalogue",
+            icon: Package,
+            label: t("nav.catalogue"),
+            active: enableInventory || enableSkills || enableFaceclaims,
+            page: (
+                <FeaturePage title={t("nav.catalogue")} help={tSettings("catalogueHelp")}>
+                    <ToggleList>
+                        <ToggleItem
+                            title={tSettings("inventoryItems")}
+                            help={tSettings("inventoryItemsHelp")}
+                            checked={enableInventory}
+                            disabled={togglingEnable}
+                            onCheckedChange={v => void handleEnableToggle("inventory", v)}
+                        />
+                        {enableInventory && (
+                            <ToggleItem
+                                indent
+                                title={t("restrictToCatalogue")}
+                                help={tSettings("restrictInventoryHelp")}
+                                control={
+                                    <Switch
+                                        checked={restrictInventory}
+                                        disabled={togglingRestriction}
+                                        onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
+                                        aria-label={`${tSettings("inventoryItems")} : ${t("restrictToCatalogue")}`}
+                                        className="shrink-0"
+                                    />
+                                }
+                            />
+                        )}
+                        <ToggleItem
+                            title={t("tabSkills")}
+                            help={tSettings("skillsHelp")}
+                            checked={enableSkills}
+                            disabled={togglingEnable}
+                            onCheckedChange={v => void handleEnableToggle("skills", v)}
+                        />
+                        {enableSkills && (
+                            <ToggleItem
+                                indent
+                                title={t("restrictToCatalogue")}
+                                help={tSettings("restrictSkillsHelp")}
+                                control={
+                                    <Switch
+                                        checked={restrictSkills}
+                                        disabled={togglingRestriction}
+                                        onCheckedChange={v => void handleRestrictionToggle("skills", v)}
+                                        aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
+                                        className="shrink-0"
+                                    />
+                                }
+                            />
+                        )}
+                        <ToggleItem
+                            title={tCatalogue("faceclaims")}
+                            help={tSettings("faceclaimsHelp")}
+                            checked={enableFaceclaims}
+                            disabled={togglingFaceclaims}
+                            onCheckedChange={v => void handleFaceclaimsToggle(v)}
+                        />
+                        {enableFaceclaims && (
+                            <ToggleItem
+                                indent
+                                title={tSettings("requireFaceclaim")}
+                                help={tSettings("requireFaceclaimHelp")}
+                                checked={requireFaceclaim}
+                                disabled={togglingRequireFaceclaim}
+                                onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
+                            />
+                        )}
+                    </ToggleList>
+                </FeaturePage>
+            ),
+        },
+        {
+            id: "map",
+            icon: MapIcon,
+            label: t("nav.map"),
+            active: enableMap,
+            page: (
+                <FeaturePage
+                    title={t("nav.map")}
+                    help={t("enableMapHelp")}
+                    toggle={{
+                        label: tSettings(enableMap ? "enabledF" : "disabledF"),
+                        ariaLabel: t("enableMap"),
+                        checked: enableMap,
+                        disabled: togglingMap,
+                        onCheckedChange: v => void handleMapToggle(v),
+                    }}
+                />
+            ),
+        },
+        {
+            id: "wiki",
+            icon: BookOpen,
+            label: tSettings("wiki"),
+            active: enableWiki,
+            page: (
+                <FeaturePage
+                    title={tSettings("wiki")}
+                    help={t("enableWikiHelp")}
+                    toggle={{
+                        label: tSettings(enableWiki ? "enabledM" : "disabledM"),
+                        ariaLabel: t("enableWiki"),
+                        checked: enableWiki,
+                        disabled: togglingWiki,
+                        onCheckedChange: v => void handleWikiToggle(v),
+                    }}
+                >
+                    {/* Le nom du lien : sans wiki, il n'a pas lieu d'être. */}
+                    {enableWiki && (
+                        <SettingsSection title={tSettings("wikiLinkName")} help={t("wikiLabelHelp")}>
+                            <FormField
+                                control={form.control}
+                                name="wiki_label"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input
+                                                placeholder={t("nav.wiki")}
+                                                aria-label={tSettings("wikiLinkName")}
+                                                className={cn("h-10 max-w-sm rounded-md text-sm", FIELD)}
+                                                {...field}
+                                                onBlur={(e) => {
+                                                    field.onBlur();
+                                                    void persistField("wiki_label", e.target.value.trim());
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </SettingsSection>
+                    )}
+                </FeaturePage>
+            ),
+        },
+        {
+            id: "personas",
+            icon: UserRound,
+            label: t("nav.personas"),
+            active: personasActive,
+            page: (
+                <FeaturePage title={t("nav.personas")} help={tSettings("personasHelp")}>
+                    <WorldPersonaTemplateSection
+                        worldId={world.id}
+                        restrictInventory={restrictInventory}
+                        restrictSkills={restrictSkills}
+                        reviewEnabled={!!world.persona_review_enabled}
+                        onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
+                        onActiveChange={setPersonasActive}
+                    />
+                </FeaturePage>
+            ),
+        },
+        ...(world_timeline
+            ? [{
+                id: "timeline" as const,
+                icon: Clock,
+                label: t("nav.timeline"),
+                active: timelineEnabled,
+                page: (
+                    <FeaturePage
+                        title={t("nav.timeline")}
+                        help={tSettings("timelineHelp")}
+                        toggle={{
+                            label: tSettings(timelineEnabled ? "enabledF" : "disabledF"),
+                            ariaLabel: t("enableTimeline"),
+                            checked: timelineEnabled,
+                            disabled: togglingTimeline,
+                            onCheckedChange: v => void handleTimelineToggle(v),
+                        }}
+                    >
+                        {timelineEnabled && (
+                            <TimelineSettings
+                                config={timelineConfig}
+                                onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}
+                                onPersist={(patch) => void persistTimelineConfig(patch)}
+                            />
+                        )}
+                    </FeaturePage>
+                ),
+            }]
+            : []),
+    ];
+
+
   return (
     <>
                         <TabsContent value="features" className="mt-0">
-                            <div className="mx-auto max-w-xl space-y-6">
-                                {/* -- Catalogue -------------------------------- */}
-                                <div className="space-y-5">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue</p>
-
-                                    {/* Objets */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Objets d&apos;inventaire</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    Les personas peuvent gérer un inventaire d&apos;objets.
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={enableInventory}
-                                                disabled={togglingEnable}
-                                                onCheckedChange={v => void handleEnableToggle("inventory", v)}
-                                                className="shrink-0 mt-0.5"
-                                            />
-                                        </div>
-                                        {enableInventory && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
-                                                    <p className="text-xs text-muted-foreground leading-snug">
-                                                        Les personas ne peuvent posséder que des objets définis dans le catalogue — la saisie libre est désactivée.
-                                                    </p>
-                                                </div>
-                                                <Switch
-                                                    checked={restrictInventory}
-                                                    disabled={togglingRestriction}
-                                                    onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
-                                                    className="shrink-0 mt-0.5"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Compétences */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">{t("tabSkills")}</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    Les personas peuvent lister leurs compétences.
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={enableSkills}
-                                                disabled={togglingEnable}
-                                                onCheckedChange={v => void handleEnableToggle("skills", v)}
-                                                className="shrink-0 mt-0.5"
-                                            />
-                                        </div>
-                                        {enableSkills && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
-                                                    <p className="text-xs text-muted-foreground leading-snug">
-                                                        Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.
-                                                    </p>
-                                                </div>
-                                                <Switch
-                                                    checked={restrictSkills}
-                                                    disabled={togglingRestriction}
-                                                    onCheckedChange={v => void handleRestrictionToggle("skills", v)}
-                                                    className="shrink-0 mt-0.5"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Faceclaims */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Faceclaims</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    Permet aux personas d&apos;indiquer l&apos;acteur ou le personnage sur lequel leur avatar est basé, et affiche un annuaire dans le Catalogue.
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={enableFaceclaims}
-                                                disabled={togglingFaceclaims}
-                                                onCheckedChange={v => void handleFaceclaimsToggle(v)}
-                                                className="shrink-0 mt-0.5"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* -- Carte ---------------------------------- */}
-                                <div className="space-y-3 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.map")}</p>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("enableMap")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {t("enableMapHelp")}
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={enableMap}
-                                            disabled={togglingMap}
-                                            onCheckedChange={v => void handleMapToggle(v)}
-                                            className="shrink-0 mt-0.5"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* -- Wiki ---------------------------------- */}
-                                <div className="space-y-3 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wiki</p>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("enableWiki")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {t("enableWikiHelp")}
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={enableWiki}
-                                            disabled={togglingWiki}
-                                            onCheckedChange={v => void handleWikiToggle(v)}
-                                            className="shrink-0 mt-0.5"
-                                        />
-                                    </div>
-                                    <FormField
-                                        control={form.control}
-                                        name="wiki_label"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    <LabelWithHelp help={t("wikiLabelHelp")}>
-                                                        Nom du lien
-                                                    </LabelWithHelp>
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder="Annexes"
-                                                        {...field}
-                                                        onBlur={(e) => {
-                                                            field.onBlur();
-                                                            void persistField("wiki_label", e.target.value.trim());
-                                                        }}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                {/* -- Fiche de persona par défaut -------------- */}
-                                <WorldPersonaTemplateSection
-                                    worldId={world.id}
-                                    restrictInventory={restrictInventory}
-                                    restrictSkills={restrictSkills}
-                                    reviewEnabled={!!world.persona_review_enabled}
-                                    onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
-                                />
-
-                                {/* -- Timeline -------------------------------- */}
-                                {world_timeline && (
-                                    <div className="space-y-5 pt-2">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chronologie</p>
-
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">{t("enableTimeline")}</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    Permet de situer chaque conversation dans un calendrier fictif.
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={timelineEnabled}
-                                                disabled={togglingTimeline}
-                                                onCheckedChange={v => void handleTimelineToggle(v)}
-                                                className="shrink-0 mt-0.5"
-                                            />
-                                        </div>
-
-                                        {timelineEnabled && (
-                                            <div className="space-y-4 rounded-xl border border-border-soft bg-muted/20 p-4">
-                                                {/* Année courante */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("yearLabel")}</p>
-                                                        <Input
-                                                            value={timelineConfig.year_label}
-                                                            placeholder="an"
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, year_label: e.target.value }))}
-                                                            onBlur={e => void persistTimelineConfig({ year_label: e.target.value || "an" })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("eraSuffix")}</p>
-                                                        <Input
-                                                            value={timelineConfig.era_name ?? ""}
-                                                            placeholder={t("eraPlaceholder")}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, era_name: e.target.value || null }))}
-                                                            onBlur={e => void persistTimelineConfig({ era_name: e.target.value || null })}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Année / mois courant */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("currentYear")}</p>
-                                                        <Input
-                                                            type="number"
-                                                            value={timelineConfig.current_year}
-                                                            min={-99999}
-                                                            max={99999}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, current_year: Number(e.target.value) || 1 }))}
-                                                            onBlur={e => void persistTimelineConfig({ current_year: Number(e.target.value) || 1 })}
-                                                        />
-                                                    </div>
-                                                    {timelineConfig.month_names.length > 0 && (
-                                                        <div className="space-y-1.5">
-                                                            <p className="text-xs font-medium text-muted-foreground">Mois actuel</p>
-                                                            <select
-                                                                value={timelineConfig.current_month ?? ""}
-                                                                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-                                                                onChange={e => {
-                                                                    const v = e.target.value === "" ? null : Number(e.target.value);
-                                                                    void persistTimelineConfig({ current_month: v });
-                                                                }}
-                                                            >
-                                                                <option value="">—</option>
-                                                                {timelineConfig.month_names.map((m, i) => (
-                                                                    <option key={i} value={i}>{m}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Liste des mois — chacun avec son propre nombre de jours (borne le
-                                                    calendrier du widget « Raccourcis chronologie » de la page
-                                                    d'accueil, voir WorldTimelineShortcutsWidget.tsx). Les deux tableaux
-                                                    (`month_names`/`days_per_month`) restent parallèles : tout ajout,
-                                                    retrait ou préréglage touche les deux à la fois. */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("calendarMonths")}</p>
-                                                        {timelineConfig.month_names.length === 0 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-                                                                className="text-[11px] text-primary hover:underline"
-                                                            >
-                                                                Utiliser les mois réels
-                                                            </button>
+                            {/* Les catégories à gauche, avec leur état ; la page de
+                                celle choisie à droite. Toutes restent montées (seule
+                                la choisie paraît) : chacune garde son état, et
+                                celui des personas, chargé par sa section, reste juste
+                                dans la colonne. */}
+                            <div className="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:gap-10">
+                                <nav
+                                    aria-label={tSettings("featuresNav")}
+                                    className="shrink-0 md:w-52 md:border-r md:border-border-soft md:pr-4"
+                                >
+                                    <p className="px-2.5 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground" aria-hidden>
+                                        {tSettings("featuresTitle")}
+                                    </p>
+                                    <ul className="space-y-0.5">
+                                        {sections.map((section) => {
+                                            const selected = section.id === sectionId;
+                                            const Icon = section.icon;
+                                            return (
+                                                <li key={section.id}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSectionId(section.id)}
+                                                        aria-current={selected ? "page" : undefined}
+                                                        // Nommé par sa catégorie ; son état se lit en description.
+                                                        aria-label={section.label}
+                                                        aria-describedby={`feature-status-${section.id}`}
+                                                        className={cn(
+                                                            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
+                                                            selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                                                         )}
-                                                    </div>
-                                                    {timelineConfig.month_names.length > 0 && (
-                                                        <div className="space-y-1">
-                                                            {timelineConfig.month_names.map((m, i) => (
-                                                                <div key={i} className="flex items-center gap-2">
-                                                                    <span className="w-4 shrink-0 text-right text-xs text-muted-foreground">{i + 1}.</span>
-                                                                    <Input
-                                                                        value={m}
-                                                                        className="h-7 flex-1 text-sm"
-                                                                        onChange={e => {
-                                                                            const next = [...timelineConfig.month_names];
-                                                                            next[i] = e.target.value;
-                                                                            setTimelineConfig(c => ({ ...c, month_names: next }));
-                                                                        }}
-                                                                        onBlur={e => {
-                                                                            const next = [...timelineConfig.month_names];
-                                                                            next[i] = e.target.value;
-                                                                            void persistTimelineConfig({ month_names: next });
-                                                                        }}
-                                                                    />
-                                                                    <Input
-                                                                        type="number"
-                                                                        aria-label={`Jours en ${m || `mois ${i + 1}`}`}
-                                                                        value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
-                                                                        min={1}
-                                                                        max={999}
-                                                                        title={t("daysCount")}
-                                                                        className="h-7 w-16 shrink-0 text-sm"
-                                                                        onChange={e => {
-                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
-                                                                            setTimelineConfig(c => ({ ...c, days_per_month: next }));
-                                                                        }}
-                                                                        onBlur={e => {
-                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
-                                                                            void persistTimelineConfig({ days_per_month: next });
-                                                                        }}
-                                                                    />
-                                                                    <button
-                                                                      aria-label={tCommon("delete")}
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            const next = timelineConfig.month_names.filter((_, j) => j !== i);
-                                                                            const nextDays = (timelineConfig.days_per_month ?? []).filter((_, j) => j !== i);
-                                                                            const currentMonth = timelineConfig.current_month;
-                                                                            void persistTimelineConfig({
-                                                                                month_names: next,
-                                                                                days_per_month: nextDays,
-                                                                                current_month: currentMonth !== null && currentMonth >= next.length ? null : currentMonth,
-                                                                            });
-                                                                        }}
-                                                                        className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    <div className="flex gap-2">
-                                                        <Input
-                                                            value={newMonthName}
-                                                            placeholder={t("monthNamePlaceholder")}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setNewMonthName(e.target.value)}
-                                                            onKeyDown={e => {
-                                                                if (e.key === "Enter" && newMonthName.trim()) {
-                                                                    e.preventDefault();
-                                                                    const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                    const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
-                                                                    void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
-                                                                    setNewMonthName("");
-                                                                }
-                                                            }}
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            variant="secondary"
-                                                            size="sm"
-                                                            disabled={!newMonthName.trim()}
-                                                            aria-label={t("addMonthName")}
-                                                            onClick={() => {
-                                                                const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
-                                                                void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
-                                                                setNewMonthName("");
-                                                            }}
-                                                        >
-                                                            <Plus className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                                    >
+                                                        <Icon className="size-4 shrink-0" aria-hidden />
+                                                        <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                                                        <StatusPill id={`feature-status-${section.id}`} active={section.active} onLabel={on} offLabel={off} />
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </nav>
+
+                                <div className="min-w-0 flex-1">
+                                    {sections.map((section) => (
+                                        <div
+                                            key={section.id}
+                                            hidden={section.id !== sectionId}
+                                            role="region"
+                                            aria-label={section.label}
+                                            data-feature-page={section.id}
+                                        >
+                                            {section.page}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </TabsContent>
 

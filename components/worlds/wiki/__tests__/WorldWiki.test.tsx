@@ -168,7 +168,7 @@ describe("WorldWiki — barre de mise en forme et images", () => {
 
   it("affiche le contenu publié avec les images autorisées", async () => {
     setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await userEvent.click(await dansLArbre("Accueil"));
 
@@ -180,7 +180,7 @@ describe("WorldWiki — barre de mise en forme et images", () => {
   it("offre la ceinture de mise en forme dans le sous-en-tête en édition", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     // Le mode modification ouvre l'éditeur de l'article : un seul geste.
     await activerModification(user);
@@ -192,7 +192,7 @@ describe("WorldWiki — barre de mise en forme et images", () => {
   it("écrit le markdown dans le champ, sans le passer par un éditeur enrichi", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
 
@@ -213,7 +213,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
   it("la recherche filtre et la sélection d'un résultat déplie le dossier parent", async () => {
     setupWithFolder();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await dansLArbre("Accueil");
 
@@ -229,7 +229,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
   it("affiche le fil d'Ariane du dossier parent dans l'en-tête principal", async () => {
     setupWithFolder();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await dansLArbre("Accueil");
     await user.click(await dansLArbre("Lieux")); // déplie le dossier
@@ -249,7 +249,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     // contient déjà une poignée de déplacement et un menu.
     setupWithFolder();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await dansLArbre("Accueil");
     const dossier = screen.getByRole("button", { name: "Lieux" });
@@ -271,7 +271,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     // bouge à l'écran.
     setupWithFolder();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await dansLArbre("Accueil");
     await user.click(screen.getByRole("button", { name: "Lieux" }));
@@ -319,7 +319,7 @@ describe("WorldWiki — création depuis un modèle", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     await user.click(screen.getByText("Page"));
@@ -343,7 +343,7 @@ describe("WorldWiki — pages restreintes", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
 
@@ -368,7 +368,7 @@ describe("WorldWiki — pages restreintes", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     const ligne = (await dansLArbre("Accueil")).closest("div")!;
@@ -393,7 +393,7 @@ describe("WorldWiki — pages restreintes", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     const ligne = (await dansLArbre("Accueil")).closest("div")!;
@@ -424,7 +424,7 @@ describe("WorldWiki — cascade de renommage", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
 
@@ -457,7 +457,7 @@ describe("WorldWiki — cascade de renommage", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
 
@@ -477,7 +477,7 @@ describe("WorldWiki — sélection initiale via initialSlug (raccourci externe)"
 
   it("sélectionne la page ciblée par initialSlug dès le chargement, sans clic", async () => {
     setupWithFolder();
-    render(<WorldWiki worldId="w1" canEdit={false} initialSlug="foret-noire" />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment initialSlug="foret-noire" />);
 
     await waitFor(() => {
       expect(mdProps).toHaveBeenCalledWith(
@@ -488,7 +488,7 @@ describe("WorldWiki — sélection initiale via initialSlug (raccourci externe)"
 
   it("déplie le dossier ancêtre de la page ciblée", async () => {
     setupWithFolder();
-    render(<WorldWiki worldId="w1" canEdit={false} initialSlug="foret-noire" />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment initialSlug="foret-noire" />);
 
     // Titre de la page ouverte (h1) — distinct de son entrée dans l'arbre latéral.
     expect(await screen.findByRole("heading", { name: "La Forêt Noire" })).toBeInTheDocument();
@@ -496,7 +496,7 @@ describe("WorldWiki — sélection initiale via initialSlug (raccourci externe)"
 
   it("ignore un slug inconnu sans planter", async () => {
     setup();
-    render(<WorldWiki worldId="w1" canEdit={false} initialSlug="inexistant" />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment initialSlug="inexistant" />);
 
     expect(await dansLArbre("Accueil")).toBeInTheDocument();
     expect(mdProps).not.toHaveBeenCalled();
@@ -519,7 +519,7 @@ describe("WorldWiki — lexique du monde", () => {
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
     await userEvent.click(await dansLArbre("Accueil"));
 
     await waitFor(() => {
@@ -535,14 +535,14 @@ describe("WorldWiki — libellé personnalisé du panneau", () => {
 
   it("affiche le libellé traduit par défaut sans prop label", () => {
     setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     expect(screen.getByText("Annexes")).toBeInTheDocument();
   });
 
   it("affiche le libellé personnalisé quand il est fourni", () => {
     setup();
-    render(<WorldWiki worldId="w1" canEdit={false} label="Compendium" />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment label="Compendium" />);
 
     expect(screen.getByText("Compendium")).toBeInTheDocument();
     expect(screen.queryByText("Annexes")).not.toBeInTheDocument();
@@ -621,7 +621,7 @@ describe("WorldWiki — l'adresse suit la page ouverte", () => {
     // et le bouton Précédent sortait du wiki d'un bond.
     setupWithFolder();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await user.click(await dansLArbre("Accueil"));
 
@@ -633,7 +633,7 @@ describe("WorldWiki — l'adresse suit la page ouverte", () => {
   it("rouvre la page que le bouton Précédent désigne", async () => {
     setupWithFolder();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await user.click(await dansLArbre("Accueil"));
     // Le retour en arrière, tel que le navigateur le produit : l'adresse
@@ -660,7 +660,7 @@ describe("WorldWiki — suppression d'une page", () => {
     // passe, plus rien n'est cliquable dans l'application.
     setup();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     const ligne = (await dansLArbre("Accueil")).closest("div")!;
@@ -680,7 +680,7 @@ describe("WorldWiki — suppression d'une page", () => {
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     const ligne = (await dansLArbre("Lieux")).closest("div")!;
@@ -718,7 +718,7 @@ describe("WorldWiki — suppression d'une page", () => {
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     await user.click(screen.getByRole("button", { name: "Corbeille" }));
@@ -751,7 +751,7 @@ describe("WorldWiki — suppression d'une page", () => {
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
     await user.click(screen.getByRole("button", { name: "Corbeille" }));
@@ -776,7 +776,7 @@ describe("WorldWiki — replier la colonne de navigation", () => {
   it("replie la colonne et laisse de quoi la rouvrir", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit={false} />);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
 
     await dansLArbre("Accueil");
     expect(screen.getByPlaceholderText("Rechercher dans le wiki…")).toBeInTheDocument();
@@ -802,7 +802,7 @@ describe("WorldWiki — pied de la colonne de navigation", () => {
     // Le pied ne porte que des commandes d'écriture : hors de ce mode, il ne
     // restait qu'un filet et une bande vide au bas de la colonne.
     setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await dansLArbre("Accueil");
     expect(screen.queryByTestId("wiki-nav-footer")).toBeNull();
@@ -811,7 +811,7 @@ describe("WorldWiki — pied de la colonne de navigation", () => {
   it("le monte dès qu'on passe en modification", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldWiki worldId="w1" canEdit />);
+    render(<WorldWiki worldId="w1" canEdit canComment />);
 
     await activerModification(user);
 

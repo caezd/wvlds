@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -35,8 +35,11 @@ function setup(overrides: Partial<typeof category> = {}) {
 }
 
 async function openEditForm(user: ReturnType<typeof userEvent.setup>) {
+  // Par son nom, et non par son rang : la poignée de déplacement est un bouton
+  // elle aussi — elle doit porter un nom accessible (WCAG), pas être un
+  // `<span role="button">` muet.
   const row = (await screen.findByText("Annonces")).closest(".group")!;
-  await user.click(row.querySelectorAll("button")[0]);
+  await user.click(within(row as HTMLElement).getByRole("button", { name: "Modifier" }));
 }
 
 beforeEach(() => {

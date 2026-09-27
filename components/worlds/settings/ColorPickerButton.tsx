@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
@@ -15,10 +16,16 @@ export function ColorPickerButton({
   color,
   onChange,
   disabled,
+  className,
+  children,
 }: {
   color: string;
   onChange: (c: string) => void;
   disabled?: boolean;
+  /** Classes du bouton — pour caler sa hauteur sur les champs voisins. */
+  className?: string;
+  /** Posé sur la pastille, centré : l'icône d'un rôle. */
+  children?: React.ReactNode;
 }) {
   const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
@@ -34,15 +41,17 @@ export function ColorPickerButton({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex">
       <button
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50", className)}
         style={{ backgroundColor: color }}
         aria-label={tCommon("chooseColor")}
-      />
+      >
+        {children}
+      </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
           <HsvColorPicker color={color} onChange={onChange} presets={[]} />

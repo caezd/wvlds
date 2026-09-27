@@ -84,6 +84,14 @@ export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
 
 /** Affiche/masque le bloc statistiques sous le titre de la page d'accueil —
  *  position fixe, ce n'est plus un bloc de home_grid (voir worldHomeGrid.ts). */
+/** Exiger un faceclaim : une fiche sans faceclaim n'est plus « terminée ». */
+export async function setWorldRequireFaceclaim(worldId: string, required: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ require_faceclaim: required }).eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldRequireFaceclaim", error) };
+  return { ok: true as const };
+}
+
 export async function setWorldHomeShowStats(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_show_stats: enabled }).eq("id", worldId);

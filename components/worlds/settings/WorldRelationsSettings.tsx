@@ -4,19 +4,21 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, X, Loader2 } from "lucide-react";
+import { ArrowLeftRight, Loader2, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ColorPickerButton } from "./ColorPickerButton";
+import { FIELD, FeaturePage, SURFACE, SettingsSection } from "./FeatureLayout";
+import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
 
 type RelationGroup = { id: string; name: string; color: string; sort_index: number };
-import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
 
 const RT_COLUMNS = "id, world_id, name, color, dash, sort_index, mutual, marital_status";
 
-type DashOption = { label: string; value: string };
-function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): DashOption[] {
+/** Les traits d'une relation sur le graphe (`dash` : un motif SVG ; vide, continu). */
+function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>) {
   return [
     { label: t("dash.solid"), value: "" },
     { label: t("dash.dashed"), value: "5 3" },
@@ -25,7 +27,26 @@ function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): Das
     { label: t("dash.mixed"), value: "8 3 2 3" },
   ];
 }
+/** Radix n'accepte pas de valeur vide pour une option : le trait continu. */
+const SOLID = "solid";
 
+/** La réciprocité d'un type : non, oui, ou oui et liée au statut marital des fiches. */
+type Reciprocity = "none" | "mutual" | RelationMaritalStatus;
+
+/** Une ligne d'une liste : bordée, sur le fond des cartes. */
+const ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
+/** Un champ sans cadre, dans une ligne. */
+const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0 dark:bg-transparent";
+/** La pastille de couleur, carrée comme sur la maquette. */
+const SWATCH = "size-6 rounded-md border-0 shadow-none";
+
+/**
+ * L'onglet Relations des réglages d'un monde : les groupes de personas et
+ * les types de relation, en sections (voir FeatureLayout). Chaque ligne se
+ * modifie sur place — couleur, nom, trait, réciprocité — et s'enregistre à
+ * la sortie du champ (la couleur, un instant après le dernier réglage : le
+ * sélecteur HSV change à chaque mouvement).
+ */
 export function WorldRelationsSettings({ worldId }: { worldId: string }) {
   const t = useTranslations("relations");
   const tCommon = useTranslations("common");
@@ -44,33 +65,27 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
       setGroups((gRows ?? []) as RelationGroup[]);
       setRelTypes((rtRows ?? []) as RelationType[]);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId]);
+  }, [supabase, worldId]);
 
-  // Groups form
+  // Les nouveaux : un groupe, un type.
   const [gName, setGName] = React.useState("");
   const [gColor, setGColor] = React.useState("#6366f1");
-
-  // Editing group
-  const [editGId, setEditGId] = React.useState<string | null>(null);
-  const [editGName, setEditGName] = React.useState("");
-  const [editGColor, setEditGColor] = React.useState("");
-
-  // Relation type form
   const [rtName, setRtName] = React.useState("");
   const [rtColor, setRtColor] = React.useState("#22c55e");
-  const [rtDash, setRtDash] = React.useState("");
-  const [rtMutual, setRtMutual] = React.useState(false);
 
-  // Editing relation type
-  const [editRtId, setEditRtId] = React.useState<string | null>(null);
-  const [editRtName, setEditRtName] = React.useState("");
-  const [editRtColor, setEditRtColor] = React.useState("");
-  const [editRtDash, setEditRtDash] = React.useState("");
-  const [editRtMutual, setEditRtMutual] = React.useState(false);
-  const [editRtMarital, setEditRtMarital] = React.useState<RelationMaritalStatus | null>(null);
+  // La couleur s'enregistre un instant après le dernier réglage.
+  const colorTimers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  React.useEffect(() => {
+    const timers = colorTimers.current;
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  }, []);
+  function persistColorSoon(key: string, save: () => void) {
+    const timers = colorTimers.current;
+    clearTimeout(timers.get(key));
+    timers.set(key, setTimeout(() => { timers.delete(key); save(); }, 400));
+  }
 
-  // ── Groups ──────────────────────────────────────────────────────────────────
+  // ── Groupes ─────────────────────────────────────────────────────────────────
 
   async function addGroup() {
     if (!gName.trim() || !groups) return;
@@ -90,69 +105,54 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     setGroups((prev) => prev?.filter((g) => g.id !== id) ?? null);
   }
 
-  function startEditG(g: RelationGroup) {
-    setEditGId(g.id);
-    setEditGName(g.name);
-    setEditGColor(g.color);
-  }
-
-  async function saveEditG() {
-    if (!editGId) return;
-    const { error } = await supabase
-      .from("world_persona_groups")
-      .update({ name: editGName.trim(), color: editGColor })
-      .eq("id", editGId);
+  async function saveGroup(id: string, patch: Partial<Pick<RelationGroup, "name" | "color">>) {
+    const { error } = await supabase.from("world_persona_groups").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    setGroups((prev) => prev?.map((g) =>
-      g.id === editGId ? { ...g, name: editGName.trim(), color: editGColor } : g
-    ) ?? null);
-    setEditGId(null);
   }
 
-  // ── Relation types ───────────────────────────────────────────────────────────
+  function editGroup(id: string, patch: Partial<Pick<RelationGroup, "name" | "color">>) {
+    setGroups((prev) => prev?.map((g) => (g.id === id ? { ...g, ...patch } : g)) ?? null);
+  }
+
+  // ── Types de relation ──────────────────────────────────────────────────────
 
   async function addRelType() {
     if (!rtName.trim()) return;
     const { data, error } = await supabase
       .from("world_relation_types")
-      .insert({ world_id: worldId, name: rtName.trim(), color: rtColor, dash: rtDash, sort_index: relTypes.length, mutual: rtMutual })
+      .insert({ world_id: worldId, name: rtName.trim(), color: rtColor, dash: "", sort_index: relTypes.length, mutual: false })
       .select(RT_COLUMNS)
       .single();
     if (error) { toast.error(error.message); return; }
     setRelTypes([...relTypes, data as RelationType]);
     setRtName("");
-    setRtColor("#22c55e");
-    setRtDash("");
-    setRtMutual(false);
   }
 
   async function deleteRelType(id: string) {
     const { error } = await supabase.from("world_relation_types").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    setRelTypes((prev) => prev.filter((t) => t.id !== id));
+    setRelTypes((prev) => prev.filter((rt) => rt.id !== id));
   }
 
-  function startEditRt(t: RelationType) {
-    setEditRtId(t.id);
-    setEditRtName(t.name);
-    setEditRtColor(t.color);
-    setEditRtDash(t.dash);
-    setEditRtMutual(t.mutual);
-    setEditRtMarital(t.marital_status);
+  type TypePatch = Partial<Pick<RelationType, "name" | "color" | "dash" | "mutual" | "marital_status">>;
+  async function saveRelType(id: string, patch: TypePatch) {
+    const { error } = await supabase.from("world_relation_types").update(patch).eq("id", id);
+    if (error) { toast.error(error.message); return false; }
+    return true;
   }
 
-  async function saveEditRt() {
-    if (!editRtId) return;
-    // Un type marital est forcément réciproque (contrainte de la migration 173).
-    const mutual = editRtMutual || editRtMarital !== null;
-    const patch = { name: editRtName.trim(), color: editRtColor, dash: editRtDash, mutual, marital_status: editRtMarital };
-    const { error } = await supabase
-      .from("world_relation_types")
-      .update(patch)
-      .eq("id", editRtId);
-    if (error) { toast.error(error.message); return; }
-    setRelTypes((prev) => prev.map((t) => (t.id === editRtId ? { ...t, ...patch } : t)));
-    setEditRtId(null);
+  function editRelType(id: string, patch: TypePatch) {
+    setRelTypes((prev) => prev.map((rt) => (rt.id === id ? { ...rt, ...patch } : rt)));
+  }
+
+  /** Changer la réciprocité : un type marital l'est d'office (contrainte de la migration 173). */
+  async function setReciprocity(rt: RelationType, value: Reciprocity) {
+    const patch: TypePatch = value === "none"
+      ? { mutual: false, marital_status: null }
+      : value === "mutual"
+        ? { mutual: true, marital_status: null }
+        : { mutual: true, marital_status: value };
+    if (await saveRelType(rt.id, patch)) editRelType(rt.id, patch);
   }
 
   if (groups === null) {
@@ -163,131 +163,206 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     );
   }
 
-  return (
-    <Tabs defaultValue="groups">
-      <TabsList className="w-full">
-        <TabsTrigger value="groups" className="flex-1">{t("groups")}</TabsTrigger>
-        <TabsTrigger value="reltypes" className="flex-1">{t("relTypes")}</TabsTrigger>
-      </TabsList>
+  // Un seul type par statut marital et par monde (migration 173).
+  const maritalTakenBy = (status: RelationMaritalStatus) => relTypes.find((rt) => rt.marital_status === status)?.id ?? null;
+  const reciprocityLabel = (value: Reciprocity) =>
+    value === "married" ? t("maritalMarried") : value === "in_relationship" ? t("maritalInRelationship") : t("mutual");
 
+  return (
+    <FeaturePage title={t("settingsTitle")}>
       {/* ── Groupes ── */}
-      <TabsContent value="groups" className="mt-4 space-y-3">
-        <div className="space-y-1.5">
-          {groups.length === 0 && (
-            <p className="text-center text-[12px] text-muted-foreground py-4">{t("noGroupsDefined")}</p>
-          )}
-          {groups.map((g) =>
-            editGId === g.id ? (
-              <div key={g.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
-                <ColorPickerButton color={editGColor} onChange={setEditGColor} />
-                <Input value={editGName} onChange={(e) => setEditGName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") void saveEditG(); }}
-                  className="h-8 flex-1 text-[12px]" autoFocus />
-                <button onClick={() => void saveEditG()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                <button onClick={() => setEditGId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
-              </div>
-            ) : (
-              <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} />
-                <span className="flex-1 text-[13px] font-medium">{g.name}</span>
-                <button onClick={() => startEditG(g)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )
-          )}
-        </div>
-        <div className="flex items-center gap-2 border-t border-border-soft pt-3">
-          <ColorPickerButton color={gColor} onChange={setGColor} />
-          <Input value={gName} onChange={(e) => setGName(e.target.value)}
+      <SettingsSection
+        title={t("groups")}
+        help={t("groupsHelp")}
+        meta={t("groupsCount", { count: groups.length })}
+      >
+        {groups.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noGroupsDefined")}</p>}
+        <ul className="space-y-2" aria-label={t("groups")}>
+          {groups.map((g) => (
+            <li key={g.id} className={ROW} data-group-id={g.id}>
+              <ColorPickerButton
+                color={g.color}
+                className={SWATCH}
+                onChange={(color) => {
+                  editGroup(g.id, { color });
+                  persistColorSoon(`g:${g.id}`, () => void saveGroup(g.id, { color }));
+                }}
+              />
+              <Input
+                value={g.name}
+                aria-label={t("groupName")}
+                className={BARE_INPUT}
+                onChange={(e) => editGroup(g.id, { name: e.target.value })}
+                onBlur={(e) => { if (e.target.value.trim()) void saveGroup(g.id, { name: e.target.value.trim() }); }}
+              />
+              <DeleteButton label={t("deleteGroup", { name: g.name })} onClick={() => void deleteGroup(g.id)} />
+            </li>
+          ))}
+        </ul>
+        <AddRow disabled={!gName.trim()} addLabel={t("addGroup")} buttonText={tCommon("add")} onAdd={() => void addGroup()}>
+          <ColorPickerButton color={gColor} onChange={setGColor} className={SWATCH} />
+          <Input
+            value={gName}
+            onChange={(e) => setGName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void addGroup(); }}
-            placeholder={t("groupNamePlaceholder")} className="h-8 flex-1 text-sm" />
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()} aria-label={t("addGroup")}>
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </TabsContent>
+            placeholder={t("groupNamePlaceholder")}
+            aria-label={t("groupNamePlaceholder")}
+            className={cn(BARE_INPUT, "font-normal")}
+          />
+        </AddRow>
+      </SettingsSection>
 
       {/* ── Types de relation ── */}
-      <TabsContent value="reltypes" className="mt-4 space-y-3">
-        <div className="space-y-1.5">
-          {relTypes.length === 0 && (
-            <p className="text-center text-[12px] text-muted-foreground py-4">{t("noTypesDefined")}</p>
-          )}
-          {relTypes.map((rt) =>
-            editRtId === rt.id ? (
-              <div key={rt.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
-                <ColorPickerButton color={editRtColor} onChange={setEditRtColor} />
-                <Input value={editRtName} onChange={(e) => setEditRtName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") void saveEditRt(); }}
-                  className="h-7 flex-1 text-[12px]" />
-                <select value={editRtDash} onChange={(e) => setEditRtDash(e.target.value)}
-                  className="h-7 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-                  {dashOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                {/* Réciproque : la relation attend l'accord de l'autre joueur et
-                    existe dans les deux sens. Un type marital l'est d'office. */}
-                <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <input type="checkbox" checked={editRtMutual || editRtMarital !== null} disabled={editRtMarital !== null}
-                    onChange={(e) => setEditRtMutual(e.target.checked)} className="accent-primary" />
-                  {t("mutual")}
-                </label>
-                <select value={editRtMarital ?? ""} aria-label={t("maritalLink")}
-                  onChange={(e) => setEditRtMarital((e.target.value || null) as RelationMaritalStatus | null)}
-                  className="h-7 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-                  <option value="">{t("maritalNone")}</option>
-                  <option value="in_relationship">{t("maritalInRelationship")}</option>
-                  <option value="married">{t("maritalMarried")}</option>
-                </select>
-                <button onClick={() => void saveEditRt()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
-              </div>
-            ) : (
-              <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
-                <svg width="24" height="8" className="shrink-0">
-                  <line x1="0" y1="4" x2="24" y2="4" stroke={rt.color} strokeWidth={1.5} strokeDasharray={rt.dash || undefined} />
+      <SettingsSection
+        title={t("relTypes")}
+        help={t("relTypesHelp")}
+        meta={t("typesCount", { count: relTypes.length })}
+      >
+        {relTypes.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noTypesDefined")}</p>}
+        <ul className="space-y-2" aria-label={t("relTypes")}>
+          {relTypes.map((rt) => {
+            const reciprocity: Reciprocity = rt.marital_status ?? (rt.mutual ? "mutual" : "none");
+            return (
+              <li key={rt.id} className={ROW} data-type-id={rt.id}>
+                <ColorPickerButton
+                  color={rt.color}
+                  className={SWATCH}
+                  onChange={(color) => {
+                    editRelType(rt.id, { color });
+                    persistColorSoon(`t:${rt.id}`, () => void saveRelType(rt.id, { color }));
+                  }}
+                />
+                {/* Le trait tel qu'il paraît sur le graphe des relations. */}
+                <svg width="28" height="8" className="shrink-0" aria-hidden data-testid="relation-line">
+                  <line x1="0" y1="4" x2="28" y2="4" stroke={rt.color} strokeWidth={1.5} strokeDasharray={rt.dash || undefined} />
                 </svg>
-                <span className="flex-1 text-[13px] font-medium">{rt.name}</span>
-                {rt.mutual && (
-                  <span className="rounded-full border border-border-soft px-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground" title={t("mutualHint")}>
-                    {rt.marital_status === "married" ? t("maritalMarried") : rt.marital_status === "in_relationship" ? t("maritalInRelationship") : t("mutual")}
-                  </span>
-                )}
-                <button onClick={() => startEditRt(rt)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
+                <Input
+                  value={rt.name}
+                  aria-label={t("typeName")}
+                  className={BARE_INPUT}
+                  onChange={(e) => editRelType(rt.id, { name: e.target.value })}
+                  onBlur={(e) => { if (e.target.value.trim()) void saveRelType(rt.id, { name: e.target.value.trim() }); }}
+                />
+                <Select
+                  value={rt.dash || SOLID}
+                  onValueChange={(v) => {
+                    const dash = v === SOLID ? "" : v;
+                    editRelType(rt.id, { dash });
+                    void saveRelType(rt.id, { dash });
+                  }}
+                >
+                  <SelectTrigger aria-label={t("dashFor", { name: rt.name })} className={cn("h-8 w-32 rounded-md px-2.5 text-xs data-[size=default]:h-8", FIELD)}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dashOptions.map((o) => (
+                      <SelectItem key={o.value || SOLID} value={o.value || SOLID}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* Réciproque : la relation attend l'accord de l'autre joueur et
+                    existe dans les deux sens ; un type marital l'est d'office.
+                    Éteint quand le type ne l'est pas. */}
+                <Select value={reciprocity} onValueChange={(v) => void setReciprocity(rt, v as Reciprocity)}>
+                  <SelectTrigger
+                    aria-label={t("reciprocityFor", { name: rt.name })}
+                    className={cn(
+                      "h-8 w-auto gap-1.5 rounded-md px-2.5 text-xs shadow-none data-[size=default]:h-8 [&>svg:last-child]:hidden",
+                      reciprocity === "none"
+                        ? "border-border-soft bg-transparent text-muted-foreground dark:bg-transparent"
+                        : "border-border bg-card text-foreground dark:bg-card",
+                    )}
+                    data-reciprocity={reciprocity}
+                  >
+                    <ArrowLeftRight className="size-3.5" aria-hidden />
+                    <span>{reciprocityLabel(reciprocity)}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("notMutual")}</SelectItem>
+                    <SelectItem value="mutual">{t("mutual")}</SelectItem>
+                    {(["in_relationship", "married"] as const).map((status) => {
+                      const takenBy = maritalTakenBy(status);
+                      return (
+                        <SelectItem key={status} value={status} disabled={takenBy !== null && takenBy !== rt.id}>
+                          {reciprocityLabel(status)}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
                 {/* Le type marital d'un monde ne se supprime pas : c'est lui
                     que la fiche choisit quand on désigne un·e conjoint·e. */}
-                <button onClick={() => void deleteRelType(rt.id)} disabled={rt.marital_status !== null}
+                <DeleteButton
+                  label={t("deleteType", { name: rt.name })}
+                  disabled={rt.marital_status !== null}
                   title={rt.marital_status !== null ? t("maritalUndeletable") : undefined}
-                  className="text-muted-foreground hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-muted-foreground" aria-label={tCommon("delete")}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )
-          )}
-        </div>
-        <div className="flex items-center gap-2 border-t border-border-soft pt-3">
-          <ColorPickerButton color={rtColor} onChange={setRtColor} />
-          <Input value={rtName} onChange={(e) => setRtName(e.target.value)}
+                  onClick={() => void deleteRelType(rt.id)}
+                />
+              </li>
+            );
+          })}
+        </ul>
+        <AddRow disabled={!rtName.trim()} addLabel={t("addRelType")} buttonText={tCommon("add")} onAdd={() => void addRelType()}>
+          <ColorPickerButton color={rtColor} onChange={setRtColor} className={SWATCH} />
+          <Input
+            value={rtName}
+            onChange={(e) => setRtName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void addRelType(); }}
-            placeholder={t("typeNamePlaceholder")} className="h-8 flex-1 text-sm" />
-          <select value={rtDash} onChange={(e) => setRtDash(e.target.value)}
-            className="h-8 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-            {dashOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <label className="flex items-center gap-1 text-[11px] text-muted-foreground" title={t("mutualHint")}>
-            <input type="checkbox" checked={rtMutual} onChange={(e) => setRtMutual(e.target.checked)} className="accent-primary" />
-            {t("mutual")}
-          </label>
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()} aria-label={t("addRelType")}>
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </TabsContent>
-    </Tabs>
+            placeholder={t("typeNamePlaceholder")}
+            aria-label={t("typeNamePlaceholder")}
+            className={cn(BARE_INPUT, "font-normal")}
+          />
+        </AddRow>
+      </SettingsSection>
+    </FeaturePage>
+  );
+}
+
+/** La corbeille d'une ligne. */
+function DeleteButton({ label, disabled, title, onClick }: { label: string; disabled?: boolean; title?: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={label}
+      className="flex size-8 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-muted-foreground"
+    >
+      <Trash2 className="size-3.5" />
+    </button>
+  );
+}
+
+/** La ligne d'ajout qui ferme une liste, en pointillés : ses champs, puis « + Ajouter ». */
+function AddRow({
+  disabled,
+  addLabel,
+  buttonText,
+  onAdd,
+  children,
+}: {
+  disabled: boolean;
+  addLabel: string;
+  buttonText: string;
+  onAdd: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-12 flex-wrap items-center gap-3 rounded-md border border-dashed border-border-soft py-1.5 pl-3 pr-1.5">
+      {children}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 shrink-0 gap-1 rounded-md border-border-soft bg-card font-normal dark:bg-card"
+        disabled={disabled}
+        aria-label={addLabel}
+        onClick={onAdd}
+      >
+        <Plus className="size-3.5" aria-hidden />
+        {buttonText}
+      </Button>
+    </div>
   );
 }

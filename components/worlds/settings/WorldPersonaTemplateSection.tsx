@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { ToggleItem, ToggleList } from "./FeatureLayout";
 import {
   Drawer,
   DrawerHeader,
@@ -47,6 +48,7 @@ export function WorldPersonaTemplateSection({
   restrictSkills,
   reviewEnabled = false,
   onReviewEnabledChange,
+  onActiveChange,
 }: {
   worldId: string;
   restrictInventory?: boolean;
@@ -54,8 +56,11 @@ export function WorldPersonaTemplateSection({
   /** Validation des fiches (migration 184) : option complémentaire de la fiche par défaut. */
   reviewEnabled?: boolean;
   onReviewEnabledChange?: (enabled: boolean) => void;
+  /** Une fiche par défaut existe (l'état de la catégorie Personas). */
+  onActiveChange?: (active: boolean) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
   const [togglingReview, setTogglingReview] = React.useState(false);
   const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
@@ -134,64 +139,58 @@ export function WorldPersonaTemplateSection({
     setSections(await fetchPersonaSections(supabase, templateId));
   }
 
+  React.useEffect(() => {
+    if (loaded) onActiveChange?.(!!templateId);
+  }, [loaded, templateId, onActiveChange]);
+
+  // La fiche et ses options, en liste de réglages (voir FeatureLayout) ; les
+  // dialogues, hors de la liste, passent par des portails.
   return (
-    <div className="space-y-5 pt-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Personas
-      </p>
-
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{t("defaultSheet")}</p>
-            <p className="text-xs text-muted-foreground leading-snug">
-              Chaque persona créé dans ce monde démarre avec une copie de
-              cette fiche (sections et champs).
-            </p>
-          </div>
-          <Switch
-            checked={!!templateId}
-            disabled={!loaded || toggling}
-            onCheckedChange={(v) => void handleToggle(v)}
-            className="shrink-0 mt-0.5"
+    <>
+      <ToggleList>
+        <ToggleItem
+          title={t("defaultSheet")}
+          help={tSettings("defaultSheetHelp")}
+          checked={!!templateId}
+          disabled={!loaded || toggling}
+          onCheckedChange={(v) => void handleToggle(v)}
+        />
+        {templateId && (
+          <ToggleItem
+            indent
+            title={t("personaReview.label")}
+            help={t("personaReview.help")}
+            control={
+              <Switch
+                checked={reviewEnabled}
+                disabled={togglingReview}
+                onCheckedChange={(v) => void handleReviewToggle(v)}
+                aria-label={t("personaReview.label")}
+                className="shrink-0"
+              />
+            }
           />
-        </div>
-
-        {templateId && (
-          <div className="ml-4 flex items-center justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-            <p className="text-xs text-muted-foreground leading-snug">
-              Définis les sections et champs que tous les nouveaux personas
-              auront au départ.
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={() => void openEditor()}
-            >
-              <Pencil className="mr-1 h-3.5 w-3.5" />
-              Éditer la fiche
-            </Button>
-          </div>
         )}
-
         {templateId && (
-          <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">{t("personaReview.label")}</p>
-              <p className="text-xs text-muted-foreground leading-snug">{t("personaReview.help")}</p>
-            </div>
-            <Switch
-              checked={reviewEnabled}
-              disabled={togglingReview}
-              onCheckedChange={(v) => void handleReviewToggle(v)}
-              aria-label={t("personaReview.label")}
-              className="shrink-0 mt-0.5"
-            />
-          </div>
+          <ToggleItem
+            indent
+            title={tSettings("editSheet")}
+            help={tSettings("editSheetHelp")}
+            control={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0 rounded-md border-border-soft bg-card dark:bg-card"
+                onClick={() => void openEditor()}
+              >
+                <Pencil className="mr-1 h-3.5 w-3.5" />
+                {tSettings("editSheet")}
+              </Button>
+            }
+          />
         )}
-      </div>
+      </ToggleList>
 
       {/* Confirmation de désactivation */}
       <AlertDialog open={confirmDisable} onOpenChange={setConfirmDisable}>
@@ -199,14 +198,13 @@ export function WorldPersonaTemplateSection({
           <AlertDialogHeader>
             <AlertDialogTitle>{t("disableDefaultSheetTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              La fiche modèle et tout son contenu seront supprimés
-              définitivement. Les personas déjà créés ne sont pas modifiés.
+              {tSettings("disableDefaultSheetHelp")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{tCommun("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmDisableTemplate()}>
-              Désactiver et supprimer
+              {tSettings("disableAndDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -238,6 +236,6 @@ export function WorldPersonaTemplateSection({
           </div>
         </SideSheetContent>
       </Drawer>
-    </div>
+    </>
   );
 }

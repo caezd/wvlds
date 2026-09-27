@@ -11,8 +11,8 @@
 
 export const WORLD_PERMISSION_GROUPS = {
   general: ["administrator", "world.settings", "roles.manage", "members.manage"],
-  chatrooms: ["messages.post", "chatrooms.create", "chatrooms.manage", "categories.manage"],
-  content: ["tabs.edit", "wiki.edit", "lexicon.edit", "tags.manage", "map.edit", "catalog.edit"],
+  chatrooms: ["messages.post", "chatrooms.create", "chatrooms.manage", "chatrooms.link", "categories.manage"],
+  content: ["wiki.edit", "wiki.comment", "lexicon.edit", "tags.manage", "map.edit", "catalog.edit", "timeline.manage"],
   personas: ["relations.manage", "personas.review", "npc.manage", "npc.play"],
   mentions: ["mentions.roles", "mentions.everyone"],
 } as const;
@@ -136,11 +136,6 @@ export function rankOf(roles: readonly { position: number }[], isOwner: boolean)
 /** Le propriétaire ne quitte pas son monde : il le transfère ou le supprime. */
 export function canLeaveWorld(m: WorldMembership | null): boolean {
   return !!m && !m.isOwner;
-}
-
-/** Les onglets système (`is_system = true`) restent au propriétaire direct. */
-export function canEditSystemTabs(m: WorldMembership | null): boolean {
-  return !!m?.isOwner;
 }
 
 /** Modifier ou supprimer un salon : son créateur, ou `chatrooms.manage`. */

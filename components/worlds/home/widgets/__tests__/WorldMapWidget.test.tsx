@@ -3,7 +3,8 @@ import { render, screen } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 
-import { WorldMapWidget, loadMapWidgetData, type MapWidgetMap } from "@/components/worlds/home/widgets/WorldMapWidget";
+import { WorldMapWidget, type MapWidgetMap } from "@/components/worlds/home/widgets/WorldMapWidget";
+import { loadMapWidgetData } from "@/components/worlds/home/widgets/widgetData";
 
 // ──────────────────────────────────────────────────────────────────────────
 // La carte était invisible tant qu'on ne cliquait pas son onglet : rien sur

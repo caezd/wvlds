@@ -10,8 +10,12 @@ import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
 import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "@/components/worlds/home/widgets/WorldWikiShortcutsWidget";
-import { loadMapWidgetData, type MapWidgetMap } from "@/components/worlds/home/widgets/WorldMapWidget";
-import { loadBirthdayMembers, type BirthdayMember } from "@/components/worlds/home/widgets/WorldBirthdaysWidget";
+import {
+  loadBirthdayMembers,
+  loadMapWidgetData,
+  type BirthdayMember,
+  type MapWidgetMap,
+} from "@/components/worlds/home/widgets/widgetData";
 
 type NavRoom = {
   id: string;

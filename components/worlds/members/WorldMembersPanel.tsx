@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { MemberManageMenu } from "./MemberManageMenu";
 import { WorldMemberCard, displayNameOf, type PresenceState, type WorldMemberCardData } from "./WorldMemberCard";
 import { WorldMemberCardDialog } from "./WorldMemberCardDialog";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 
@@ -55,14 +56,15 @@ function normalize(text: string) {
 
 function RoleSection({
   heading,
-  color,
+  role,
   members,
   presenceOf,
   activityOf,
   manageFor,
 }: {
   heading: string;
-  color?: string;
+  /** Le rôle qui groupe cette section — sa couleur et son icône titrent. */
+  role?: WorldRoleRow | null;
   members: WorldMemberCardData[];
   presenceOf: (userId: string) => PresenceState;
   activityOf: (userId: string) => WorldMemberActivity | undefined;
@@ -71,7 +73,11 @@ function RoleSection({
   return (
     <section>
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-        {color && <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />}
+        {role?.lucide_icon ? (
+          <LazyLucideIcon name={role.lucide_icon} width={16} height={16} className="shrink-0" style={{ color: role.color }} />
+        ) : (
+          role && <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: role.color }} />
+        )}
         {heading}
         <span className="text-xs font-normal text-muted-foreground">{members.length}</span>
       </h3>
@@ -130,6 +136,7 @@ export function WorldMembersPanel({
   );
 
   const onlineCount = members.filter((m) => getUserPresence(m.user_id) === "online").length;
+  /** Ma propre ligne : le bouton « Ma carte » n'a de sens que pour un membre. */
   const me = membership ? rows.find((r) => r.user_id === membership.userId) ?? null : null;
 
   const filtered = useMemo(() => {
@@ -340,7 +347,7 @@ export function WorldMembersPanel({
               <RoleSection
                 key={g.key}
                 heading={headingOf(g)}
-                color={g.role?.color}
+                role={g.role}
                 members={g.members}
                 presenceOf={getUserPresence}
                 activityOf={(id) => activity.get(id)}

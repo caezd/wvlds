@@ -5,6 +5,7 @@ const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
   "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request",
   "role_mention", "everyone_mention", "persona_submitted", "persona_reviewed",
+  "sequel_request",
 ];
 
 const base: PushNotifPayload = {
@@ -18,6 +19,15 @@ describe("buildPushText", () => {
     expect(title).toBeTruthy();
     expect(body).toBeTruthy();
     expect(body).not.toMatch(/<b>|<\/b>/);
+  });
+
+  it("une demande de suite nomme les deux salons et ouvre la chronologie", () => {
+    const meta = { sequel_id: "s1", chatroom_title: "La frontière", previous_title: "Le départ" };
+    expect(buildPushText({ ...base, type: "sequel_request", chat_id: null, world_id: "w1", metadata: meta }, "fr").body)
+      .toBe("Alice propose que « La frontière » fasse suite à « Le départ »");
+    expect(buildPushText({ ...base, type: "sequel_request", metadata: meta }, "en").body)
+      .toBe("Alice proposes “La frontière” as a sequel to “Le départ”");
+    expect(pushHref({ chat_id: null, world_id: "w1", type: "sequel_request", metadata: meta })).toBe("/w/w1?view=timeline");
   });
 
   it("nomme le rôle mentionné, et distingue @ici de @tous", () => {

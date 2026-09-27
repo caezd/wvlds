@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 
-import { worldSettingsSchema, truthyOrNull } from "../worldSettingsSchema";
+import { buildWorldSettingsSchema, truthyOrNull } from "../worldSettingsSchema";
+
+const worldSettingsSchema = buildWorldSettingsSchema((key) => key);
 
 // ──────────────────────────────────────────────────────────────────────────
 // Le schéma du formulaire des réglages d'un monde vivait au milieu d'un

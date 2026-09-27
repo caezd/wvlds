@@ -19,11 +19,72 @@ vi.mock("next-intl", async () => {
     return cur;
   }
 
-  function interpolate(tpl: string, vals: Record<string, unknown>): string {
-    return tpl.replace(/\{(\w+)(?:,[^}]*)?\}/g, (_, k: string) => {
-      const v = vals[k];
-      return v !== undefined && typeof v !== "function" ? String(v) : `{${k}}`;
-    });
+  // Le format ICU, tel que next-intl le lit : `{nom}`, et les blocs
+  // `{n, plural, one {…} other {…}}` et `{g, select, …}`, imbriqués au besoin.
+  //
+  // Le mock ne remplaçait que `{nom}` jusqu'à la première accolade fermante :
+  // un pluriel sortait en « 2 other {# mois}} », et un test ne pouvait vérifier
+  // l'accord d'aucun des messages qui en portent. Les règles de pluriel sont
+  // celles du français (0 et 1 au singulier), comme à l'écran.
+  const reglesPluriel = new Intl.PluralRules("fr");
+
+  /** L'accolade fermante qui répond à celle placée en `debut`. */
+  function fermeture(tpl: string, debut: number): number {
+    let profondeur = 0;
+    for (let i = debut; i < tpl.length; i++) {
+      if (tpl[i] === "{") profondeur++;
+      else if (tpl[i] === "}" && --profondeur === 0) return i;
+    }
+    return -1;
+  }
+
+  /** Les branches `clé {texte}` d'un bloc plural/select. */
+  function branches(corps: string): Map<string, string> {
+    const out = new Map<string, string>();
+    let i = 0;
+    while (i < corps.length) {
+      const ouverture = corps.indexOf("{", i);
+      if (ouverture === -1) break;
+      const cle = corps.slice(i, ouverture).trim();
+      const fin = fermeture(corps, ouverture);
+      if (fin === -1) break;
+      out.set(cle, corps.slice(ouverture + 1, fin));
+      i = fin + 1;
+    }
+    return out;
+  }
+
+  function interpolate(tpl: string, vals: Record<string, unknown>, diese?: string): string {
+    let out = "";
+    let i = 0;
+    while (i < tpl.length) {
+      const c = tpl[i];
+      if (c === "#" && diese !== undefined) { out += diese; i++; continue; }
+      if (c !== "{") { out += c; i++; continue; }
+      const fin = fermeture(tpl, i);
+      if (fin === -1) { out += tpl.slice(i); break; }
+      const bloc = tpl.slice(i + 1, fin);
+      const [nom, genre, ...reste] = bloc.split(",");
+      const cle = nom.trim();
+      const valeur = vals[cle];
+      const type = genre?.trim();
+      if (type === "plural" || type === "select") {
+        const choix = branches(reste.join(","));
+        let texte: string | undefined;
+        if (type === "plural") {
+          const n = Number(valeur);
+          texte = choix.get(`=${n}`) ?? choix.get(reglesPluriel.select(n)) ?? choix.get("other");
+          out += interpolate(texte ?? "", vals, String(n));
+        } else {
+          texte = choix.get(String(valeur)) ?? choix.get("other");
+          out += interpolate(texte ?? "", vals, diese);
+        }
+      } else {
+        out += valeur !== undefined && typeof valeur !== "function" ? String(valeur) : `{${cle}}`;
+      }
+      i = fin + 1;
+    }
+    return out;
   }
 
   function renderRich(tpl: string, vals: Record<string, unknown>): unknown {

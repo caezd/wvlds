@@ -24,6 +24,8 @@ vi.mock("@/hooks/useLongPress", () => ({
 }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  // La carte de monde sur le profil d'un membre (MemberWorldCardSection) lit la locale.
+  useLocale: () => "fr",
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 export type ColorPreset = { label: string; value: string };
 
@@ -30,6 +30,24 @@ export const ACCENT_COLOR_PRESETS: ColorPreset[] = [
   { label: "Ambre",  value: "#f59e0b" },
 ];
 
+/**
+ * Ce qu'on colle dans un champ hexadécimal, ramené à `#rrggbb`.
+ *
+ * On accepte le dièse ou non, trois chiffres comme six, une transparence en
+ * queue (ignorée, la base ne stocke que six chiffres), et tout séparateur
+ * traîné d'un copier-coller. `null` quand il n'en sort rien d'exploitable.
+ */
+export function normalizeHex(input: string): string | null {
+  // Le code en entier, et rien d'autre : filtrer les caractères un à un
+  // faisait d'un « rgb(29, 78, 216) » un « #b29782 » — le `b` de `rgb` est
+  // un chiffre hexadécimal comme un autre.
+  const m = input.trim().match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
+  if (!m) return null;
+  const raw = m[1].toLowerCase();
+  if (raw.length === 3) return "#" + raw.split("").map((c) => c + c).join("");
+  return "#" + raw.slice(0, 6);
+}
+
 export function hexToHsv(hex: string): { h: number; s: number; v: number } | null {
   const h = hex.replace("#", "");
   if (h.length !== 6) return null;
@@ -56,6 +74,46 @@ export function hsvToHex(h: number, s: number, v: number): string {
   return "#" + [r + m, g + m, b + m].map((n) => Math.round(n * 255).toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Le code hexadécimal, à droite du dégradé de teinte.
+ *
+ * La frappe reste libre — on ne retient que les chiffres hexadécimaux — et la
+ * couleur ne change qu'une fois le code complet ; à la sortie du champ, ce qui
+ * n'a pas abouti revient à la couleur en cours plutôt que de rester en plan.
+ */
+function HexField({ color, onChange }: { color: string; onChange: (hex: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? color.replace(/^#/, "").toUpperCase();
+
+  function saisir(valeur: string) {
+    const propre = valeur.replace(/^#/, "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
+    setDraft(propre);
+    const hex = normalizeHex(propre);
+    if (hex) onChange(hex);
+  }
+
+  return (
+    <label className="flex h-7 shrink-0 items-center gap-0.5 rounded-md border border-border px-1.5 font-mono text-[11px] focus-within:ring-1 focus-within:ring-ring">
+      <span className="text-muted-foreground" aria-hidden>#</span>
+      <input
+        value={shown}
+        onChange={(e) => saisir(e.target.value)}
+        onBlur={() => setDraft(null)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        spellCheck={false}
+        autoComplete="off"
+        aria-label="hex"
+        className="w-[6ch] bg-transparent uppercase outline-none"
+      />
+    </label>
+  );
+}
+
 export function HsvColorPicker({
   color,
   onChange,
@@ -80,7 +138,10 @@ export function HsvColorPicker({
     const H = canvas.offsetHeight || 150;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    const ctx = canvas.getContext("2d")!;
+    // Sans contexte 2D — un navigateur qui le refuse, jsdom sous test — il n'y
+    // a rien à peindre ; le reste du sélecteur fonctionne quand même.
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     ctx.scale(dpr, dpr);
 
     ctx.fillStyle = `hsl(${hsv.h},100%,50%)`;
@@ -126,9 +187,10 @@ export function HsvColorPicker({
         onPointerMove={(e) => { if (e.buttons > 0) pickSV(e); }}
       />
 
-      {/* Slider teinte */}
+      {/* Slider teinte, et le code hexadécimal à sa droite */}
+      <div className="flex items-center gap-2">
       <div
-        className="relative h-3 rounded-full overflow-hidden"
+        className="relative h-3 flex-1 rounded-full overflow-hidden"
         style={{ background: "linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)" }}
       >
         <input
@@ -140,6 +202,8 @@ export function HsvColorPicker({
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow pointer-events-none"
           style={{ left: `calc(${(hsv.h / 360) * 100}% - 6px)`, backgroundColor: `hsl(${hsv.h},100%,50%)` }}
         />
+      </div>
+        <HexField color={color} onChange={(hex) => onChangeRef.current(hex)} />
       </div>
 
       {/* Couleurs prédéfinies */}

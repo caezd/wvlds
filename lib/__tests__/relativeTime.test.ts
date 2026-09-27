@@ -17,6 +17,12 @@ describe("relativeTime", () => {
     const old = new Date(now - 60 * 86_400_000).toISOString();
     expect(relativeTime(old, "fr", "—", now)).toMatch(/2026/);
   });
+
+  it("un plafond de jours plus long garde la durée relative", () => {
+    const old = new Date(now - 60 * 86_400_000).toISOString();
+    expect(relativeTime(old, "fr", "—", now, 365)).toBe("il y a 60 jours");
+    expect(relativeTime(new Date(now - 400 * 86_400_000).toISOString(), "fr", "—", now, 365)).toMatch(/2025/);
+  });
 });
 
 describe("localTimeIn", () => {

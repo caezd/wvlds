@@ -15,7 +15,6 @@ import { ChatroomAvatarWithPresence } from "@/components/chatrooms/persona/Chatr
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
-import { RoleChip } from "./RoleChip";
 import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { isRetiredStatus } from "@/lib/personaStatus";
 
@@ -68,7 +67,7 @@ export function MemberStatusBadge({
       title={note ?? undefined}
       className={cn(
         "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        status === "paused" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+        status === "paused" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-red-500/15 text-red-700 dark:text-red-300",
         className,
       )}
     >
@@ -145,8 +144,13 @@ export function WorldMemberCard({
     <article
       data-presence={presence}
       data-status={member.effectiveStatus}
-      className={cn("flex flex-col gap-3 rounded-lg border border-border-soft p-3", away && "bg-muted/20")}
+      className={cn("relative flex flex-col gap-3 rounded-lg border border-border-soft p-3", away && "bg-muted/20")}
     >
+      {/* Le menu « ⋯ » se pose dans le coin, hors du flux : dans la rangée, il
+          décalait l'activité d'une carte à l'autre, et lui réserver une
+          gouttière creusait un vide sur les cartes qui n'en ont pas. */}
+      {manage && <div className="absolute right-2 top-2">{manage}</div>}
+
       <div className="flex items-start gap-3">
         <UserProfileSheetTrigger userId={member.user_id} label={t("openProfile", { name: displayName })}>
           <ChatroomAvatarWithPresence
@@ -159,7 +163,7 @@ export function WorldMemberCard({
           />
         </UserProfileSheetTrigger>
 
-        <div className="min-w-0 flex-1 pt-0.5">
+        <div className={cn("min-w-0 flex-1 pt-0.5", manage && "pr-7")}>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="truncate text-sm font-semibold">{displayName}</p>
             <MemberStatusBadge status={member.effectiveStatus} until={member.status_until} note={member.status_note} />
@@ -170,44 +174,35 @@ export function WorldMemberCard({
             {tPresence(presence)}
           </p>
         </div>
-        {/* L'activité, en chiffres seulement, à droite du nom : le nombre de
-            messages et la dernière prise de parole ; le détail au survol. */}
+      </div>
+
+      {member.bio && <p className="line-clamp-2 text-xs text-muted-foreground">{member.bio}</p>}
+
+      {(activity || member.availability || localTime || birthdaySoon) && (
+        <div className="space-y-1 text-xs text-muted-foreground">
+        {/* L'activité en chiffres, sur une ligne : le nombre de messages et la
+            dernière prise de parole ; le détail au survol. */}
         {activity && (
-          <dl className="shrink-0 space-y-1 pt-0.5 text-right text-xs text-muted-foreground" data-testid="member-activity">
-            <div className="flex items-center justify-end gap-1" title={t("card.messages", { count: activity.message_count })}>
-              <dt className="sr-only">{t("card.messages", { count: activity.message_count })}</dt>
+          <dl className="flex items-center gap-3" data-testid="member-activity">
+            <div className="flex items-center gap-1.5" title={t("card.messages", { count: activity.message_count })}>
               <MessageSquare className="h-3 w-3 shrink-0" aria-hidden />
+              <dt className="sr-only">{t("card.messages", { count: activity.message_count })}</dt>
               <dd className="tabular-nums">{activity.message_count}</dd>
             </div>
             {activity.last_message_at && (
               <div
-                className="flex items-center justify-end gap-1"
+                className="flex min-w-0 items-center gap-1.5"
                 title={t("card.lastActive", { when: relativeTime(activity.last_message_at, locale, t("card.justNow"), now.getTime()) })}
               >
-                <dt className="sr-only">{t("card.activity")}</dt>
                 <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                <dt className="sr-only">{t("card.activity")}</dt>
                 <dd className="truncate">{relativeTime(activity.last_message_at, locale, t("card.justNow"), now.getTime())}</dd>
               </div>
             )}
           </dl>
         )}
-        {manage}
-      </div>
-
-      {/* Un membre peut cumuler plusieurs rôles : la section ne dit que le plus
-          haut, les puces disent tous les autres. */}
-      {member.roles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1" data-testid="member-roles">
-          {member.roles.map((r) => (
-            <RoleChip key={r.id} role={r} />
-          ))}
-        </div>
-      )}
-
-      {member.bio && <p className="line-clamp-2 text-xs text-muted-foreground">{member.bio}</p>}
-
-      {(member.availability || localTime || birthdaySoon) && (
-        <dl className="space-y-1 text-xs text-muted-foreground">
+        {(member.availability || localTime || birthdaySoon) && (
+        <dl className="space-y-1">
           {(member.availability || localTime) && (
             <div className="flex items-center gap-1.5">
               <CalendarClock className="h-3 w-3 shrink-0" aria-hidden />
@@ -231,6 +226,8 @@ export function WorldMemberCard({
             </div>
           )}
         </dl>
+        )}
+        </div>
       )}
 
       {shown.length > 0 ? (

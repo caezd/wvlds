@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft, AtSign, Bell, CheckCheck, ClipboardCheck, Globe, Hash, Heart, Loader2,
-    Megaphone, MessageSquare, Settings, Smile, UserPlus, X,
+    Megaphone, MessageSquare, Settings, Smile, UserPlus, X, Spline
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -42,12 +42,13 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     everyone_mention: <Megaphone size={13} />,
     persona_submitted: <ClipboardCheck size={13} />,
     persona_reviewed: <ClipboardCheck size={13} />,
+    sequel_request: <Spline size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
+const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request"];
 const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
-const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request"];
+const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request", "sequel_request"];
 
 // ── WorldInviteCard ───────────────────────────────────────────────────────────
 
@@ -188,6 +189,74 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
  * Les notifications d'avant la migration 175 n'ont pas de `relation_id` :
  * elles se présentent comme expirées.
  */
+/**
+ * Une demande de suite entre salons (migration 194) : l'accepter relie les
+ * deux salons sur la chronologie ; la refuser supprime le lien proposé.
+ */
+function SequelRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
+    const t = useTranslations("notifications");
+    const sequelId = notif.metadata?.sequel_id ?? null;
+    const supabase = createClient();
+    const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "expired" | null>(null);
+    const [acting, setActing] = useState(false);
+
+    useEffect(() => {
+        if (!sequelId) { setStatus("expired"); return; }
+        supabase.from(TABLE.CHATROOM_SEQUELS)
+            .select("status")
+            .eq("id", sequelId)
+            .maybeSingle()
+            .then(({ data }: { data: { status: string } | null }) => {
+                setStatus(data ? (data.status as "pending" | "accepted") : "expired");
+            });
+    }, [sequelId, supabase]);
+
+    async function accept() {
+        if (!sequelId || acting) return;
+        setActing(true);
+        const { error } = await supabase.from(TABLE.CHATROOM_SEQUELS).update({ status: "accepted" }).eq("id", sequelId);
+        setActing(false);
+        if (error) {
+            console.error("[SequelRequestCard] acceptation", error);
+            toast.error(t("sequelRequest.failed"));
+            return;
+        }
+        setStatus("accepted");
+        onMarkRead(notif.id);
+    }
+
+    async function decline() {
+        if (!sequelId || acting) return;
+        setActing(true);
+        const { error } = await supabase.from(TABLE.CHATROOM_SEQUELS).delete().eq("id", sequelId);
+        setActing(false);
+        if (error) {
+            console.error("[SequelRequestCard] refus", error);
+            toast.error(t("sequelRequest.failed"));
+            return;
+        }
+        setStatus("declined");
+        onMarkRead(notif.id);
+    }
+
+    if (status === null) return null;
+    if (status === "accepted") return <p className="mt-2 text-[11px] text-muted-foreground">{t("sequelRequest.accepted")}</p>;
+    if (status === "declined") return <p className="mt-2 text-[11px] text-muted-foreground">{t("sequelRequest.declined")}</p>;
+    if (status === "expired") return <p className="mt-2 text-[11px] text-muted-foreground">{t("sequelRequest.expired")}</p>;
+
+    return (
+        <div className="mt-2.5 flex items-center gap-2">
+            <Button size="sm" className="h-7 shrink-0 px-3 text-xs" onClick={accept} disabled={acting}>
+                {t("sequelRequest.accept")}
+            </Button>
+            <button onClick={decline} disabled={acting} aria-label={t("sequelRequest.decline")}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <X size={14} />
+            </button>
+        </div>
+    );
+}
+
 function RelationRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
     const t = useTranslations("notifications");
     const tCommon = useTranslations("common");
@@ -304,6 +373,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
     const t = useTranslations("notifications");
     const isInvite = notif.type === "world_invite";
     const isRelationRequest = notif.type === "relation_request";
+    const isSequelRequest = notif.type === "sequel_request";
     const isActionable = ACTIONABLE_TYPES.includes(notif.type);
     const href = isActionable ? null : notifHref(notif);
     const isUnread = !notif.read_at;
@@ -340,6 +410,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
             </div>
             {isInvite && <WorldInviteCard notif={notif} onMarkRead={onRead} />}
             {isRelationRequest && <RelationRequestCard notif={notif} onMarkRead={onRead} />}
+            {isSequelRequest && <SequelRequestCard notif={notif} onMarkRead={onRead} />}
         </div>
     );
 
@@ -413,6 +484,7 @@ export function NotificationInlinePanelContent() {
         everyone_mention: t("prefs.everyone_mention"),
         persona_submitted: t("prefs.persona_submitted"),
         persona_reviewed: t("prefs.persona_reviewed"),
+        sequel_request: t("prefs.sequel_request"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

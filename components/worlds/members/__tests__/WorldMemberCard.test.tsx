@@ -72,6 +72,28 @@ describe("WorldMemberCard", () => {
     expect(activity.querySelector("[title*='actif il y a 3 jours']")).not.toBeNull();
   });
 
+  it("le menu « ⋯ » se pose dans le coin et ne déplace rien", () => {
+    // Dans la rangée du haut, le menu poussait l'activité d'une carte à
+    // l'autre ; lui réserver une gouttière creusait un vide là où il manque.
+    const props = {
+      member: member(),
+      presence: "offline" as const,
+      now: NOW,
+      activity: { message_count: 4, last_message_at: null },
+    };
+    const { rerender } = render(<WorldMemberCard {...props} />);
+    const activiteSansMenu = screen.getByTestId("member-activity").parentElement!.className;
+
+    rerender(<WorldMemberCard {...props} manage={<button type="button">Options</button>} />);
+    const menu = screen.getByRole("button", { name: "Options" }).parentElement!;
+    // Hors du flux, dans le coin de la carte — la rangée du haut ne le contient pas.
+    expect(menu.className).toContain("absolute");
+    expect(menu.parentElement).toBe(screen.getByRole("article"));
+    // L'activité vit sous l'identité, à la même place avec ou sans menu.
+    expect(screen.getByTestId("member-activity").parentElement!.className).toBe(activiteSansMenu);
+    expect(screen.getByTestId("member-activity").closest("[data-testid]")).not.toBe(menu);
+  });
+
   it("disponibilités et heure locale sur la même ligne", () => {
     render(
       <WorldMemberCard member={member({ availability: "Le soir en semaine", timezone: "Asia/Tokyo" })} presence="offline" now={NOW} />,

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
-import { HsvColorPicker, BUBBLE_COLOR_PRESETS, type ColorPreset } from "@/components/ui/hsv-color-picker";
+import { HsvColorPicker, normalizeHex, BUBBLE_COLOR_PRESETS, type ColorPreset } from "@/components/ui/hsv-color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // ── Sélecteur couleur compact : carré + hex + popover HSV ─────────
@@ -38,10 +38,15 @@ export function ColorInput({
           <HsvColorPicker color={color} onChange={onChange} presets={presets} />
         </PopoverContent>
       </Popover>
+      {/* Le code est normalisé à la saisie : la base n'accepte que `#rrggbb`
+          (migration 171), une frappe en cours n'a pas à y descendre. */}
       <input
         type="text"
         value={color}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const hex = normalizeHex(e.target.value);
+          if (hex) onChange(hex);
+        }}
         className="h-7 flex-1 rounded-md border border-input bg-transparent px-2 font-mono text-xs outline-none focus:ring-1 focus:ring-ring"
       />
     </div>
