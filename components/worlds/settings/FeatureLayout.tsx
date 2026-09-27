@@ -129,6 +129,10 @@ export function ToggleList({ children, className }: { children: React.ReactNode;
 export function ToggleItem({
   title,
   help,
+  description,
+  icon,
+  badge,
+  dimmed = false,
   checked,
   disabled,
   onCheckedChange,
@@ -137,6 +141,14 @@ export function ToggleItem({
 }: {
   title: string;
   help?: string;
+  /** Une explication laissée en clair sous le titre (les permissions d'un rôle). */
+  description?: React.ReactNode;
+  /** Avant le titre. */
+  icon?: React.ReactNode;
+  /** Après le titre : une pastille d'état. */
+  badge?: React.ReactNode;
+  /** Une ligne qui ne dépend plus d'elle-même (réglée par une autre). */
+  dimmed?: boolean;
   checked?: boolean;
   disabled?: boolean;
   onCheckedChange?: (checked: boolean) => void;
@@ -146,10 +158,15 @@ export function ToggleItem({
   indent?: boolean;
 }) {
   return (
-    <div className={cn("flex min-h-12 items-center justify-between gap-4 px-4 py-2.5", indent && "pl-8")}>
-      <p className={cn("min-w-0 text-sm", indent ? "text-muted-foreground" : "font-medium")}>
-        <TitleWithHelp title={title} help={help} />
-      </p>
+    <div className={cn("flex min-h-12 items-center justify-between gap-4 px-4 py-2.5", indent && "pl-8", dimmed && "opacity-60")}>
+      <div className="min-w-0">
+        <p className={cn("flex min-w-0 items-center gap-2 text-sm", indent ? "text-muted-foreground" : "font-medium")}>
+          {icon}
+          <TitleWithHelp title={title} help={help} />
+          {badge}
+        </p>
+        {description && <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>}
+      </div>
       {control ?? (
         <Switch
           checked={!!checked}

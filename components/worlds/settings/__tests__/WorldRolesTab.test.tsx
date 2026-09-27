@@ -172,7 +172,7 @@ describe("WorldRolesTab — fiche", () => {
     await user.click(screen.getByRole("button", { name: /^Éditeur/ }));
 
     const section = await screen.findByRole("region", { name: "Éditeur" });
-    await user.click(within(section).getByRole("checkbox", { name: "Modifier le catalogue" }));
+    await user.click(within(section).getByRole("switch", { name: "Modifier le catalogue" }));
 
     const update = mock.builders.find((b) => b.builder.update.mock.calls.length > 0)!;
     expect(update.builder.update).toHaveBeenCalledWith({ permissions: ["wiki.edit", "map.edit", "roles.manage", "catalog.edit"] });
@@ -184,9 +184,64 @@ describe("WorldRolesTab — fiche", () => {
     setup();
     render(<WorldRolesTab worldId="w1" />);
     const section = await screen.findByRole("region", { name: "Administrateur" });
-    const wiki = within(section).getByRole("checkbox", { name: "Modifier le wiki" });
+    const wiki = within(section).getByRole("switch", { name: "Modifier le wiki" });
     expect(wiki).toHaveAttribute("aria-checked", "true");
     expect(wiki).toBeDisabled();
+  });
+
+  it("l'en-tête résume le rôle : porteurs et permissions ; « Icône » et « Supprimer le rôle » à droite", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldRolesTab worldId="w1" />);
+    const admin = await screen.findByRole("region", { name: "Administrateur" });
+    expect(within(admin).getByText("1 membre · toutes les permissions")).toBeInTheDocument();
+    expect(within(admin).getByRole("button", { name: "Icône" })).toBeEnabled();
+    expect(within(admin).getByRole("button", { name: "Supprimer le rôle" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Joueur/ }));
+    const player = await screen.findByRole("region", { name: "Joueur" });
+    expect(within(player).getByText("2 membres · 1 permission")).toBeInTheDocument();
+  });
+
+  it("une section par groupe, avec son compte ; sous `administrator`, les autres permissions sont « Incluses »", async () => {
+    setup();
+    render(<WorldRolesTab worldId="w1" />);
+    const admin = await screen.findByRole("region", { name: "Administrateur" });
+    expect(within(admin).getByRole("region", { name: "Affichage" })).toBeInTheDocument();
+    const general = within(admin).getByRole("region", { name: "Général" });
+    expect(general).toHaveTextContent("4 sur 4");
+    expect(within(general).getAllByText("Inclus")).toHaveLength(3);
+    // Rien à désactiver là où tout vient d'`administrator`.
+    const contenu = within(admin).getByRole("region", { name: "Contenu" });
+    expect(within(contenu).getByRole("button", { name: "Tout désactiver" })).toBeDisabled();
+  });
+
+  it("« Tout activer » accorde d'un coup les permissions manquantes du groupe", async () => {
+    const mock = setup([{ data: null, error: null }]);
+    const user = userEvent.setup();
+    render(<WorldRolesTab worldId="w1" />);
+    await screen.findByRole("list", { name: "Rôles" });
+    await user.click(screen.getByRole("button", { name: /^Éditeur/ }));
+    const contenu = within(await screen.findByRole("region", { name: "Éditeur" })).getByRole("region", { name: "Contenu" });
+    expect(contenu).toHaveTextContent("2 sur 7");
+
+    await user.click(within(contenu).getByRole("button", { name: "Tout activer" }));
+
+    const update = mock.builders.find((b) => b.builder.update.mock.calls.length > 0)!;
+    expect(update.builder.update).toHaveBeenCalledWith({
+      permissions: ["wiki.edit", "map.edit", "roles.manage", "wiki.comment", "lexicon.edit", "tags.manage", "catalog.edit", "timeline.manage"],
+    });
+    expect(await within(contenu).findByRole("button", { name: "Tout désactiver" })).toBeEnabled();
+  });
+
+  it("« Tout désactiver » retire les permissions que le rôle porte lui-même", async () => {
+    const mock = setup([{ data: null, error: null }]);
+    const user = userEvent.setup();
+    render(<WorldRolesTab worldId="w1" />);
+    const general = within(await screen.findByRole("region", { name: "Administrateur" })).getByRole("region", { name: "Général" });
+    await user.click(within(general).getByRole("button", { name: "Tout désactiver" }));
+    const update = mock.builders.find((b) => b.builder.update.mock.calls.length > 0)!;
+    expect(update.builder.update).toHaveBeenCalledWith({ permissions: [] });
   });
 
   it("renomme à la sortie du champ, pas à chaque frappe", async () => {
@@ -236,9 +291,9 @@ describe("WorldRolesTab — hiérarchie", () => {
     // Un rôle sous lui : modifiable, mais pas au-delà de ses propres permissions.
     await user.click(screen.getByRole("button", { name: /^Joueur/ }));
     const player = await screen.findByRole("region", { name: "Joueur" });
-    expect(within(player).getByRole("checkbox", { name: "Modifier le wiki" })).toBeEnabled();
-    expect(within(player).getByRole("checkbox", { name: "Modifier le catalogue" })).toBeDisabled();
-    expect(within(player).getByRole("checkbox", { name: "Administrateur" })).toBeDisabled();
+    expect(within(player).getByRole("switch", { name: "Modifier le wiki" })).toBeEnabled();
+    expect(within(player).getByRole("switch", { name: "Modifier le catalogue" })).toBeDisabled();
+    expect(within(player).getByRole("switch", { name: "Administrateur" })).toBeDisabled();
   });
 
   it("les flèches ne déplacent un rôle qu'entre voisins gérables", async () => {
