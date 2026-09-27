@@ -919,7 +919,7 @@ describe("WorldTimeline — styles des suites", () => {
       end_date: { year: 1, month: 2, day: 5 }, wiki_page_id: null, wiki_page: null,
     }];
     await frise([room("a", "Prologue", 1, 0, 2), room("b", "Suite", 1, 1, 2), room("c", "Trois", 1, 1, 3), room("d", "Quatre", 1, 2, 2)]);
-    const cle = () => screen.queryByTestId("timeline-event-spans")?.getAttribute("data-layout") ?? "";
+    const cle = () => document.querySelector("[data-suite-style]")?.getAttribute("data-layout") ?? "";
     // Graphe, deux couloirs (a → c et b → d se chevauchent) : 14 + 8 + 10 = 32px.
     await vi.waitFor(() => expect(cle()).toMatch(/:32:0$/));
     // Au survol seulement, un seul couloir réservé : 24px.

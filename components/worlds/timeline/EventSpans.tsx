@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { assignSuiteLanes } from "@/lib/worldTimelineItems";
+import type { TimelineLayout } from "@/components/worlds/timeline/TimelineLayout";
 
 type Span = { id: string; top: number; bottom: number; x: number };
 
@@ -27,75 +28,60 @@ export function eventSpanPad(lanes: number): number {
 export type EventSpan = { id: string; clipTop: boolean; clipBottom: boolean };
 
 /**
+ * Les barres, sur le relevé de la frise : de la ligne de l'événement à celle
+ * de sa fin (`<id>:end`), ou jusqu'au bord pour un bout hors champ ; juste
+ * avant le début des titres, un couloir par barre qui en chevauche une autre.
+ */
+export function layoutEventSpans(layout: TimelineLayout, toDraw: readonly EventSpan[]): { spans: Span[]; laneCount: number } {
+  if (layout.titleX === null) return { spans: [], laneCount: 0 };
+  const x = layout.titleX - TITLE_GAP;
+  const measured = toDraw.flatMap(({ id, clipTop, clipBottom }) => {
+    const start = layout.rows.get(id);
+    const end = layout.rows.get(`${id}:end`);
+    // Une ligne attendue à l'écran mais pas (encore) rendue : rien.
+    if ((!clipTop && !start) || (!clipBottom && !end)) return [];
+    return [{
+      id,
+      top: !clipTop && start ? start.top + 10 : 0,
+      bottom: !clipBottom && end ? end.top + 10 : layout.height,
+      x,
+    }];
+  });
+  const lanes = assignSuiteLanes(measured);
+  return {
+    spans: measured.map((m, i) => ({ ...m, x: m.x - lanes[i] * LANE_GAP })),
+    laneCount: lanes.length === 0 ? 0 : Math.max(...lanes) + 1,
+  };
+}
+
+/**
  * La durée des événements qui durent (migration 197) : une barre fine le
- * long du fil, de la ligne de l'événement (`[data-event-id]`) à celle de sa
- * fin (`[data-event-end-id]`), juste avant les titres — graphe des suites
- * compris, puisqu'on se cale sur le début de leur texte (`[data-title-start]`). Deux
- * durées qui se chevauchent prennent chacune leur couloir, vers le fil.
- * Les positions se mesurent dans le DOM, comme les lignes de suite. Au
- * survol d'un événement (« pendant ce temps », voir WorldTimeline), sa barre
- * fonce et les autres s'estompent.
+ * long du fil, de la ligne de l'événement à celle de sa fin, juste avant les
+ * titres — graphe des suites compris, puisqu'on se cale sur le début de leur
+ * texte. Deux durées qui se chevauchent prennent chacune leur couloir, vers
+ * le fil. Les positions viennent du relevé commun de la frise (voir
+ * TimelineLayout). Au survol d'un événement (« pendant ce temps », voir
+ * WorldTimeline), sa barre fonce et les autres s'estompent.
  */
 export function EventSpans({
-  containerRef,
+  layout,
   spans: toDraw,
   active = null,
-  version,
   onLanes,
 }: {
-  containerRef: React.RefObject<HTMLElement | null>;
+  layout: TimelineLayout;
   /** Les événements dont la durée croise ce qui est rendu. */
   spans: readonly EventSpan[];
   /** L'événement survolé : sa barre ressort. */
   active?: string | null;
-  /** Change quand la frise change : force une mesure. */
-  version: string;
   /** Le nombre de couloirs pris par les barres, pour que la frise écarte
    *  ses titres d'autant (voir `eventSpanPad`). */
   onLanes?: (count: number) => void;
 }) {
-  const [spans, setSpans] = React.useState<Span[]>([]);
-
-  const measure = React.useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const measured = toDraw.flatMap(({ id, clipTop, clipBottom }) => {
-      const start = clipTop ? null : container.querySelector<HTMLElement>(`[data-event-id="${id}"]`);
-      const end = clipBottom ? null : container.querySelector<HTMLElement>(`[data-event-end-id="${id}"]`);
-      if ((!clipTop && !start) || (!clipBottom && !end)) return [];
-      // Tous les titres commencent au même retrait : celui de la ligne, ou
-      // de n'importe quelle ligne quand les deux bouts sont hors champ.
-      const text = (start ?? end ?? container).querySelector<HTMLElement>("[data-title-start]");
-      if (!text) return [];
-      return [{
-        id,
-        top: start ? start.getBoundingClientRect().top - rect.top + 10 : 0,
-        bottom: end ? end.getBoundingClientRect().top - rect.top + 10 : rect.height,
-        x: text.getBoundingClientRect().left - rect.left - TITLE_GAP,
-      }];
-    });
-    const lanes = assignSuiteLanes(measured);
-    setSpans(measured.map((m, i) => ({ ...m, x: m.x - lanes[i] * LANE_GAP })));
-    onLanes?.(lanes.length === 0 ? 0 : Math.max(...lanes) + 1);
-  }, [containerRef, toDraw, onLanes]);
-
-  React.useLayoutEffect(() => {
-    measure();
-  }, [measure, version]);
-  // Au montage, la référence du conteneur (un parent) n'est pas encore posée
-  // pendant les effets de mise en page de ses enfants : on remesure après.
+  const { spans, laneCount } = React.useMemo(() => layoutEventSpans(layout, toDraw), [layout, toDraw]);
   React.useEffect(() => {
-    measure();
-  }, [measure]);
-
-  React.useEffect(() => {
-    const container = containerRef.current;
-    if (!container || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => measure());
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [containerRef, measure]);
+    onLanes?.(laneCount);
+  }, [onLanes, laneCount]);
 
   if (spans.length === 0) return null;
   return (
@@ -103,7 +89,6 @@ export function EventSpans({
       className="pointer-events-none absolute inset-0 z-[2] h-full w-full overflow-visible"
       aria-hidden
       data-testid="timeline-event-spans"
-      data-layout={version}
     >
       {spans.map((s) => (
         <path

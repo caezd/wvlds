@@ -59,7 +59,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Performance",
     area: "Monde",
-    text: "Chronologie :\n- chargée en une seule requête, affichée d’un bloc\n- dates rendues au fil du défilement, vers le haut comme vers le bas",
+    text: "Chronologie :\n- chargée en une seule requête, affichée d’un bloc\n- dates rendues au fil du défilement, vers le haut comme vers le bas\n- personas de chaque salon tenus à jour plutôt que recalculés\n- recherche fluide sur les grands mondes\n- lignes de suite et barres de durée mesurées en une seule passe\n- dialogues de gestion chargés à leur première ouverture",
   },
   {
     date: "2026-09-26",

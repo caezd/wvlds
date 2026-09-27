@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { assignSuiteLanes, buildSuiteChains, isSuiteBridge, suiteChainOf, type SuitePair } from "@/lib/worldTimelineItems";
+import type { TimelineLayout } from "@/components/worlds/timeline/TimelineLayout";
 
 export type SuiteLink = SuitePair;
 
@@ -53,9 +54,101 @@ function litLanes(drawn: Drawn[], only: ReadonlySet<string>, offset: number): Dr
 }
 
 /**
- * Le calque des lignes de suite. Les positions se mesurent dans le DOM
- * (`[data-room-id]`, `[data-journal-id]`, et l'anneau d'un salon pour le
- * graphe), à chaque changement de la frise et de la taille du conteneur.
+ * Les tracés des lignes de suite et du fil d'un persona, et le nombre de
+ * couloirs à réserver, sur le relevé de la frise (voir TimelineLayout) :
+ * un calcul pur, sans lecture du DOM.
+ */
+function layoutSuites(
+  layout: TimelineLayout,
+  links: SuiteLink[],
+  thread: { ids: readonly string[]; color: string | null } | null,
+  hoverMode: boolean,
+): { drawn: Drawn[]; laneCount: number } {
+  const yOf = (id: string) => {
+    const row = layout.rows.get(id);
+    return row ? row.top + Math.min(row.height, 20) / 2 : null;
+  };
+
+  const solid = (ids: readonly string[]) => {
+    const points = ids
+      .map((id) => ({ id, y: yOf(id), pending: false }))
+      .filter((p): p is Point => p.y !== null)
+      .sort((a, b) => a.y - b.y);
+    const segments: Segment[] = points.slice(1).map((p, i) => ({ top: points[i].y, bottom: p.y, pending: false }));
+    return { points, segments };
+  };
+  const span = (points: Point[]) => ({
+    top: Math.min(...points.map((p) => p.y)),
+    bottom: Math.max(...points.map((p) => p.y)),
+  });
+
+  // Les chaînes ne se forment que des liens acceptés, en traits pleins.
+  // Une suite proposée se trace à part, dans son propre couloir et en
+  // pointillés : fondue dans une chaîne, elle disparaissait sous son trait
+  // plein dès que ses deux salons y étaient déjà. Elle prend la couleur de
+  // la chaîne qu'elle rejoint (la suite d'abord, puis le salon précédent).
+  // Une passerelle entre deux arcs se trace aussi à part, en fondu de la
+  // couleur de l'arc quitté à celle de l'arc rejoint.
+  const accepted = buildSuiteChains(links.filter((l) => !l.pending));
+  const chainColor = (id: string) => accepted.find((c) => c.ids.includes(id))?.color ?? null;
+  const chains: { color: string | null; bridge?: Drawn["bridge"]; points: Point[]; segments: Segment[] }[] = [
+    ...accepted.map((c) => ({ color: c.color, ...solid(c.ids) })),
+    ...links
+      .filter((l) => l.pending || isSuiteBridge(l))
+      .map((l) => {
+        const pending = !!l.pending;
+        const pair = solid([l.from, l.to]).points.map((p) => ({ ...p, pending }));
+        return {
+          color: isSuiteBridge(l) ? l.color : chainColor(l.to) ?? chainColor(l.from) ?? l.color,
+          bridge: isSuiteBridge(l) ? { fromId: l.from, fromColor: l.bridgeFrom ?? null } : undefined,
+          points: pair,
+          segments: pair.length > 1 ? [{ top: pair[0].y, bottom: pair[1].y, pending }] : [],
+        };
+      }),
+  ].filter((c) => c.points.length > 1);
+
+  // Le fil du persona : le premier couloir ; les suites se rangent après.
+  const threadChain = thread ? solid(thread.ids) : null;
+  const hasThread = !!threadChain && threadChain.points.length > 0;
+  const spans = chains.map((c) => span(c.points));
+  const lanes = assignSuiteLanes(spans).map((l) => l + (hasThread ? 1 : 0));
+
+  const drawn: Drawn[] = chains.map((c, i) => ({
+    key: c.points.map((p) => p.id).join(">"),
+    points: c.points,
+    segments: c.segments,
+    ...spans[i],
+    lane: lanes[i],
+    color: c.color,
+    bridge: c.bridge,
+  }));
+  if (hasThread) {
+    drawn.unshift({
+      key: "persona-thread",
+      points: threadChain.points,
+      segments: threadChain.segments,
+      ...span(threadChain.points),
+      lane: 0,
+      color: thread!.color,
+      thread: true,
+    });
+  }
+  // Au survol, la place réservée est celle du survol le plus chargé : la
+  // chaîne d'un arc et les passerelles qui en partent se chevauchent.
+  const laneCount = (items: { top: number; bottom: number }[]) =>
+    items.length === 0 ? 0 : Math.max(...assignSuiteLanes(items)) + 1;
+  const suiteLanes = !hoverMode
+    ? laneCount(spans)
+    : Math.max(0, ...[...new Set(chains.flatMap((c) => c.points.map((p) => p.id)))].map((id) => {
+        const lit = suiteChainOf(links, id) ?? new Set([id]);
+        return laneCount(chains.filter((c) => c.points.some((p) => lit.has(p.id))).map((c) => span(c.points)));
+      }));
+  return { drawn, laneCount: suiteLanes + (hasThread ? 1 : 0) };
+}
+
+/**
+ * Le calque des lignes de suite, sur le relevé de la frise (voir
+ * TimelineLayout : `[data-room-id]`, `[data-journal-id]`, le fil).
  *
  * Le fil d'un persona se dessine comme une chaîne, dans le style choisi,
  * toujours dans le premier couloir : les suites viennent après lui.
@@ -69,135 +162,32 @@ function litLanes(drawn: Drawn[], only: ReadonlySet<string>, offset: number): Dr
  * du survol, et les titres ne bougent pas quand une chaîne s'allume.
  */
 export function SuiteLinks({
-  containerRef,
+  layout,
   links,
   style,
   only,
   thread = null,
-  version,
   onLanes,
 }: {
-  containerRef: React.RefObject<HTMLElement | null>;
+  layout: TimelineLayout;
   links: SuiteLink[];
   style: SuiteStyle;
   /** Au survol seulement : les salons de la chaîne à tracer ; `null` pour toutes. */
   only: ReadonlySet<string> | null;
   /** Le fil d'un persona : ses salons et ses entrées de journal, dans sa couleur. */
   thread?: { ids: readonly string[]; color: string | null } | null;
-  /** Change quand la frise change (filtres, données) : force une mesure. */
-  version: string;
   onLanes: (count: number) => void;
 }) {
-  const [drawn, setDrawn] = React.useState<Drawn[]>([]);
-  const [box, setBox] = React.useState({ width: 0, filX: 0 });
   const hoverMode = only !== null;
   const uid = React.useId();
-
-  const measure = React.useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const yOf = (id: string) => {
-      const el = container.querySelector<HTMLElement>(`[data-room-id="${id}"], [data-journal-id="${id}"]`);
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return r.top - rect.top + Math.min(r.height, 20) / 2;
-    };
-    // Le fil : le centre d'un anneau de salon.
-    const ring = container.querySelector<HTMLElement>("[data-room-id] [data-testid='timeline-ring']");
-    const ringRect = ring?.getBoundingClientRect();
-    const filX = ringRect ? ringRect.left - rect.left + ringRect.width / 2 : 0;
-
-    const solid = (ids: readonly string[]) => {
-      const points = ids
-        .map((id) => ({ id, y: yOf(id), pending: false }))
-        .filter((p): p is Point => p.y !== null)
-        .sort((a, b) => a.y - b.y);
-      const segments: Segment[] = points.slice(1).map((p, i) => ({ top: points[i].y, bottom: p.y, pending: false }));
-      return { points, segments };
-    };
-    const span = (points: Point[]) => ({
-      top: Math.min(...points.map((p) => p.y)),
-      bottom: Math.max(...points.map((p) => p.y)),
-    });
-
-    // Les chaînes ne se forment que des liens acceptés, en traits pleins.
-    // Une suite proposée se trace à part, dans son propre couloir et en
-    // pointillés : fondue dans une chaîne, elle disparaissait sous son trait
-    // plein dès que ses deux salons y étaient déjà. Elle prend la couleur de
-    // la chaîne qu'elle rejoint (la suite d'abord, puis le salon précédent).
-    // Une passerelle entre deux arcs se trace aussi à part, en fondu de la
-    // couleur de l'arc quitté à celle de l'arc rejoint.
-    const accepted = buildSuiteChains(links.filter((l) => !l.pending));
-    const chainColor = (id: string) => accepted.find((c) => c.ids.includes(id))?.color ?? null;
-    const chains: { color: string | null; bridge?: Drawn["bridge"]; points: Point[]; segments: Segment[] }[] = [
-      ...accepted.map((c) => ({ color: c.color, ...solid(c.ids) })),
-      ...links
-        .filter((l) => l.pending || isSuiteBridge(l))
-        .map((l) => {
-          const pending = !!l.pending;
-          const pair = solid([l.from, l.to]).points.map((p) => ({ ...p, pending }));
-          return {
-            color: isSuiteBridge(l) ? l.color : chainColor(l.to) ?? chainColor(l.from) ?? l.color,
-            bridge: isSuiteBridge(l) ? { fromId: l.from, fromColor: l.bridgeFrom ?? null } : undefined,
-            points: pair,
-            segments: pair.length > 1 ? [{ top: pair[0].y, bottom: pair[1].y, pending }] : [],
-          };
-        }),
-    ].filter((c) => c.points.length > 1);
-
-    // Le fil du persona : le premier couloir ; les suites se rangent après.
-    const threadChain = thread ? solid(thread.ids) : null;
-    const hasThread = !!threadChain && threadChain.points.length > 0;
-    const spans = chains.map((c) => span(c.points));
-    const lanes = assignSuiteLanes(spans).map((l) => l + (hasThread ? 1 : 0));
-
-    const next: Drawn[] = chains.map((c, i) => ({
-      key: c.points.map((p) => p.id).join(">"),
-      points: c.points,
-      segments: c.segments,
-      ...spans[i],
-      lane: lanes[i],
-      color: c.color,
-      bridge: c.bridge,
-    }));
-    if (hasThread) {
-      next.unshift({
-        key: "persona-thread",
-        points: threadChain.points,
-        segments: threadChain.segments,
-        ...span(threadChain.points),
-        lane: 0,
-        color: thread!.color,
-        thread: true,
-      });
-    }
-    setDrawn(next);
-    setBox({ width: rect.width, filX });
-    // Au survol, la place réservée est celle du survol le plus chargé : la
-    // chaîne d'un arc et les passerelles qui en partent se chevauchent.
-    const laneCount = (items: { top: number; bottom: number }[]) =>
-      items.length === 0 ? 0 : Math.max(...assignSuiteLanes(items)) + 1;
-    const suiteLanes = !hoverMode
-      ? laneCount(spans)
-      : Math.max(0, ...[...new Set(chains.flatMap((c) => c.points.map((p) => p.id)))].map((id) => {
-          const lit = suiteChainOf(links, id) ?? new Set([id]);
-          return laneCount(chains.filter((c) => c.points.some((p) => lit.has(p.id))).map((c) => span(c.points)));
-        }));
-    onLanes(suiteLanes + (hasThread ? 1 : 0));
-  }, [containerRef, links, onLanes, hoverMode, thread]);
-
-  React.useLayoutEffect(() => {
-    measure();
-  }, [measure, version]);
-
+  const { drawn, laneCount } = React.useMemo(
+    () => layoutSuites(layout, links, thread, hoverMode),
+    [layout, links, thread, hoverMode],
+  );
   React.useEffect(() => {
-    const container = containerRef.current;
-    if (!container || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => measure());
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [containerRef, measure]);
+    onLanes(laneCount);
+  }, [onLanes, laneCount]);
+  const box = { width: layout.width, filX: layout.filX };
 
   // Au survol, la chaîne allumée (et ses passerelles) se range dans les
   // couloirs réservés aux suites, après celui du fil de persona, toujours tracé.

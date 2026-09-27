@@ -49,6 +49,7 @@ import {
   type SuiteStyle,
 } from "@/components/worlds/timeline/SuiteLinks";
 import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
+import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
 // seulement une fois ouverts : leur code (sélecteur de date, formulaires)
 // n'est chargé qu'à la première ouverture.
@@ -382,6 +383,8 @@ export function WorldTimeline({
   // Le décalage des titres : les couloirs du graphe, puis ceux des barres de
   // durée, qui se logent juste avant le texte.
   const titlePad = graphPad + eventSpanPad(spanLanes);
+  // La clé du relevé des calques : ce qui est rendu, et ce qui décale les titres.
+  const overlayKey = `${layoutVersion}:${titlePad}:${rightPad ?? 0}`;
   const onSpanLanes = useCallback((n: number) => setSpanLanes(n), []);
 
   const players = useMemo(
@@ -627,6 +630,7 @@ export function WorldTimeline({
               ref={listRef}
               className="relative"
               data-suite-style={suiteStyle}
+              data-layout={overlayKey}
               onMouseOver={(e) => trackHover(e.target as HTMLElement)}
               onMouseLeave={() => {
                 setHoveredRoom(null);
@@ -676,19 +680,24 @@ export function WorldTimeline({
                   );
                 })}
               </ol>
-              <SuiteLinks containerRef={listRef} links={suiteLinks} style={suiteStyle} only={onlyChain} thread={thread} version={layoutVersion} onLanes={onLanes} />
-              {/* Se remesure aussi quand la place des lignes de suite change
-                  (style, « au survol seulement ») : les titres, sur lesquels
-                  se calent les barres, se décalent alors sans que la frise
-                  ni la taille de la liste ne changent. */}
               {win && win.end < totalRows && <div ref={bottomSentinel} className="h-px" data-testid="timeline-more-after" aria-hidden />}
-              <EventSpans
-                containerRef={listRef}
-                spans={eventSpans}
-                active={duringSpan ? hoveredSpan : null}
-                version={`${layoutVersion}:${titlePad}:${rightPad ?? 0}`}
-                onLanes={onSpanLanes}
-              />
+              {/* Les calques, sur un relevé commun de la frise (une mesure
+                  par image, qui ne redessine que les calques). Il se refait
+                  quand ce qui est rendu change, et quand la place des lignes
+                  de suite ou des barres décale les titres. */}
+              <TimelineOverlays containerRef={listRef} version={overlayKey}>
+                {(layout) => (
+                  <>
+                    <SuiteLinks layout={layout} links={suiteLinks} style={suiteStyle} only={onlyChain} thread={thread} onLanes={onLanes} />
+                    <EventSpans
+                      layout={layout}
+                      spans={eventSpans}
+                      active={duringSpan ? hoveredSpan : null}
+                      onLanes={onSpanLanes}
+                    />
+                  </>
+                )}
+              </TimelineOverlays>
             </div>
           )}
         </div>
