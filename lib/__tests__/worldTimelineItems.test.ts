@@ -6,11 +6,11 @@ import {
   buildTimelineSections,
   countActiveFilters,
   effectiveRoomStatus,
-  eventArcIds,
   eventEndItems,
   holidayItems,
   initialTimelineWindow,
   sliceTimelineSections,
+  timelineMonthStops,
   timelineRowCount,
   timelineRowOfYear,
   timelineRowsById,
@@ -326,28 +326,21 @@ describe("arcRanks", () => {
   });
 });
 
-describe("eventArcIds", () => {
-  // Arc A : an 1, mois 2 → an 1, mois 6 ; arc B : an 2 ; arc C : aucun salon.
-  const ITEMS: TimelineItem[] = [
-    salon("a1", 1, 2, 1, { arcId: "A" }),
-    salon("a2", 1, 6, 10, { arcId: "A" }),
-    salon("b1", 2, 0, 5, { arcId: "B" }),
-    salon("libre", 1, 4, 1),
-  ];
-
-  it("un événement ponctuel : les arcs dont la période le contient", () => {
-    const m = eventArcIds([...ITEMS, evenement("e", 1, 4, 1)], ["C", "B", "A"]);
-    expect(m.get("e")).toEqual(["A"]);
-  });
-
-  it("un événement qui dure : tous les arcs qu'il chevauche, dans l'ordre des arcs", () => {
-    const m = eventArcIds([...ITEMS, evenement("e", 1, 5, 1, { year: 2, month: 3, day: null })], ["B", "A"]);
-    expect(m.get("e")).toEqual(["B", "A"]);
-  });
-
-  it("aucun arc en cours : pas d'entrée ; les bornes comptent", () => {
-    const m = eventArcIds([...ITEMS, evenement("avant", 1, 1, 1), evenement("borne", 1, 6, 10)], ["A", "B"]);
-    expect(m.has("avant")).toBe(false);
-    expect(m.get("borne")).toEqual(["A"]);
+describe("timelineMonthStops", () => {
+  it("un arrêt par mois (salons comptés), par date sans mois, et par année vide", () => {
+    const sections = buildTimelineSections([
+      salon("a", 1, null, null),
+      salon("b", 1, 0, 3),
+      salon("c", 1, 0, 9),
+      evenement("e", 1, 2, 1),
+      salon("d", 3, 1, 1),
+    ], 2);
+    expect(timelineMonthStops(sections)).toEqual([
+      { year: 1, month: null, row: 0, rooms: 1 },
+      { year: 1, month: 0, row: 1, rooms: 2 },
+      { year: 1, month: 2, row: 3, rooms: 0 },
+      { year: 2, month: null, row: 4, rooms: 0 },
+      { year: 3, month: 1, row: 5, rooms: 1 },
+    ]);
   });
 });

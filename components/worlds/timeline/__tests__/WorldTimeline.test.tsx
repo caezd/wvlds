@@ -213,48 +213,104 @@ describe("WorldTimeline — frise verticale", () => {
     expect(bandeau.querySelector("button")).toBeNull();
   });
 
-  it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite, sans le fil", async () => {
+  it("le bandeau de l'année sépare les années, sous les lignes de suite, sans le fil ; il ne se colle plus", async () => {
     db.tables.chatroom_sequels = [suite("a", "b")];
     await frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
     const bandeau = bandeaux()[0];
-    // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
-    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "top-[var(--tl-head,0px)]"]));
-    // Au repos, transparent et sous les lignes de suite (z-[2]) : elles le
-    // traversent, ses traits compris.
-    expect(bandeau.className.split(" ")).toContain("z-[1]");
-    expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
+    // Où l'on en est se lit dans le bandeau de position, collé dans la tête.
+    expect(bandeau.className.split(" ")).not.toContain("sticky");
     expect(bandeau).not.toHaveAttribute("data-stuck");
+    // Transparent et sous les lignes de suite (z-[2]) : elles le traversent.
+    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["relative", "z-[1]"]));
+    expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
     expect(bandeau.className).not.toMatch(/(^|\s)(lg:)?bg-/);
     // Le fil ne le traverse pas.
-    expect(within(bandeau).queryByTestId("timeline-year-band-fil")).toBeNull();
     expect(bandeau.querySelector(".w-px")).toBeNull();
-    expect(screen.getByTestId("timeline-scroll").style.getPropertyValue("--tl-head")).toMatch(/^\d+px$/);
+    expect(screen.getByTestId("timeline-head")).toContainElement(screen.getByTestId("timeline-position"));
+    // Bordé dessus et dessous.
+    expect(screen.getByTestId("timeline-position").className.split(" ")).toEqual(expect.arrayContaining(["border-y", "border-border"]));
   });
 
-  it("collé, le bandeau prend le fond de la page et couvre les lignes ; revenu au repos, il redevient transparent", async () => {
-    await frise([room("a", "Prologue", 1, 0, 1), room("b", "Plus tard", 2, 0, 1)]);
+  it("le bandeau de position suit le défilement : l'année, le mois passé sous la tête, ses salons ; les flèches mènent au mois voisin", async () => {
+    const user = userEvent.setup();
+    await frise([room("a", "Départ", 1, 0, 1), room("b", "Retour", 1, 2, 1), room("b2", "Et encore", 1, 2, 9), room("c", "Plus tard", 2, 0, 1)]);
     const scroll = screen.getByTestId("timeline-scroll");
-    const [an1, an2] = bandeaux();
-    const section1 = an1.closest("[data-year]") as HTMLElement;
-    const section2 = an2.closest("[data-year]") as HTMLElement;
-    // La tête mesure 0 sous jsdom : son bas est le haut du défilement (100).
-    const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+    const rect = (top: number, bottom = top + 20) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+    const place = (el: Element, top: number, bottom?: number) => { (el as HTMLElement).getBoundingClientRect = () => rect(top, bottom); };
+    // La tête mesure 0 sous jsdom : le seuil est le haut du défilement (100) + 8.
+    place(scroll, 100, 600);
+    const [an1, an2] = bandeaux().map((b) => b.closest("[data-year]")!);
+    place(an1, 40, 300);
+    place(an2, 300, 800);
+    // Janvier, puis les deux dates de mars.
+    const [janvier, mars, mars9] = an1.querySelectorAll("[data-date-group]");
+    place(janvier, 60);
+    place(mars, 200);
+    place(mars9, 240);
+    fireEvent.scroll(scroll);
+    const position = screen.getByTestId("timeline-position");
+    expect(within(position).getByTestId("timeline-position-label")).toHaveTextContent("An 1Janvier1 salon");
+
+    // Mars passe sous la tête.
+    place(mars, 90);
+    fireEvent.scroll(scroll);
+    expect(within(position).getByTestId("timeline-position-label")).toHaveTextContent("An 1Mars2 salons");
+
+    // « Mois suivant » : défile jusqu'au mois d'après (janvier de l'an 2).
+    const scrollTo = vi.fn();
+    scroll.scrollTo = scrollTo as never;
+    await user.click(within(position).getByRole("button", { name: "Mois suivant" }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 200, behavior: "smooth" });
+    expect(within(position).getByRole("button", { name: "Mois précédent" })).toBeEnabled();
+  });
+
+  it("les puces des arcs : ceux du mois en cours d'abord ; au survol d'un salon, son arc en tête et en pastille", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_arcs = [
+      { id: "exil", name: "L'exil", color: "#22c55e", position: 0 },
+      { id: "sacre", name: "Le sacre", color: "#ef4444", position: 1 },
+    ];
+    db.tables.chatrooms = [
+      { id: "a", arc_id: "sacre", category_id: null },
+      { id: "b", arc_id: "exil", category_id: null },
+      { id: "c", arc_id: "sacre", category_id: null },
+    ];
+    await frise([room("b", "Retour", 1, 0, 1), room("a", "Départ", 2, 0, 1), room("c", "Sacre", 2, 0, 4)]);
+    const scroll = screen.getByTestId("timeline-scroll");
+    const rect = (top: number, bottom = top + 20) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
     scroll.getBoundingClientRect = () => rect(100, 600);
-    // L'an 1 est passé sous la tête, l'an 2 pas encore.
-    section1.getBoundingClientRect = () => rect(40, 300);
-    section2.getBoundingClientRect = () => rect(300, 800);
+    const [an1, an2] = bandeaux().map((b) => b.closest("[data-year]") as HTMLElement);
+    an1.getBoundingClientRect = () => rect(40, 300);
+    an2.getBoundingClientRect = () => rect(300, 800);
     fireEvent.scroll(scroll);
-    expect(an1).toHaveAttribute("data-stuck", "true");
-    expect(an1.className.split(" ")).toEqual(expect.arrayContaining(["z-[3]", "bg-body", "lg:bg-background"]));
-    expect(an1.className.split(" ")).not.toContain("z-[1]");
-    expect(an2).not.toHaveAttribute("data-stuck");
-    // Revenu en haut : plus rien de collé.
-    section1.getBoundingClientRect = () => rect(100, 360);
-    section2.getBoundingClientRect = () => rect(360, 860);
-    fireEvent.scroll(scroll);
-    expect(an1).not.toHaveAttribute("data-stuck");
-    expect(an1.className).not.toMatch(/(^|\s)(lg:)?bg-/);
-    expect(an1.className.split(" ")).toContain("z-[1]");
+
+    const puces = () => [...screen.getByTestId("timeline-arc-dots").querySelectorAll<HTMLElement>("[data-arc-dot]")];
+    // An 1, janvier : l'exil en tête, seul net.
+    expect(puces().map((p) => p.dataset.arcDot)).toEqual(["exil", "sacre"]);
+    expect(puces().map((p) => !!p.dataset.bright)).toEqual([true, false]);
+    expect(screen.queryByTestId("timeline-hovered-arc")).toBeNull();
+
+    // Survol d'un salon du sacre : son arc passe en tête, et sa pastille paraît.
+    await user.hover(screen.getByRole("button", { name: /^Départ/ }));
+    expect(puces().map((p) => p.dataset.arcDot)).toEqual(["sacre", "exil"]);
+    expect(puces().map((p) => !!p.dataset.bright)).toEqual([true, false]);
+    expect(screen.getByTestId("timeline-hovered-arc")).toHaveTextContent("Le sacre2 épisodes");
+  });
+
+  it("l'en-tête résume la frise ; « Aujourd'hui » ramène à la date actuelle ; la légende des marques", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_arcs = [{ id: "exil", name: "L'exil", color: "#22c55e", position: 0 }];
+    await frise([room("a", "Départ", 1, 0, 1), room("b", "Retour", 1, 2, 1)]);
+    expect(screen.getByTestId("timeline-summary")).toHaveTextContent("2 salons · 1 arc");
+    const legende = screen.getByRole("list", { name: "Légende" });
+    expect(within(legende).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "En cours", "En sommeil", "Terminé", "Abandonné", "Événement",
+    ]);
+    const scroll = screen.getByTestId("timeline-scroll");
+    const scrollTo = vi.fn();
+    scroll.scrollTo = scrollTo as never;
+    await user.click(screen.getByRole("button", { name: "Aujourd’hui" }));
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" }));
   });
 
   it("le premier mois de l'année, sous le bandeau, calé sur le jour", async () => {
@@ -359,7 +415,9 @@ describe("WorldTimeline — frise verticale", () => {
 
     const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
     const pastilles = within(nav).getAllByRole("button");
-    expect(pastilles.map((p) => p.textContent)).toEqual(["1 – 5", "11 – 15"]);
+    // Nommées par leur tranche ; la courante porte en plus son nombre de salons.
+    expect(pastilles.map((p) => p.textContent)).toEqual(["1 – 5", "11 – 151"]);
+    expect(within(nav).getByRole("button", { name: "11 – 15" })).toBe(pastilles[1]);
     // Ouverte sur l'année actuelle : sa tranche est la courante.
     expect(pastilles[1]).toHaveAttribute("aria-current", "true");
 
@@ -457,9 +515,10 @@ describe("WorldTimeline — fond ambiant", () => {
     await frise([room("a", "Début", 1, 0, 1), room("b", "Mars", 1, 2, 1), room("c", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
     for (const anneau of screen.getAllByTestId("timeline-ring")) ambiant(anneau);
     ambiant(screen.getByTestId("timeline-month-label"));
-    const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
-    // La tête collante (recherche, filtres, périodes) porte le fond.
-    expect(nav.parentElement!.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "bg-body/90", "lg:bg-background/90"]));
+    // La tête collante (recherche, filtres, périodes, position) porte le fond.
+    const tete = screen.getByTestId("timeline-head");
+    expect(tete).toContainElement(screen.getByRole("navigation", { name: "Périodes de la chronologie" }));
+    expect(tete.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "bg-body/90", "lg:bg-background/90"]));
   });
 });
 
@@ -624,28 +683,18 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     expect(barres.querySelector("[data-event-span='e1']")).not.toBeNull();
   });
 
-  it("un jalon n'a pas de « jusqu'à » ; les arcs en cours pendant l'événement paraissent en puces", async () => {
-    db.tables.world_timeline_arcs = [
-      { id: "exil", name: "L'exil", color: "#22c55e", position: 0 },
-      { id: "sacre", name: "Le sacre", color: "#ef4444", position: 1 },
-    ];
-    db.tables.chatrooms = [
-      { id: "a", arc_id: "exil", category_id: null },
-      { id: "b", arc_id: "exil", category_id: null },
-      { id: "c", arc_id: "sacre", category_id: null },
-    ];
+  it("un jalon n'a pas de « jusqu'à », et la carte ne porte pas les arcs", async () => {
+    db.tables.world_timeline_arcs = [{ id: "exil", name: "L'exil", color: "#22c55e", position: 0 }];
+    db.tables.chatrooms = [{ id: "a", arc_id: "exil", category_id: null }, { id: "b", arc_id: "exil", category_id: null }];
     db.tables.world_timeline_events = [{
       id: "e1", title: "La comète", description: null, timeline_date: { year: 1, month: 1, day: 3 },
       end_date: null, wiki_page_id: null, wiki_page: null,
     }];
-    await frise([room("a", "Départ", 1, 0, 6), room("b", "Retour", 1, 2, 1), room("c", "Couronne", 2, 0, 1)]);
+    await frise([room("a", "Départ", 1, 0, 6), room("b", "Retour", 1, 2, 1)]);
     const evenement = (await screen.findByText("La comète")).closest("[data-event-id]") as HTMLElement;
+    expect(within(evenement).getByTestId("timeline-event-card")).toBeInTheDocument();
     expect(within(evenement).queryByTestId("timeline-event-until")).toBeNull();
-    // L'exil court de janvier à mars de l'an 1 : il passe sous la comète ; le sacre, en l'an 2, non.
-    const puces = within(evenement).getByTestId("timeline-event-arcs");
-    expect(puces).toHaveTextContent("Arcs en cours : L'exil");
-    expect(puces.querySelectorAll("[title]")).toHaveLength(1);
-    expect(puces.querySelector("[title]")).toHaveAttribute("title", "L'exil");
+    expect(evenement.querySelector("[title], [data-arc-dot]")).toBeNull();
   });
 
   it("pendant ce temps : au survol d'un événement qui dure, ce qui se passe pendant reste net, le reste s'estompe", async () => {
@@ -893,7 +942,8 @@ describe("WorldTimeline — saisons", () => {
       { ...CONFIG, current_year: 12, ages: [{ name: "Âge des Cendres", from_year: 10, to_year: 19 }] },
     );
     const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
-    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["1 – 5", "Âge des Cendres"]);
+    // Nommées par leur période ; la courante porte en plus son nombre de salons.
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["1 – 5", "Âge des Cendres2"]);
     expect(within(nav).getByRole("button", { name: "Âge des Cendres" })).toHaveAttribute("aria-current", "true");
     // Un bandeau, une seule fois, avant la première année de la saison.
     const bandeaux = screen.getAllByTestId("timeline-age");

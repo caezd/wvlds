@@ -532,37 +532,35 @@ export function arcRanks(items: readonly TimelineItem[]): Map<string, number> {
   return ranks;
 }
 
-// ── Arcs en cours pendant un événement ───────────────────────
+// ── Mois de la frise ─────────────────────────────────────────
+
+/** Un mois de la frise (ou une année sans mois), là où l'on peut se rendre. */
+export type TimelineMonthStop = {
+  year: number;
+  month: number | null;
+  /** Sa première ligne (voir `timelineRowCount`). */
+  row: number;
+  /** Les salons de ce mois. */
+  rooms: number;
+};
 
 /**
- * Les arcs que chaque événement traverse : ceux dont les salons, du premier
- * au dernier, chevauchent sa période (du début à la fin s'il dure, sa seule
- * date sinon). Dans l'ordre des arcs donnés. À calculer sur tous les salons,
- * pas sur ceux qu'un filtre laisse.
+ * Les mois de la frise, dans l'ordre : un arrêt par mois qui a une entrée,
+ * un par date sans mois, un pour une année vide. Les flèches du bandeau de
+ * position vont de l'un à l'autre.
  */
-export function eventArcIds(
-  items: readonly TimelineItem[],
-  arcOrder: readonly string[],
-): Map<string, string[]> {
-  const spans = new Map<string, { start: WorldTimelineDate; end: WorldTimelineDate }>();
-  for (const item of items) {
-    if (item.kind !== "room" || !item.arcId) continue;
-    const span = spans.get(item.arcId);
-    if (!span) spans.set(item.arcId, { start: item.date, end: item.date });
-    else {
-      if (compareDates(item.date, span.start) < 0) span.start = item.date;
-      if (compareDates(item.date, span.end) > 0) span.end = item.date;
-    }
-  }
-  const result = new Map<string, string[]>();
-  for (const item of items) {
-    if (item.kind !== "event") continue;
-    const end = item.endDate && compareDates(item.endDate, item.date) > 0 ? item.endDate : item.date;
-    const ids = arcOrder.filter((id) => {
-      const span = spans.get(id);
-      return !!span && compareDates(span.start, end) <= 0 && compareDates(span.end, item.date) >= 0;
+export function timelineMonthStops(sections: readonly TimelineYearSection[]): TimelineMonthStop[] {
+  const stops: TimelineMonthStop[] = [];
+  let row = 0;
+  for (const s of sections) {
+    if (s.groups.length === 0) stops.push({ year: s.year, month: null, row, rooms: 0 });
+    s.groups.forEach((g, i) => {
+      const rooms = g.items.filter((item) => item.kind === "room").length;
+      const last = stops.at(-1);
+      if (last && last.year === s.year && last.month === g.month) last.rooms += rooms;
+      else stops.push({ year: s.year, month: g.month, row: row + i, rooms });
     });
-    if (ids.length > 0) result.set(item.id, ids);
+    row += Math.max(1, s.groups.length);
   }
-  return result;
+  return stops;
 }

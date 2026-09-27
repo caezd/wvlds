@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useDeferredValue, useEffect, useLayoutEffe
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { ArrowDown, BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
+import { ArrowDown, BookOpen, BookText, Clock, LocateFixed, Pencil, Plus, Search, Sparkles, Spline, Sunrise, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import {
@@ -13,7 +13,6 @@ import {
   TIMELINE_PAGE,
   ageOf,
   arcRanks,
-  eventArcIds,
   buildTimelinePeriods,
   buildTimelineSections,
   effectiveRoomStatus,
@@ -25,6 +24,7 @@ import {
   normalizeAges,
   sliceTimelineSections,
   suiteChainOf,
+  timelineMonthStops,
   timelineRowCount,
   timelineRowOfYear,
   timelineRowsById,
@@ -34,6 +34,7 @@ import {
   type TimelineHolidayItem,
   type TimelineItem,
   type TimelineJournalItem,
+  type TimelineMonthStop,
   type TimelineRoomContext,
   type TimelineRoomItem,
   type TimelineWindow,
@@ -51,6 +52,7 @@ import {
 } from "@/components/worlds/timeline/SuiteLinks";
 import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
 import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
+import { TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
 // seulement une fois ouverts : leur code (sélecteur de date, formulaires)
 // n'est chargé qu'à la première ouverture.
@@ -168,6 +170,9 @@ export function WorldTimeline({
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
   // « Pendant ce temps » : l'événement qui dure survolé (ou sa fin).
   const [hoveredSpan, setHoveredSpan] = useState<string | null>(null);
+  // L'arc du salon sous le pointeur, mis en avant dans les puces du bandeau
+  // de position.
+  const [hoveredArcs, setHoveredArcs] = useState<readonly string[]>([]);
   useEffect(() => {
     setSuiteStyleState(readSuiteStyle());
     setHoverOnlyState(readSuiteHoverOnly());
@@ -217,8 +222,17 @@ export function WorldTimeline({
   // Le rang de chaque salon dans son arc, sur tous les salons : il ne change
   // pas quand on filtre.
   const ranks = useMemo(() => arcRanks(allItems), [allItems]);
-  // Les arcs en cours pendant chaque événement, sur tous les salons aussi.
-  const eventArcs = useMemo(() => eventArcIds(allItems, data.arcs.map((a) => a.id)), [allItems, data.arcs]);
+  // L'arc de chaque salon, et le nombre d'épisodes de chaque arc.
+  const arcStats = useMemo(() => {
+    const arcOf = new Map<string, string>();
+    const episodes = new Map<string, number>();
+    for (const item of allItems) {
+      if (item.kind !== "room" || !item.arcId) continue;
+      arcOf.set(item.id, item.arcId);
+      episodes.set(item.arcId, (episodes.get(item.arcId) ?? 0) + 1);
+    }
+    return { arcOf, episodes };
+  }, [allItems]);
 
   const ctx: TimelineRoomContext = useMemo(
     () => ({ personas: data.roomPersonas, openers: data.openers }),
@@ -360,7 +374,12 @@ export function WorldTimeline({
   }
   function trackHover(target: HTMLElement) {
     setHoveredSpan(spanUnder(target));
-    if (hoverOnly) setHoveredRoom(target.closest<HTMLElement>("[data-room-id]")?.dataset.roomId ?? null);
+    const roomId = target.closest<HTMLElement>("[data-room-id]")?.dataset.roomId ?? null;
+    if (hoverOnly) setHoveredRoom(roomId);
+    const arcId = roomId ? arcStats.arcOf.get(roomId) ?? null : null;
+    const next = arcId ? [arcId] : [];
+    // Même liste : pas de nouveau rendu à chaque mouvement du pointeur.
+    setHoveredArcs((cur) => (cur.length === next.length && cur.every((id, i) => id === next[i]) ? cur : next));
   }
 
   // Le fil du persona filtré : les salons où il a écrit et ses entrées de
@@ -399,28 +418,58 @@ export function WorldTimeline({
     return scrollRef.current?.querySelector<HTMLElement>(`[data-year="${year}"]`) ?? null;
   }
 
-  // Défiler jusqu'à une année, une fois qu'elle est rendue : une année hors
-  // de la fenêtre y entre d'abord (la fenêtre s'ouvre sur elle).
-  const [pendingYear, setPendingYear] = useState<{ year: number; smooth: boolean } | null>(null);
-  function scrollToYear(year: number, smooth: boolean) {
-    const row = timelineRowOfYear(sections, year);
+  // Les mois de la frise, où mènent les flèches du bandeau de position.
+  const stops = useMemo(() => timelineMonthStops(sections), [sections]);
+
+  // Défiler jusqu'à une année, un mois ou la date actuelle, une fois rendus :
+  // hors de la fenêtre, la fenêtre s'ouvre d'abord sur eux.
+  type ScrollTarget =
+    | { kind: "year"; year: number }
+    | { kind: "stop"; year: number; month: number | null }
+    | { kind: "now" };
+  const [pendingScroll, setPendingScroll] = useState<{ target: ScrollTarget; smooth: boolean } | null>(null);
+  function openWindowAt(row: number) {
     if (row < 0) return;
     if (win && (row < win.start || row >= win.end)) {
       setWin({ start: row, end: Math.min(totalRows, row + TIMELINE_PAGE) });
     }
-    setPendingYear({ year, smooth });
+  }
+  function scrollToYear(year: number, smooth: boolean) {
+    const row = timelineRowOfYear(sections, year);
+    if (row < 0) return;
+    openWindowAt(row);
+    setPendingScroll({ target: { kind: "year", year }, smooth });
+  }
+  function scrollToStop(stop: TimelineMonthStop) {
+    openWindowAt(stop.row);
+    setPendingScroll({ target: { kind: "stop", year: stop.year, month: stop.month }, smooth: true });
+  }
+  function scrollToNow() {
+    openWindowAt(timelineRowOfYear(sections, config.current_year));
+    setPendingScroll({ target: { kind: "now" }, smooth: true });
+  }
+  function targetEl(target: ScrollTarget): HTMLElement | null {
+    if (target.kind === "now") {
+      return scrollRef.current?.querySelector<HTMLElement>("[data-testid='timeline-now']") ?? sectionEl(config.current_year);
+    }
+    const section = sectionEl(target.year);
+    if (!section || target.kind === "year") return section;
+    const group = section.querySelector<HTMLElement>(`[data-date-group][data-month="${target.month ?? "none"}"]`);
+    // Le premier mois de l'année : l'année entière, son bandeau compris.
+    return group && group.dataset.newMonth ? group : section;
   }
   useLayoutEffect(() => {
-    if (!pendingYear) return;
+    if (!pendingScroll) return;
     const el = scrollRef.current;
-    const section = sectionEl(pendingYear.year);
-    if (!el || !section) return;
-    const top = section.offsetTop - (headRef.current?.offsetHeight ?? 0);
-    if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: pendingYear.smooth ? "smooth" : "auto" });
+    const node = targetEl(pendingScroll.target);
+    if (!el || !node) return;
+    const top = el.scrollTop + node.getBoundingClientRect().top - el.getBoundingClientRect().top - (headRef.current?.offsetHeight ?? 0);
+    if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: pendingScroll.smooth ? "smooth" : "auto" });
     else el.scrollTop = top;
-    setPendingYear(null);
-    // `shown` : l'année demandée n'est peut-être rendue qu'au rendu suivant.
-  }, [pendingYear, shown]);
+    setPendingScroll(null);
+    // `shown` : la cible n'est peut-être rendue qu'au rendu suivant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- targetEl lit le DOM rendu
+  }, [pendingScroll, shown]);
 
   // La fenêtre : à la première réponse, ouverte sur l'année actuelle ; à
   // chaque changement de filtre ou de recherche, sur l'année actuelle si
@@ -435,7 +484,7 @@ export function WorldTimeline({
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } else {
       setWin(initialTimelineWindow(sections, config.current_year));
-      setPendingYear({ year: config.current_year, smooth: false });
+      setPendingScroll({ target: { kind: "year", year: config.current_year }, smooth: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- à la première réponse et quand les filtres changent
   }, [data.loading, filterKey]);
@@ -474,40 +523,65 @@ export function WorldTimeline({
     return () => observer.disconnect();
   }, [win, totalRows]);
 
-  // Les périodes suivent le défilement : celle de la dernière année passée
-  // sous la tête.
-  // Le bandeau de l'année collé sous la tête : celle dont le haut est passé
-  // sous la tête et le bas pas encore. Au repos, un bandeau est transparent
-  // et laisse voir les lignes de suite ; collé, il les couvre.
-  const [stuckYear, setStuckYear] = useState<number | null>(null);
-  function updateStuckYear() {
+  // Où l'on en est : l'année et le mois passés en dernier sous la tête. Les
+  // périodes suivent aussi le défilement.
+  const [position, setPosition] = useState<{ year: number; month: number | null } | null>(null);
+  function updatePosition(scrolled: boolean) {
     const el = scrollRef.current;
-    if (!el) return;
-    const headBottom = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0);
-    let stuck: number | null = null;
+    if (!el || shown.length === 0) return;
+    const seuil = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0) + 8;
+    let year = shown[0].year;
     for (const s of shown) {
-      const r = sectionEl(s.year)?.getBoundingClientRect();
-      if (r && r.top < headBottom - 0.5 && r.bottom > headBottom) stuck = s.year;
+      const node = sectionEl(s.year);
+      if (node && node.getBoundingClientRect().top <= seuil) year = s.year;
     }
-    setStuckYear(stuck);
+    let month: number | null = null;
+    const groups = sectionEl(year)?.querySelectorAll<HTMLElement>("[data-date-group]") ?? [];
+    groups.forEach((g, i) => {
+      if (i === 0 || g.getBoundingClientRect().top <= seuil) month = g.dataset.month === "none" ? null : Number(g.dataset.month);
+    });
+    setPosition((cur) => (cur && cur.year === year && cur.month === month ? cur : { year, month }));
+    // Au défilement seulement : une pastille choisie reste choisie jusque-là.
+    if (scrolled && periods.length > 1) setActivePeriod(periodOf(year));
   }
   useEffect(() => {
-    updateStuckYear();
+    updatePosition(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- quand la frise ou la tête changent
   }, [shown, headHeight]);
 
-  function onScroll() {
-    updateStuckYear();
-    const el = scrollRef.current;
-    if (!el || periods.length < 2) return;
-    const seuil = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0) + 8;
-    let current = shown[0]?.year ?? 0;
-    for (const s of shown) {
-      const node = sectionEl(s.year);
-      if (node && node.getBoundingClientRect().top <= seuil) current = s.year;
+  const stopIndex = position ? stops.findIndex((st) => st.year === position.year && st.month === position.month) : -1;
+  const currentStop = stopIndex >= 0 ? stops[stopIndex] : null;
+
+  // Les puces des arcs : ceux que l'on survole d'abord, sinon ceux du mois
+  // en cours ; les autres, estompés, à la suite.
+  const monthArcs = useMemo(() => {
+    if (!currentStop) return [];
+    const ids = new Set<string>();
+    for (const g of sections.find((sec) => sec.year === currentStop.year)?.groups ?? []) {
+      if (g.month !== currentStop.month) continue;
+      for (const item of g.items) if (item.kind === "room" && item.arcId) ids.add(item.arcId);
     }
-    setActivePeriod(periodOf(current));
-  }
+    return data.arcs.filter((a) => ids.has(a.id)).map((a) => a.id);
+  }, [currentStop, sections, data.arcs]);
+  const priorityArcs = hoveredArcs.length > 0 ? hoveredArcs : monthArcs;
+  const orderedArcs = useMemo(
+    () => [
+      ...priorityArcs.flatMap((id) => arcsById.get(id) ?? []),
+      ...data.arcs.filter((a) => !priorityArcs.includes(a.id)),
+    ],
+    [priorityArcs, arcsById, data.arcs],
+  );
+  const hoveredArc = hoveredArcs.length === 1 ? arcsById.get(hoveredArcs[0]) ?? null : null;
+
+  // Les salons de chaque période, sur sa pastille.
+  const periodRooms = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const sec of sections) {
+      const n = sec.groups.reduce((acc, g) => acc + g.items.filter((i) => i.kind === "room").length, 0);
+      counts.set(periodOf(sec.year), (counts.get(periodOf(sec.year)) ?? 0) + n);
+    }
+    return counts;
+  }, [sections, periodOf]);
 
   const nowLabel = t("settings.timelinePreviewLabel");
   const empty = !data.loading && allItems.length === 0;
@@ -517,20 +591,27 @@ export function WorldTimeline({
       <WorldPanelHeader
         icon={<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("nav.timeline")}
-      />
+      >
+        {!data.loading && (
+          <span className="ml-2 truncate text-xs text-muted-foreground" data-testid="timeline-summary">
+            {tv("summary", { rooms: data.rooms.length, arcs: data.arcs.length })}
+          </span>
+        )}
+      </WorldPanelHeader>
 
       {empty && !canManage ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
       ) : (
         <div
           ref={scrollRef}
-          onScroll={onScroll}
+          onScroll={() => updatePosition(true)}
           className="relative flex-1 overflow-y-auto"
           style={{ ["--tl-head" as string]: `${headHeight}px` }}
           data-testid="timeline-scroll"
         >
-          <div ref={headRef} className={cn("sticky top-0 z-10 space-y-3 px-5 py-3 backdrop-blur", AMBIENT_BG_TRANSLUCENT)}>
-            {/* Recherche, filtres, gestion */}
+          <div ref={headRef} className={cn("sticky top-0 z-10 backdrop-blur", AMBIENT_BG_TRANSLUCENT)} data-testid="timeline-head">
+            <div className="space-y-3 px-5 py-3">
+            {/* Recherche, filtres, « Aujourd'hui » ; à droite, la gestion. */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative min-w-40 flex-1 sm:max-w-xs">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -557,6 +638,10 @@ export function WorldTimeline({
                 hoverOnly={hoverOnly}
                 onHoverOnly={setHoverOnly}
               />
+              <Button type="button" size="sm" variant="ghost" className="h-8 gap-1.5" onClick={scrollToNow}>
+                <LocateFixed className="h-3.5 w-3.5" />
+                {tv("today")}
+              </Button>
               {/* Le fil du persona filtré, rappelé en tête ; la croix l'efface. */}
               {threadPersona && (
                 <span
@@ -581,7 +666,11 @@ export function WorldTimeline({
               )}
               <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reload()} />
               {canManage && (
-                <>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setArcsOpen(true)}>
+                    <Spline className="h-3.5 w-3.5" />
+                    {tv("arcs")}
+                  </Button>
                   <Button
                     type="button"
                     size="sm"
@@ -592,33 +681,55 @@ export function WorldTimeline({
                     <Plus className="h-3.5 w-3.5" />
                     {tv("addEvent")}
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" className="h-8 gap-1.5" onClick={() => setArcsOpen(true)}>
-                    <Spline className="h-3.5 w-3.5" />
-                    {tv("arcs")}
-                  </Button>
-                </>
+                </div>
               )}
             </div>
 
-            {periods.length > 1 && (
-              <nav aria-label={t("timelineRanges")} className="flex gap-2 overflow-x-auto">
-                {periods.map((p) => (
-                  <button
-                    key={p.key}
-                    type="button"
-                    aria-current={p.key === activePeriod ? "true" : undefined}
-                    onClick={() => { setActivePeriod(p.key); scrollToYear(p.firstYear, true); }}
-                    className={cn(
-                      "h-7 shrink-0 rounded-full px-4 text-xs font-medium tabular-nums transition-colors",
-                      p.key === activePeriod
-                        ? "bg-foreground text-background"
-                        : "bg-muted text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </nav>
+            {/* Les périodes à gauche, la légende du fil à droite. */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {periods.length > 1 && (
+                <nav aria-label={t("timelineRanges")} className="flex min-w-0 gap-2 overflow-x-auto">
+                  {periods.map((p) => {
+                    const current = p.key === activePeriod;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        aria-current={current ? "true" : undefined}
+                        onClick={() => { setActivePeriod(p.key); scrollToYear(p.firstYear, true); }}
+                        className={cn(
+                          "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium tabular-nums transition-colors",
+                          current
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {p.age && <Sunrise className="size-3.5 shrink-0" aria-hidden />}
+                        {p.label}
+                        {current && (periodRooms.get(p.key) ?? 0) > 0 && (
+                          <span className="text-[10px] font-normal opacity-60" data-testid="timeline-period-count" aria-hidden>
+                            {periodRooms.get(p.key)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </nav>
+              )}
+              <TimelineLegend className="ml-auto hidden justify-end md:flex" />
+            </div>
+            </div>
+
+            {!data.loading && sections.length > 0 && (
+              <TimelinePositionBar
+                config={config}
+                stop={currentStop}
+                onPrevious={stopIndex > 0 ? () => scrollToStop(stops[stopIndex - 1]) : null}
+                onNext={stopIndex >= 0 && stopIndex < stops.length - 1 ? () => scrollToStop(stops[stopIndex + 1]) : null}
+                arcs={orderedArcs}
+                bright={priorityArcs.length > 0 ? new Set(priorityArcs) : null}
+                hovered={hoveredArc ? { arc: hoveredArc, episodes: arcStats.episodes.get(hoveredArc.id) ?? 0 } : null}
+              />
             )}
           </div>
 
@@ -638,6 +749,7 @@ export function WorldTimeline({
               onMouseLeave={() => {
                 setHoveredRoom(null);
                 setHoveredSpan(null);
+                setHoveredArcs([]);
               }}
               onFocus={(e) => trackHover(e.target as HTMLElement)}
             >
@@ -669,10 +781,8 @@ export function WorldTimeline({
                         openers={data.openers}
                         arcsById={arcsById}
                         ranks={ranks}
-                        eventArcs={eventArcs}
                         canManage={canManage}
                         highlight={highlight}
-                        stuck={stuckYear === section.year}
                         onOpenRoom={(id) => router.push(`/c/${id}`)}
                         onOpenWiki={(slug) => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`)}
                         onEditEvent={(id) => {
@@ -823,10 +933,6 @@ function SectionWithAge({
   );
 }
 
-/** La légende d'une année (« Eon », le nom d'ère), dans son bandeau :
- *  petites capitales, plus appuyées que celles des mois. */
-const YEAR_CAPTION = "text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground/60";
-
 function YearBlock({
   section,
   config,
@@ -834,10 +940,8 @@ function YearBlock({
   openers,
   arcsById,
   ranks,
-  eventArcs,
   canManage,
   highlight,
-  stuck,
   onOpenRoom,
   onOpenWiki,
   onEditEvent,
@@ -848,11 +952,8 @@ function YearBlock({
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
   ranks: ReadonlyMap<string, number>;
-  eventArcs: ReadonlyMap<string, readonly string[]>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
-  /** Le bandeau de l'année est collé sous la tête. */
-  stuck: boolean;
   onOpenRoom: (id: string) => void;
   onOpenWiki: (slug: string) => void;
   onEditEvent: (id: string) => void;
@@ -878,7 +979,6 @@ function YearBlock({
       openers={openers}
       arcsById={arcsById}
       ranks={ranks}
-      eventArcs={eventArcs}
       canManage={canManage}
       highlight={highlight}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
@@ -908,22 +1008,15 @@ function YearBlock({
   return (
     <li data-year={section.year}>
       {/* L'année, un bandeau sur toute la largeur du conteneur (marges de la
-          liste comprises), collé sous la tête le temps de son année : on sait
-          toujours où l'on est, et deux années se séparent franchement. Au
-          repos, transparent et sous les lignes de suite (z-[1] ; z-[2] pour
-          les lignes, voir SuiteLinks) : elles le traversent, ses traits
-          compris. Collé, il passe au-dessus d'elles et des salons (z-[3]),
-          prend le fond de la page et les couvre ; toujours sous la tête
-          (z-10). Le fil s'y interrompt ; un trait dessus et dessous (aucun
-          au-dessus de la toute première année).
+          liste comprises) qui sépare deux années ; où l'on en est se lit dans
+          le bandeau de position, collé dans la tête. Sous les lignes de suite
+          (z-[1] ; z-[2] pour les lignes, voir SuiteLinks) : elles le
+          traversent, ses traits compris. Le fil s'y interrompt ; un trait
+          dessus et dessous (aucun au-dessus de la toute première année).
           Le titre à gauche, le chiffre en gras. */}
       <div
-        className={cn(
-          "sticky top-[var(--tl-head,0px)] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5",
-          stuck ? cn("z-[3]", AMBIENT_BG) : "z-[1]",
-        )}
+        className="relative z-[1] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5"
         data-testid="timeline-year-band"
-        data-stuck={stuck || undefined}
       >
         <h3 className="flex min-w-0 items-baseline gap-1.5 leading-none">
           {/* Les espaces entre les parties : invisibles en flex, mais lus
@@ -982,7 +1075,6 @@ function DateGroupBlock({
   openers,
   arcsById,
   ranks,
-  eventArcs,
   canManage,
   highlight,
   newMonth,
@@ -996,7 +1088,6 @@ function DateGroupBlock({
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
   ranks: ReadonlyMap<string, number>;
-  eventArcs: ReadonlyMap<string, readonly string[]>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
   newMonth: boolean;
@@ -1010,6 +1101,7 @@ function DateGroupBlock({
     <li
       className={cn("relative", newMonth && "pt-12")}
       data-date-group={group.key}
+      data-month={group.month ?? "none"}
       data-new-month={newMonth || undefined}
     >
       {/* Le filet d'un nouveau mois, en pointillés, d'un bord à l'autre du
@@ -1066,7 +1158,6 @@ function DateGroupBlock({
                   item={item as TimelineEvent}
                   day={day}
                   until={lastsUntil(config, item as TimelineEvent)}
-                  arcs={(eventArcs.get(item.id) ?? []).flatMap((id) => arcsById.get(id) ?? [])}
                   canManage={canManage}
                   dimmed={dimmed}
                   onOpenWiki={onOpenWiki}
@@ -1229,14 +1320,12 @@ function lastsUntil(config: WorldTimelineConfig, event: TimelineEvent): string |
 
 /**
  * Un événement : une carte, son losange sur le fil en face du titre. La fin
- * d'un événement qui dure en pastille à côté du titre ; les arcs en cours
- * pendant l'événement en puces de leur couleur, à droite.
+ * d'un événement qui dure en pastille à côté du titre.
  */
 function EventRow({
   item,
   day,
   until,
-  arcs,
   canManage,
   dimmed,
   onOpenWiki,
@@ -1245,7 +1334,6 @@ function EventRow({
   item: TimelineEvent;
   day: number | null;
   until: string | null;
-  arcs: readonly TimelineArc[];
   canManage: boolean;
   dimmed: boolean;
   onOpenWiki: (slug: string) => void;
@@ -1283,20 +1371,6 @@ function EventRow({
               </span>
             )}
           </p>
-          {arcs.length > 0 && (
-            <span className="flex shrink-0 items-center gap-1 pt-[5px]" data-testid="timeline-event-arcs">
-              <span className="sr-only">{tv("eventArcs", { names: arcs.map((a) => a.name).join(", ") })}</span>
-              {arcs.map((arc) => (
-                <span
-                  key={arc.id}
-                  className="size-2.5 rounded-full"
-                  style={{ backgroundColor: arc.color }}
-                  title={arc.name}
-                  aria-hidden
-                />
-              ))}
-            </span>
-          )}
           {canManage && (
             <button
               type="button"
