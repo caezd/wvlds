@@ -388,7 +388,8 @@ describe("WorldTimeline — frise verticale", () => {
       // Pas de navigation : le tiroir.
       expect(push).not.toHaveBeenCalled();
       const tiroir = await screen.findByTestId("timeline-room-drawer");
-      expect(tiroir.className.split(" ")).toContain("rounded-lg");
+      // L'arrondi et le fond du tiroir de navigation d'un monde.
+      expect(tiroir.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "bg-background"]));
       expect(within(tiroir).getByTestId("timeline-drawer-arc")).toHaveTextContent("L'héritière· 1/2");
       expect(within(tiroir).getByRole("heading", { name: "Le testament scellé" })).toBeInTheDocument();
       expect(tiroir).toHaveTextContent("3 Mars, An 1 · terminé");

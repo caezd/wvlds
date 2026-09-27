@@ -98,7 +98,11 @@ export function TimelineRoomDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-      <DrawerContent className="rounded-lg" data-testid="timeline-room-drawer">
+      <DrawerContent
+        // Comme le tiroir de navigation d'un monde (AppShell) : même arrondi, même fond.
+        className="rounded-md border bg-background text-foreground shadow-lg"
+        data-testid="timeline-room-drawer"
+      >
         {room && (
           <>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-3">
