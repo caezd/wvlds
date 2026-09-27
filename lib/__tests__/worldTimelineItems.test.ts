@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   NO_TIMELINE_FILTERS,
   assignSuiteLanes,
+  buildTimelineMinimap,
   buildTimelinePeriods,
   buildTimelineSections,
   countActiveFilters,
@@ -342,5 +343,26 @@ describe("timelineMonthStops", () => {
       { year: 2, month: null, row: 4, rooms: 0 },
       { year: 3, month: 1, row: 5, rooms: 1 },
     ]);
+  });
+});
+
+describe("buildTimelineMinimap", () => {
+  it("chaque année, chaque mois du calendrier : salons, contenu, événement, arcs ; max au moins 1", () => {
+    const sections = buildTimelineSections([
+      salon("a", 1, 0, 3, { arcId: "exil" } as Partial<TimelineItem>),
+      salon("b", 1, 0, 9),
+      salon("c", 1, null, null),
+      evenement("e", 1, 2, 1, { year: 3, month: 1, day: 1 }),
+      journal("j", "p", 1, 1, 4),
+    ], 1);
+    const { years, max } = buildTimelineMinimap([...sections, ...buildTimelineSections(eventEndItems([evenement("e", 1, 2, 1, { year: 3, month: 1, day: 1 })]), 3)], 3);
+    expect(years.map((y) => y.year)).toEqual([1, 3]);
+    const [an1, an3] = years;
+    expect(an1.months.map((m) => [m.rooms, m.items, m.hasEvent])).toEqual([[2, 2, false], [0, 1, false], [0, 1, true]]);
+    expect([...an1.months[0].arcIds]).toEqual(["exil"]);
+    // La fin d'un événement qui dure compte comme un événement.
+    expect(an3.months[1].hasEvent).toBe(true);
+    expect(max).toBe(2);
+    expect(buildTimelineMinimap([], 12).max).toBe(1);
   });
 });

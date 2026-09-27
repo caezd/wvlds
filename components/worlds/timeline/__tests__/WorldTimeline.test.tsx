@@ -297,6 +297,39 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.getByTestId("timeline-hovered-arc")).toHaveTextContent("Le sacre2 épisodes");
   });
 
+  it("la mini-carte couvre toute la frise ; un clic sur un mois défile jusqu'à sa première date ; le mois lu y ressort", async () => {
+    const user = userEvent.setup();
+    await frise([room("a", "Départ", 1, 0, 1), room("b", "Retour", 1, 2, 1), room("c", "Plus tard", 2, 0, 1)]);
+    const carte = screen.getByRole("navigation", { name: "Aperçu de la frise" });
+    // Deux années, trois mois chacune (le calendrier du monde).
+    expect(within(carte).getAllByRole("button", { name: /^(Janvier|Février|Mars), An/ })).toHaveLength(6);
+
+    const scroll = screen.getByTestId("timeline-scroll");
+    const rect = (top: number, bottom = top + 20) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+    const place = (el: Element, top: number, bottom?: number) => { (el as HTMLElement).getBoundingClientRect = () => rect(top, bottom); };
+    place(scroll, 100, 600);
+    const an1 = document.querySelector("[data-year='1']")!;
+    place(an1, 40, 300);
+    place(document.querySelector("[data-year='2']")!, 300, 800);
+    const [janvier, mars] = an1.querySelectorAll("[data-date-group]");
+    place(janvier, 60);
+    place(mars, 250);
+    fireEvent.scroll(scroll);
+    expect(within(carte).getByRole("button", { name: "Janvier, An 1 · 1 salon" })).toHaveAttribute("aria-current", "true");
+
+    // Mars de l'an 1 : jusqu'à sa première date, sous la tête (0 sous jsdom).
+    const scrollTo = vi.fn();
+    scroll.scrollTo = scrollTo as never;
+    await user.click(within(carte).getByRole("button", { name: "Mars, An 1 · 1 salon" }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 150, behavior: "smooth" });
+
+    // Mars passe sous la tête : la mini-carte suit.
+    place(mars, 90);
+    fireEvent.scroll(scroll);
+    expect(within(carte).getByRole("button", { name: "Mars, An 1 · 1 salon" })).toHaveAttribute("aria-current", "true");
+    expect(within(carte).getByRole("button", { name: "Janvier, An 1 · 1 salon" })).not.toHaveAttribute("aria-current");
+  });
+
   it("l'en-tête résume la frise ; « Aujourd'hui » ramène à la date actuelle ; la légende des marques", async () => {
     const user = userEvent.setup();
     db.tables.world_timeline_arcs = [{ id: "exil", name: "L'exil", color: "#22c55e", position: 0 }];
@@ -428,7 +461,7 @@ describe("WorldTimeline — frise verticale", () => {
 
   it("sur cinq ans ou moins, pas de pastilles", async () => {
     await frise([room("a", "Début", 1, 0, 1), room("b", "Fin", 3, 0, 1)]);
-    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Périodes de la chronologie" })).toBeNull();
   });
 
   it("ouvrir un salon depuis la frise", async () => {

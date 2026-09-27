@@ -13,6 +13,7 @@ import {
   TIMELINE_PAGE,
   ageOf,
   arcRanks,
+  buildTimelineMinimap,
   buildTimelinePeriods,
   buildTimelineSections,
   effectiveRoomStatus,
@@ -53,6 +54,7 @@ import {
 import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
 import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
 import { TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
+import { TimelineMinimap } from "@/components/worlds/timeline/TimelineMinimap";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
 // seulement une fois ouverts : leur code (sélecteur de date, formulaires)
 // n'est chargé qu'à la première ouverture.
@@ -144,12 +146,19 @@ export function WorldTimeline({
   // La hauteur de la tête collée (recherche, filtres, périodes) : les bornes
   // des années se collent juste dessous (`--tl-head`).
   const [headHeight, setHeadHeight] = useState(0);
+  // Le haut du bandeau de position dans la tête : la mini-carte commence en
+  // face de lui.
+  const [positionTop, setPositionTop] = useState(0);
   useEffect(() => {
     const head = headRef.current;
     if (!head || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => setHeadHeight(head.offsetHeight));
+    const measure = () => {
+      setHeadHeight(head.offsetHeight);
+      setPositionTop(head.querySelector<HTMLElement>("[data-testid='timeline-position']")?.offsetTop ?? head.offsetHeight);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(head);
-    setHeadHeight(head.offsetHeight);
+    measure();
     return () => observer.disconnect();
   }, []);
   const listRef = useRef<HTMLDivElement>(null);
@@ -573,6 +582,18 @@ export function WorldTimeline({
   );
   const hoveredArc = hoveredArcs.length === 1 ? arcsById.get(hoveredArcs[0]) ?? null : null;
 
+  // La mini-carte : toute la frise filtrée, pas seulement la fenêtre rendue.
+  // L'arc isolé : celui du salon survolé, sinon celui du filtre.
+  const minimap = useMemo(
+    () => buildTimelineMinimap(sections, config.month_names.length),
+    [sections, config.month_names.length],
+  );
+  const isolatedArc = hoveredArc ?? (filters.arcId ? arcsById.get(filters.arcId) ?? null : null);
+  function goToMonth(year: number, month: number) {
+    const stop = stops.find((st) => st.year === year && st.month === month);
+    if (stop) scrollToStop(stop);
+  }
+
   // Les salons de chaque période, sur sa pastille.
   const periodRooms = useMemo(() => {
     const counts = new Map<string, number>();
@@ -602,10 +623,13 @@ export function WorldTimeline({
       {empty && !canManage ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
       ) : (
+        <div className="flex min-h-0 flex-1">
         <div
           ref={scrollRef}
           onScroll={() => updatePosition(true)}
-          className="relative flex-1 overflow-y-auto"
+          // Une barre de défilement fine et sombre : pas de bande claire entre
+          // la frise et la mini-carte.
+          className="relative min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-muted)_transparent] [scrollbar-width:thin] dark:[color-scheme:dark]"
           style={{ ["--tl-head" as string]: `${headHeight}px` }}
           data-testid="timeline-scroll"
         >
@@ -814,6 +838,20 @@ export function WorldTimeline({
               </TimelineOverlays>
             </div>
           )}
+        </div>
+        {!data.loading && sections.length > 0 && (
+          <TimelineMinimap
+            className="hidden lg:flex"
+            config={config}
+            years={minimap.years}
+            max={minimap.max}
+            current={position}
+            isolatedArc={isolatedArc}
+            onYear={(year) => scrollToYear(year, true)}
+            onMonth={goToMonth}
+            top={positionTop}
+          />
+        )}
         </div>
       )}
 

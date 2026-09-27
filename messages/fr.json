@@ -640,6 +640,8 @@
       "previousMonth": "Mois précédent",
       "nextMonth": "Mois suivant",
       "legend": "Légende",
+      "minimapLabel": "Aperçu de la frise",
+      "minimapMonth": "{month}, {year} · {count, plural, one {# salon} other {# salons}}{event, select, true { · événement} other {}}",
       "arcs": "Arcs",
       "noMatch": "Rien ne correspond à la recherche ou aux filtres.",
       "arcOf": "arc {name}",

@@ -564,3 +564,53 @@ export function timelineMonthStops(sections: readonly TimelineYearSection[]): Ti
   }
   return stops;
 }
+
+// ── Mini-carte ───────────────────────────────────────────────
+
+/** Un mois de la mini-carte : ses salons, s'il a du contenu, un événement, des arcs. */
+export type TimelineMinimapMonth = {
+  rooms: number;
+  /** Tout ce qu'il réunit : salons, événements, fêtes, journaux. */
+  items: number;
+  /** Un événement du monde, ou la fin d'un événement qui dure. */
+  hasEvent: boolean;
+  arcIds: ReadonlySet<string>;
+};
+export type TimelineMinimapYear = { year: number; months: TimelineMinimapMonth[] };
+
+/**
+ * La mini-carte de la frise : chaque année, et chacun des mois du calendrier.
+ * À calculer sur les sections filtrées, avant la fenêtre rendue : elle couvre
+ * toute la chronologie. Une date sans mois n'y paraît pas. `max` : le plus de
+ * salons sur un mois, au moins 1 (la largeur des barres s'y rapporte).
+ */
+export function buildTimelineMinimap(
+  sections: readonly TimelineYearSection[],
+  monthCount: number,
+): { years: TimelineMinimapYear[]; max: number } {
+  let max = 1;
+  const years = sections.map((s) => {
+    const months = Array.from({ length: Math.max(1, monthCount) }, () => ({
+      rooms: 0,
+      items: 0,
+      hasEvent: false,
+      arcIds: new Set<string>(),
+    }));
+    for (const g of s.groups) {
+      const m = g.month === null ? undefined : months[g.month];
+      if (!m) continue;
+      for (const item of g.items) {
+        m.items++;
+        if (item.kind === "room") {
+          m.rooms++;
+          if (item.arcId) m.arcIds.add(item.arcId);
+        } else if (item.kind === "event" || item.kind === "eventEnd") {
+          m.hasEvent = true;
+        }
+      }
+    }
+    for (const m of months) max = Math.max(max, m.rooms);
+    return { year: s.year, months };
+  });
+  return { years, max };
+}

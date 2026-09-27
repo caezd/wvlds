@@ -640,6 +640,8 @@
       "previousMonth": "Mes anterior",
       "nextMonth": "Mes siguiente",
       "legend": "Leyenda",
+      "minimapLabel": "Vista general de la cronología",
+      "minimapMonth": "{month}, {year} · {count, plural, one {# sala} other {# salas}}{event, select, true { · evento} other {}}",
       "arcs": "Arcos",
       "noMatch": "Nada coincide con la búsqueda o los filtros.",
       "arcOf": "arco {name}",
