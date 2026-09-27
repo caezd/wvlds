@@ -56,6 +56,8 @@ import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
 import { TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
 import { TimelineMinimap } from "@/components/worlds/timeline/TimelineMinimap";
 import { RoomPreviewProvider, TimelineRoomPreview } from "@/components/worlds/timeline/TimelineRoomPreview";
+import { TimelineRoomDrawer } from "@/components/worlds/timeline/TimelineRoomDrawer";
+import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
 // seulement une fois ouverts : leur code (sélecteur de date, formulaires)
 // n'est chargé qu'à la première ouverture.
@@ -612,6 +614,45 @@ export function WorldTimeline({
     return counts;
   }, [sections, periodOf]);
 
+  // Au doigt, pas de survol : un appui sur un salon ouvre son tiroir plutôt
+  // que le salon, et la carte de survol est retirée (elle s'ouvrait parfois
+  // à l'appui). `drawerRoom` reste posé à la fermeture (le tiroir glisse
+  // avec son contenu).
+  const coarse = useMediaQuery(MEDIA.pointeurGrossier);
+  const [drawerRoom, setDrawerRoom] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  function openRoom(id: string) {
+    if (coarse) {
+      setDrawerRoom(id);
+      setDrawerOpen(true);
+    } else router.push(`/c/${id}`);
+  }
+  const drawer = useMemo(() => {
+    if (!drawerRoom) return null;
+    const rooms = allItems.filter((i): i is TimelineRoomItem => i.kind === "room");
+    const room = rooms.find((r) => r.id === drawerRoom);
+    if (!room) return null;
+    const arc = room.arcId ? arcsById.get(room.arcId) ?? null : null;
+    const episodes = arc
+      ? rooms
+          .filter((r) => r.arcId === arc.id && ranks.has(r.id))
+          .map((r) => ({ id: r.id, title: r.title, date: r.date, status: r.status, rank: ranks.get(r.id)! }))
+          .sort((a, b) => a.rank - b.rank)
+      : [];
+    // Les voisins sur la frise, telle que les filtres la montrent.
+    const order = sections.flatMap((sec) => sec.groups.flatMap((g) => g.items.filter((i) => i.kind === "room").map((i) => i.id)));
+    const at = order.indexOf(room.id);
+    return {
+      room: { id: room.id, title: room.title, date: room.date, status: room.status },
+      arc,
+      rank: ranks.get(room.id) ?? null,
+      episodes,
+      participants: roomPreview.participantsOf(room.id),
+      previousId: at > 0 ? order[at - 1] : null,
+      nextId: at >= 0 && at < order.length - 1 ? order[at + 1] : null,
+    };
+  }, [drawerRoom, allItems, arcsById, ranks, sections, roomPreview]);
+
   const nowLabel = t("settings.timelinePreviewLabel");
   const empty = !data.loading && allItems.length === 0;
 
@@ -773,7 +814,7 @@ export function WorldTimeline({
           ) : sections.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted-foreground" data-testid="timeline-no-match">{tv("noMatch")}</p>
           ) : (
-            <RoomPreviewProvider value={roomPreview}>
+            <RoomPreviewProvider value={coarse ? null : roomPreview}>
             <div
               ref={listRef}
               className="relative"
@@ -825,7 +866,7 @@ export function WorldTimeline({
                         ranks={ranks}
                         canManage={canManage}
                         highlight={highlight}
-                        onOpenRoom={(id) => router.push(`/c/${id}`)}
+                        onOpenRoom={openRoom}
                         onOpenWiki={(slug) => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`)}
                         onEditEvent={(id) => {
                           const event = eventsById.get(id);
@@ -883,6 +924,22 @@ export function WorldTimeline({
           </div>
         </div>
       )}
+
+      <TimelineRoomDrawer
+        open={drawerOpen && !!drawer}
+        onOpenChange={setDrawerOpen}
+        config={config}
+        supabase={data.supabase}
+        room={drawer?.room ?? null}
+        arc={drawer?.arc ?? null}
+        rank={drawer?.rank ?? null}
+        episodes={drawer?.episodes ?? []}
+        participants={drawer?.participants ?? []}
+        previousId={drawer?.previousId ?? null}
+        nextId={drawer?.nextId ?? null}
+        onSelect={setDrawerRoom}
+        onOpenRoom={(id) => router.push(`/c/${id}`)}
+      />
 
       {canManage && eventDialogUsed && (
         <TimelineEventDialog

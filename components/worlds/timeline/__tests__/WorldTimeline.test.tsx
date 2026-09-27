@@ -87,6 +87,9 @@ beforeEach(() => {
   db.rpcs = {};
   db.writes = [];
   db.rooms = [];
+  // Un test qui simule le doigt (matchMedia) ou navigue ne déborde pas sur le suivant.
+  push.mockClear();
+  __clearRoomPreviewCache();
   rpc.mockReset();
   rpc.mockImplementation((name: string, args: { p_with_journals?: boolean }) =>
     name === "get_world_timeline"
@@ -95,6 +98,7 @@ beforeEach(() => {
 });
 
 import { WorldTimeline } from "@/components/worlds/timeline/WorldTimeline";
+import { __clearRoomPreviewCache } from "@/components/worlds/timeline/TimelineRoomPreview";
 
 const CONFIG: WorldTimelineConfig = {
   year_label: "An",
@@ -342,6 +346,75 @@ describe("WorldTimeline — frise verticale", () => {
     expect(titre).toHaveAttribute("data-state", "closed");
     await user.hover(titre);
     expect(await screen.findByText("« Ne me mens pas. »", {}, { timeout: 2000 })).toBeInTheDocument();
+  });
+
+  it("au doigt, un appui sur un salon ouvre son tiroir : arc, participants, dernier message, épisodes, voisins", async () => {
+    // Le doigt : un `matchMedia` le temps du test (celui du setup est un
+    // vi.fn, qu'un spyOn ne rendrait pas intact).
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("coarse"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    try {
+      const user = userEvent.setup();
+      db.tables.world_timeline_arcs = [{ id: "arc", name: "L'héritière", color: "#a78bfa", position: 0 }];
+      db.tables.chatrooms = [
+        { id: "a", arc_id: "arc", category_id: null, status: "completed" },
+        { id: "b", arc_id: "arc", category_id: null },
+        { id: "c", arc_id: null, category_id: null },
+      ];
+      db.tables.chatroom_sequels = [suite("a", "b")];
+      db.rpcs.get_chatroom_personas = {
+        data: [
+          { chat_id: "a", persona_id: "p1", persona_name: "Mira", group_color: "#ef4444" },
+          { chat_id: "a", persona_id: "p2", persona_name: "Tess", group_color: "#3b82f6" },
+        ],
+        error: null,
+      };
+      db.tables.chat_messages = [{ content: "— Tu savais, depuis le début.", created_at: new Date().toISOString() }];
+      await frise([room("a", "Le testament scellé", 1, 2, 3), room("b", "Une lettre sans cachet", 1, 2, 9), room("c", "Ailleurs", 1, 2, 20)]);
+
+      const titre = screen.getByRole("button", { name: /^Le testament scellé/ });
+      // Au doigt, pas de carte de survol sur le titre.
+      expect(titre).not.toHaveAttribute("data-state");
+      await user.click(titre);
+      // Pas de navigation : le tiroir.
+      expect(push).not.toHaveBeenCalled();
+      const tiroir = await screen.findByTestId("timeline-room-drawer");
+      expect(tiroir.className.split(" ")).toContain("rounded-lg");
+      expect(within(tiroir).getByTestId("timeline-drawer-arc")).toHaveTextContent("L'héritière· 1/2");
+      expect(within(tiroir).getByRole("heading", { name: "Le testament scellé" })).toBeInTheDocument();
+      expect(tiroir).toHaveTextContent("3 Mars, An 1 · terminé");
+      expect(within(tiroir).getByTestId("timeline-drawer-people")).toHaveTextContent("MMiraTTess");
+      expect(await within(tiroir).findByText("« — Tu savais, depuis le début. »")).toBeInTheDocument();
+      const episodes = within(tiroir).getByRole("region", { name: "Épisodes de l’arc" });
+      expect(within(episodes).getAllByRole("button").map((b) => b.textContent)).toEqual([
+        "1Le testament scelléMar · An 1",
+        "2Une lettre sans cachetMar · An 1",
+      ]);
+      expect(within(episodes).getAllByRole("button")[0]).toHaveAttribute("aria-current", "true");
+
+      // Le salon d'avant : aucun ; d'après : la lettre, puis « Ailleurs », sans arc.
+      expect(within(tiroir).getByRole("button", { name: "Salon précédent" })).toBeDisabled();
+      await user.click(within(tiroir).getByRole("button", { name: "Salon suivant" }));
+      expect(await within(tiroir).findByRole("heading", { name: "Une lettre sans cachet" })).toBeInTheDocument();
+      await user.click(within(tiroir).getByRole("button", { name: "Salon suivant" }));
+      expect(await within(tiroir).findByRole("heading", { name: "Ailleurs" })).toBeInTheDocument();
+      expect(within(tiroir).queryByTestId("timeline-drawer-arc")).toBeNull();
+      expect(within(tiroir).queryByRole("region", { name: "Épisodes de l’arc" })).toBeNull();
+
+      await user.click(within(tiroir).getByRole("button", { name: /Ouvrir le salon/ }));
+      expect(push).toHaveBeenCalledWith("/c/c");
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it("l'en-tête résume la frise ; « Aujourd'hui » ramène à la date actuelle ; la légende des marques", async () => {
