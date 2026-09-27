@@ -860,12 +860,16 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     expect(ligne("d")).toHaveAttribute("data-status", "abandoned");
 
     const anneau = (id: string) => within(ligne(id)).getByTestId("timeline-ring");
-    // En cours : creux. En sommeil : un quart plein. Terminé : plein. Abandonné : en pointillés.
-    // (Le quart plein est un `conic-gradient`, que jsdom ne sait pas lire :
-    // on vérifie qu'un salon en cours n'a pas de dégradé, et que l'anneau en
-    // sommeil garde le fond qui découpe le fil.)
-    expect(anneau("a").getAttribute("style") ?? "").not.toMatch(/gradient/);
+    // En cours : creux. En sommeil : le signe pause couché (« = »), sur le
+    // fond qui découpe le fil. Terminé : plein. Abandonné : en pointillés.
+    // Une bordure de 2px.
+    expect(anneau("a").className.split(" ")).toContain("border-2");
+    expect(within(anneau("a")).queryByTestId("timeline-pause-mark")).toBeNull();
+    const pause = within(anneau("b")).getByTestId("timeline-pause-mark");
+    expect(pause.children).toHaveLength(2);
+    expect(pause.firstElementChild!.className.split(" ")).toEqual(expect.arrayContaining(["bg-current", "h-[1.5px]"]));
     expect(anneau("b").className).toContain("bg-body");
+    expect(anneau("b").getAttribute("style") ?? "").not.toMatch(/gradient/);
     expect(anneau("c").className).toContain("bg-foreground/35");
     expect(anneau("d").className.split(" ")).toContain("border-dashed");
     // Le statut est lu, sauf « en cours ».

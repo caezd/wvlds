@@ -53,7 +53,7 @@ import {
 } from "@/components/worlds/timeline/SuiteLinks";
 import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
 import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
-import { TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
+import { PauseBars, TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
 import { TimelineMinimap } from "@/components/worlds/timeline/TimelineMinimap";
 import { RoomPreviewProvider, TimelineRoomPreview } from "@/components/worlds/timeline/TimelineRoomPreview";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
@@ -954,7 +954,7 @@ function TimelineSkeleton({ label }: { label: string }) {
                       {dates.map((d, i) => (
                         <li key={i} className="relative flex h-5 items-center gap-2">
                           <span className={cn(SKELETON_BAR, "absolute right-[calc(100%+2.5rem)] top-0.5 h-4 w-4")} />
-                          <span className={cn("absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] border-border", AMBIENT_BG)} />
+                          <span className={cn("absolute -left-[33.5px] top-1 size-3 rounded-full border-2 border-border", AMBIENT_BG)} />
                           <span className={cn(SKELETON_BAR, "h-3.5")} style={{ width: `${d.title}%` }} />
                           <span className={cn(SKELETON_BAR, "h-2.5 opacity-60")} style={{ width: `${d.by}%` }} />
                         </li>
@@ -1290,23 +1290,24 @@ function RoomRow({
       <DayGutter day={day} />
       {/* Un anneau par salon, sur le fil, centré sur son titre (ligne de
           20px), à la couleur de son arc ; il fonce au survol. Son remplissage
-          dit le statut : creux en cours, un quart plein en sommeil, plein
-          terminé, en pointillés abandonné. */}
+          dit le statut : creux en cours, le signe pause couché (« = ») en
+          sommeil, plein terminé, en pointillés abandonné. */}
       <span
         className={cn(
-          "absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] transition-colors",
+          "absolute -left-[33.5px] top-1 flex size-3 items-center justify-center rounded-full border-2 transition-colors",
           !arc && "border-foreground/35 text-foreground/35 group-hover/room:border-foreground group-hover/room:text-foreground",
           status === "abandoned" && "border-dashed",
           status === "completed" && !arc ? "bg-foreground/35 group-hover/room:bg-foreground" : status !== "completed" && AMBIENT_BG,
         )}
         style={{
-          ...(arc ? { borderColor: arc.color } : {}),
+          ...(arc ? { borderColor: arc.color, color: arc.color } : {}),
           ...(status === "completed" && arc ? { backgroundColor: arc.color } : {}),
-          ...(status === "dormant" ? { backgroundImage: `conic-gradient(${arc?.color ?? "currentColor"} 0 25%, transparent 0)` } : {}),
         }}
         data-testid="timeline-ring"
         aria-hidden
-      />
+      >
+        {status === "dormant" && <PauseBars />}
+      </span>
       {/* Au survol, l'aperçu du salon (participants, dernier message). */}
       <TimelineRoomPreview roomId={item.id} status={status}>
         <button
