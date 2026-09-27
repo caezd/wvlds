@@ -38,11 +38,13 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     const user = userEvent.setup();
     render(<Harnais onPersist={onPersist} />);
 
-    const ere = screen.getByLabelText("Ère / suffixe");
+    const ere = screen.getByLabelText(/^Ère \/ suffixe/);
     await user.clear(ere);
     await user.type(ere, "après la Chute");
 
     expect(within(screen.getByTestId("timeline-preview")).getByText("Dégel, an 342 après la Chute")).toBeInTheDocument();
+    // Et l'aperçu sous le format, au même instant.
+    expect(screen.getByTestId("timeline-format-preview")).toHaveTextContent("Dégel, an 342 après la Chute");
     // L'écriture n'a lieu qu'à la sortie du champ.
     expect(onPersist).not.toHaveBeenCalled();
     await user.tab();
@@ -73,14 +75,32 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     }
   });
 
-  it("le calendrier dit la longueur de l'année qu'il compose", () => {
+  it("le calendrier dit la longueur de l'année qu'il compose ; la date actuelle, où l'on en est dans l'année", () => {
     render(<Harnais />);
-    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("2 mois · 58 jours par an");
+    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("2 mois · 58 jours");
+    const date = screen.getByTestId("timeline-preview");
+    expect(date).toHaveTextContent("Mois 2 / 2");
+    expect(date).toHaveTextContent("58 jours par an");
+    // Une barre par mois ; le mois actuel marqué.
+    const barres = within(date).getByTestId("timeline-month-progress").children;
+    expect(barres).toHaveLength(2);
+    expect(barres[1]).toHaveAttribute("data-current", "true");
+  });
+
+  it("l'année actuelle se règle aussi d'un pas, en moins ou en plus", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+    await user.click(screen.getByRole("button", { name: "Année suivante" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ current_year: 343 });
+    await user.click(screen.getByRole("button", { name: "Année précédente" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ current_year: 342 });
   });
 
   it("l'accord suit les nombres : un mois d'un jour s'écrit au singulier", () => {
     render(<Harnais initial={{ ...CONFIG, month_names: ["Unique"], days_per_month: [1], current_month: 0 }} />);
-    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("1 mois · 1 jour par an");
+    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("1 mois · 1 jour");
+    expect(screen.getByTestId("timeline-preview")).toHaveTextContent("1 jour par an");
   });
 
   it("sans mois, il le dit plutôt que de laisser une liste vide", () => {

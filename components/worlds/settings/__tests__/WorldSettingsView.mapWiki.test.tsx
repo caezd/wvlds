@@ -120,45 +120,27 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(screen.getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "false");
   });
 
-  it("deux colonnes ou une : les catégories à gauche ; sous md, la catégorie se déplie sous son nom", async () => {
-    monter();
+  it("les catégories à gauche, chacune avec son état ; la page de la catégorie choisie à droite", async () => {
+    monter({ enable_map: true, enable_wiki: false });
     await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
     const nav = screen.getByRole("navigation", { name: "Catégories de fonctions" });
-    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(
+    expect(within(nav).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
       expect.arrayContaining(["Catalogue", "Carte", "Wiki", "Personas"]),
     );
-    // Sous md (jsdom), le catalogue est déplié sous son nom, les autres repliés.
-    expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-expanded", "true");
-    expect(within(nav).getByRole("region", { name: "Catalogue" })).toBeInTheDocument();
-    expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAttribute("aria-expanded", "false");
-    // Un second clic replie.
-    await userEvent.click(within(nav).getByRole("button", { name: "Catalogue" }));
-    expect(within(nav).queryByRole("region", { name: "Catalogue" })).toBeNull();
-  });
+    // L'état se lit en description : « Actif » ou « Off ».
+    expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAccessibleDescription("Actif");
+    expect(within(nav).getByRole("button", { name: "Wiki" })).toHaveAccessibleDescription("Off");
 
-  it("sur grand écran, la catégorie choisie s'affiche à droite, sous son titre", async () => {
-    const avant = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: true, media: query, onchange: null,
-      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
-    try {
-      monter();
-      await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
-      const nav = screen.getByRole("navigation", { name: "Catégories de fonctions" });
-      // Le catalogue, d'emblée : marqué à gauche, ses réglages à droite.
-      expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-current", "true");
-      expect(within(nav).queryByRole("region")).toBeNull();
-      const droite = screen.getByRole("region", { name: "Catalogue" });
-      expect(within(droite).getByRole("heading", { name: "Catalogue" })).toBeInTheDocument();
-      expect(nav).not.toContainElement(droite);
-      // Choisir la carte remplace la colonne de droite.
-      await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
-      expect(screen.getByRole("region", { name: "Carte" })).toBeInTheDocument();
-      expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
-      expect(screen.getByRole("switch", { name: "Activer la carte" })).toBeInTheDocument();
-    } finally {
-      window.matchMedia = avant;
-    }
+    // Le catalogue d'emblée ; une seule page visible à la fois.
+    expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("region", { name: "Catalogue" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Carte" })).toBeNull();
+
+    await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
+    const carte = screen.getByRole("region", { name: "Carte" });
+    expect(within(carte).getByRole("heading", { name: /Carte/ })).toBeInTheDocument();
+    // L'interrupteur encadré de l'en-tête dit l'état, et le change.
+    expect(within(carte).getByText("Activée")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
   });
 });

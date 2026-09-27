@@ -6,11 +6,10 @@ import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
 import { TabsContent } from "@/components/ui/tabs";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { World } from "@/types/worlds";
-import { LabelWithHelp } from "./LabelWithHelp";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
 
 /** Les catégories de fonctions, dans la colonne de gauche. */
@@ -44,10 +43,9 @@ import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldP
 import { TimelineSettings } from "./TimelineSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BookOpen, ChevronDown, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
-import { useMediaQuery, MEDIA } from "@/hooks/useMediaQuery";
+import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FeatureOption, FeatureRow } from "./FeatureRow";
+import { FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
  * Onglet « Fonctions » des réglages d'un monde : inventaire et compétences,
@@ -105,10 +103,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         world.timeline_config ?? defaultConfig,
     );
     const [togglingTimeline, setTogglingTimeline] = React.useState(false);
-    // La catégorie affichée : à droite en deux colonnes ; dépliée sous son
-    // nom en une (où l'on peut aussi tout replier).
-    const deuxColonnes = useMediaQuery(MEDIA.md);
-    const [sectionId, setSectionId] = React.useState<FeatureSectionId | null>("catalogue");
+    // La catégorie affichée, et l'état de celle des personas (sa section le
+    // charge elle-même).
+    const [sectionId, setSectionId] = React.useState<FeatureSectionId>("catalogue");
+    const [personasActive, setPersonasActive] = React.useState(false);
 
     async function handleEnableToggle(field: "inventory" | "skills", enabled: boolean) {
         setTogglingEnable(true);
@@ -211,78 +209,100 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         else onUpdated?.({ ...world, timeline_config: next } as World);
     }
 
-    const sections: { id: FeatureSectionId; icon: LucideIcon; label: string; content: React.ReactNode }[] = [
+    const on = tSettings("statusOn");
+    const off = tSettings("statusOff");
+    const sections: { id: FeatureSectionId; icon: LucideIcon; label: string; active: boolean; page: React.ReactNode }[] = [
         {
             id: "catalogue",
             icon: Package,
             label: t("nav.catalogue"),
-            content: (
-                <>
-                    <FeatureRow
-                        label={tSettings("inventoryItems")}
-                        help={tSettings("inventoryItemsHelp")}
-                        checked={enableInventory}
-                        disabled={togglingEnable}
-                        onCheckedChange={v => void handleEnableToggle("inventory", v)}
-                    >
-                        <FeatureOption label={t("restrictToCatalogue")} help={tSettings("restrictInventoryHelp")}>
-                            <Switch
-                                checked={restrictInventory}
-                                disabled={togglingRestriction}
-                                onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
-                                aria-label={`${tSettings("inventoryItems")} : ${t("restrictToCatalogue")}`}
-                                className="shrink-0"
+            active: enableInventory || enableSkills || enableFaceclaims,
+            page: (
+                <FeaturePage title={t("nav.catalogue")} help={tSettings("catalogueHelp")}>
+                    <ToggleList>
+                        <ToggleItem
+                            title={tSettings("inventoryItems")}
+                            help={tSettings("inventoryItemsHelp")}
+                            checked={enableInventory}
+                            disabled={togglingEnable}
+                            onCheckedChange={v => void handleEnableToggle("inventory", v)}
+                        />
+                        {enableInventory && (
+                            <ToggleItem
+                                indent
+                                title={t("restrictToCatalogue")}
+                                help={tSettings("restrictInventoryHelp")}
+                                control={
+                                    <Switch
+                                        checked={restrictInventory}
+                                        disabled={togglingRestriction}
+                                        onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
+                                        aria-label={`${tSettings("inventoryItems")} : ${t("restrictToCatalogue")}`}
+                                        className="shrink-0"
+                                    />
+                                }
                             />
-                        </FeatureOption>
-                    </FeatureRow>
-                    <FeatureRow
-                        label={t("tabSkills")}
-                        help={tSettings("skillsHelp")}
-                        checked={enableSkills}
-                        disabled={togglingEnable}
-                        onCheckedChange={v => void handleEnableToggle("skills", v)}
-                    >
-                        <FeatureOption label={t("restrictToCatalogue")} help={tSettings("restrictSkillsHelp")}>
-                            <Switch
-                                checked={restrictSkills}
-                                disabled={togglingRestriction}
-                                onCheckedChange={v => void handleRestrictionToggle("skills", v)}
-                                aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
-                                className="shrink-0"
+                        )}
+                        <ToggleItem
+                            title={t("tabSkills")}
+                            help={tSettings("skillsHelp")}
+                            checked={enableSkills}
+                            disabled={togglingEnable}
+                            onCheckedChange={v => void handleEnableToggle("skills", v)}
+                        />
+                        {enableSkills && (
+                            <ToggleItem
+                                indent
+                                title={t("restrictToCatalogue")}
+                                help={tSettings("restrictSkillsHelp")}
+                                control={
+                                    <Switch
+                                        checked={restrictSkills}
+                                        disabled={togglingRestriction}
+                                        onCheckedChange={v => void handleRestrictionToggle("skills", v)}
+                                        aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
+                                        className="shrink-0"
+                                    />
+                                }
                             />
-                        </FeatureOption>
-                    </FeatureRow>
-                    <FeatureRow
-                        label={tCatalogue("faceclaims")}
-                        help={tSettings("faceclaimsHelp")}
-                        checked={enableFaceclaims}
-                        disabled={togglingFaceclaims}
-                        onCheckedChange={v => void handleFaceclaimsToggle(v)}
-                    >
-                        <FeatureOption label={tSettings("requireFaceclaim")} help={tSettings("requireFaceclaimHelp")}>
-                            <Switch
+                        )}
+                        <ToggleItem
+                            title={tCatalogue("faceclaims")}
+                            help={tSettings("faceclaimsHelp")}
+                            checked={enableFaceclaims}
+                            disabled={togglingFaceclaims}
+                            onCheckedChange={v => void handleFaceclaimsToggle(v)}
+                        />
+                        {enableFaceclaims && (
+                            <ToggleItem
+                                indent
+                                title={tSettings("requireFaceclaim")}
+                                help={tSettings("requireFaceclaimHelp")}
                                 checked={requireFaceclaim}
                                 disabled={togglingRequireFaceclaim}
                                 onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
-                                aria-label={tSettings("requireFaceclaim")}
-                                className="shrink-0"
                             />
-                        </FeatureOption>
-                    </FeatureRow>
-                </>
+                        )}
+                    </ToggleList>
+                </FeaturePage>
             ),
         },
         {
             id: "map",
             icon: MapIcon,
             label: t("nav.map"),
-            content: (
-                <FeatureRow
-                    label={t("enableMap")}
+            active: enableMap,
+            page: (
+                <FeaturePage
+                    title={t("nav.map")}
                     help={t("enableMapHelp")}
-                    checked={enableMap}
-                    disabled={togglingMap}
-                    onCheckedChange={v => void handleMapToggle(v)}
+                    toggle={{
+                        label: tSettings(enableMap ? "enabledF" : "disabledF"),
+                        ariaLabel: t("enableMap"),
+                        checked: enableMap,
+                        disabled: togglingMap,
+                        onCheckedChange: v => void handleMapToggle(v),
+                    }}
                 />
             ),
         },
@@ -290,54 +310,64 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
             id: "wiki",
             icon: BookOpen,
             label: tSettings("wiki"),
-            content: (
-                <FeatureRow
-                    label={t("enableWiki")}
+            active: enableWiki,
+            page: (
+                <FeaturePage
+                    title={tSettings("wiki")}
                     help={t("enableWikiHelp")}
-                    checked={enableWiki}
-                    disabled={togglingWiki}
-                    onCheckedChange={v => void handleWikiToggle(v)}
+                    toggle={{
+                        label: tSettings(enableWiki ? "enabledM" : "disabledM"),
+                        ariaLabel: t("enableWiki"),
+                        checked: enableWiki,
+                        disabled: togglingWiki,
+                        onCheckedChange: v => void handleWikiToggle(v),
+                    }}
                 >
-                    <FormField
-                        control={form.control}
-                        name="wiki_label"
-                        render={({ field }) => (
-                            <FormItem className="flex min-h-8 items-center justify-between gap-4 space-y-0">
-                                <FormLabel className="font-normal text-muted-foreground">
-                                    <LabelWithHelp help={t("wikiLabelHelp")}>
-                                        {tSettings("wikiLinkName")}
-                                    </LabelWithHelp>
-                                </FormLabel>
-                                <FormControl>
-                                    <Input
-                                        placeholder={t("nav.wiki")}
-                                        className="h-8 w-44 text-sm"
-                                        {...field}
-                                        onBlur={(e) => {
-                                            field.onBlur();
-                                            void persistField("wiki_label", e.target.value.trim());
-                                        }}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </FeatureRow>
+                    {/* Le nom du lien : sans wiki, il n'a pas lieu d'être. */}
+                    {enableWiki && (
+                        <SettingsSection title={tSettings("wikiLinkName")} help={t("wikiLabelHelp")}>
+                            <FormField
+                                control={form.control}
+                                name="wiki_label"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input
+                                                placeholder={t("nav.wiki")}
+                                                aria-label={tSettings("wikiLinkName")}
+                                                className="h-10 max-w-sm text-sm"
+                                                {...field}
+                                                onBlur={(e) => {
+                                                    field.onBlur();
+                                                    void persistField("wiki_label", e.target.value.trim());
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </SettingsSection>
+                    )}
+                </FeaturePage>
             ),
         },
         {
             id: "personas",
             icon: UserRound,
             label: t("nav.personas"),
-            content: (
-                <WorldPersonaTemplateSection
-                    worldId={world.id}
-                    restrictInventory={restrictInventory}
-                    restrictSkills={restrictSkills}
-                    reviewEnabled={!!world.persona_review_enabled}
-                    onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
-                />
+            active: personasActive,
+            page: (
+                <FeaturePage title={t("nav.personas")} help={tSettings("personasHelp")}>
+                    <WorldPersonaTemplateSection
+                        worldId={world.id}
+                        restrictInventory={restrictInventory}
+                        restrictSkills={restrictSkills}
+                        reviewEnabled={!!world.persona_review_enabled}
+                        onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
+                        onActiveChange={setPersonasActive}
+                    />
+                </FeaturePage>
             ),
         },
         ...(world_timeline
@@ -345,73 +375,90 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                 id: "timeline" as const,
                 icon: Clock,
                 label: t("nav.timeline"),
-                content: (
-                    <FeatureRow
-                        label={t("enableTimeline")}
+                active: timelineEnabled,
+                page: (
+                    <FeaturePage
+                        title={t("nav.timeline")}
                         help={tSettings("timelineHelp")}
-                        checked={timelineEnabled}
-                        disabled={togglingTimeline}
-                        onCheckedChange={v => void handleTimelineToggle(v)}
+                        toggle={{
+                            label: tSettings(timelineEnabled ? "enabledF" : "disabledF"),
+                            ariaLabel: t("enableTimeline"),
+                            checked: timelineEnabled,
+                            disabled: togglingTimeline,
+                            onCheckedChange: v => void handleTimelineToggle(v),
+                        }}
                     >
-                        <TimelineSettings
-                            config={timelineConfig}
-                            onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}
-                            onPersist={(patch) => void persistTimelineConfig(patch)}
-                        />
-                    </FeatureRow>
+                        {timelineEnabled && (
+                            <TimelineSettings
+                                config={timelineConfig}
+                                onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}
+                                onPersist={(patch) => void persistTimelineConfig(patch)}
+                            />
+                        )}
+                    </FeaturePage>
                 ),
             }]
             : []),
     ];
-    const current = sections.find((section) => section.id === sectionId) ?? null;
+
 
   return (
     <>
                         <TabsContent value="features" className="mt-0">
-                            {/* Deux colonnes : les catégories de fonctions à gauche,
-                                les réglages de celle choisie à droite. Sous md, la
-                                catégorie se déplie sous son nom (comme les rôles). */}
-                            <div className="mx-auto flex max-w-4xl flex-col gap-4 md:flex-row md:gap-8">
-                                <nav aria-label={tSettings("featuresNav")} className={cn("w-full shrink-0", deuxColonnes && "md:w-48")}>
+                            {/* Les catégories à gauche, avec leur état ; la page de
+                                celle choisie à droite. Toutes restent montées (seule
+                                la choisie paraît) : chacune garde son état, et
+                                celui des personas, chargé par sa section, reste juste
+                                dans la colonne. */}
+                            <div className="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:gap-10">
+                                <nav
+                                    aria-label={tSettings("featuresNav")}
+                                    className="shrink-0 md:w-52 md:border-r md:border-border-soft md:pr-4"
+                                >
+                                    <p className="px-2.5 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground" aria-hidden>
+                                        {tSettings("featuresTitle")}
+                                    </p>
                                     <ul className="space-y-0.5">
                                         {sections.map((section) => {
-                                            const active = section.id === sectionId;
+                                            const selected = section.id === sectionId;
                                             const Icon = section.icon;
                                             return (
                                                 <li key={section.id}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setSectionId((cur) => (!deuxColonnes && cur === section.id ? null : section.id))}
-                                                        aria-current={deuxColonnes && active ? "true" : undefined}
-                                                        aria-expanded={deuxColonnes ? undefined : active}
+                                                        onClick={() => setSectionId(section.id)}
+                                                        aria-current={selected ? "page" : undefined}
+                                                        // Nommé par sa catégorie ; son état se lit en description.
+                                                        aria-label={section.label}
+                                                        aria-describedby={`feature-status-${section.id}`}
                                                         className={cn(
                                                             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
-                                                            active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                                                            selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                                                         )}
                                                     >
                                                         <Icon className="size-4 shrink-0" aria-hidden />
                                                         <span className="min-w-0 flex-1 truncate">{section.label}</span>
-                                                        {!deuxColonnes && (
-                                                            <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", active && "rotate-180")} />
-                                                        )}
+                                                        <StatusPill id={`feature-status-${section.id}`} active={section.active} onLabel={on} offLabel={off} />
                                                     </button>
-                                                    {!deuxColonnes && active && (
-                                                        <section aria-label={section.label} className="divide-y divide-border-soft px-2.5 pb-2">
-                                                            {section.content}
-                                                        </section>
-                                                    )}
                                                 </li>
                                             );
                                         })}
                                     </ul>
                                 </nav>
 
-                                {deuxColonnes && current && (
-                                    <section aria-label={current.label} className="min-w-0 flex-1">
-                                        <h3 className="pb-1 text-base font-semibold">{current.label}</h3>
-                                        <div className="divide-y divide-border-soft">{current.content}</div>
-                                    </section>
-                                )}
+                                <div className="min-w-0 flex-1">
+                                    {sections.map((section) => (
+                                        <div
+                                            key={section.id}
+                                            hidden={section.id !== sectionId}
+                                            role="region"
+                                            aria-label={section.label}
+                                            data-feature-page={section.id}
+                                        >
+                                            {section.page}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </TabsContent>
 

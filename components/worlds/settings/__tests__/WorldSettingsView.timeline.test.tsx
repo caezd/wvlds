@@ -195,13 +195,14 @@ describe("WorldSettingsView — Chronologie — jours par mois", () => {
     setup();
     const user = await openTimelineSection(WITH_MONTHS);
 
-    await user.type(screen.getByPlaceholderText("Nom du mois…"), "Mars{Enter}");
+    // Un mois de plus, nommé d'office « Mois 3 » : on le renomme dans sa tuile.
+    await user.click(screen.getByRole("button", { name: "Ajouter un mois" }));
 
     await waitFor(() => {
       expect(setWorldTimelineMock).toHaveBeenCalledWith(
         "w1",
         true,
-        expect.objectContaining({ month_names: ["Janvier", "Février", "Mars"], days_per_month: [31, 28, 30] }),
+        expect.objectContaining({ month_names: ["Janvier", "Février", "Mois 3"], days_per_month: [31, 28, 30] }),
       );
     });
   });

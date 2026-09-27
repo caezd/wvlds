@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { FeatureOption, FeatureRow } from "./FeatureRow";
+import { ToggleItem, ToggleList } from "./FeatureLayout";
 import {
   Drawer,
   DrawerHeader,
@@ -48,6 +48,7 @@ export function WorldPersonaTemplateSection({
   restrictSkills,
   reviewEnabled = false,
   onReviewEnabledChange,
+  onActiveChange,
 }: {
   worldId: string;
   restrictInventory?: boolean;
@@ -55,6 +56,8 @@ export function WorldPersonaTemplateSection({
   /** Validation des fiches (migration 184) : option complémentaire de la fiche par défaut. */
   reviewEnabled?: boolean;
   onReviewEnabledChange?: (enabled: boolean) => void;
+  /** Une fiche par défaut existe (l'état de la catégorie Personas). */
+  onActiveChange?: (active: boolean) => void;
 }) {
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
@@ -136,39 +139,58 @@ export function WorldPersonaTemplateSection({
     setSections(await fetchPersonaSections(supabase, templateId));
   }
 
-  // Une ligne de la liste des fonctions (voir FeatureRow) ; les dialogues,
-  // hors de la liste, passent par des portails.
+  React.useEffect(() => {
+    if (loaded) onActiveChange?.(!!templateId);
+  }, [loaded, templateId, onActiveChange]);
+
+  // La fiche et ses options, en liste de réglages (voir FeatureLayout) ; les
+  // dialogues, hors de la liste, passent par des portails.
   return (
     <>
-      <FeatureRow
-        label={t("defaultSheet")}
-        help={tSettings("defaultSheetHelp")}
-        checked={!!templateId}
-        disabled={!loaded || toggling}
-        onCheckedChange={(v) => void handleToggle(v)}
-      >
-        <FeatureOption label={tSettings("editSheet")} help={tSettings("editSheetHelp")}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0"
-            onClick={() => void openEditor()}
-          >
-            <Pencil className="mr-1 h-3.5 w-3.5" />
-            {tSettings("editSheet")}
-          </Button>
-        </FeatureOption>
-        <FeatureOption label={t("personaReview.label")} help={t("personaReview.help")}>
-          <Switch
-            checked={reviewEnabled}
-            disabled={togglingReview}
-            onCheckedChange={(v) => void handleReviewToggle(v)}
-            aria-label={t("personaReview.label")}
-            className="shrink-0"
+      <ToggleList>
+        <ToggleItem
+          title={t("defaultSheet")}
+          help={tSettings("defaultSheetHelp")}
+          checked={!!templateId}
+          disabled={!loaded || toggling}
+          onCheckedChange={(v) => void handleToggle(v)}
+        />
+        {templateId && (
+          <ToggleItem
+            indent
+            title={t("personaReview.label")}
+            help={t("personaReview.help")}
+            control={
+              <Switch
+                checked={reviewEnabled}
+                disabled={togglingReview}
+                onCheckedChange={(v) => void handleReviewToggle(v)}
+                aria-label={t("personaReview.label")}
+                className="shrink-0"
+              />
+            }
           />
-        </FeatureOption>
-      </FeatureRow>
+        )}
+        {templateId && (
+          <ToggleItem
+            indent
+            title={tSettings("editSheet")}
+            help={tSettings("editSheetHelp")}
+            control={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0 border-border-soft bg-transparent"
+                onClick={() => void openEditor()}
+              >
+                <Pencil className="mr-1 h-3.5 w-3.5" />
+                {tSettings("editSheet")}
+              </Button>
+            }
+          />
+        )}
+      </ToggleList>
 
       {/* Confirmation de désactivation */}
       <AlertDialog open={confirmDisable} onOpenChange={setConfirmDisable}>
