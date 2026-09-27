@@ -647,7 +647,9 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
     expect(etiquette).toHaveTextContent("L'exil");
     const salon = etiquette.closest("li")!;
     expect(within(salon).getByTestId("timeline-ring")).toHaveStyle({ borderColor: "#22c55e" });
-    expect(screen.getByRole("button", { name: /arc L'exil/ })).toBeInTheDocument();
+    // Sans suite, pas un épisode : la couleur de l'arc, sans numéro.
+    const bouton = screen.getByRole("button", { name: "Exil à l'est, arc L'exil, 6 Janvier, An 1" });
+    expect(within(bouton).queryByTestId("timeline-arc-rank")).toBeNull();
   });
 
   it("le rang du salon dans son arc, avant le titre, stable quand on filtre", async () => {

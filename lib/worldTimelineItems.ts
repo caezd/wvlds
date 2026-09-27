@@ -508,13 +508,22 @@ export function suiteChainOf(pairs: readonly SuitePair[], id: string): ReadonlyS
 /**
  * Le rang de chaque salon dans son arc (1, 2, 3…), dans l'ordre du récit :
  * par date ; à date égale, la suite après le salon qu'elle suit, puis par
- * titre. À calculer sur tous les salons, pas sur ceux qu'un filtre laisse :
- * le rang d'un salon ne change pas quand on filtre.
+ * titre. Seuls les salons reliés par une suite (qu'ils suivent un salon ou
+ * qu'un salon les suive, acceptée ou proposée) ont un rang : un salon d'un
+ * arc sans suite n'en fait pas un épisode, il en garde seulement la couleur.
+ * À calculer sur tous les salons, pas sur ceux qu'un filtre laisse : le rang
+ * d'un salon ne change pas quand on filtre.
  */
 export function arcRanks(items: readonly TimelineItem[]): Map<string, number> {
+  const linked = new Set<string>();
+  for (const item of items) {
+    if (item.kind !== "room" || item.previousIds.length === 0) continue;
+    linked.add(item.id);
+    for (const id of item.previousIds) linked.add(id);
+  }
   const byArc = new Map<string, TimelineRoomItem[]>();
   for (const item of items) {
-    if (item.kind !== "room" || !item.arcId) continue;
+    if (item.kind !== "room" || !item.arcId || !linked.has(item.id)) continue;
     if (!byArc.has(item.arcId)) byArc.set(item.arcId, []);
     byArc.get(item.arcId)!.push(item);
   }

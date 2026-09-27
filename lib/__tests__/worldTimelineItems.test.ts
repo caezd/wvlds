@@ -313,17 +313,21 @@ describe("chaînes de suites", () => {
 });
 
 describe("arcRanks", () => {
-  it("numérote les salons de chaque arc dans l'ordre du récit ; la suite passe après, à date égale", async () => {
+  it("numérote les salons reliés par une suite de chaque arc, dans l'ordre du récit ; la suite passe après, à date égale", async () => {
     const { arcRanks } = await import("@/lib/worldTimelineItems");
     const ranks = arcRanks([
-      salon("c", 3, 0, 1, { arcId: "exil" } as Partial<TimelineItem>),
+      salon("c", 3, 0, 1, { arcId: "exil", previousIds: ["b"] } as Partial<TimelineItem>),
       salon("b", 1, 2, 9, { arcId: "exil", previousIds: ["a"] } as Partial<TimelineItem>),
       salon("a", 1, 2, 9, { arcId: "exil" } as Partial<TimelineItem>),
+      // Dans l'arc, mais sans suite : pas d'épisode, pas de rang.
+      salon("seul", 1, 0, 5, { arcId: "exil" } as Partial<TimelineItem>),
       salon("x", 1, 0, 1, { arcId: "crue" } as Partial<TimelineItem>),
+      // Une suite depuis un salon hors arc suffit.
+      salon("y", 1, 3, 1, { arcId: "crue", previousIds: ["libre"] } as Partial<TimelineItem>),
       salon("libre", 1, 0, 1),
       evenement("e", 1, 0, 1),
     ]);
-    expect(Object.fromEntries(ranks)).toEqual({ a: 1, b: 2, c: 3, x: 1 });
+    expect(Object.fromEntries(ranks)).toEqual({ a: 1, b: 2, c: 3, y: 1 });
   });
 });
 
