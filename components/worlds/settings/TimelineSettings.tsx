@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HelpHint } from "@/components/ui/help-hint";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Le rouge de la date actuelle, comme sur la frise : l'accent en sombre, un rouge franc en clair. */
@@ -33,6 +34,10 @@ const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus
 const LIST_ROW = "flex h-12 items-center gap-2 rounded-md border border-border-soft bg-card pl-2 pr-1.5";
 /** Une petite case de saisie dans une ligne : une année, un jour. */
 const SMALL_BOX = "h-8 rounded-md border border-border-soft bg-background px-2 text-center text-sm shadow-none focus-visible:ring-1";
+/** Un sélecteur (shadcn) dans une ligne : aux mesures des petites cases. */
+const SMALL_SELECT = "h-8 w-32 rounded-md border-border-soft bg-background px-2 text-sm shadow-none data-[size=default]:h-8";
+/** « Aucun mois » : Radix n'accepte pas de valeur vide pour une option. */
+const NO_MONTH = "none";
 /** Un champ numérique sans flèches. */
 const NO_SPIN = "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
@@ -205,18 +210,23 @@ export function TimelineSettings({
             <Label htmlFor="timeline-current-month" className="text-xs font-normal text-muted-foreground">{tSettings("currentMonth")}</Label>
             {/* Sans mois défini, le champ reste là mais se tait : il
                 disparaissait, et la rangée se retrouvait bancale. */}
-            <select
-              id="timeline-current-month"
-              value={config.current_month ?? ""}
+            <Select
+              value={moisCourant === null ? NO_MONTH : String(moisCourant)}
               disabled={nbMois === 0}
-              className="h-10 w-full rounded-md border border-border bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              onChange={(e) => onPersist({ current_month: e.target.value === "" ? null : Number(e.target.value) })}
+              onValueChange={(v) => onPersist({ current_month: v === NO_MONTH ? null : Number(v) })}
             >
-              <option value="">{nbMois === 0 ? tSettings("noMonths") : "—"}</option>
-              {config.month_names.map((m, i) => (
-                <option key={i} value={i}>{m}</option>
-              ))}
-            </select>
+              <SelectTrigger id="timeline-current-month" className="h-10 w-full rounded-md border-border data-[size=default]:h-10">
+                <SelectValue placeholder={tSettings("noMonths")}>
+                  {nbMois === 0 ? tSettings("noMonths") : moisCourant === null ? "—" : config.month_names[moisCourant]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_MONTH}>—</SelectItem>
+                {config.month_names.map((m, i) => (
+                  <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </section>
       </div>
@@ -494,19 +504,22 @@ export function TimelineSettings({
                       onChange={(e) => majFete(i, { day: e.target.value === "" ? null : Number(e.target.value) }, false)}
                       onBlur={(e) => majFete(i, { day: jourDe(e.target.value, fete.month) }, true)}
                     />
-                    <select
-                      value={fete.month}
-                      aria-label={tSettings("holidayMonth", { name: fete.name })}
-                      className="h-8 w-36 rounded-md border border-border-soft bg-background px-2 text-sm"
-                      onChange={(e) => {
-                        const month = Number(e.target.value);
+                    <Select
+                      value={String(fete.month)}
+                      onValueChange={(v) => {
+                        const month = Number(v);
                         majFete(i, { month, day: fete.day === null ? null : Math.min(fete.day, daysInMonth(config, month)) }, true);
                       }}
                     >
-                      {config.month_names.map((nom, m) => (
-                        <option key={m} value={m}>{nom}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger aria-label={tSettings("holidayMonth", { name: fete.name })} className={cn(SMALL_SELECT, "w-36")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {config.month_names.map((nom, m) => (
+                          <SelectItem key={m} value={String(m)}>{nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </PopoverContent>
                 </Popover>
                 <button
@@ -551,16 +564,19 @@ export function TimelineSettings({
               className={cn(SMALL_BOX, NO_SPIN, "w-16")}
               onChange={(e) => setNewHoliday((h) => ({ ...h, day: e.target.value }))}
             />
-            <select
-              value={newHoliday.month}
-              aria-label={tSettings("holidayMonthPlaceholder")}
-              className="h-8 w-32 rounded-md border border-border-soft bg-background px-2 text-sm"
-              onChange={(e) => setNewHoliday((h) => ({ ...h, month: Number(e.target.value) }))}
+            <Select
+              value={String(newHoliday.month)}
+              onValueChange={(v) => setNewHoliday((h) => ({ ...h, month: Number(v) }))}
             >
-              {config.month_names.map((nom, m) => (
-                <option key={m} value={m}>{nom}</option>
-              ))}
-            </select>
+              <SelectTrigger aria-label={tSettings("holidayMonthPlaceholder")} className={SMALL_SELECT}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {config.month_names.map((nom, m) => (
+                  <SelectItem key={m} value={String(m)}>{nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </AddRow>
         )}
       </SettingsSection>

@@ -188,6 +188,36 @@ describe("TimelineSettings — saisons et frise", () => {
   });
 });
 
+describe("TimelineSettings — sélecteurs shadcn", () => {
+  it("le mois actuel : choisi dans la liste, ou « — » pour aucun ; plus de liste native", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, holidays: [{ name: "Nuit du Dégel", month: 1, day: 1 }] }} onPersist={onPersist} />);
+    expect(document.querySelector("select")).toBeNull();
+
+    const mois = screen.getByLabelText("Mois actuel");
+    expect(mois).toHaveTextContent("Dégel");
+    await user.click(mois);
+    await user.click(await screen.findByRole("option", { name: "Givre" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ current_month: 0 });
+
+    await user.click(screen.getByLabelText("Mois actuel"));
+    await user.click(await screen.findByRole("option", { name: "—" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ current_month: null });
+  });
+
+  it("le mois d'une fête, dans la fenêtre de sa date", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, holidays: [{ name: "Fin du Givre", month: 0, day: 30 }] }} onPersist={onPersist} />);
+    await user.click(screen.getByRole("button", { name: "Date de Fin du Givre" }));
+    await user.click(await screen.findByRole("combobox", { name: "Mois de Fin du Givre" }));
+    await user.click(await screen.findByRole("option", { name: "Dégel" }));
+    // Dégel ne compte que 28 jours : le 30 devient le 28.
+    expect(onPersist).toHaveBeenLastCalledWith({ holidays: [{ name: "Fin du Givre", month: 1, day: 28 }] });
+  });
+});
+
 describe("TimelineSettings — responsive", () => {
   it("s'adapte à la place de sa page (requêtes de conteneur), pas à la fenêtre", () => {
     render(<Harnais />);
@@ -218,7 +248,9 @@ describe("TimelineSettings — fêtes et mise en sommeil", () => {
     await user.type(screen.getByRole("textbox", { name: "Nouvelle fête" }), "Fête du Givre");
     // Givre compte 30 jours : 40 devient 30.
     await user.type(screen.getByRole("spinbutton", { name: "Jour" }), "40");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Mois de la nouvelle fête" }), "Givre");
+    // Un sélecteur shadcn : on l'ouvre, puis on choisit.
+    await user.click(screen.getByRole("combobox", { name: "Mois de la nouvelle fête" }));
+    await user.click(await screen.findByRole("option", { name: "Givre" }));
     await user.click(screen.getByRole("button", { name: "Ajouter la fête" }));
 
     expect(onPersist).toHaveBeenLastCalledWith({
