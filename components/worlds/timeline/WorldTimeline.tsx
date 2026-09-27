@@ -73,13 +73,12 @@ import type { WorldTimelineAge, WorldTimelineConfig } from "@/types/worlds";
 
 /**
  * Le fond ambiant de la page, pour ce qui découpe le fil ou les filets (le
- * nom d'un mois, un anneau) et pour la barre de tête : sous `lg`, c'est
- * celui du `<body>` qu'on voit ; `<main>` ne pose `bg-background` qu'à partir
- * de `lg` (voir AppShell.tsx). Un `bg-background` seul faisait des pavés
- * visibles sur mobile.
+ * nom d'un mois, un anneau) : sous `lg`, c'est celui du `<body>` qu'on
+ * voit ; `<main>` ne pose `bg-background` qu'à partir de `lg` (voir
+ * AppShell.tsx). Un `bg-background` seul faisait des pavés visibles sur
+ * mobile.
  */
 const AMBIENT_BG = "bg-body lg:bg-background";
-const AMBIENT_BG_TRANSLUCENT = "bg-body/90 lg:bg-background/90";
 
 /** Le style des lignes de suite, choisi par chacun et gardé dans son
  *  navigateur (une préférence de lecture, pas un réglage du monde). */
@@ -143,25 +142,6 @@ export function WorldTimeline({
   const tv = useTranslations("worlds.timelineView");
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const headRef = useRef<HTMLDivElement>(null);
-  // La hauteur de la tête collée (recherche, filtres, périodes) : les bornes
-  // des années se collent juste dessous (`--tl-head`).
-  const [headHeight, setHeadHeight] = useState(0);
-  // Le haut du bandeau de position dans la tête : la mini-carte commence en
-  // face de lui.
-  const [positionTop, setPositionTop] = useState(0);
-  useEffect(() => {
-    const head = headRef.current;
-    if (!head || typeof ResizeObserver === "undefined") return;
-    const measure = () => {
-      setHeadHeight(head.offsetHeight);
-      setPositionTop(head.querySelector<HTMLElement>("[data-testid='timeline-position']")?.offsetTop ?? head.offsetHeight);
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(head);
-    measure();
-    return () => observer.disconnect();
-  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const data = useTimelineData(worldId, !!config.show_journals);
 
@@ -482,7 +462,7 @@ export function WorldTimeline({
     const el = scrollRef.current;
     const node = targetEl(pendingScroll.target);
     if (!el || !node) return;
-    const top = el.scrollTop + node.getBoundingClientRect().top - el.getBoundingClientRect().top - (headRef.current?.offsetHeight ?? 0);
+    const top = el.scrollTop + node.getBoundingClientRect().top - el.getBoundingClientRect().top;
     if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: pendingScroll.smooth ? "smooth" : "auto" });
     else el.scrollTop = top;
     setPendingScroll(null);
@@ -548,7 +528,7 @@ export function WorldTimeline({
   function updatePosition(scrolled: boolean) {
     const el = scrollRef.current;
     if (!el || shown.length === 0) return;
-    const seuil = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0) + 8;
+    const seuil = el.getBoundingClientRect().top + 8;
     let year = shown[0].year;
     for (const s of shown) {
       const node = sectionEl(s.year);
@@ -566,7 +546,7 @@ export function WorldTimeline({
   useEffect(() => {
     updatePosition(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- quand la frise ou la tête changent
-  }, [shown, headHeight]);
+  }, [shown]);
 
   const stopIndex = position ? stops.findIndex((st) => st.year === position.year && st.month === position.month) : -1;
   const currentStop = stopIndex >= 0 ? stops[stopIndex] : null;
@@ -633,140 +613,141 @@ export function WorldTimeline({
       {empty && !canManage ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
       ) : (
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* La tête : recherche, filtres, gestion ; périodes et légende. Hors
+              de la zone qui défile, pleine largeur (au-dessus de la mini-carte). */}
+          <div className="space-y-3 px-5 py-3" data-testid="timeline-head">
+          {/* Recherche, filtres, « Aujourd'hui » ; à droite, la gestion. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-40 flex-1 sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                value={filters.query}
+                onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+                placeholder={tv("search")}
+                aria-label={tv("search")}
+                className="h-8 pl-8 text-sm"
+              />
+            </div>
+            <TimelineFiltersPopover
+              filters={filters}
+              onChange={setFilters}
+              showJournals={!!config.show_journals}
+              showHolidays={(config.holidays ?? []).length > 0}
+              personas={data.personas.map((p) => ({ id: p.id, label: p.name }))}
+              players={players}
+              arcs={data.arcs.map((a) => ({ id: a.id, label: a.name }))}
+              categories={data.categories.map((c) => ({ id: c.id, label: c.title }))}
+              suiteStyle={suiteStyle}
+              onSuiteStyle={setSuiteStyle}
+              hoverOnly={hoverOnly}
+              onHoverOnly={setHoverOnly}
+            />
+            <Button type="button" size="sm" variant="ghost" className="h-8 gap-1.5 rounded-md" onClick={scrollToNow}>
+              <LocateFixed className="h-3.5 w-3.5" />
+              {tv("today")}
+            </Button>
+            {/* Le fil du persona filtré, rappelé en tête ; la croix l'efface. */}
+            {threadPersona && (
+              <span
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border pl-2.5 pr-1 text-xs"
+                data-testid="timeline-persona-thread-chip"
+              >
+                <span
+                  className={cn("size-2.5 rounded-full", !threadPersona.color && "bg-foreground")}
+                  style={threadPersona.color ? { backgroundColor: threadPersona.color } : undefined}
+                  aria-hidden
+                />
+                {tv("personaThread", { name: threadPersona.name })}
+                <button
+                  type="button"
+                  onClick={() => setFilters({ ...filters, personaId: null })}
+                  aria-label={tv("personaThreadClear", { name: threadPersona.name })}
+                  className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reload()} />
+            {canManage && (
+              <div className="ml-auto flex items-center gap-2">
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setArcsOpen(true)}>
+                  <Spline className="h-3.5 w-3.5" />
+                  {tv("arcs")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5"
+                  onClick={() => setEventDialog({ open: true, event: null })}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {tv("addEvent")}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Les périodes à gauche, la légende du fil à droite. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {periods.length > 1 && (
+              <nav aria-label={t("timelineRanges")} className="flex min-w-0 gap-2 overflow-x-auto">
+                {periods.map((p) => {
+                  const current = p.key === activePeriod;
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      aria-current={current ? "true" : undefined}
+                      onClick={() => { setActivePeriod(p.key); scrollToYear(p.firstYear, true); }}
+                      className={cn(
+                        "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium tabular-nums transition-colors",
+                        current
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {p.age && <Sunrise className="size-3.5 shrink-0" aria-hidden />}
+                      {p.label}
+                      {current && (periodRooms.get(p.key) ?? 0) > 0 && (
+                        <span className="text-[10px] font-normal opacity-60" data-testid="timeline-period-count" aria-hidden>
+                          {periodRooms.get(p.key)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+            <TimelineLegend className="ml-auto hidden justify-end md:flex" />
+          </div>
+          </div>
+          {/* Dessous : le bandeau de position et la frise qui défile ; à droite,
+              la mini-carte, en face du bandeau. */}
+          <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">
+          {!data.loading && sections.length > 0 && (
+            <TimelinePositionBar
+              config={config}
+              stop={currentStop}
+              onPrevious={stopIndex > 0 ? () => scrollToStop(stops[stopIndex - 1]) : null}
+              onNext={stopIndex >= 0 && stopIndex < stops.length - 1 ? () => scrollToStop(stops[stopIndex + 1]) : null}
+              arcs={orderedArcs}
+              bright={priorityArcs.length > 0 ? new Set(priorityArcs) : null}
+              hovered={hoveredArc ? { arc: hoveredArc, episodes: arcStats.episodes.get(hoveredArc.id) ?? 0 } : null}
+            />
+          )}
         <div
           ref={scrollRef}
           onScroll={() => updatePosition(true)}
           // Une barre de défilement fine et sombre : pas de bande claire entre
           // la frise et la mini-carte.
           className="relative min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-muted)_transparent] [scrollbar-width:thin] dark:[color-scheme:dark]"
-          style={{ ["--tl-head" as string]: `${headHeight}px` }}
           data-testid="timeline-scroll"
         >
-          <div ref={headRef} className={cn("sticky top-0 z-10 backdrop-blur", AMBIENT_BG_TRANSLUCENT)} data-testid="timeline-head">
-            <div className="space-y-3 px-5 py-3">
-            {/* Recherche, filtres, « Aujourd'hui » ; à droite, la gestion. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative min-w-40 flex-1 sm:max-w-xs">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                <Input
-                  type="search"
-                  value={filters.query}
-                  onChange={(e) => setFilters({ ...filters, query: e.target.value })}
-                  placeholder={tv("search")}
-                  aria-label={tv("search")}
-                  className="h-8 pl-8 text-sm"
-                />
-              </div>
-              <TimelineFiltersPopover
-                filters={filters}
-                onChange={setFilters}
-                showJournals={!!config.show_journals}
-                showHolidays={(config.holidays ?? []).length > 0}
-                personas={data.personas.map((p) => ({ id: p.id, label: p.name }))}
-                players={players}
-                arcs={data.arcs.map((a) => ({ id: a.id, label: a.name }))}
-                categories={data.categories.map((c) => ({ id: c.id, label: c.title }))}
-                suiteStyle={suiteStyle}
-                onSuiteStyle={setSuiteStyle}
-                hoverOnly={hoverOnly}
-                onHoverOnly={setHoverOnly}
-              />
-              <Button type="button" size="sm" variant="ghost" className="h-8 gap-1.5" onClick={scrollToNow}>
-                <LocateFixed className="h-3.5 w-3.5" />
-                {tv("today")}
-              </Button>
-              {/* Le fil du persona filtré, rappelé en tête ; la croix l'efface. */}
-              {threadPersona && (
-                <span
-                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border pl-2.5 pr-1 text-xs"
-                  data-testid="timeline-persona-thread-chip"
-                >
-                  <span
-                    className={cn("size-2.5 rounded-full", !threadPersona.color && "bg-foreground")}
-                    style={threadPersona.color ? { backgroundColor: threadPersona.color } : undefined}
-                    aria-hidden
-                  />
-                  {tv("personaThread", { name: threadPersona.name })}
-                  <button
-                    type="button"
-                    onClick={() => setFilters({ ...filters, personaId: null })}
-                    aria-label={tv("personaThreadClear", { name: threadPersona.name })}
-                    className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
-              <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reload()} />
-              {canManage && (
-                <div className="ml-auto flex items-center gap-2">
-                  <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setArcsOpen(true)}>
-                    <Spline className="h-3.5 w-3.5" />
-                    {tv("arcs")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-8 gap-1.5"
-                    onClick={() => setEventDialog({ open: true, event: null })}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    {tv("addEvent")}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Les périodes à gauche, la légende du fil à droite. */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {periods.length > 1 && (
-                <nav aria-label={t("timelineRanges")} className="flex min-w-0 gap-2 overflow-x-auto">
-                  {periods.map((p) => {
-                    const current = p.key === activePeriod;
-                    return (
-                      <button
-                        key={p.key}
-                        type="button"
-                        aria-current={current ? "true" : undefined}
-                        onClick={() => { setActivePeriod(p.key); scrollToYear(p.firstYear, true); }}
-                        className={cn(
-                          "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium tabular-nums transition-colors",
-                          current
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-border text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {p.age && <Sunrise className="size-3.5 shrink-0" aria-hidden />}
-                        {p.label}
-                        {current && (periodRooms.get(p.key) ?? 0) > 0 && (
-                          <span className="text-[10px] font-normal opacity-60" data-testid="timeline-period-count" aria-hidden>
-                            {periodRooms.get(p.key)}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </nav>
-              )}
-              <TimelineLegend className="ml-auto hidden justify-end md:flex" />
-            </div>
-            </div>
-
-            {!data.loading && sections.length > 0 && (
-              <TimelinePositionBar
-                config={config}
-                stop={currentStop}
-                onPrevious={stopIndex > 0 ? () => scrollToStop(stops[stopIndex - 1]) : null}
-                onNext={stopIndex >= 0 && stopIndex < stops.length - 1 ? () => scrollToStop(stops[stopIndex + 1]) : null}
-                arcs={orderedArcs}
-                bright={priorityArcs.length > 0 ? new Set(priorityArcs) : null}
-                hovered={hoveredArc ? { arc: hoveredArc, episodes: arcStats.episodes.get(hoveredArc.id) ?? 0 } : null}
-              />
-            )}
-          </div>
-
           {data.loading ? (
             <TimelineSkeleton label={tv("loading")} />
           ) : empty ? (
@@ -851,6 +832,7 @@ export function WorldTimeline({
             </RoomPreviewProvider>
           )}
         </div>
+          </div>
         {!data.loading && sections.length > 0 && (
           <TimelineMinimap
             className="hidden lg:flex"
@@ -861,9 +843,9 @@ export function WorldTimeline({
             isolatedArc={isolatedArc}
             onYear={(year) => scrollToYear(year, true)}
             onMonth={goToMonth}
-            top={positionTop}
           />
         )}
+          </div>
         </div>
       )}
 

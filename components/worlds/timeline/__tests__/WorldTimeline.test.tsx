@@ -226,7 +226,10 @@ describe("WorldTimeline — frise verticale", () => {
     expect(bandeau.className).not.toMatch(/(^|\s)(lg:)?bg-/);
     // Le fil ne le traverse pas.
     expect(bandeau.querySelector(".w-px")).toBeNull();
-    expect(screen.getByTestId("timeline-head")).toContainElement(screen.getByTestId("timeline-position"));
+    // La tête et le bandeau de position restent hors de la zone qui défile.
+    const zone = screen.getByTestId("timeline-scroll");
+    expect(zone).not.toContainElement(screen.getByTestId("timeline-head"));
+    expect(zone).not.toContainElement(screen.getByTestId("timeline-position"));
     // Bordé dessus et dessous.
     expect(screen.getByTestId("timeline-position").className.split(" ")).toEqual(expect.arrayContaining(["border-y", "border-border"]));
   });
@@ -353,7 +356,10 @@ describe("WorldTimeline — frise verticale", () => {
     const scroll = screen.getByTestId("timeline-scroll");
     const scrollTo = vi.fn();
     scroll.scrollTo = scrollTo as never;
-    await user.click(screen.getByRole("button", { name: "Aujourd’hui" }));
+    const aujourdhui = screen.getByRole("button", { name: "Aujourd’hui" });
+    // Arrondi comme les autres boutons de la tête.
+    expect(aujourdhui.className.split(" ")).toContain("rounded-md");
+    await user.click(aujourdhui);
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" }));
   });
 
@@ -559,10 +565,10 @@ describe("WorldTimeline — fond ambiant", () => {
     await frise([room("a", "Début", 1, 0, 1), room("b", "Mars", 1, 2, 1), room("c", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
     for (const anneau of screen.getAllByTestId("timeline-ring")) ambiant(anneau);
     ambiant(screen.getByTestId("timeline-month-label"));
-    // La tête collante (recherche, filtres, périodes, position) porte le fond.
+    // La tête (recherche, filtres, périodes) ne défile pas : ni collée, ni fond à elle.
     const tete = screen.getByTestId("timeline-head");
     expect(tete).toContainElement(screen.getByRole("navigation", { name: "Périodes de la chronologie" }));
-    expect(tete.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "bg-body/90", "lg:bg-background/90"]));
+    expect(tete.className).not.toMatch(/sticky|(^|\s)(lg:)?bg-/);
   });
 });
 

@@ -89,13 +89,12 @@ describe("TimelineMinimap", () => {
     expect((fevrier2.querySelector("[data-testid='timeline-minimap-bar']") as HTMLElement).style.backgroundColor).toBe("");
   });
 
-  it("commence en face du bandeau de position, bordée dessus ; des lignes de 10px ; elle défile pour garder le mois lu au milieu", () => {
+  it("bordée dessus, comme le bandeau de position en face ; des lignes de 10px ; elle défile pour garder le mois lu au milieu", () => {
     const props = {
-      config: CONFIG, years: ANNEES, max: 4, isolatedArc: null, onYear: vi.fn(), onMonth: vi.fn(), top: 96,
+      config: CONFIG, years: ANNEES, max: 4, isolatedArc: null, onYear: vi.fn(), onMonth: vi.fn(),
     };
     const { rerender } = render(<TimelineMinimap {...props} current={{ year: 1, month: 0 }} />);
     const nav = screen.getByRole("navigation", { name: "Aperçu de la frise" });
-    expect(nav.style.marginTop).toBe("96px");
     expect(nav.className.split(" ")).toEqual(expect.arrayContaining(["border-t", "border-t-border"]));
     const mars2 = within(nav).getByRole("button", { name: /^Mars, Eon 2/ });
     expect(mars2.className.split(" ")).toEqual(expect.arrayContaining(["h-2.5", "shrink-0"]));

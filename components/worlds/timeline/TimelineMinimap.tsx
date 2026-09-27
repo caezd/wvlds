@@ -26,7 +26,6 @@ export function TimelineMinimap({
   isolatedArc,
   onYear,
   onMonth,
-  top = 0,
   className,
 }: {
   config: WorldTimelineConfig;
@@ -38,8 +37,6 @@ export function TimelineMinimap({
   isolatedArc: { id: string; color: string } | null;
   onYear: (year: number) => void;
   onMonth: (year: number, month: number) => void;
-  /** Le haut du bandeau de position (année, mois) dans la tête : la mini-carte commence en face, bordée dessus comme lui. */
-  top?: number;
   className?: string;
 }) {
   const tv = useTranslations("worlds.timelineView");
@@ -62,7 +59,6 @@ export function TimelineMinimap({
     <nav
       aria-label={tv("minimapLabel")}
       className={cn("w-[52px] shrink-0 flex-col border-l border-t border-l-border-soft border-t-border", className)}
-      style={{ marginTop: top }}
       data-testid="timeline-minimap"
     >
       <div
