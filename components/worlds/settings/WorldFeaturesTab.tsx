@@ -224,7 +224,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableInventory && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft bg-muted/20 p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {t("restrictToCatalogue")}
                                                     <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictInventoryHelp")}</HelpHint>
@@ -254,7 +254,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableSkills && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft bg-muted/20 p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {t("restrictToCatalogue")}
                                                     <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictSkillsHelp")}</HelpHint>
@@ -284,7 +284,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableFaceclaims && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft bg-muted/20 p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {tSettings("requireFaceclaim")}
                                                     <HelpHint title={tSettings("requireFaceclaim")}>{tSettings("requireFaceclaimHelp")}</HelpHint>
@@ -335,7 +335,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     {/* Le nom du lien, imbriqué sous le wiki comme les options
                                         du catalogue sous le leur : sans wiki, il n'a pas lieu d'être. */}
                                     {enableWiki && (
-                                        <div className="ml-4 rounded-md border border-border-soft bg-muted/20 p-3">
+                                        <div className="ml-4 rounded-md border border-border-soft p-3">
                                             <FormField
                                                 control={form.control}
                                                 name="wiki_label"

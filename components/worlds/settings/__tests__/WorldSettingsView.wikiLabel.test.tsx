@@ -96,10 +96,11 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     const { unmount } = render(<WorldSettingsView world={BASE_WORLD} />);
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
     const encadre = screen.getByPlaceholderText("Annexes").closest(".ml-4") as HTMLElement;
-    expect(encadre.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border-border-soft", "bg-muted/20"]));
-    // Tous les encadrés d'options imbriquées de l'onglet : rounded-md.
+    expect(encadre.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border", "border-border-soft"]));
+    // Tous les encadrés d'options imbriquées de l'onglet : le style « carte »,
+    // une bordure en rounded-md, sans fond.
     for (const el of document.querySelectorAll(".ml-4.border-border-soft")) {
-      expect(el.className).not.toMatch(/rounded-xl/);
+      expect(el.className).not.toMatch(/rounded-xl|bg-/);
     }
     unmount();
 

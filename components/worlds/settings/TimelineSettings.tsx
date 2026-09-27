@@ -123,7 +123,7 @@ export function TimelineSettings({
   return (
     <>
       {/* ── Aperçu : ce que composent les trois réglages qui suivent ── */}
-      <div className="ml-4 rounded-md border border-border-soft bg-muted/20 p-3" data-testid="timeline-preview">
+      <div className="ml-4 rounded-md border border-border-soft p-3" data-testid="timeline-preview">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">{tSettings("timelinePreviewLabel")}</p>
           <HelpHint title={tSettings("timelinePreviewLabel")}>{tSettings("timelinePreviewHelp")}</HelpHint>
@@ -577,7 +577,7 @@ function SubOption({
   children: React.ReactNode;
 }) {
   return (
-    <section className="ml-4 space-y-3 rounded-md border border-border-soft bg-muted/20 p-3" aria-label={title}>
+    <section className="ml-4 space-y-3 rounded-md border border-border-soft p-3" aria-label={title}>
       <div className="flex items-center gap-3">
         <p className="min-w-0 flex-1 text-sm font-medium">{title}</p>
         {action}
