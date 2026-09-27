@@ -70,7 +70,7 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     // Ni « Ex. … » sous les champs du format.
     expect(screen.queryByText(/^Ex\./)).toBeNull();
     // Une aide par sous-option, et pour les options qu'elles contiennent.
-    for (const nom of ["Aide : Fêtes du calendrier", "Aide : Afficher les journaux des personas", "Aide : Mise en sommeil (jours)"]) {
+    for (const nom of ["Aide : Fêtes du calendrier", "Aide : Afficher les journaux des personas", "Aide : Mise en sommeil"]) {
       expect(screen.getByRole("button", { name: nom })).toBeInTheDocument();
     }
   });
@@ -188,6 +188,22 @@ describe("TimelineSettings — saisons et frise", () => {
   });
 });
 
+describe("TimelineSettings — responsive", () => {
+  it("s'adapte à la place de sa page (requêtes de conteneur), pas à la fenêtre", () => {
+    render(<Harnais />);
+    // L'en-tête et chaque section : deux colonnes seulement quand la page a la place.
+    const date = screen.getByTestId("timeline-preview").parentElement as HTMLElement;
+    expect(date.className).toMatch(/@2xl:grid-cols-/);
+    expect(date.className).not.toMatch(/(^|\s)(sm|md|lg):grid-cols-/);
+    const section = screen.getByRole("region", { name: "Mois du calendrier" });
+    expect(section.className).toMatch(/@2xl:grid-cols-/);
+    expect(section.querySelector("ol")!.className).toMatch(/@lg:grid-cols-2/);
+    // Les lignes d'ajout passent à la ligne plutôt que de déborder.
+    const ajout = screen.getByRole("button", { name: "Ajouter la saison" }).parentElement as HTMLElement;
+    expect(ajout.className.split(" ")).toContain("flex-wrap");
+  });
+});
+
 describe("TimelineSettings — fêtes et mise en sommeil", () => {
   it("ajoute une fête, triée dans l'année ; son jour se borne au mois", async () => {
     const onPersist = vi.fn();
@@ -214,9 +230,16 @@ describe("TimelineSettings — fêtes et mise en sommeil", () => {
     const user = userEvent.setup();
     render(<Harnais initial={{ ...CONFIG, holidays: [{ name: "Nuit du Dégel", month: 1, day: 1 }] }} onPersist={onPersist} />);
 
-    await user.clear(screen.getByRole("spinbutton", { name: "Jour de Nuit du Dégel" }));
+    // La date en pastille ; un appui ouvre le jour et le mois.
+    const pastille = screen.getByRole("button", { name: "Date de Nuit du Dégel" });
+    expect(pastille).toHaveTextContent("1 Dégel");
+    await user.click(pastille);
+    await user.clear(await screen.findByRole("spinbutton", { name: "Jour de Nuit du Dégel" }));
     await user.tab();
     expect(onPersist).toHaveBeenLastCalledWith({ holidays: [{ name: "Nuit du Dégel", month: 1, day: null }] });
+    // Sans jour, la pastille dit le mois seul.
+    expect(screen.getByRole("button", { name: "Date de Nuit du Dégel" })).toHaveTextContent(/^Dégel$/);
+    await user.keyboard("{Escape}");
 
     await user.click(screen.getByRole("button", { name: "Supprimer la fête Nuit du Dégel" }));
     expect(onPersist).toHaveBeenLastCalledWith({ holidays: [] });
@@ -227,7 +250,7 @@ describe("TimelineSettings — fêtes et mise en sommeil", () => {
     const onPersist = vi.fn();
     const user = userEvent.setup();
     render(<Harnais onPersist={onPersist} />);
-    const delai = screen.getByRole("spinbutton", { name: "Mise en sommeil (jours)" });
+    const delai = screen.getByRole("spinbutton", { name: "Mise en sommeil, en jours" });
     expect(delai).toHaveValue(30);
     await user.clear(delai);
     await user.type(delai, "0");

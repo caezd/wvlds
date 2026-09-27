@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, Hourglass, Minus, Plus, RotateCcw, X } from "lucide-react";
+import { ArrowRight, Eye, Hourglass, Minus, Plus, RotateCcw, X } from "lucide-react";
 
 import type { WorldTimelineAge, WorldTimelineConfig, WorldTimelineHoliday } from "@/types/worlds";
 import { DEFAULT_DORMANT_DAYS } from "@/lib/worldTimelineItems";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HelpHint } from "@/components/ui/help-hint";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Le rouge de la date actuelle, comme sur la frise : l'accent en sombre, un rouge franc en clair. */
@@ -28,6 +29,10 @@ const NOW_RED_BORDER = "border-red-600/40 dark:border-accent/40";
 
 /** Un champ sans cadre, dans une ligne bordée. */
 const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0";
+/** Une ligne d'une liste (saison, fête) : bordée, sur le fond des cartes. */
+const LIST_ROW = "flex h-12 items-center gap-2 rounded-lg border border-border-soft bg-card pl-2 pr-1.5";
+/** Une petite case de saisie dans une ligne : une année, un jour. */
+const SMALL_BOX = "h-8 rounded-md border border-border-soft bg-background px-2 text-center text-sm shadow-none focus-visible:ring-1";
 /** Un champ numérique sans flèches. */
 const NO_SPIN = "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
@@ -52,6 +57,9 @@ export function TimelineSettings({
 }) {
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
+  const tCommon = useTranslations("common");
+  // Le libellé d'année, capitalisé, devant les années d'une saison (« An 4 »).
+  const libelleAnnee = config.year_label ? config.year_label[0].toUpperCase() + config.year_label.slice(1) : "";
   const [newAge, setNewAge] = React.useState<{ name: string; from: string }>({ name: "", from: "" });
   const [newHoliday, setNewHoliday] = React.useState<{ name: string; month: number; day: string }>({ name: "", month: 0, day: "" });
   const ages = config.ages ?? [];
@@ -126,7 +134,7 @@ export function TimelineSettings({
   return (
     <div className="space-y-6">
       {/* ── En tête : la date actuelle du monde, et où en est le récit ── */}
-      <div className="grid overflow-hidden rounded-xl border border-border-soft bg-card md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="grid overflow-hidden rounded-xl border border-border-soft bg-card @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
         <div className="flex flex-col p-5" data-testid="timeline-preview">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Hourglass className="size-3.5" aria-hidden />
@@ -156,7 +164,7 @@ export function TimelineSettings({
 
         <section
           aria-label={tSettings("timelineNow")}
-          className="space-y-4 border-t border-border-soft p-5 md:border-l md:border-t-0"
+          className="space-y-4 border-t border-border-soft p-5 @2xl:border-l @2xl:border-t-0"
         >
           <p className="flex items-center gap-1.5 text-sm font-semibold">
             {tSettings("timelineNow")}
@@ -215,7 +223,7 @@ export function TimelineSettings({
 
       {/* ── Comment une date s'écrit ── */}
       <SettingsSection title={tSettings("timelineFormat")} help={tSettings("timelineFormatHelp")}>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 @md:grid-cols-2">
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-year-label" className="text-xs font-normal text-muted-foreground">{t("yearLabel")}</Label>
             <Input
@@ -294,7 +302,7 @@ export function TimelineSettings({
         }
       >
         {nbMois > 0 ? (
-          <ol className="grid gap-2 sm:grid-cols-2">
+          <ol className="grid gap-2 @lg:grid-cols-2">
             {config.month_names.map((m, i) => (
               <li
                 key={i}
@@ -376,7 +384,7 @@ export function TimelineSettings({
         {ages.length > 0 ? (
           <ol className="space-y-2" aria-label={tSettings("timelineAges")}>
             {ages.map((age, i) => (
-              <li key={i} className="flex h-11 items-center gap-2 rounded-lg border border-border-soft pl-2 pr-1.5">
+              <li key={i} className={LIST_ROW}>
                 <Input
                   value={age.name}
                   aria-label={tSettings("ageName")}
@@ -384,21 +392,21 @@ export function TimelineSettings({
                   onChange={(e) => majSaison(i, { name: e.target.value }, false)}
                   onBlur={(e) => majSaison(i, { name: e.target.value }, true)}
                 />
+                {libelleAnnee && <span className="text-xs text-muted-foreground" aria-hidden>{libelleAnnee}</span>}
                 <Input
                   type="number"
                   value={age.from_year}
                   aria-label={tSettings("ageFrom", { name: age.name })}
-                  className={cn(BARE_INPUT, NO_SPIN, "w-16 text-right")}
+                  className={cn(SMALL_BOX, NO_SPIN, "w-14")}
                   onChange={(e) => majSaison(i, { from_year: Number(e.target.value) || 0 }, false)}
                   onBlur={(e) => majSaison(i, { from_year: Number(e.target.value) || 0 }, true)}
                 />
-                <span className="text-xs text-muted-foreground" aria-hidden>–</span>
+                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 <Input
                   type="number"
                   value={age.to_year ?? ""}
-                  placeholder="…"
                   aria-label={tSettings("ageTo", { name: age.name })}
-                  className={cn(BARE_INPUT, NO_SPIN, "w-16")}
+                  className={cn(SMALL_BOX, NO_SPIN, "w-14")}
                   onChange={(e) => majSaison(i, { to_year: e.target.value === "" ? null : Number(e.target.value) }, false)}
                   onBlur={(e) => majSaison(i, { to_year: e.target.value === "" ? null : Number(e.target.value) }, true)}
                 />
@@ -406,7 +414,7 @@ export function TimelineSettings({
                   type="button"
                   aria-label={tSettings("deleteAge", { name: age.name })}
                   onClick={() => onPersist({ ages: ages.filter((_, j) => j !== i) })}
-                  className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive"
+                  className="ml-1 flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -420,13 +428,14 @@ export function TimelineSettings({
         <AddRow
           disabled={!newAge.name.trim() || Number.isNaN(parseInt(newAge.from, 10))}
           addLabel={tSettings("addAge")}
+          buttonText={tCommon("add")}
           onAdd={ajouterSaison}
         >
           <Input
             value={newAge.name}
             placeholder={tSettings("ageNamePlaceholder")}
             aria-label={tSettings("ageNamePlaceholder")}
-            className={cn(BARE_INPUT, "min-w-0 flex-1")}
+            className={cn(BARE_INPUT, "min-w-32 flex-1")}
             onChange={(e) => setNewAge((a) => ({ ...a, name: e.target.value }))}
             onKeyDown={(e) => {
               if (e.key === "Enter") { e.preventDefault(); ajouterSaison(); }
@@ -437,7 +446,7 @@ export function TimelineSettings({
             value={newAge.from}
             placeholder={tSettings("ageFromPlaceholder")}
             aria-label={tSettings("ageFromPlaceholder")}
-            className={cn(BARE_INPUT, NO_SPIN, "w-24")}
+            className={cn(SMALL_BOX, NO_SPIN, "w-20")}
             onChange={(e) => setNewAge((a) => ({ ...a, from: e.target.value }))}
             onKeyDown={(e) => {
               if (e.key === "Enter") { e.preventDefault(); ajouterSaison(); }
@@ -453,7 +462,7 @@ export function TimelineSettings({
         {holidays.length > 0 ? (
           <ol className="space-y-2" aria-label={tSettings("timelineHolidays")}>
             {holidays.map((fete, i) => (
-              <li key={i} className="flex h-11 items-center gap-2 rounded-lg border border-border-soft pl-2 pr-1.5">
+              <li key={i} className={LIST_ROW}>
                 <Input
                   value={fete.name}
                   maxLength={HOLIDAY_NAME_MAX}
@@ -462,34 +471,49 @@ export function TimelineSettings({
                   onChange={(e) => majFete(i, { name: e.target.value }, false)}
                   onBlur={(e) => majFete(i, { name: e.target.value }, true)}
                 />
-                <Input
-                  type="number"
-                  min={1}
-                  value={fete.day ?? ""}
-                  placeholder="…"
-                  aria-label={tSettings("holidayDay", { name: fete.name })}
-                  className={cn(BARE_INPUT, NO_SPIN, "w-12 text-right")}
-                  onChange={(e) => majFete(i, { day: e.target.value === "" ? null : Number(e.target.value) }, false)}
-                  onBlur={(e) => majFete(i, { day: jourDe(e.target.value, fete.month) }, true)}
-                />
-                <select
-                  value={fete.month}
-                  aria-label={tSettings("holidayMonth", { name: fete.name })}
-                  className="h-8 w-32 rounded-md border border-border-soft bg-transparent px-2 text-sm"
-                  onChange={(e) => {
-                    const month = Number(e.target.value);
-                    majFete(i, { month, day: fete.day === null ? null : Math.min(fete.day, daysInMonth(config, month)) }, true);
-                  }}
-                >
-                  {config.month_names.map((nom, m) => (
-                    <option key={m} value={m}>{nom}</option>
-                  ))}
-                </select>
+                {/* Sa date en pastille ; un appui ouvre le jour et le mois. */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={tSettings("holidayDate", { name: fete.name })}
+                      className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-medium tabular-nums transition-colors hover:bg-muted/70"
+                      data-testid="holiday-date"
+                    >
+                      {fete.day !== null ? `${fete.day} ${config.month_names[fete.month] ?? ""}` : config.month_names[fete.month]}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="flex w-auto items-center gap-2 p-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={fete.day ?? ""}
+                      placeholder={tSettings("holidayDayPlaceholder")}
+                      aria-label={tSettings("holidayDay", { name: fete.name })}
+                      className={cn(SMALL_BOX, NO_SPIN, "w-16")}
+                      onChange={(e) => majFete(i, { day: e.target.value === "" ? null : Number(e.target.value) }, false)}
+                      onBlur={(e) => majFete(i, { day: jourDe(e.target.value, fete.month) }, true)}
+                    />
+                    <select
+                      value={fete.month}
+                      aria-label={tSettings("holidayMonth", { name: fete.name })}
+                      className="h-8 w-36 rounded-md border border-border-soft bg-background px-2 text-sm"
+                      onChange={(e) => {
+                        const month = Number(e.target.value);
+                        majFete(i, { month, day: fete.day === null ? null : Math.min(fete.day, daysInMonth(config, month)) }, true);
+                      }}
+                    >
+                      {config.month_names.map((nom, m) => (
+                        <option key={m} value={m}>{nom}</option>
+                      ))}
+                    </select>
+                  </PopoverContent>
+                </Popover>
                 <button
                   type="button"
                   aria-label={tSettings("deleteHoliday", { name: fete.name })}
                   onClick={() => onPersist({ holidays: holidays.filter((_, j) => j !== i) })}
-                  className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive"
+                  className="ml-1 flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -501,13 +525,18 @@ export function TimelineSettings({
         )}
 
         {nbMois > 0 && (
-          <AddRow disabled={!newHoliday.name.trim()} addLabel={tSettings("addHoliday")} onAdd={ajouterFete}>
+          <AddRow
+            disabled={!newHoliday.name.trim()}
+            addLabel={tSettings("addHoliday")}
+            buttonText={tCommon("add")}
+            onAdd={ajouterFete}
+          >
             <Input
               value={newHoliday.name}
               maxLength={HOLIDAY_NAME_MAX}
               placeholder={tSettings("holidayNamePlaceholder")}
               aria-label={tSettings("holidayNamePlaceholder")}
-              className={cn(BARE_INPUT, "min-w-0 flex-1")}
+              className={cn(BARE_INPUT, "min-w-32 flex-1")}
               onChange={(e) => setNewHoliday((h) => ({ ...h, name: e.target.value }))}
               onKeyDown={(e) => {
                 if (e.key === "Enter") { e.preventDefault(); ajouterFete(); }
@@ -519,13 +548,13 @@ export function TimelineSettings({
               value={newHoliday.day}
               placeholder={tSettings("holidayDayPlaceholder")}
               aria-label={tSettings("holidayDayPlaceholder")}
-              className={cn(BARE_INPUT, NO_SPIN, "w-14")}
+              className={cn(SMALL_BOX, NO_SPIN, "w-16")}
               onChange={(e) => setNewHoliday((h) => ({ ...h, day: e.target.value }))}
             />
             <select
               value={newHoliday.month}
               aria-label={tSettings("holidayMonthPlaceholder")}
-              className="h-8 w-32 rounded-md border border-border-soft bg-transparent px-2 text-sm"
+              className="h-8 w-32 rounded-md border border-border-soft bg-background px-2 text-sm"
               onChange={(e) => setNewHoliday((h) => ({ ...h, month: Number(e.target.value) }))}
             >
               {config.month_names.map((nom, m) => (
@@ -551,16 +580,19 @@ export function TimelineSettings({
             title={tSettings("dormantDays")}
             help={tSettings("dormantDaysHelp")}
             control={
-              <Input
-                type="number"
-                min={0}
-                max={DORMANT_DAYS_MAX}
-                value={config.dormant_days ?? DEFAULT_DORMANT_DAYS}
-                aria-label={tSettings("dormantDays")}
-                className="h-8 w-20 shrink-0 text-sm"
-                onChange={(e) => onDraft({ dormant_days: clampDormantDays(e.target.value) })}
-                onBlur={(e) => onPersist({ dormant_days: clampDormantDays(e.target.value) })}
-              />
+              <span className="flex h-9 shrink-0 items-center rounded-md border border-border-soft bg-background pr-3">
+                <Input
+                  type="number"
+                  min={0}
+                  max={DORMANT_DAYS_MAX}
+                  value={config.dormant_days ?? DEFAULT_DORMANT_DAYS}
+                  aria-label={tSettings("dormantDaysInput")}
+                  className={cn(BARE_INPUT, NO_SPIN, "h-full w-14 text-sm")}
+                  onChange={(e) => onDraft({ dormant_days: clampDormantDays(e.target.value) })}
+                  onBlur={(e) => onPersist({ dormant_days: clampDormantDays(e.target.value) })}
+                />
+                <span className="text-xs text-muted-foreground" aria-hidden>{tSettings("daysWord")}</span>
+              </span>
             }
           />
         </ToggleList>
@@ -569,31 +601,37 @@ export function TimelineSettings({
   );
 }
 
-/** La ligne d'ajout qui ferme une liste : ses champs, puis « + ». */
+/** La ligne d'ajout qui ferme une liste, en pointillés : ses champs, puis « + Ajouter ». */
 function AddRow({
   disabled,
   addLabel,
+  buttonText,
   onAdd,
   children,
 }: {
   disabled: boolean;
+  /** Le nom du bouton : « Ajouter la saison ». */
   addLabel: string;
+  /** Son texte : « Ajouter ». */
+  buttonText: string;
   onAdd: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-11 items-center gap-1 rounded-lg border border-dashed border-border-soft pl-2 pr-1.5">
+    // Sur une page étroite, ses champs passent à la ligne plutôt que de déborder.
+    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-lg border border-dashed border-border-soft py-1.5 pl-2 pr-1.5">
       {children}
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="size-8 shrink-0 p-0"
+        className="h-8 shrink-0 gap-1 border-border-soft bg-card font-normal"
         disabled={disabled}
         aria-label={addLabel}
         onClick={onAdd}
       >
-        <Plus className="size-4" />
+        <Plus className="size-3.5" aria-hidden />
+        {buttonText}
       </Button>
     </div>
   );

@@ -968,7 +968,7 @@
       "holidayDayPlaceholder": "Jour",
       "holidayMonthPlaceholder": "Mois de la nouvelle fête",
       "addHoliday": "Ajouter la fête",
-      "dormantDays": "Mise en sommeil (jours)",
+      "dormantDays": "Mise en sommeil",
       "dormantDaysHelp": "Un salon en cours sans message depuis ce nombre de jours paraît en sommeil sur la frise. 0 : jamais.",
       "featuresNav": "Catégories de fonctions",
       "featuresTitle": "Fonctions",
@@ -990,7 +990,10 @@
       "roomRules": "Règles des salons",
       "roomRulesHelp": "Lien entre les salons et la date du monde.",
       "addMonth": "Ajouter un mois",
-      "newMonthName": "Mois {n}"
+      "newMonthName": "Mois {n}",
+      "holidayDate": "Date de {name}",
+      "daysWord": "jours",
+      "dormantDaysInput": "Mise en sommeil, en jours"
     },
     "timelinePicker": {
       "year": "Année",

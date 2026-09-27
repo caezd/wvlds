@@ -12,6 +12,11 @@ import { HelpHint } from "@/components/ui/help-hint";
  * réglages à droite —, avec des listes d'interrupteurs bordées. Pas de
  * description sous les titres : l'explication est derrière l'aide (voir
  * HelpHint), à côté du titre.
+ *
+ * La page est un conteneur (`@container`) : ses sections passent en deux
+ * colonnes selon la place qu'elle a, pas selon la fenêtre — entre les
+ * barres latérales de l'application et la colonne des catégories, elle peut
+ * être étroite sur un grand écran.
  */
 
 /** Un titre suivi de son aide. */
@@ -45,7 +50,7 @@ export function FeaturePage({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="@container min-w-0 space-y-6">
       <header className="flex items-center justify-between gap-4">
         <h3 className="min-w-0 text-xl font-semibold tracking-tight">
           <TitleWithHelp title={title} help={help} />
@@ -88,7 +93,7 @@ export function SettingsSection({
   return (
     <section
       aria-label={title}
-      className={cn("grid gap-4 border-t border-border-soft pt-6 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] md:gap-10", className)}
+      className={cn("grid gap-4 border-t border-border-soft pt-6 @2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10", className)}
     >
       <div className="space-y-1">
         <h4 className="text-sm font-semibold">

@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Interface",
     area: "Monde",
-    text: "Réglages du monde :\n- explications derrière une icône d’aide en bout de ligne, ouverte au survol, au clavier ou d’un appui\n- onglet Fonctions redessiné : les catégories à gauche avec leur état (Actif, Off), la page de chacune à droite, son interrupteur en tête\n- chronologie : date actuelle en grand avec la progression des mois, année réglable d’un pas, mois du calendrier en grille",
+    text: "Réglages du monde :\n- explications derrière une icône d’aide en bout de ligne, ouverte au survol, au clavier ou d’un appui\n- onglet Fonctions redessiné : les catégories à gauche avec leur état (Actif, Off), la page de chacune à droite, son interrupteur en tête ; ses sections s’empilent quand la place manque\n- chronologie : date actuelle en grand avec la progression des mois, année réglable d’un pas, mois du calendrier en grille",
   },
   {
     date: "2026-09-26",
