@@ -55,6 +55,7 @@ import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpan
 import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
 import { TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
 import { TimelineMinimap } from "@/components/worlds/timeline/TimelineMinimap";
+import { RoomPreviewProvider, TimelineRoomPreview } from "@/components/worlds/timeline/TimelineRoomPreview";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
 // seulement une fois ouverts : leur code (sélecteur de date, formulaires)
 // n'est chargé qu'à la première ouverture.
@@ -199,6 +200,15 @@ export function WorldTimeline({
 
   const arcsById = useMemo(() => new Map(data.arcs.map((a) => [a.id, a])), [data.arcs]);
   const eventsById = useMemo(() => new Map(data.events.map((e) => [e.id, e])), [data.events]);
+  // L'aperçu d'un salon au survol : le client, et les personas qui y ont écrit.
+  const roomPreview = useMemo(() => {
+    const personasById = new Map(data.personas.map((p) => [p.id, p]));
+    return {
+      supabase: data.supabase,
+      participantsOf: (roomId: string) =>
+        [...(data.roomPersonas.get(roomId) ?? [])].flatMap((id) => personasById.get(id) ?? []),
+    };
+  }, [data.supabase, data.personas, data.roomPersonas]);
 
   // Les salons que chaque salon suit (liens acceptés ou proposés).
   const previousOf = useMemo(() => {
@@ -764,6 +774,7 @@ export function WorldTimeline({
           ) : sections.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted-foreground" data-testid="timeline-no-match">{tv("noMatch")}</p>
           ) : (
+            <RoomPreviewProvider value={roomPreview}>
             <div
               ref={listRef}
               className="relative"
@@ -837,6 +848,7 @@ export function WorldTimeline({
                 )}
               </TimelineOverlays>
             </div>
+            </RoomPreviewProvider>
           )}
         </div>
         {!data.loading && sections.length > 0 && (
@@ -1278,75 +1290,78 @@ function RoomRow({
         data-testid="timeline-ring"
         aria-hidden
       />
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={[
-          item.title,
-          opener && openerText(opener, (name) => t("timelineByName", { name })),
-          arc && (rank ? tv("arcEpisode", { name: arc.name, rank }) : tv("arcOf", { name: arc.name })),
-          status !== "active" && tv(`roomStatus.${status}`),
-          fullDate,
-        ]
-          .filter(Boolean)
-          .join(", ")}
-        // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
-        // héritait de la hauteur de ligne du parent et le titre glissait.
-        className="group/title ml-[var(--tl-graph-pad,0px)] block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        data-title-start
-      >
-        {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
-        <span className="min-w-0 break-words">
-          {/* Le rang dans l'arc, à la couleur de l'arc, juste avant le titre. */}
-          {arc && rank && (
-            <span
-              className="mr-1 text-sm font-semibold tabular-nums"
-              style={{ color: arc.color }}
-              data-testid="timeline-arc-rank"
-              aria-hidden
-            >
-              {rank}.
-            </span>
-          )}
-          <span
-            className={cn(
-              "text-sm font-medium transition-colors group-hover/room:text-foreground",
-              status === "abandoned" ? "text-foreground/40" : "text-foreground/75",
+      {/* Au survol, l'aperçu du salon (participants, dernier message). */}
+      <TimelineRoomPreview roomId={item.id} status={status}>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={[
+            item.title,
+            opener && openerText(opener, (name) => t("timelineByName", { name })),
+            arc && (rank ? tv("arcEpisode", { name: arc.name, rank }) : tv("arcOf", { name: arc.name })),
+            status !== "active" && tv(`roomStatus.${status}`),
+            fullDate,
+          ]
+            .filter(Boolean)
+            .join(", ")}
+          // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
+          // héritait de la hauteur de ligne du parent et le titre glissait.
+          className="group/title ml-[var(--tl-graph-pad,0px)] block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          data-title-start
+        >
+          {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
+          <span className="min-w-0 break-words">
+            {/* Le rang dans l'arc, à la couleur de l'arc, juste avant le titre. */}
+            {arc && rank && (
+              <span
+                className="mr-1 text-sm font-semibold tabular-nums"
+                style={{ color: arc.color }}
+                data-testid="timeline-arc-rank"
+                aria-hidden
+              >
+                {rank}.
+              </span>
             )}
-          >
-            {item.title}
-          </span>
-          {/* « par Persona (@pseudo) » : le persona dans la couleur de son
-              groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
-              quand le salon n'a pas encore de message. */}
-          {opener && (
-            <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
-              {t.rich("timelineBy", {
-                name: opener.persona ?? `@${opener.name}`,
-                author: (chunks) => (
-                  <span
-                    className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
-                    style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
-                  >
-                    {chunks}
-                  </span>
-                ),
-              })}
-              {opener.persona && ` (@${opener.name})`}
-            </span>
-          )}
-          {arc && (
             <span
-              className="ml-2 text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: arc.color }}
-              data-testid="timeline-arc"
-              aria-hidden
+              className={cn(
+                "text-sm font-medium transition-colors group-hover/room:text-foreground",
+                status === "abandoned" ? "text-foreground/40" : "text-foreground/75",
+              )}
             >
-              {arc.name}
+              {item.title}
             </span>
-          )}
-        </span>
-      </button>
+            {/* « par Persona (@pseudo) » : le persona dans la couleur de son
+                groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
+                quand le salon n'a pas encore de message. */}
+            {opener && (
+              <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
+                {t.rich("timelineBy", {
+                  name: opener.persona ?? `@${opener.name}`,
+                  author: (chunks) => (
+                    <span
+                      className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
+                      style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
+                    >
+                      {chunks}
+                    </span>
+                  ),
+                })}
+                {opener.persona && ` (@${opener.name})`}
+              </span>
+            )}
+            {arc && (
+              <span
+                className="ml-2 text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: arc.color }}
+                data-testid="timeline-arc"
+                aria-hidden
+              >
+                {arc.name}
+              </span>
+            )}
+          </span>
+        </button>
+      </TimelineRoomPreview>
     </li>
   );
 }

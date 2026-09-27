@@ -20,7 +20,7 @@ const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => {
   function builder(table: string) {
     const b: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "not", "order", "in", "is", "single", "maybeSingle"]) b[m] = () => b;
+    for (const m of ["select", "eq", "not", "order", "in", "is", "limit", "single", "maybeSingle"]) b[m] = () => b;
     for (const op of ["insert", "update", "delete"]) {
       b[op] = (payload?: unknown) => { db.writes.push({ table, op, payload }); return b; };
     }
@@ -328,6 +328,17 @@ describe("WorldTimeline — frise verticale", () => {
     fireEvent.scroll(scroll);
     expect(within(carte).getByRole("button", { name: "Mars, An 1 · 1 salon" })).toHaveAttribute("aria-current", "true");
     expect(within(carte).getByRole("button", { name: "Janvier, An 1 · 1 salon" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("le titre d'un salon ouvre son aperçu au survol, après un court délai", async () => {
+    const user = userEvent.setup();
+    db.tables.chat_messages = [{ content: "Ne me mens pas.", created_at: new Date().toISOString() }];
+    await frise([room("a", "Départ", 1, 0, 1)]);
+    const titre = screen.getByRole("button", { name: /^Départ/ });
+    // Déclencheur de la carte de survol (Radix), fermée au repos.
+    expect(titre).toHaveAttribute("data-state", "closed");
+    await user.hover(titre);
+    expect(await screen.findByText("« Ne me mens pas. »", {}, { timeout: 2000 })).toBeInTheDocument();
   });
 
   it("l'en-tête résume la frise ; « Aujourd'hui » ramène à la date actuelle ; la légende des marques", async () => {
