@@ -90,17 +90,26 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("");
   });
 
-  it("imbriqué sous le wiki, dans un encadré d'option ; absent quand le wiki est désactivé", async () => {
+  it("imbriqué sous le wiki, dans la carte de sa catégorie ; absent quand le wiki est désactivé", async () => {
     setup();
     const user = userEvent.setup();
     const { unmount } = render(<WorldSettingsView world={BASE_WORLD} />);
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
-    const encadre = screen.getByPlaceholderText("Annexes").closest(".ml-4") as HTMLElement;
-    expect(encadre.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border", "border-border-soft"]));
-    // Tous les encadrés d'options imbriquées de l'onglet : le style « carte »,
-    // une bordure en rounded-md, sans fond.
-    for (const el of document.querySelectorAll(".ml-4.border-border-soft")) {
-      expect(el.className).not.toMatch(/rounded-xl|bg-/);
+    // En retrait sous l'interrupteur du wiki, dans la carte de sa catégorie.
+    const champ = screen.getByPlaceholderText("Annexes");
+    expect(champ.closest(".ml-4")).not.toBeNull();
+    const carte = champ.closest("[data-testid='features-category']") as HTMLElement;
+    expect(carte).toHaveTextContent("Activer le wiki");
+    // Chaque catégorie de fonctions, une carte : une bordure en rounded-md,
+    // sans fond ; les options imbriquées, sans encadré à elles.
+    const cartes = screen.getAllByTestId("features-category");
+    expect(cartes.length).toBeGreaterThanOrEqual(3);
+    for (const c of cartes) {
+      expect(c.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border", "border-border-soft"]));
+      expect(c.className).not.toMatch(/bg-/);
+    }
+    for (const el of document.querySelectorAll(".ml-4")) {
+      expect(el.className).not.toMatch(/rounded|bg-muted/);
     }
     unmount();
 

@@ -137,7 +137,7 @@ export function WorldPersonaTemplateSection({
   }
 
   return (
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5 rounded-md border border-border-soft p-4" data-testid="features-category">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {t("nav.personas")}
       </p>
@@ -157,7 +157,7 @@ export function WorldPersonaTemplateSection({
         </div>
 
         {templateId && (
-          <div className="ml-4 flex items-center justify-end gap-2 rounded-md border border-border-soft p-3">
+          <div className="ml-4 flex items-center justify-end gap-2">
             <HelpHint title={tSettings("editSheet")}>{tSettings("editSheetHelp")}</HelpHint>
             <Button
               type="button"
@@ -173,7 +173,7 @@ export function WorldPersonaTemplateSection({
         )}
 
         {templateId && (
-          <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
+          <div className="ml-4 flex items-start justify-between gap-4">
             <p className="flex items-center gap-1.5 text-sm font-medium">
                 {t("personaReview.label")}
                 <HelpHint title={t("personaReview.label")}>{t("personaReview.help")}</HelpHint>

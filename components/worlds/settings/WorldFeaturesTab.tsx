@@ -206,7 +206,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                         <TabsContent value="features" className="mt-0">
                             <div className="mx-auto max-w-xl space-y-6">
                                 {/* -- Catalogue -------------------------------- */}
-                                <div className="space-y-5">
+                                <div className="space-y-5 rounded-md border border-border-soft p-4" data-testid="features-category">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.catalogue")}</p>
 
                                     {/* Objets */}
@@ -224,7 +224,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableInventory && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {t("restrictToCatalogue")}
                                                     <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictInventoryHelp")}</HelpHint>
@@ -254,7 +254,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableSkills && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {t("restrictToCatalogue")}
                                                     <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictSkillsHelp")}</HelpHint>
@@ -284,7 +284,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             />
                                         </div>
                                         {enableFaceclaims && (
-                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-md border border-border-soft p-3">
+                                            <div className="ml-4 flex items-start justify-between gap-4">
                                                 <p className="flex items-center gap-1.5 text-sm font-medium">
                                                     {tSettings("requireFaceclaim")}
                                                     <HelpHint title={tSettings("requireFaceclaim")}>{tSettings("requireFaceclaimHelp")}</HelpHint>
@@ -301,7 +301,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                 </div>
 
                                 {/* -- Carte ---------------------------------- */}
-                                <div className="space-y-3 pt-2">
+                                <div className="space-y-3 rounded-md border border-border-soft p-4" data-testid="features-category">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.map")}</p>
                                     <div className="flex items-start justify-between gap-4">
                                         <p className="flex items-center gap-1.5 text-sm font-medium">
@@ -318,7 +318,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                 </div>
 
                                 {/* -- Wiki ---------------------------------- */}
-                                <div className="space-y-3 pt-2">
+                                <div className="space-y-3 rounded-md border border-border-soft p-4" data-testid="features-category">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{tSettings("wiki")}</p>
                                     <div className="flex items-start justify-between gap-4">
                                         <p className="flex items-center gap-1.5 text-sm font-medium">
@@ -335,7 +335,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     {/* Le nom du lien, imbriqué sous le wiki comme les options
                                         du catalogue sous le leur : sans wiki, il n'a pas lieu d'être. */}
                                     {enableWiki && (
-                                        <div className="ml-4 rounded-md border border-border-soft p-3">
+                                        <div className="ml-4">
                                             <FormField
                                                 control={form.control}
                                                 name="wiki_label"
@@ -375,7 +375,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
 
                                 {/* -- Timeline -------------------------------- */}
                                 {world_timeline && (
-                                    <div className="space-y-5 pt-2">
+                                    <div className="space-y-5 rounded-md border border-border-soft p-4" data-testid="features-category">
                                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.timeline")}</p>
 
                                         <div className="flex items-start justify-between gap-4">

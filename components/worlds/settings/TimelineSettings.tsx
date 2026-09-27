@@ -123,7 +123,7 @@ export function TimelineSettings({
   return (
     <>
       {/* ── Aperçu : ce que composent les trois réglages qui suivent ── */}
-      <div className="ml-4 rounded-md border border-border-soft p-3" data-testid="timeline-preview">
+      <div className="ml-4" data-testid="timeline-preview">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">{tSettings("timelinePreviewLabel")}</p>
           <HelpHint title={tSettings("timelinePreviewLabel")}>{tSettings("timelinePreviewHelp")}</HelpHint>
@@ -563,8 +563,9 @@ function clampDormantDays(value: string): number {
   return Number.isNaN(days) ? 0 : Math.min(Math.max(days, 0), DORMANT_DAYS_MAX);
 }
 
-/** Une sous-option en retrait, au dessin de celles de la fiche par défaut ;
- *  son explication derrière l'aide en bout de ligne. */
+/** Une sous-option en retrait, séparée de la précédente d'un filet (la
+ *  carte de la chronologie les réunit) ; son explication derrière l'aide en
+ *  bout de ligne. */
 function SubOption({
   title,
   help,
@@ -577,7 +578,7 @@ function SubOption({
   children: React.ReactNode;
 }) {
   return (
-    <section className="ml-4 space-y-3 rounded-md border border-border-soft p-3" aria-label={title}>
+    <section className="ml-4 space-y-3 border-t border-border-soft pt-4" aria-label={title}>
       <div className="flex items-center gap-3">
         <p className="min-w-0 flex-1 text-sm font-medium">{title}</p>
         {action}
