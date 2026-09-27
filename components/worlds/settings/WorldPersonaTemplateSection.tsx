@@ -33,6 +33,7 @@ import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
 import { setWorldReviewActiveCache } from "@/hooks/useWorldReviewActive";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { HelpHint } from "@/components/ui/help-hint";
 
 /**
  * Réglage « Fiche de persona par défaut » d'un monde.
@@ -143,12 +144,10 @@ export function WorldPersonaTemplateSection({
 
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{t("defaultSheet")}</p>
-            <p className="text-xs text-muted-foreground leading-snug">
-              {tSettings("defaultSheetHelp")}
-            </p>
-          </div>
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+              {t("defaultSheet")}
+              <HelpHint title={t("defaultSheet")}>{tSettings("defaultSheetHelp")}</HelpHint>
+          </p>
           <Switch
             checked={!!templateId}
             disabled={!loaded || toggling}
@@ -158,10 +157,8 @@ export function WorldPersonaTemplateSection({
         </div>
 
         {templateId && (
-          <div className="ml-4 flex items-center justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-            <p className="text-xs text-muted-foreground leading-snug">
-              {tSettings("editSheetHelp")}
-            </p>
+          <div className="ml-4 flex items-center justify-end gap-2 rounded-xl border border-border-soft bg-muted/20 p-3">
+            <HelpHint title={tSettings("editSheet")}>{tSettings("editSheetHelp")}</HelpHint>
             <Button
               type="button"
               variant="secondary"
@@ -177,10 +174,10 @@ export function WorldPersonaTemplateSection({
 
         {templateId && (
           <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">{t("personaReview.label")}</p>
-              <p className="text-xs text-muted-foreground leading-snug">{t("personaReview.help")}</p>
-            </div>
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+                {t("personaReview.label")}
+                <HelpHint title={t("personaReview.label")}>{t("personaReview.help")}</HelpHint>
+            </p>
             <Switch
               checked={reviewEnabled}
               disabled={togglingReview}

@@ -41,6 +41,7 @@ import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldP
 import { TimelineSettings } from "./TimelineSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { HelpHint } from "@/components/ui/help-hint";
 
 /**
  * Onglet « Fonctions » des réglages d'un monde : inventaire et compétences,
@@ -211,12 +212,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     {/* Objets */}
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">{tSettings("inventoryItems")}</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    {tSettings("inventoryItemsHelp")}
-                                                </p>
-                                            </div>
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                {tSettings("inventoryItems")}
+                                                <HelpHint title={tSettings("inventoryItems")}>{tSettings("inventoryItemsHelp")}</HelpHint>
+                                            </p>
                                             <Switch
                                                 checked={enableInventory}
                                                 disabled={togglingEnable}
@@ -226,12 +225,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         </div>
                                         {enableInventory && (
                                             <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
-                                                    <p className="text-xs text-muted-foreground leading-snug">
-                                                        {tSettings("restrictInventoryHelp")}
-                                                    </p>
-                                                </div>
+                                                <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                    {t("restrictToCatalogue")}
+                                                    <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictInventoryHelp")}</HelpHint>
+                                                </p>
                                                 <Switch
                                                     checked={restrictInventory}
                                                     disabled={togglingRestriction}
@@ -245,12 +242,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     {/* Compétences */}
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">{t("tabSkills")}</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    {tSettings("skillsHelp")}
-                                                </p>
-                                            </div>
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                {t("tabSkills")}
+                                                <HelpHint title={t("tabSkills")}>{tSettings("skillsHelp")}</HelpHint>
+                                            </p>
                                             <Switch
                                                 checked={enableSkills}
                                                 disabled={togglingEnable}
@@ -260,12 +255,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         </div>
                                         {enableSkills && (
                                             <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
-                                                    <p className="text-xs text-muted-foreground leading-snug">
-                                                        {tSettings("restrictSkillsHelp")}
-                                                    </p>
-                                                </div>
+                                                <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                    {t("restrictToCatalogue")}
+                                                    <HelpHint title={t("restrictToCatalogue")}>{tSettings("restrictSkillsHelp")}</HelpHint>
+                                                </p>
                                                 <Switch
                                                     checked={restrictSkills}
                                                     disabled={togglingRestriction}
@@ -279,12 +272,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     {/* Faceclaims */}
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">{tCatalogue("faceclaims")}</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    {tSettings("faceclaimsHelp")}
-                                                </p>
-                                            </div>
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                {tCatalogue("faceclaims")}
+                                                <HelpHint title={tCatalogue("faceclaims")}>{tSettings("faceclaimsHelp")}</HelpHint>
+                                            </p>
                                             <Switch
                                                 checked={enableFaceclaims}
                                                 disabled={togglingFaceclaims}
@@ -294,12 +285,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         </div>
                                         {enableFaceclaims && (
                                             <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">{tSettings("requireFaceclaim")}</p>
-                                                    <p className="text-xs text-muted-foreground leading-snug">
-                                                        {tSettings("requireFaceclaimHelp")}
-                                                    </p>
-                                                </div>
+                                                <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                    {tSettings("requireFaceclaim")}
+                                                    <HelpHint title={tSettings("requireFaceclaim")}>{tSettings("requireFaceclaimHelp")}</HelpHint>
+                                                </p>
                                                 <Switch
                                                     checked={requireFaceclaim}
                                                     disabled={togglingRequireFaceclaim}
@@ -315,12 +304,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                 <div className="space-y-3 pt-2">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.map")}</p>
                                     <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("enableMap")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {t("enableMapHelp")}
-                                            </p>
-                                        </div>
+                                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                                            {t("enableMap")}
+                                            <HelpHint title={t("enableMap")}>{t("enableMapHelp")}</HelpHint>
+                                        </p>
                                         <Switch
                                             checked={enableMap}
                                             disabled={togglingMap}
@@ -334,12 +321,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                 <div className="space-y-3 pt-2">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{tSettings("wiki")}</p>
                                     <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("enableWiki")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {t("enableWikiHelp")}
-                                            </p>
-                                        </div>
+                                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                                            {t("enableWiki")}
+                                            <HelpHint title={t("enableWiki")}>{t("enableWikiHelp")}</HelpHint>
+                                        </p>
                                         <Switch
                                             checked={enableWiki}
                                             disabled={togglingWiki}
@@ -388,12 +373,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.timeline")}</p>
 
                                         <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">{t("enableTimeline")}</p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    {tSettings("timelineHelp")}
-                                                </p>
-                                            </div>
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                {t("enableTimeline")}
+                                                <HelpHint title={t("enableTimeline")}>{tSettings("timelineHelp")}</HelpHint>
+                                            </p>
                                             <Switch
                                                 checked={timelineEnabled}
                                                 disabled={togglingTimeline}

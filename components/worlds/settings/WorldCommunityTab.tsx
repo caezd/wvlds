@@ -30,6 +30,7 @@ import {
   removeWorldTag,
 } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { HelpHint } from "@/components/ui/help-hint";
 
 /**
  * Onglet « Communauté » des réglages d'un monde : visibilité, types d'avatars
@@ -237,12 +238,10 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     {/* Deux cartes plutôt qu'un interrupteur : le choix se lit
                                         d'un coup d'œil, comme Privé / Public juste au-dessus. */}
                                     <div className="space-y-3">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("tabSecurity")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {tSettings("ageRestrictedHelp")}
-                                            </p>
-                                        </div>
+                                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                                            {t("tabSecurity")}
+                                            <HelpHint title={t("tabSecurity")}>{tSettings("ageRestrictedHelp")}</HelpHint>
+                                        </p>
                                         <SegmentedRail>
                                             <Segment
                                                 active={!ageRestricted}
@@ -263,12 +262,10 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
 
                                     {/* -- Avatars acceptés --------------------- */}
                                     <div className="space-y-3">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {tSettings("avatarTypesHelp")}
-                                            </p>
-                                        </div>
+                                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                                            {t("acceptedAvatarTypes")}
+                                            <HelpHint title={t("acceptedAvatarTypes")}>{tSettings("avatarTypesHelp")}</HelpHint>
+                                        </p>
                                         <SegmentedRail>
                                             <Segment
                                                 active={allowsRealAvatars}
@@ -292,14 +289,12 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         discrète pour ce qu'on propose : trois rangées de pastilles
                                         de formes différentes se lisaient comme un fourre-tout. */}
                                     <div className="space-y-3">
-                                        <div className="space-y-0.5">
-                                            <div className="flex items-baseline justify-between gap-2">
-                                                <p className="text-sm font-medium">{tSettings("tags")}</p>
-                                                <p className="text-[11px] tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {tSettings("tagsHelp")}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                {tSettings("tags")}
+                                                <HelpHint title={tSettings("tags")}>{tSettings("tagsHelp")}</HelpHint>
                                             </p>
+                                            <p className="text-[11px] tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
                                         </div>
 
                                         <div className="space-y-2 rounded-lg border border-border-soft p-2">

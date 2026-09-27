@@ -31,6 +31,7 @@ import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { LabelWithHelp } from "./LabelWithHelp";
 import { ColorPickerButton } from "./ColorPickerButton";
 import { RoleChip } from "../members/RoleChip";
+import { HelpHint } from "@/components/ui/help-hint";
 
 const ROLE_SELECT = "id, world_id, name, color, lucide_icon, position, permissions, is_default, mentionable, hoist";
 const NEW_ROLE_COLOR = "#94a3b8";
@@ -181,8 +182,10 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
     <div className="mx-auto flex max-w-4xl flex-col gap-4 md:flex-row">
       {/* ── Liste ──────────────────────────────────────────── */}
       <aside className={cn("w-full shrink-0 space-y-2", deuxColonnes && "md:w-64")}>
-        <h3 className="text-sm font-semibold">{t("title")}</h3>
-        <p className="text-xs text-muted-foreground">{t("hierarchyHelp")}</p>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">{t("title")}</h3>
+          <HelpHint title={t("title")}>{t("hierarchyHelp")}</HelpHint>
+        </div>
         {/* Le bouton précède la liste, comme « Nouvelle catégorie » : une ligne
             pleine largeur juste au-dessus des rôles qu'il vient compléter. */}
         <Button size="sm" variant="outline" onClick={() => void createRole()} className="w-full text-xs">
@@ -517,7 +520,7 @@ function ToggleRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg border border-border-soft px-3 py-2">
-      <LabelWithHelp help={help}>
+      <LabelWithHelp help={help} title={label}>
         <Label htmlFor={id}>{label}</Label>
       </LabelWithHelp>
       <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onChange} />

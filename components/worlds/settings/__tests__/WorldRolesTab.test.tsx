@@ -92,6 +92,19 @@ describe("WorldRolesTab — liste", () => {
     expect(items[2]).toHaveTextContent("2");
   });
 
+  it("la hiérarchie s'explique derrière l'aide du titre ; chaque permission garde son explication en clair", async () => {
+    setup();
+    render(<WorldRolesTab worldId="w1" />);
+    const aide = await screen.findByRole("button", { name: "Aide : Rôles" });
+    expect(aide).toHaveAccessibleDescription(/^Du plus haut au plus bas/);
+    expect(screen.queryByText(/^Du plus haut au plus bas/, { selector: "p" })).toBeNull();
+    // Les permissions, elles, restent expliquées sous leur nom.
+    expect(await screen.findByText("Apparence, page d'accueil, fonctions et communauté.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^Aide : Réglages du monde/ })).toBeNull();
+    // Les options d'un rôle : une aide nommée d'après l'option.
+    expect(screen.getByRole("button", { name: /^Aide : Afficher/ })).toBeInTheDocument();
+  });
+
   it("sélectionne le plus haut rôle par défaut et montre sa fiche", async () => {
     setup();
     render(<WorldRolesTab worldId="w1" />);
