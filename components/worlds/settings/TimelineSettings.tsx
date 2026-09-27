@@ -656,7 +656,7 @@ function AddRow({
 const HOLIDAY_NAME_MAX = 60;
 const DORMANT_DAYS_MAX = 3650;
 
-/** Un délai de mise en sommeil saisi : entier, de 0 (jamais) à dix ans. */
+/** Un délai de mise en pause saisi : entier, de 0 (jamais) à dix ans. */
 function clampDormantDays(value: string): number {
   const days = parseInt(value, 10);
   return Number.isNaN(days) ? 0 : Math.min(Math.max(days, 0), DORMANT_DAYS_MAX);

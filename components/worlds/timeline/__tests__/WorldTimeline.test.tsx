@@ -351,8 +351,10 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.getByTestId("timeline-summary")).toHaveTextContent("2 salons · 1 arc");
     const legende = screen.getByRole("list", { name: "Légende" });
     expect(within(legende).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "En cours", "En sommeil", "Terminé", "Abandonné", "Événement",
+      "En cours", "Pause", "Terminé", "Abandonné", "Événement",
     ]);
+    // En pause : l'icône « cercle pause », comme sur le fil.
+    expect(within(legende).getAllByRole("listitem")[1].querySelector("svg.lucide-circle-pause")).not.toBeNull();
     const scroll = screen.getByTestId("timeline-scroll");
     const scrollTo = vi.fn();
     scroll.scrollTo = scrollTo as never;
@@ -860,16 +862,13 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     expect(ligne("d")).toHaveAttribute("data-status", "abandoned");
 
     const anneau = (id: string) => within(ligne(id)).getByTestId("timeline-ring");
-    // En cours : creux. En sommeil : le signe pause couché (« = »), sur le
-    // fond qui découpe le fil. Terminé : plein. Abandonné : en pointillés.
-    // Une bordure de 2px.
+    // En cours : creux, bordé de 2px. En pause : l'icône « cercle pause », sur
+    // le fond qui découpe le fil. Terminé : plein. Abandonné : en pointillés.
     expect(anneau("a").className.split(" ")).toContain("border-2");
-    expect(within(anneau("a")).queryByTestId("timeline-pause-mark")).toBeNull();
-    const pause = within(anneau("b")).getByTestId("timeline-pause-mark");
-    expect(pause.children).toHaveLength(2);
-    expect(pause.firstElementChild!.className.split(" ")).toEqual(expect.arrayContaining(["bg-current", "h-[1.5px]"]));
-    expect(anneau("b").className).toContain("bg-body");
-    expect(anneau("b").getAttribute("style") ?? "").not.toMatch(/gradient/);
+    expect(anneau("a").tagName.toLowerCase()).toBe("span");
+    expect(anneau("b").tagName.toLowerCase()).toBe("svg");
+    expect(anneau("b").getAttribute("class")).toContain("lucide-circle-pause");
+    expect(anneau("b").getAttribute("class")).toContain("bg-body");
     expect(anneau("c").className).toContain("bg-foreground/35");
     expect(anneau("d").className.split(" ")).toContain("border-dashed");
     // Le statut est lu, sauf « en cours ».

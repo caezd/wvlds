@@ -117,7 +117,7 @@ describe("TimelineRoomPreview", () => {
     expect(await screen.findByText("« — Tu savais. Ne me mens pas. »")).toBeInTheDocument();
     expect(carte).toHaveTextContent("19 messages");
     expect(carte).toHaveTextContent("dernier message il y a 47 jours");
-    expect(carte).toHaveTextContent("En sommeil");
+    expect(carte).toHaveTextContent("Pause");
   });
 
   it("hors de la frise (sans contexte), le titre reste seul", () => {

@@ -11,7 +11,7 @@ import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type ArcOption = { id: string; name: string };
-/** Le statut enregistré d'un salon (migration 197) ; « en sommeil » se déduit. */
+/** Le statut enregistré d'un salon (migration 197) ; « en pause » se déduit. */
 type RoomStatus = "active" | "completed" | "abandoned";
 const ROOM_STATUSES: readonly RoomStatus[] = ["active", "completed", "abandoned"];
 type RoomOption = { id: string; title: string | null; timeline_date: WorldTimelineDate; mine: boolean };

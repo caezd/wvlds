@@ -697,7 +697,7 @@
       "filterStatus": "Status",
       "roomStatus": {
         "active": "In progress",
-        "dormant": "Dormant",
+        "dormant": "Paused",
         "completed": "Completed",
         "abandoned": "Abandoned"
       },
@@ -991,8 +991,8 @@
       "holidayDayPlaceholder": "Day",
       "holidayMonthPlaceholder": "Month of the new holiday",
       "addHoliday": "Add the holiday",
-      "dormantDays": "Dormant after",
-      "dormantDaysHelp": "A room in progress with no message for this many days shows as dormant on the timeline. 0: never.",
+      "dormantDays": "Paused after",
+      "dormantDaysHelp": "A room in progress with no message for this many days shows as paused on the timeline. 0: never.",
       "featuresNav": "Feature categories",
       "featuresTitle": "Features",
       "statusOn": "On",
@@ -1016,7 +1016,7 @@
       "newMonthName": "Month {n}",
       "holidayDate": "Date of {name}",
       "daysWord": "days",
-      "dormantDaysInput": "Dormant after, in days"
+      "dormantDaysInput": "Paused after, in days"
     },
     "timelinePicker": {
       "year": "Year",

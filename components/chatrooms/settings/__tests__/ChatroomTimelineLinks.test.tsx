@@ -66,7 +66,7 @@ function monter(onSaved = vi.fn()) {
 }
 
 describe("ChatroomTimelineLinks", () => {
-  it("le statut du salon : lu, puis changé ; « en sommeil » ne se choisit pas", async () => {
+  it("le statut du salon : lu, puis changé ; « en pause » ne se choisit pas", async () => {
     const onSaved = vi.fn();
     monter(onSaved);
     const user = userEvent.setup();

@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useDeferredValue, useEffect, useLayoutEffe
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { ArrowDown, BookOpen, BookText, Clock, LocateFixed, Pencil, Plus, Search, Sparkles, Spline, Sunrise, X } from "lucide-react";
+import { ArrowDown, BookOpen, BookText, CirclePause, Clock, LocateFixed, Pencil, Plus, Search, Sparkles, Spline, Sunrise, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import {
@@ -53,7 +53,7 @@ import {
 } from "@/components/worlds/timeline/SuiteLinks";
 import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
 import { TimelineOverlays } from "@/components/worlds/timeline/TimelineLayout";
-import { PauseBars, TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
+import { TimelineLegend, TimelinePositionBar, YEAR_CAPTION } from "@/components/worlds/timeline/TimelinePositionBar";
 import { TimelineMinimap } from "@/components/worlds/timeline/TimelineMinimap";
 import { RoomPreviewProvider, TimelineRoomPreview } from "@/components/worlds/timeline/TimelineRoomPreview";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
@@ -200,7 +200,7 @@ export function WorldTimeline({
     return map;
   }, [data.sequels]);
 
-  // « En sommeil » se compte à partir de l'ouverture de la frise.
+  // « En pause » (en sommeil) se compte à partir de l'ouverture de la frise.
   const [now] = useState(() => Date.now());
   const dormantDays = config.dormant_days ?? DEFAULT_DORMANT_DAYS;
 
@@ -1290,24 +1290,37 @@ function RoomRow({
       <DayGutter day={day} />
       {/* Un anneau par salon, sur le fil, centré sur son titre (ligne de
           20px), à la couleur de son arc ; il fonce au survol. Son remplissage
-          dit le statut : creux en cours, le signe pause couché (« = ») en
-          sommeil, plein terminé, en pointillés abandonné. */}
-      <span
-        className={cn(
-          "absolute -left-[33.5px] top-1 flex size-3 items-center justify-center rounded-full border-2 transition-colors",
-          !arc && "border-foreground/35 text-foreground/35 group-hover/room:border-foreground group-hover/room:text-foreground",
-          status === "abandoned" && "border-dashed",
-          status === "completed" && !arc ? "bg-foreground/35 group-hover/room:bg-foreground" : status !== "completed" && AMBIENT_BG,
-        )}
-        style={{
-          ...(arc ? { borderColor: arc.color, color: arc.color } : {}),
-          ...(status === "completed" && arc ? { backgroundColor: arc.color } : {}),
-        }}
-        data-testid="timeline-ring"
-        aria-hidden
-      >
-        {status === "dormant" && <PauseBars />}
-      </span>
+          dit le statut : creux en cours, plein terminé, en pointillés
+          abandonné ; en pause, l'icône « cercle pause » à sa place (même
+          centre, cercle de même taille, trait d'environ 2px). */}
+      {status === "dormant" ? (
+        <CirclePause
+          className={cn(
+            "absolute -left-[34.5px] top-[3px] size-3.5 rounded-full transition-colors",
+            AMBIENT_BG,
+            !arc && "text-foreground/35 group-hover/room:text-foreground",
+          )}
+          style={arc ? { color: arc.color } : undefined}
+          strokeWidth={3.4}
+          data-testid="timeline-ring"
+          aria-hidden
+        />
+      ) : (
+        <span
+          className={cn(
+            "absolute -left-[33.5px] top-1 size-3 rounded-full border-2 transition-colors",
+            !arc && "border-foreground/35 text-foreground/35 group-hover/room:border-foreground group-hover/room:text-foreground",
+            status === "abandoned" && "border-dashed",
+            status === "completed" && !arc ? "bg-foreground/35 group-hover/room:bg-foreground" : status !== "completed" && AMBIENT_BG,
+          )}
+          style={{
+            ...(arc ? { borderColor: arc.color } : {}),
+            ...(status === "completed" && arc ? { backgroundColor: arc.color } : {}),
+          }}
+          data-testid="timeline-ring"
+          aria-hidden
+        />
+      )}
       {/* Au survol, l'aperçu du salon (participants, dernier message). */}
       <TimelineRoomPreview roomId={item.id} status={status}>
         <button

@@ -70,7 +70,7 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     // Ni « Ex. … » sous les champs du format.
     expect(screen.queryByText(/^Ex\./)).toBeNull();
     // Une aide par sous-option, et pour les options qu'elles contiennent.
-    for (const nom of ["Aide : Fêtes du calendrier", "Aide : Afficher les journaux des personas", "Aide : Mise en sommeil"]) {
+    for (const nom of ["Aide : Fêtes du calendrier", "Aide : Afficher les journaux des personas", "Aide : Mise en pause"]) {
       expect(screen.getByRole("button", { name: nom })).toBeInTheDocument();
     }
   });
@@ -259,7 +259,7 @@ describe("TimelineSettings — responsive", () => {
   });
 });
 
-describe("TimelineSettings — fêtes et mise en sommeil", () => {
+describe("TimelineSettings — fêtes et mise en pause", () => {
   it("ajoute une fête, triée dans l'année ; son jour se borne au mois", async () => {
     const onPersist = vi.fn();
     const user = userEvent.setup();
@@ -303,11 +303,11 @@ describe("TimelineSettings — fêtes et mise en sommeil", () => {
     expect(screen.getByText("Aucune fête au calendrier.")).toBeInTheDocument();
   });
 
-  it("la mise en sommeil : 30 jours par défaut, 0 pour jamais, bornée", async () => {
+  it("la mise en pause : 30 jours par défaut, 0 pour jamais, bornée", async () => {
     const onPersist = vi.fn();
     const user = userEvent.setup();
     render(<Harnais onPersist={onPersist} />);
-    const delai = screen.getByRole("spinbutton", { name: "Mise en sommeil, en jours" });
+    const delai = screen.getByRole("spinbutton", { name: "Mise en pause, en jours" });
     expect(delai).toHaveValue(30);
     await user.clear(delai);
     await user.type(delai, "0");

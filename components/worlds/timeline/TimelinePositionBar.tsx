@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, CirclePause } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { TIMELINE_ROOM_STATUSES, type TimelineMonthStop, type TimelineRoomStatus } from "@/lib/worldTimelineItems";
@@ -113,33 +113,18 @@ export function TimelinePositionBar({
   );
 }
 
-/**
- * « En sommeil » : le signe pause couché (« = »), deux traits dans l'anneau,
- * de la couleur du texte de l'anneau (`currentColor`).
- */
-export function PauseBars({ small = false }: { small?: boolean }) {
-  const bar = cn("block h-[1.5px] rounded-full bg-current", small ? "w-1" : "w-[5px]");
-  return (
-    <span className={cn("flex flex-col items-center", small ? "gap-px" : "gap-[2px]")} data-testid="timeline-pause-mark" aria-hidden>
-      <span className={bar} />
-      <span className={bar} />
-    </span>
-  );
-}
-
-/** La marque d'un statut, telle qu'elle paraît sur le fil. */
+/** La marque d'un statut, telle qu'elle paraît sur le fil ; en pause, l'icône « cercle pause ». */
 function StatusMark({ status }: { status: TimelineRoomStatus }) {
+  if (status === "dormant") return <CirclePause className="size-3 shrink-0" strokeWidth={3} aria-hidden />;
   return (
     <span
       className={cn(
-        "flex size-2.5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-foreground/60",
+        "size-2.5 shrink-0 rounded-full border-[1.5px] border-foreground/60",
         status === "abandoned" && "border-dashed",
         status === "completed" && "bg-foreground/60",
       )}
       aria-hidden
-    >
-      {status === "dormant" && <PauseBars small />}
-    </span>
+    />
   );
 }
 

@@ -697,7 +697,7 @@
       "filterStatus": "Estado",
       "roomStatus": {
         "active": "En curso",
-        "dormant": "Inactivo",
+        "dormant": "En pausa",
         "completed": "Terminado",
         "abandoned": "Abandonado"
       },
@@ -991,8 +991,8 @@
       "holidayDayPlaceholder": "Día",
       "holidayMonthPlaceholder": "Mes de la nueva fiesta",
       "addHoliday": "Añadir la fiesta",
-      "dormantDays": "Inactividad",
-      "dormantDaysHelp": "Un salón en curso sin mensajes durante este número de días aparece inactivo en la cronología. 0: nunca.",
+      "dormantDays": "Pausa",
+      "dormantDaysHelp": "Un salón en curso sin mensajes durante este número de días aparece en pausa en la cronología. 0: nunca.",
       "featuresNav": "Categorías de funciones",
       "featuresTitle": "Funciones",
       "statusOn": "Activo",
@@ -1016,7 +1016,7 @@
       "newMonthName": "Mes {n}",
       "holidayDate": "Fecha de {name}",
       "daysWord": "días",
-      "dormantDaysInput": "Inactividad, en días"
+      "dormantDaysInput": "Pausa, en días"
     },
     "timelinePicker": {
       "year": "Año",
