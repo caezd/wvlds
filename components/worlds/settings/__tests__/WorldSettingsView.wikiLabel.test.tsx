@@ -86,35 +86,27 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
 
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("");
   });
 
-  it("imbriqué sous le wiki, dans la carte de sa catégorie ; absent quand le wiki est désactivé", async () => {
+  it("imbriqué sous le wiki, le long du fil de ses options ; absent quand le wiki est désactivé", async () => {
     setup();
     const user = userEvent.setup();
     const { unmount } = render(<WorldSettingsView world={BASE_WORLD} />);
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
-    // En retrait sous l'interrupteur du wiki, dans la carte de sa catégorie.
-    const champ = screen.getByPlaceholderText("Annexes");
-    expect(champ.closest(".ml-4")).not.toBeNull();
-    const carte = champ.closest("[data-testid='features-category']") as HTMLElement;
-    expect(carte).toHaveTextContent("Activer le wiki");
-    // Chaque catégorie de fonctions, une carte : une bordure en rounded-md,
-    // sans fond ; les options imbriquées, sans encadré à elles.
-    const cartes = screen.getAllByTestId("features-category");
-    expect(cartes.length).toBeGreaterThanOrEqual(3);
-    for (const c of cartes) {
-      expect(c.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "border", "border-border-soft"]));
-      expect(c.className).not.toMatch(/bg-/);
-    }
-    for (const el of document.querySelectorAll(".ml-4")) {
-      expect(el.className).not.toMatch(/rounded|bg-muted/);
-    }
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
+    // Une option du wiki : dans ses options dépliées, le long du fil, sans encadré.
+    const options = screen.getByPlaceholderText("Annexes").closest("[data-testid='feature-options']") as HTMLElement;
+    expect(options).not.toBeNull();
+    expect(options.className).not.toMatch(/rounded|bg-/);
+    expect(options.closest("[data-testid='feature-row']")).toHaveTextContent("Activer le wiki");
     unmount();
 
     render(<WorldSettingsView world={{ ...BASE_WORLD, enable_wiki: false }} />);
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     expect(screen.queryByPlaceholderText("Annexes")).toBeNull();
   });
 
@@ -124,6 +116,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
 
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("Compendium");
   });
@@ -134,6 +127,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     const input = screen.getByPlaceholderText("Annexes");
     await user.type(input, "Compendium");
     await user.tab(); // blur
@@ -150,6 +144,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     const input = screen.getByPlaceholderText("Annexes");
     await user.type(input, "Compendium");
     await user.tab();
@@ -165,6 +160,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     const input = screen.getByPlaceholderText("Annexes");
     await user.clear(input);
     await user.tab();

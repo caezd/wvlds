@@ -970,7 +970,8 @@
       "holidayMonthPlaceholder": "Mois de la nouvelle fête",
       "addHoliday": "Ajouter la fête",
       "dormantDays": "Mise en sommeil (jours)",
-      "dormantDaysHelp": "Un salon en cours sans message depuis ce nombre de jours paraît en sommeil sur la frise. 0 : jamais."
+      "dormantDaysHelp": "Un salon en cours sans message depuis ce nombre de jours paraît en sommeil sur la frise. 0 : jamais.",
+      "featuresNav": "Catégories de fonctions"
     },
     "timelinePicker": {
       "year": "Année",

@@ -970,7 +970,8 @@
       "holidayMonthPlaceholder": "Month of the new holiday",
       "addHoliday": "Add the holiday",
       "dormantDays": "Dormant after (days)",
-      "dormantDaysHelp": "A room in progress with no message for this many days shows as dormant on the timeline. 0: never."
+      "dormantDaysHelp": "A room in progress with no message for this many days shows as dormant on the timeline. 0: never.",
+      "featuresNav": "Feature categories"
     },
     "timelinePicker": {
       "year": "Year",

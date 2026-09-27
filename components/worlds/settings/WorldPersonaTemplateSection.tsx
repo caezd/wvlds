@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { FeatureOption, FeatureRow } from "./FeatureRow";
 import {
   Drawer,
   DrawerHeader,
@@ -33,7 +34,6 @@ import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
 import { setWorldReviewActiveCache } from "@/hooks/useWorldReviewActive";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { HelpHint } from "@/components/ui/help-hint";
 
 /**
  * Réglage « Fiche de persona par défaut » d'un monde.
@@ -136,58 +136,39 @@ export function WorldPersonaTemplateSection({
     setSections(await fetchPersonaSections(supabase, templateId));
   }
 
+  // Une ligne de la liste des fonctions (voir FeatureRow) ; les dialogues,
+  // hors de la liste, passent par des portails.
   return (
-    <div className="space-y-5 rounded-md border border-border-soft p-4" data-testid="features-category">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {t("nav.personas")}
-      </p>
-
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-4">
-          <p className="flex items-center gap-1.5 text-sm font-medium">
-              {t("defaultSheet")}
-              <HelpHint title={t("defaultSheet")}>{tSettings("defaultSheetHelp")}</HelpHint>
-          </p>
+    <>
+      <FeatureRow
+        label={t("defaultSheet")}
+        help={tSettings("defaultSheetHelp")}
+        checked={!!templateId}
+        disabled={!loaded || toggling}
+        onCheckedChange={(v) => void handleToggle(v)}
+      >
+        <FeatureOption label={tSettings("editSheet")} help={tSettings("editSheetHelp")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0"
+            onClick={() => void openEditor()}
+          >
+            <Pencil className="mr-1 h-3.5 w-3.5" />
+            {tSettings("editSheet")}
+          </Button>
+        </FeatureOption>
+        <FeatureOption label={t("personaReview.label")} help={t("personaReview.help")}>
           <Switch
-            checked={!!templateId}
-            disabled={!loaded || toggling}
-            onCheckedChange={(v) => void handleToggle(v)}
-            className="shrink-0 mt-0.5"
+            checked={reviewEnabled}
+            disabled={togglingReview}
+            onCheckedChange={(v) => void handleReviewToggle(v)}
+            aria-label={t("personaReview.label")}
+            className="shrink-0"
           />
-        </div>
-
-        {templateId && (
-          <div className="ml-4 flex items-center justify-end gap-2">
-            <HelpHint title={tSettings("editSheet")}>{tSettings("editSheetHelp")}</HelpHint>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={() => void openEditor()}
-            >
-              <Pencil className="mr-1 h-3.5 w-3.5" />
-              {tSettings("editSheet")}
-            </Button>
-          </div>
-        )}
-
-        {templateId && (
-          <div className="ml-4 flex items-start justify-between gap-4">
-            <p className="flex items-center gap-1.5 text-sm font-medium">
-                {t("personaReview.label")}
-                <HelpHint title={t("personaReview.label")}>{t("personaReview.help")}</HelpHint>
-            </p>
-            <Switch
-              checked={reviewEnabled}
-              disabled={togglingReview}
-              onCheckedChange={(v) => void handleReviewToggle(v)}
-              aria-label={t("personaReview.label")}
-              className="shrink-0 mt-0.5"
-            />
-          </div>
-        )}
-      </div>
+        </FeatureOption>
+      </FeatureRow>
 
       {/* Confirmation de désactivation */}
       <AlertDialog open={confirmDisable} onOpenChange={setConfirmDisable}>
@@ -233,6 +214,6 @@ export function WorldPersonaTemplateSection({
           </div>
         </SideSheetContent>
       </Drawer>
-    </div>
+    </>
   );
 }

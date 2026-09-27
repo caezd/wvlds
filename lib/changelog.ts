@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Interface",
     area: "Monde",
-    text: "Réglages du monde : les explications passent derrière une icône d’aide en bout de ligne, qui s’ouvre au survol, au clavier ou d’un appui.",
+    text: "Réglages du monde :\n- explications derrière une icône d’aide en bout de ligne, ouverte au survol, au clavier ou d’un appui\n- onglet Fonctions en deux colonnes : les catégories à gauche, leurs réglages à droite (dépliés sous leur nom sur mobile)",
   },
   {
     date: "2026-09-26",

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -73,36 +73,33 @@ beforeEach(() => vi.clearAllMocks());
 // donc par `!== false`, et c'est ce que ces tests fixent.
 // ──────────────────────────────────────────────────────────────────────────
 
+/** Ouvre l'onglet Fonctions, puis une catégorie de la colonne de gauche. */
+async function ouvrir(categorie: "Carte" | "Wiki") {
+  await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
+  await userEvent.click(screen.getByRole("button", { name: categorie }));
+}
+
 describe("WorldSettingsView — carte et wiki", () => {
   it("montre les deux interrupteurs activés par défaut", async () => {
     monter();
-    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
-
+    await ouvrir("Carte");
     // Le mock next-intl du dépôt résout les vraies traductions de `fr.json`.
-    expect(screen.getByText("Activer la carte")).toBeInTheDocument();
-    expect(screen.getByText("Activer le wiki")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Wiki" }));
+    expect(screen.getByRole("switch", { name: "Activer le wiki" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("considère un monde sans la colonne comme activé", async () => {
     // Objet partiel : `enable_map` absent ne doit pas se lire comme « désactivé ».
     monter();
-    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
-
-    const interrupteurs = screen.getAllByRole("switch");
-    expect(interrupteurs.length).toBeGreaterThan(0);
-    for (const s of interrupteurs) expect(s).toBeInTheDocument();
+    await ouvrir("Carte");
+    expect(screen.getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("désactive la carte en appelant l'action avec le bon champ", async () => {
     monter({ enable_map: true });
-    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
-
-    const ligne = screen.getByText("Activer la carte").closest("div")?.parentElement;
-    const interrupteur = ligne?.querySelector('[role="switch"]');
-    expect(interrupteur, "interrupteur de la carte introuvable").toBeTruthy();
-
-    await userEvent.click(interrupteur as Element);
-
+    await ouvrir("Carte");
+    await userEvent.click(screen.getByRole("switch", { name: "Activer la carte" }));
     await waitFor(() => {
       expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_map", false);
     });
@@ -110,12 +107,8 @@ describe("WorldSettingsView — carte et wiki", () => {
 
   it("désactive le wiki en appelant l'action avec le bon champ", async () => {
     monter({ enable_wiki: true });
-    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
-
-    const ligne = screen.getByText("Activer le wiki").closest("div")?.parentElement;
-    const interrupteur = ligne?.querySelector('[role="switch"]');
-    await userEvent.click(interrupteur as Element);
-
+    await ouvrir("Wiki");
+    await userEvent.click(screen.getByRole("switch", { name: "Activer le wiki" }));
     await waitFor(() => {
       expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_wiki", false);
     });
@@ -123,10 +116,49 @@ describe("WorldSettingsView — carte et wiki", () => {
 
   it("reflète un monde où la carte est déjà désactivée", async () => {
     monter({ enable_map: false });
-    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await ouvrir("Carte");
+    expect(screen.getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "false");
+  });
 
-    const ligne = screen.getByText("Activer la carte").closest("div")?.parentElement;
-    const interrupteur = ligne?.querySelector('[role="switch"]');
-    expect(interrupteur).toHaveAttribute("aria-checked", "false");
+  it("deux colonnes ou une : les catégories à gauche ; sous md, la catégorie se déplie sous son nom", async () => {
+    monter();
+    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
+    const nav = screen.getByRole("navigation", { name: "Catégories de fonctions" });
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(
+      expect.arrayContaining(["Catalogue", "Carte", "Wiki", "Personas"]),
+    );
+    // Sous md (jsdom), le catalogue est déplié sous son nom, les autres repliés.
+    expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(nav).getByRole("region", { name: "Catalogue" })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAttribute("aria-expanded", "false");
+    // Un second clic replie.
+    await userEvent.click(within(nav).getByRole("button", { name: "Catalogue" }));
+    expect(within(nav).queryByRole("region", { name: "Catalogue" })).toBeNull();
+  });
+
+  it("sur grand écran, la catégorie choisie s'affiche à droite, sous son titre", async () => {
+    const avant = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true, media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    try {
+      monter();
+      await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
+      const nav = screen.getByRole("navigation", { name: "Catégories de fonctions" });
+      // Le catalogue, d'emblée : marqué à gauche, ses réglages à droite.
+      expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-current", "true");
+      expect(within(nav).queryByRole("region")).toBeNull();
+      const droite = screen.getByRole("region", { name: "Catalogue" });
+      expect(within(droite).getByRole("heading", { name: "Catalogue" })).toBeInTheDocument();
+      expect(nav).not.toContainElement(droite);
+      // Choisir la carte remplace la colonne de droite.
+      await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
+      expect(screen.getByRole("region", { name: "Carte" })).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
+      expect(screen.getByRole("switch", { name: "Activer la carte" })).toBeInTheDocument();
+    } finally {
+      window.matchMedia = avant;
+    }
   });
 });

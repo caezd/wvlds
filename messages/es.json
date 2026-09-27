@@ -970,7 +970,8 @@
       "holidayMonthPlaceholder": "Mes de la nueva fiesta",
       "addHoliday": "Añadir la fiesta",
       "dormantDays": "Inactividad (días)",
-      "dormantDaysHelp": "Un salón en curso sin mensajes durante este número de días aparece inactivo en la cronología. 0: nunca."
+      "dormantDaysHelp": "Un salón en curso sin mensajes durante este número de días aparece inactivo en la cronología. 0: nunca.",
+      "featuresNav": "Categorías de funciones"
     },
     "timelinePicker": {
       "year": "Año",

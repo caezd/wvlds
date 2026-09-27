@@ -102,6 +102,7 @@ async function openTimelineSection(config: WorldTimelineConfig) {
   const user = userEvent.setup();
   render(<WorldSettingsView world={baseWorld(config)} />);
   await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+  await user.click(screen.getByRole("button", { name: "Chronologie" }));
   return user;
 }
 
