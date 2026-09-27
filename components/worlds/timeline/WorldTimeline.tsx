@@ -1,7 +1,8 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,8 +49,11 @@ import {
   type SuiteStyle,
 } from "@/components/worlds/timeline/SuiteLinks";
 import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
-import { TimelineArcsDialog } from "@/components/worlds/timeline/TimelineArcsDialog";
-import { TimelineEventDialog } from "@/components/worlds/timeline/TimelineEventDialog";
+// Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
+// seulement une fois ouverts : leur code (sélecteur de date, formulaires)
+// n'est chargé qu'à la première ouverture.
+const TimelineArcsDialog = dynamic(() => import("@/components/worlds/timeline/TimelineArcsDialog").then((m) => m.TimelineArcsDialog));
+const TimelineEventDialog = dynamic(() => import("@/components/worlds/timeline/TimelineEventDialog").then((m) => m.TimelineEventDialog));
 import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
 import { TimelineSequelRequests, type SequelRequest } from "@/components/worlds/timeline/TimelineSequelRequests";
 import {
@@ -150,6 +154,11 @@ export function WorldTimeline({
   const [filters, setFilters] = useState<TimelineFilters>(NO_TIMELINE_FILTERS);
   const [eventDialog, setEventDialog] = useState<{ open: boolean; event: TimelineEvent | null }>({ open: false, event: null });
   const [arcsOpen, setArcsOpen] = useState(false);
+  // Montés à la première ouverture, puis gardés (pour leur fermeture animée).
+  const [eventDialogUsed, setEventDialogUsed] = useState(false);
+  const [arcsDialogUsed, setArcsDialogUsed] = useState(false);
+  if (eventDialog.open && !eventDialogUsed) setEventDialogUsed(true);
+  if (arcsOpen && !arcsDialogUsed) setArcsDialogUsed(true);
   const [lanes, setLanes] = useState(0);
   const [spanLanes, setSpanLanes] = useState(0);
   const [suiteStyle, setSuiteStyleState] = useState<SuiteStyle>("rail");
@@ -211,9 +220,14 @@ export function WorldTimeline({
     () => ({ personas: data.roomPersonas, openers: data.openers }),
     [data.roomPersonas, data.openers],
   );
+  // La recherche filtre toute la frise : sur un gros monde, ce calcul passe
+  // après la frappe (valeur différée), qui reste fluide ; le champ, lui, suit
+  // chaque touche.
+  const deferredQuery = useDeferredValue(filters.query);
+  const applied = useMemo(() => ({ ...filters, query: deferredQuery }), [filters, deferredQuery]);
   const visible = useMemo(
-    () => allItems.filter((i) => matchesTimelineFilters(i, filters, ctx)),
-    [allItems, filters, ctx],
+    () => allItems.filter((i) => matchesTimelineFilters(i, applied, ctx)),
+    [allItems, applied, ctx],
   );
 
   // L'année actuelle du monde a toujours sa section — sauf si les filtres ne
@@ -226,9 +240,9 @@ export function WorldTimeline({
       s.groups.filter((g) => g.month !== null).map((g) => ({ year: s.year, month: g.month! })),
     );
     const holidays = holidayItems(config.holidays, months, config.month_names.length)
-      .filter((h) => matchesTimelineFilters(h, filters, ctx));
+      .filter((h) => matchesTimelineFilters(h, applied, ctx));
     return holidays.length > 0 ? buildTimelineSections([...visible, ...holidays], config.current_year) : base;
-  }, [visible, config.current_year, config.holidays, config.month_names.length, filters, ctx]);
+  }, [visible, config.current_year, config.holidays, config.month_names.length, applied, ctx]);
 
   // La fenêtre rendue (voir sliceTimelineSections) : posée à la première
   // réponse et à chaque changement de filtre, étendue au défilement.
@@ -406,11 +420,11 @@ export function WorldTimeline({
   // chaque changement de filtre ou de recherche, sur l'année actuelle si
   // rien ne filtre, sinon depuis le premier résultat.
   const filterKey = JSON.stringify([
-    filters.query, [...filters.kinds].sort(), filters.personaId, filters.player, filters.arcId, filters.categoryId, filters.status,
+    applied.query, [...applied.kinds].sort(), applied.personaId, applied.player, applied.arcId, applied.categoryId, applied.status,
   ]);
   useEffect(() => {
     if (data.loading) return;
-    if (isFiltering(filters)) {
+    if (isFiltering(applied)) {
       setWin({ start: 0, end: Math.min(totalRows, TIMELINE_PAGE) });
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } else {
@@ -680,26 +694,26 @@ export function WorldTimeline({
         </div>
       )}
 
-      {canManage && (
-        <>
-          <TimelineEventDialog
-            open={eventDialog.open}
-            onOpenChange={(open) => setEventDialog((d) => ({ ...d, open }))}
-            supabase={data.supabase}
-            worldId={worldId}
-            config={config}
-            event={eventDialog.event}
-            onSaved={() => void data.reload()}
-          />
-          <TimelineArcsDialog
-            open={arcsOpen}
-            onOpenChange={setArcsOpen}
-            supabase={data.supabase}
-            worldId={worldId}
-            arcs={data.arcs}
-            onChanged={() => void data.reload()}
-          />
-        </>
+      {canManage && eventDialogUsed && (
+        <TimelineEventDialog
+          open={eventDialog.open}
+          onOpenChange={(open) => setEventDialog((d) => ({ ...d, open }))}
+          supabase={data.supabase}
+          worldId={worldId}
+          config={config}
+          event={eventDialog.event}
+          onSaved={() => void data.reload()}
+        />
+      )}
+      {canManage && arcsDialogUsed && (
+        <TimelineArcsDialog
+          open={arcsOpen}
+          onOpenChange={setArcsOpen}
+          supabase={data.supabase}
+          worldId={worldId}
+          arcs={data.arcs}
+          onChanged={() => void data.reload()}
+        />
       )}
     </div>
   );

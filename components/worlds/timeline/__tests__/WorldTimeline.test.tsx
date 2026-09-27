@@ -493,6 +493,9 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
       id: "e1", title: "Couronnement", description: null, timeline_date: { year: 1, month: 0, day: 6 }, wiki_page_id: null, wiki_page: null,
     }];
     await frise([room("a", "Prologue", 1, 0, 6)], CONFIG, { canManage: true });
+    // Chargé et monté à la première ouverture seulement.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByText("Nouvel événement")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Événement$/ }));
     expect(await screen.findByRole("dialog", { name: "Nouvel événement" })).toBeInTheDocument();
