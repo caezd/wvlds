@@ -38,6 +38,11 @@ type Drawn = {
 
 const EDGE = 12;
 const STUB = 14;
+/** Le trait vers l'arc part à cette distance de la fin du texte… */
+const LEAD_GAP = 8;
+/** …et s'arrête avant la pastille (rayon 3,5 + 1,5) ; en deçà de cette place, rien. */
+const LEAD_STOP = 5;
+const LEAD_MIN = 16;
 /** Écart entre couloirs, par style. */
 const LANE_GAP: Record<SuiteStyle, number> = { rail: 10, graph: 8 };
 /** Distance entre le fil et le premier couloir du graphe. */
@@ -160,6 +165,10 @@ function layoutSuites(
  * tracée à la fois, avec ses passerelles : on réserve les couloirs du survol
  * le plus chargé (`onLanes`), souvent un seul. La place ne dépend donc pas
  * du survol, et les titres ne bougent pas quand une chaîne s'allume.
+ *
+ * En rail, au survol d'un salon d'une chaîne teintée par un arc, un trait
+ * pointillé à la couleur de l'arc part de la fin de son texte jusqu'à sa
+ * pastille : l'œil relie la ligne à sa colonne sans suivre la hauteur.
  */
 export function SuiteLinks({
   layout,
@@ -167,6 +176,7 @@ export function SuiteLinks({
   style,
   only,
   thread = null,
+  hoveredRoomId = null,
   onLanes,
 }: {
   layout: TimelineLayout;
@@ -176,6 +186,8 @@ export function SuiteLinks({
   only: ReadonlySet<string> | null;
   /** Le fil d'un persona : ses salons et ses entrées de journal, dans sa couleur. */
   thread?: { ids: readonly string[]; color: string | null } | null;
+  /** Le salon survolé (ou qui a le focus) : son trait vers l'arc, en rail. */
+  hoveredRoomId?: string | null;
   onLanes: (count: number) => void;
 }) {
   const hoverMode = only !== null;
@@ -225,6 +237,15 @@ export function SuiteLinks({
     className: color ? undefined : d.thread ? "fill-foreground" : "fill-foreground/40",
     style: color ? { fill: color } : undefined,
   });
+  // Le tracé où mène le trait du salon survolé : sa chaîne d'arc (pas le fil
+  // d'un persona), de préférence celle de ses suites acceptées plutôt
+  // qu'une passerelle ou une proposition — un seul trait à la fois.
+  const leadOwner = !hoveredRoomId || style !== "rail"
+    ? null
+    : (() => {
+        const owners = shown.filter((d) => !d.thread && d.points.some((p) => p.id === hoveredRoomId && colorAt(d, p.id)));
+        return owners.find((d) => !d.bridge && !d.points.find((p) => p.id === hoveredRoomId)!.pending) ?? owners[0] ?? null;
+      })();
   const groupProps = (d: Drawn) => ({
     "data-suite": d.thread ? undefined : d.key,
     "data-testid": d.thread ? "timeline-persona-thread" : undefined,
@@ -268,12 +289,38 @@ export function SuiteLinks({
             {d.segments.map((s) => (
               <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={2 + weight} strokeLinecap={s.pending ? "butt" : "round"} {...strokeProps(d, s.pending, trunkPaint(d))} />
             ))}
-            {d.points.map((p) => (
-              <g key={p.id}>
-                <path d={`M ${x} ${p.y} H ${x - STUB}`} fill="none" strokeWidth={1} {...strokeProps(d, p.pending, colorAt(d, p.id))} />
-                <circle cx={x} cy={p.y} r={3.5 + weight} data-thread-point={d.thread ? p.id : undefined} {...fillProps(d, colorAt(d, p.id))} />
-              </g>
-            ))}
+            {d.points.map((p) => {
+              const hovered = d === leadOwner && p.id === hoveredRoomId;
+              const textEnd = hovered ? layout.rows.get(p.id)?.textEnd : undefined;
+              const lead = textEnd !== undefined && x - LEAD_STOP - (textEnd + LEAD_GAP) > LEAD_MIN;
+              return (
+                <g key={p.id}>
+                  {lead ? (
+                    // Pas de transition sur le tracé : un fondu à l'apparition.
+                    <path
+                      d={`M ${textEnd! + LEAD_GAP} ${p.y} H ${x - LEAD_STOP}`}
+                      fill="none"
+                      strokeWidth={1.5}
+                      strokeDasharray="3 3"
+                      strokeLinecap="butt"
+                      className="animate-in fade-in"
+                      style={{ stroke: colorAt(d, p.id) ?? undefined, opacity: 0.8, animationDuration: "120ms" }}
+                      data-testid="timeline-arc-lead"
+                    />
+                  ) : (
+                    <path d={`M ${x} ${p.y} H ${x - STUB}`} fill="none" strokeWidth={1} {...strokeProps(d, p.pending, colorAt(d, p.id))} />
+                  )}
+                  <circle
+                    cx={x}
+                    cy={p.y}
+                    r={3.5 + weight + (hovered ? 1 : 0)}
+                    data-thread-point={d.thread ? p.id : undefined}
+                    data-hovered={hovered || undefined}
+                    {...fillProps(d, colorAt(d, p.id))}
+                  />
+                </g>
+              );
+            })}
           </g>
         );
       })}

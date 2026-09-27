@@ -373,8 +373,9 @@ export function WorldTimeline({
   }
   function trackHover(target: HTMLElement) {
     setHoveredSpan(spanUnder(target));
+    // Le salon survolé : sa chaîne au survol seulement, son trait vers l'arc en rail.
     const roomId = target.closest<HTMLElement>("[data-room-id]")?.dataset.roomId ?? null;
-    if (hoverOnly) setHoveredRoom(roomId);
+    setHoveredRoom(roomId);
     const arcId = roomId ? arcStats.arcOf.get(roomId) ?? null : null;
     const next = arcId ? [arcId] : [];
     // Même liste : pas de nouveau rendu à chaque mouvement du pointeur.
@@ -768,6 +769,14 @@ export function WorldTimeline({
                 setHoveredArcs([]);
               }}
               onFocus={(e) => trackHover(e.target as HTMLElement)}
+              onBlur={(e) => {
+                // Le focus quitte la frise : plus rien de survolé.
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                  setHoveredRoom(null);
+                  setHoveredSpan(null);
+                  setHoveredArcs([]);
+                }
+              }}
             >
               {win && win.start > 0 && <div ref={topSentinel} className="h-px" data-testid="timeline-more-before" aria-hidden />}
               <ol
@@ -818,7 +827,15 @@ export function WorldTimeline({
               <TimelineOverlays containerRef={listRef} version={overlayKey}>
                 {(layout) => (
                   <>
-                    <SuiteLinks layout={layout} links={suiteLinks} style={suiteStyle} only={onlyChain} thread={thread} onLanes={onLanes} />
+                    <SuiteLinks
+                      layout={layout}
+                      links={suiteLinks}
+                      style={suiteStyle}
+                      only={onlyChain}
+                      thread={thread}
+                      hoveredRoomId={hoveredRoom}
+                      onLanes={onLanes}
+                    />
                     <EventSpans
                       layout={layout}
                       spans={eventSpans}
@@ -1291,8 +1308,9 @@ function RoomRow({
           className="group/title ml-[var(--tl-graph-pad,0px)] block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-title-start
         >
-          {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
-          <span className="min-w-0 break-words">
+          {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond.
+              Son bord droit (`data-title-end`) : d'où part le trait vers l'arc. */}
+          <span className="min-w-0 break-words" data-title-end>
             {/* Le rang dans l'arc, à la couleur de l'arc, juste avant le titre. */}
             {arc && rank && (
               <span

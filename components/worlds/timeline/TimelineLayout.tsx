@@ -2,8 +2,11 @@
 
 import * as React from "react";
 
-/** Une ligne de la frise telle que mesurée : son haut et sa hauteur, dans le repère du conteneur. */
-export type TimelineRowBox = { top: number; height: number };
+/**
+ * Une ligne de la frise telle que mesurée : son haut et sa hauteur, dans le
+ * repère du conteneur ; pour un salon, le bord droit de son texte (`textEnd`).
+ */
+export type TimelineRowBox = { top: number; height: number; textEnd?: number };
 
 /**
  * Le relevé de la frise rendue, dont se servent ses calques (lignes de
@@ -42,7 +45,10 @@ export function measureTimeline(container: HTMLElement): TimelineLayout {
     // on la relève comme si sa ligne de titre (20px) était centrée sur elle.
     const anchor = el.querySelector<HTMLElement>("[data-row-anchor]")?.getBoundingClientRect();
     const top = anchor ? anchor.top + anchor.height / 2 - 10 : r.top;
-    rows.set(id, { top: top - rect.top, height: r.height });
+    // Un salon : le bord droit de son texte (numéro, titre, « par … », arc),
+    // pas celui du bouton, qui fait toute la largeur.
+    const end = roomId ? el.querySelector<HTMLElement>("[data-title-end]")?.getBoundingClientRect() : undefined;
+    rows.set(id, end ? { top: top - rect.top, height: r.height, textEnd: end.right - rect.left } : { top: top - rect.top, height: r.height });
   }
   const mark = container.querySelector<HTMLElement>(MARK)?.getBoundingClientRect();
   const title = container.querySelector<HTMLElement>("[data-title-start]")?.getBoundingClientRect();

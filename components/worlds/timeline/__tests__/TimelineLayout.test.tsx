@@ -60,6 +60,28 @@ describe("measureTimeline", () => {
   });
 });
 
+describe("measureTimeline — fin du texte d'un salon", () => {
+  it("relève le bord droit du texte (`data-title-end`), pas celui du bouton", () => {
+    render(
+      <div data-frise data-top="100" data-left="10" data-h="800">
+        <li data-room-id="a" data-top="140">
+          <button data-left="56">
+            <span data-title-end data-left="200">Prologue</span>
+          </button>
+        </li>
+        <li data-journal-id="j" data-top="180">
+          <span data-title-end data-left="200" />
+        </li>
+      </div>,
+    );
+    const r = measureTimeline(document.querySelector("[data-frise]") as HTMLElement);
+    // Bord droit : 200 + 12 ; repère du conteneur : − 10.
+    expect(r.rows.get("a")).toEqual({ top: 40, height: 20, textEnd: 202 });
+    // Seuls les salons en ont une.
+    expect(r.rows.get("j")).toEqual({ top: 80, height: 20 });
+  });
+});
+
 describe("measureTimeline — marque décalée", () => {
   it("une ligne à `data-row-anchor` (la carte d'un événement) se relève sur sa marque, centrée sur 20px", () => {
     render(
