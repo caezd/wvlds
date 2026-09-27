@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { HelpHint } from "@/components/ui/help-hint";
 
 /**
  * Les réglages d'une chronologie activée.
@@ -123,9 +124,11 @@ export function TimelineSettings({
     <>
       {/* ── Aperçu : ce que composent les trois réglages qui suivent ── */}
       <div className="ml-4 rounded-xl border border-border-soft bg-muted/20 p-3" data-testid="timeline-preview">
-        <p className="text-xs text-muted-foreground">{tSettings("timelinePreviewLabel")}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">{tSettings("timelinePreviewLabel")}</p>
+          <HelpHint title={tSettings("timelinePreviewLabel")}>{tSettings("timelinePreviewHelp")}</HelpHint>
+        </div>
         <p className="mt-0.5 text-lg font-semibold leading-tight">{apercu}</p>
-        <p className="mt-1 text-xs text-muted-foreground leading-snug">{tSettings("timelinePreviewHelp")}</p>
       </div>
 
       {/* ── 1. Comment une date s'écrit ── */}
@@ -141,7 +144,6 @@ export function TimelineSettings({
               onChange={(e) => onDraft({ year_label: e.target.value })}
               onBlur={(e) => onPersist({ year_label: e.target.value || tSettings("yearPlaceholder") })}
             />
-            <p className="text-[11px] text-muted-foreground">{tSettings("yearLabelHint")}</p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-era" className="text-xs">{t("eraSuffix")}</Label>
@@ -153,7 +155,6 @@ export function TimelineSettings({
               onChange={(e) => onDraft({ era_name: e.target.value || null })}
               onBlur={(e) => onPersist({ era_name: e.target.value || null })}
             />
-            <p className="text-[11px] text-muted-foreground">{tSettings("eraHint")}</p>
           </div>
         </div>
       </SubOption>
@@ -195,11 +196,9 @@ export function TimelineSettings({
 
         {/* La période en cours : là où les salons peuvent se situer. */}
         <label className="flex items-start justify-between gap-4 border-t border-border-soft pt-3">
-          <span className="space-y-0.5">
-            <span className="block text-sm">{tSettings("restrictToCurrent")}</span>
-            <span className="block text-xs text-muted-foreground leading-snug">
-              {tSettings("restrictToCurrentHelp", { period: periode })}
-            </span>
+          <span className="flex items-center gap-1.5 text-sm">
+            {tSettings("restrictToCurrent")}
+            <HelpHint title={tSettings("restrictToCurrent")}>{tSettings("restrictToCurrentHelp", { period: periode })}</HelpHint>
           </span>
           <Switch
             checked={!!config.restrict_to_current}
@@ -211,9 +210,9 @@ export function TimelineSettings({
 
         {/* Dater chaque salon dès sa création. */}
         <label className="flex items-start justify-between gap-4 border-t border-border-soft pt-3">
-          <span className="space-y-0.5">
-            <span className="block text-sm">{tSettings("requireDate")}</span>
-            <span className="block text-xs text-muted-foreground leading-snug">{tSettings("requireDateHelp")}</span>
+          <span className="flex items-center gap-1.5 text-sm">
+            {tSettings("requireDate")}
+            <HelpHint title={tSettings("requireDate")}>{tSettings("requireDateHelp")}</HelpHint>
           </span>
           <Switch
             checked={!!config.require_date}
@@ -521,9 +520,9 @@ export function TimelineSettings({
       {/* ── 6. Ce que montre la frise ── */}
       <SubOption title={tSettings("timelineFrieze")} help={tSettings("timelineFriezeHelp")}>
         <label className="flex items-start justify-between gap-4">
-          <span className="space-y-0.5">
-            <span className="block text-sm">{tSettings("showJournals")}</span>
-            <span className="block text-xs text-muted-foreground leading-snug">{tSettings("showJournalsHelp")}</span>
+          <span className="flex items-center gap-1.5 text-sm">
+            {tSettings("showJournals")}
+            <HelpHint title={tSettings("showJournals")}>{tSettings("showJournalsHelp")}</HelpHint>
           </span>
           <Switch
             checked={!!config.show_journals}
@@ -535,9 +534,9 @@ export function TimelineSettings({
         {/* Un salon en cours sans message depuis ce délai paraît « en
             sommeil » ; rien n'est modifié en base (voir effectiveRoomStatus). */}
         <label className="flex items-start justify-between gap-4">
-          <span className="space-y-0.5">
-            <span className="block text-sm">{tSettings("dormantDays")}</span>
-            <span className="block text-xs text-muted-foreground leading-snug">{tSettings("dormantDaysHelp")}</span>
+          <span className="flex items-center gap-1.5 text-sm">
+            {tSettings("dormantDays")}
+            <HelpHint title={tSettings("dormantDays")}>{tSettings("dormantDaysHelp")}</HelpHint>
           </span>
           <Input
             type="number"
@@ -564,7 +563,8 @@ function clampDormantDays(value: string): number {
   return Number.isNaN(days) ? 0 : Math.min(Math.max(days, 0), DORMANT_DAYS_MAX);
 }
 
-/** Une sous-option en retrait, au dessin de celles de la fiche par défaut. */
+/** Une sous-option en retrait, au dessin de celles de la fiche par défaut ;
+ *  son explication derrière l'aide en bout de ligne. */
 function SubOption({
   title,
   help,
@@ -578,12 +578,10 @@ function SubOption({
 }) {
   return (
     <section className="ml-4 space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3" aria-label={title}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-xs text-muted-foreground leading-snug">{help}</p>
-        </div>
+      <div className="flex items-center gap-3">
+        <p className="min-w-0 flex-1 text-sm font-medium">{title}</p>
         {action}
+        <HelpHint title={title}>{help}</HelpHint>
       </div>
       {children}
     </section>

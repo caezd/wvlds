@@ -81,7 +81,9 @@
     "formatQuote": "Citation",
     "formatLinkText": "texte",
     "formatToolbar": "Mise en forme",
-    "rename": "Renommer"
+    "rename": "Renommer",
+    "help": "Aide",
+    "helpFor": "Aide : {title}"
   },
   "nav": {
     "profile": "Mon profil",
@@ -908,8 +910,6 @@
       "timelinePreviewHelp": "C'est ainsi que les salons afficheront leur date. Elle se compose des trois réglages ci-dessous.",
       "timelineFormat": "Format des dates",
       "timelineFormatHelp": "Le mot placé devant le numéro de l'année, et ce qui le suit.",
-      "yearLabelHint": "Ex. an, cycle, âge",
-      "eraHint": "Facultatif. Ex. des Cendres, après la Chute",
       "timelineNow": "Où en est le récit",
       "timelineNowHelp": "La date proposée par défaut quand on situe un salon ; le calendrier de l'accueil s'ouvre sur elle. Faites-la avancer au fil de l'histoire.",
       "restrictToCurrent": "Restreindre les salons à la période en cours",
@@ -917,7 +917,7 @@
       "requireDate": "Exiger une date à la création d'un salon",
       "requireDateHelp": "Le choix de la date paraît juste sous le titre du salon, pré-rempli avec la date actuelle du récit, et un salon ne se crée pas sans.",
       "timelineAges": "Saisons",
-      "timelineAgesHelp": "Des âges nommés qui découpent l'histoire du monde (« L'Âge des Cendres », an 1 à 40). Sur la frise, ils remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau. Sans année de fin, une saison court jusqu'à la suivante.",
+      "timelineAgesHelp": "Des âges nommés qui découpent l'histoire du monde. Sur la frise, ils remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau. Sans année de fin, une saison court jusqu'à la suivante.",
       "ageName": "Nom de la saison",
       "ageFrom": "Première année de {name}",
       "ageTo": "Dernière année de {name}",
@@ -959,7 +959,7 @@
       "maxChars": "{max} caractères max",
       "colorInvalid": "Couleur hex valide, p. ex. #1f2937",
       "timelineHolidays": "Fêtes du calendrier",
-      "timelineHolidaysHelp": "Des jours qui reviennent chaque année (« Fête des lanternes », le 9 du sixième mois). La frise les rappelle à leur date, dans les mois qui ont déjà une entrée. Sans jour, une fête vaut pour tout le mois.",
+      "timelineHolidaysHelp": "Des jours qui reviennent chaque année. La frise les rappelle à leur date, dans les mois qui ont déjà une entrée. Sans jour, une fête vaut pour tout le mois.",
       "holidayName": "Nom de la fête",
       "holidayDay": "Jour de {name}",
       "holidayMonth": "Mois de {name}",

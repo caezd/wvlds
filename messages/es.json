@@ -81,7 +81,9 @@
     "formatQuote": "Cita",
     "formatLinkText": "texto",
     "formatToolbar": "Formato",
-    "rename": "Renombrar"
+    "rename": "Renombrar",
+    "help": "Ayuda",
+    "helpFor": "Ayuda: {title}"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -908,8 +910,6 @@
       "timelinePreviewHelp": "Así mostrarán las salas su fecha. Se compone de los tres ajustes siguientes.",
       "timelineFormat": "Formato de las fechas",
       "timelineFormatHelp": "La palabra delante del número del año, y lo que le sigue.",
-      "yearLabelHint": "Ej. año, ciclo, era",
-      "eraHint": "Opcional. Ej. de las Cenizas, tras la Caída",
       "timelineNow": "En qué punto está el relato",
       "timelineNowHelp": "La fecha propuesta por defecto al situar una sala; el calendario de la portada se abre en ella. Hágala avanzar con la historia.",
       "restrictToCurrent": "Limitar las salas al periodo en curso",
@@ -917,7 +917,7 @@
       "requireDate": "Exigir una fecha al crear una sala",
       "requireDateHelp": "La elección de la fecha aparece justo debajo del título de la sala, rellenada con la fecha actual del relato, y no se puede crear una sala sin ella.",
       "timelineAges": "Estaciones",
-      "timelineAgesHelp": "Edades con nombre que dividen la historia del mundo («La Edad de las Cenizas», año 1 a 40). En la cronología, sustituyen los tramos de cinco años y abren sus años con una banda. Sin año final, una estación dura hasta la siguiente.",
+      "timelineAgesHelp": "Edades con nombre que dividen la historia del mundo. En la cronología, sustituyen los tramos de cinco años y abren sus años con una banda. Sin año final, una estación dura hasta la siguiente.",
       "ageName": "Nombre de la estación",
       "ageFrom": "Primer año de {name}",
       "ageTo": "Último año de {name}",
@@ -959,7 +959,7 @@
       "maxChars": "{max} caracteres máx.",
       "colorInvalid": "Color hex válido, p. ej. #1f2937",
       "timelineHolidays": "Fiestas del calendario",
-      "timelineHolidaysHelp": "Días que vuelven cada año (« Fiesta de los farolillos », el 9 del sexto mes). La cronología los recuerda en su fecha, en los meses que ya tienen una entrada. Sin día, una fiesta vale para todo el mes.",
+      "timelineHolidaysHelp": "Días que vuelven cada año. La cronología los recuerda en su fecha, en los meses que ya tienen una entrada. Sin día, una fiesta vale para todo el mes.",
       "holidayName": "Nombre de la fiesta",
       "holidayDay": "Día de {name}",
       "holidayMonth": "Mes de {name}",

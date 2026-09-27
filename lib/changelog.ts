@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09-26",
+    category: "Interface",
+    area: "Monde",
+    text: "Réglages du monde : les explications passent derrière une icône d’aide en bout de ligne, qui s’ouvre au survol, au clavier ou d’un appui.",
+  },
+  {
+    date: "2026-09-26",
     category: "Fonctionnalité",
     area: "Salons",
     text: "Suites entre salons :\n- « Suite de… » à la création d’un salon ou dans ses réglages\n- dans un salon où l’on ne joue pas : suite proposée, à accepter par ses participants\n- jamais à rebours de la chronologie\n- permission « Relier des salons », donnée aux joueurs",

@@ -56,6 +56,23 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     expect(screen.getByRole("region", { name: "Mois du calendrier" })).toBeInTheDocument();
   });
 
+  it("chaque explication derrière une aide en bout de ligne, sans exemple ni texte sous le titre", () => {
+    render(<Harnais />);
+    const saisons = screen.getByRole("region", { name: "Saisons" });
+    const aide = within(saisons).getByRole("button", { name: "Aide : Saisons" });
+    expect(aide).toHaveAccessibleDescription(/^Des âges nommés qui découpent l'histoire du monde\./);
+    // Plus d'exemple entre guillemets, ni de description visible sous le titre.
+    expect(aide.getAttribute("aria-describedby")).toBeTruthy();
+    expect(saisons.textContent).not.toMatch(/«/);
+    expect(within(saisons).queryByText(/^Des âges nommés/, { selector: "p" })).toBeNull();
+    // Ni « Ex. … » sous les champs du format.
+    expect(screen.queryByText(/^Ex\./)).toBeNull();
+    // Une aide par sous-option, et pour les options qu'elles contiennent.
+    for (const nom of ["Aide : Fêtes du calendrier", "Aide : Afficher les journaux des personas", "Aide : Mise en sommeil (jours)"]) {
+      expect(screen.getByRole("button", { name: nom })).toBeInTheDocument();
+    }
+  });
+
   it("le calendrier dit la longueur de l'année qu'il compose", () => {
     render(<Harnais />);
     expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("2 mois · 58 jours par an");
