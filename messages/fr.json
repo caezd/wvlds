@@ -1940,6 +1940,7 @@
     "categoryDescription": "Description",
     "categoryDescriptionPlaceholder": "Quelques lignes sur cette catégorie (Markdown)…",
     "editCategory": "Modifier la catégorie {name}",
+    "reorderCategory": "Déplacer la catégorie {name}",
     "linkedPages": "Pages du wiki",
     "linkPage": "Lier une page",
     "searchPage": "Rechercher une page…",

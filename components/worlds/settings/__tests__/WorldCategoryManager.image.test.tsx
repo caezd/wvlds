@@ -93,3 +93,21 @@ describe("WorldCategoryManager — image unique de catégorie", () => {
     expect(screen.getByText("Retirer l'image")).toBeInTheDocument();
   });
 });
+
+describe("WorldCategoryManager — poignée de tri", () => {
+  it("nomme la poignée d'après la catégorie, pour les lecteurs d'écran", async () => {
+    setup();
+    render(<WorldCategoryManager worldId="world-1" canEdit />);
+
+    const handle = await screen.findByRole("button", { name: "Déplacer la catégorie Annonces" });
+    expect(handle).toHaveAttribute("aria-roledescription", "sortable");
+  });
+
+  it("n'affiche pas de poignée sans droit d'édition", async () => {
+    setup();
+    render(<WorldCategoryManager worldId="world-1" canEdit={false} />);
+
+    await screen.findByText("Annonces");
+    expect(screen.queryByRole("button", { name: /Déplacer la catégorie/ })).not.toBeInTheDocument();
+  });
+});

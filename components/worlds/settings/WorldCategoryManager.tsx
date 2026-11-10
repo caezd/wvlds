@@ -209,6 +209,7 @@ function CategoryRow({
   onDelete: () => void;
 }) {
   const tCommon = useTranslations("common");
+  const tCatalogue = useTranslations("catalogue");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     disabled: !canEdit,
@@ -243,9 +244,10 @@ function CategoryRow({
         <span
           {...attributes}
           {...listeners}
+          aria-label={tCatalogue("reorderCategory", { name: category.title })}
           className="shrink-0 touch-none cursor-grab text-muted-foreground/50"
         >
-          <GripVertical className="h-3.5 w-3.5" />
+          <GripVertical className="h-3.5 w-3.5" aria-hidden />
         </span>
       )}
       <CategoryAvatar
