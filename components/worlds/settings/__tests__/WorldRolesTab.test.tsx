@@ -161,6 +161,18 @@ describe("WorldRolesTab — fiche", () => {
   });
 });
 
+describe("WorldRolesTab — couleur", () => {
+  it("ne propose pas l'opacité : la base n'admet que #rrggbb pour un rôle", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldRolesTab worldId="w1" />);
+    const section = await screen.findByRole("region", { name: "Administrateur" });
+    await user.click(within(section).getByRole("button", { name: "Choisir une couleur" }));
+    expect(within(section).getByRole("group", { name: "Couleurs prédéfinies" })).toBeInTheDocument();
+    expect(within(section).queryByRole("slider", { name: "Opacité" })).toBeNull();
+  });
+});
+
 describe("WorldRolesTab — hiérarchie", () => {
   it("un éditeur voit le rôle Administrateur verrouillé et ne peut conférer que ce qu'il a", async () => {
     asEditor();

@@ -40,4 +40,13 @@ describe("ColorPickerButton", () => {
     fireEvent.change(screen.getByRole("slider", { name: "Opacité" }), { target: { value: "50" } });
     expect(onChange).toHaveBeenLastCalledWith("#ff000080");
   });
+
+  it("sans `alpha`, ne propose pas l'opacité et ne produit que du #rrggbb", async () => {
+    const onChange = vi.fn();
+    render(<ColorPickerButton color="#ff0000" onChange={onChange} alpha={false} />);
+    await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    expect(screen.queryByRole("slider", { name: "Opacité" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Bleu" }));
+    expect(onChange).toHaveBeenLastCalledWith("#47b3f2");
+  });
 });

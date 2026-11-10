@@ -10,15 +10,20 @@ import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
  *
  * Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
  * pointerdown sur le canvas HSV comme un clic hors du dialog.
+ *
+ * `alpha={false}` retire le curseur d'opacité, pour une colonne dont la
+ * contrainte n'admet que `#rrggbb` (couleur des rôles).
  */
 export function ColorPickerButton({
   color,
   onChange,
   disabled,
+  alpha = true,
 }: {
   color: string;
   onChange: (c: string) => void;
   disabled?: boolean;
+  alpha?: boolean;
 }) {
   const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
@@ -45,7 +50,7 @@ export function ColorPickerButton({
       />
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 w-64">
-          <HsvColorPicker color={color} onChange={onChange} alpha className="shadow-md" />
+          <HsvColorPicker color={color} onChange={onChange} alpha={alpha} className="shadow-md" />
         </div>
       )}
     </div>
