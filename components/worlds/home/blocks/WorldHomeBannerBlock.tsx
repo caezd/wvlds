@@ -284,8 +284,8 @@ export function WorldHomeBannerDialog({
                       />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[220px] p-3 z-[200]" align="start">
-                    <HsvColorPicker color={accent || DEFAULT_ACCENT} onChange={setAccent} presets={[]} />
+                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0 z-[200]" align="start">
+                    <HsvColorPicker color={accent || DEFAULT_ACCENT} onChange={setAccent} alpha framed={false} />
                   </PopoverContent>
                 </Popover>
                 {ACCENT_COLOR_PRESETS.map((c) => (

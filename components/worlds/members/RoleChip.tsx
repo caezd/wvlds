@@ -2,6 +2,7 @@
 
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { cn } from "@/lib/utils";
+import { withOpacity } from "@/lib/colorOpacity";
 
 /**
  * Un rôle en puce : sa couleur en point (ou son icône), son nom.
@@ -25,7 +26,7 @@ export function RoleChip({
         size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
         className,
       )}
-      style={{ borderColor: `${role.color}55` }}
+      style={{ borderColor: withOpacity(role.color, 0.33) }}
     >
       {role.lucide_icon ? (
         <LazyLucideIcon

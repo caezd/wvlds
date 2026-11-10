@@ -1,14 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 import { render, fireEvent, screen } from "@testing-library/react";
 
-// HsvColorPicker dessine sur un <canvas> — jsdom n'implémente pas
-// getContext("2d") sans le paquet natif "canvas". On le remplace ici : seule
-// l'ouverture du popover et le câblage du bouton "Confirmer" sont testés.
-vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/ui/hsv-color-picker")>();
-  return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
-});
-
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 
 function getEditor(container: HTMLElement) {
@@ -283,6 +275,6 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     fireEvent.mouseDown(paletteButton);
     fireEvent.click(paletteButton);
     fireEvent.click(screen.getByText("Confirmer"));
-    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "[#b91c1c]rouge[/]");
+    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "[#e8553a]rouge[/]");
   });
 });

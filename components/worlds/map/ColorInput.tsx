@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
-import { HsvColorPicker, BUBBLE_COLOR_PRESETS, type ColorPreset } from "@/components/ui/hsv-color-picker";
+import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // ── Sélecteur couleur compact : carré + hex + popover HSV ─────────
@@ -11,11 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export function ColorInput({
   color,
   onChange,
-  presets = BUBBLE_COLOR_PRESETS,
 }: {
   color: string;
   onChange: (hex: string) => void;
-  presets?: ColorPreset[];
 }) {
   const t = useTranslations("common");
   return (
@@ -30,12 +28,12 @@ export function ColorInput({
           />
         </PopoverTrigger>
         <PopoverContent
-          className="w-60 p-3 z-[200]"
+          className="w-64 overflow-hidden rounded-2xl p-0 z-[200]"
           side="bottom"
           align="start"
           onWheel={(e) => e.stopPropagation()}
         >
-          <HsvColorPicker color={color} onChange={onChange} presets={presets} />
+          <HsvColorPicker color={color} onChange={onChange} alpha framed={false} />
         </PopoverContent>
       </Popover>
       <input

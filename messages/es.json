@@ -83,6 +83,14 @@
     "formatToolbar": "Formato",
     "rename": "Renombrar"
   },
+  "colorPicker": {
+    "presets": "Colores predefinidos",
+    "saturation": "Saturación y brillo",
+    "saturationValue": "Saturación {s} %, brillo {v} %",
+    "hue": "Tono",
+    "opacity": "Opacidad",
+    "hex": "Código hexadecimal"
+  },
   "nav": {
     "profile": "Mi perfil",
     "password": "Cambiar contraseña",

@@ -92,14 +92,6 @@ vi.mock("@/components/ui/button", () => ({
     <button onClick={onClick} {...props}>{children}</button>
   ),
 }));
-// Le mock de @/components/ui/popover ci-dessus ignore `open` (rend toujours
-// ses enfants) — sans ça, la barre de mise en forme (ParagraphBlockEditor)
-// monterait HsvColorPicker qui dessine sur un <canvas>, non supporté par
-// jsdom sans le paquet natif "canvas".
-vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/ui/hsv-color-picker")>();
-  return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
-});
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 

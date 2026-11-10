@@ -585,11 +585,12 @@ export function CalloutDialog({
                       />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[220px] p-3 z-[200]" align="start">
+                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0 z-[200]" align="start">
                     <HsvColorPicker
                       color={accent || DEFAULT_ACCENT}
                       onChange={setAccent}
-                      presets={[]}
+                      alpha
+                      framed={false}
                     />
                   </PopoverContent>
                 </Popover>

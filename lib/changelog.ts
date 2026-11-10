@@ -5,6 +5,12 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ── 2026-11 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-11",
+    tag: "Interface",
+    text: "Nouveau sélecteur de couleur dans toute l’application : une rangée de pastilles, puis saturation, luminosité, teinte et code hexadécimal. Toutes les couleurs acceptent aussi une opacité : texte, bulles de dialogue, encadrés, bannières d’accueil, jauges, rôles, relations et carte.",
+  },
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",

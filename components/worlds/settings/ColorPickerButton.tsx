@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 /**
- * Pastille de couleur qui déplie un sélecteur HSV.
+ * Pastille de couleur qui déplie le sélecteur de couleur.
  *
  * Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
  * pointerdown sur le canvas HSV comme un clic hors du dialog.
@@ -44,8 +44,8 @@ export function ColorPickerButton({
         aria-label={tCommon("chooseColor")}
       />
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
-          <HsvColorPicker color={color} onChange={onChange} presets={[]} />
+        <div className="absolute left-0 top-full z-50 mt-1 w-64">
+          <HsvColorPicker color={color} onChange={onChange} alpha className="shadow-md" />
         </div>
       )}
     </div>

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { wrapSelection, applyListPrefix, applyHeadingPrefix } from "@/lib/textFormatting";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
-import { BUBBLE_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { DEFAULT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 function buildHTML(v: string): string {
@@ -173,7 +173,7 @@ export function ParagraphBlockEditor({
   const [focused, setFocused] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
-  const [pendingColor, setPendingColor] = useState(BUBBLE_COLOR_PRESETS[4].value);
+  const [pendingColor, setPendingColor] = useState(DEFAULT_COLOR_PRESETS[1].value);
   // Sélection sauvegardée avant l'ouverture du picker de couleur — la
   // sélection dans le contentEditable ne survit pas aux clics dans le popover
   // (portalé ailleurs dans le DOM), donc on la restaure au moment d'appliquer.
@@ -827,9 +827,9 @@ export function ParagraphBlockEditor({
                 <Palette className="h-3.5 w-3.5" />
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-3" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
-              <div className="space-y-3">
-                <HsvColorPicker color={pendingColor} onChange={setPendingColor} />
+            <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <HsvColorPicker color={pendingColor} onChange={setPendingColor} alpha framed={false} />
+              <div className="border-t border-border p-2.5">
                 <button
                   type="button"
                   onClick={() => applyColor(pendingColor)}

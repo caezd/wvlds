@@ -9,6 +9,7 @@ import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { getInitials } from "@/lib/textFormatting";
 import { CW, CH } from "./geometry";
 import type { CPersona } from "./types";
+import { withOpacity } from "@/lib/colorOpacity";
 
 /**
  * La carte d'un persona — la même sur le canevas et dans la rangée mobile.
@@ -64,7 +65,7 @@ export function PersonaCard({
           <Image src={persona.avatar_url} alt="" fill sizes={`${CW}px`} className="object-cover" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-xl font-bold"
-            style={{ background: gc ? `${gc}33` : "var(--muted)", color: gc ?? "var(--muted-foreground)" }}>
+            style={{ background: gc ? withOpacity(gc, 0.2) : "var(--muted)", color: gc ?? "var(--muted-foreground)" }}>
             {getInitials(persona.name)}
           </div>
         )}

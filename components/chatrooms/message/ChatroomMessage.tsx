@@ -509,6 +509,7 @@ function ChatroomMessage({
           <HsvColorPicker
             color={editBubbleColor ?? "#1d4ed8"}
             onChange={setEditBubbleColor}
+            alpha
           />
           <DialogFooter className="flex-row justify-between sm:justify-between">
             <button

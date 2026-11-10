@@ -23,6 +23,7 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import type { LinkPreview } from "@/lib/wikiLinkPreview";
 import type { WorldLexiconTerm } from "@/types/worlds";
+import { withOpacity } from "@/lib/colorOpacity";
 
 type Props = {
   content: string;
@@ -447,7 +448,7 @@ export function MarkdownContent({
           // Rôle supprimé depuis : le texte reste du texte.
           if (!role) return <>{children}</>;
           return (
-            <span data-mention="role" className={base} style={{ color: role.color, backgroundColor: `${role.color}26` }}>
+            <span data-mention="role" className={base} style={{ color: role.color, backgroundColor: withOpacity(role.color, 0.15) }}>
               {children}
             </span>
           );

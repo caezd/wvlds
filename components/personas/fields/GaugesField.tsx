@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, X } from "lucide-react";
 
+import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { GaugeItem } from "@/types/personas";
 import { makeItemId } from "./shared";
 
@@ -56,13 +58,25 @@ export function GaugesField({
                   onChange={(e) => patch(item.id, "max", Math.max(1, Number(e.target.value)))}
                   className="w-12 bg-transparent outline-none"
                 />
-                <input
-                  type="color"
-                  value={item.color}
-                  onChange={(e) => patch(item.id, "color", e.target.value)}
-                  className="h-6 w-6 shrink-0 cursor-pointer rounded border-none bg-transparent p-0"
-                  title="Couleur"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={tCommon("chooseColor")}
+                      title={tCommon("chooseColor")}
+                      className="h-5 w-5 shrink-0 rounded-md ring-1 ring-inset ring-foreground/10 transition-shadow hover:ring-2 hover:ring-ring"
+                      style={{ backgroundColor: item.color }}
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0 z-[200]" align="end">
+                    <HsvColorPicker
+                      color={item.color}
+                      onChange={(hex) => patch(item.id, "color", hex)}
+                      alpha
+                      framed={false}
+                    />
+                  </PopoverContent>
+                </Popover>
                 <button
                   aria-label={tCommon("remove")}
                   type="button"

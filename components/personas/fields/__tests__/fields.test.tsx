@@ -283,13 +283,30 @@ describe("GaugesField", () => {
       />,
     );
 
-    // Deux champs numériques seulement : la valeur puis le maximum. L'entrée
-    // de couleur n'expose pas le rôle « spinbutton ».
+    // Deux champs numériques seulement : la valeur puis le maximum. La
+    // pastille de couleur est un bouton.
     const [, maxInput] = screen.getAllByRole("spinbutton");
     await userEvent.clear(maxInput);
     await userEvent.type(maxInput, "0");
 
     expect(onSave.mock.calls.at(-1)![0][0].max).toBeGreaterThanOrEqual(1);
+  });
+
+  it("choisit la couleur d'une jauge dans le sélecteur de l'application", async () => {
+    const onSave = vi.fn();
+    render(
+      <GaugesField
+        initialItems={[{ id: "g", name: "PV", value: 10, max: 100, color: "#6366f1" }]}
+        onSave={onSave}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Rouge" }));
+    expect(onSave.mock.calls.at(-1)![0][0].color).toBe("#e8553a");
+
+    // Les jauges acceptent une couleur translucide.
+    expect(screen.getByRole("slider", { name: "Opacité" })).toBeInTheDocument();
   });
 });
 

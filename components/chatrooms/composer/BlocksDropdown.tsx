@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/drawer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
+import { withOpacity } from "@/lib/colorOpacity";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -394,7 +395,7 @@ export function BlocksDropdown({
                                 <div key={i} className="inline-flex flex-nowrap items-end gap-2">
                                     <div
                                         className={cn("rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm leading-snug", !bubbleColor && "bg-muted")}
-                                        style={bubbleColor ? { backgroundColor: bubbleColor + "33" } : undefined}
+                                        style={bubbleColor ? { backgroundColor: withOpacity(bubbleColor, 0.2) } : undefined}
                                     >
                                         {text}
                                     </div>
@@ -578,7 +579,7 @@ export function BlocksDropdown({
                                     <div key={i} className="inline-flex items-end gap-2 flex-nowrap">
                                         <div
                                             className={cn("rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm leading-snug whitespace-nowrap", !bubbleColor && "bg-muted")}
-                                            style={bubbleColor ? { backgroundColor: bubbleColor + "33" } : undefined}
+                                            style={bubbleColor ? { backgroundColor: withOpacity(bubbleColor, 0.2) } : undefined}
                                         >
                                             {text}
                                         </div>
@@ -597,6 +598,7 @@ export function BlocksDropdown({
                             <HsvColorPicker
                                 color={bubbleColor ?? "#1d4ed8"}
                                 onChange={onBubbleColorChange}
+                                alpha
                             />
                             <div className="flex gap-2">
                                 <button

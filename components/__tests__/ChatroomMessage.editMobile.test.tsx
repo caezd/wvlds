@@ -92,10 +92,6 @@ vi.mock("@/components/ui/button", () => ({
     <button onClick={onClick} {...props}>{children}</button>
   ),
 }));
-vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/ui/hsv-color-picker")>();
-  return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
-});
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 

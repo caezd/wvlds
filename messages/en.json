@@ -83,6 +83,14 @@
     "formatToolbar": "Formatting",
     "rename": "Rename"
   },
+  "colorPicker": {
+    "presets": "Preset colors",
+    "saturation": "Saturation and brightness",
+    "saturationValue": "Saturation {s}%, brightness {v}%",
+    "hue": "Hue",
+    "opacity": "Opacity",
+    "hex": "Hex code"
+  },
   "nav": {
     "profile": "My profile",
     "password": "Change password",

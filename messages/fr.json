@@ -83,6 +83,14 @@
     "formatToolbar": "Mise en forme",
     "rename": "Renommer"
   },
+  "colorPicker": {
+    "presets": "Couleurs prédéfinies",
+    "saturation": "Saturation et luminosité",
+    "saturationValue": "Saturation {s} %, luminosité {v} %",
+    "hue": "Teinte",
+    "opacity": "Opacité",
+    "hex": "Code hexadécimal"
+  },
   "nav": {
     "profile": "Mon profil",
     "password": "Changer le mot de passe",

@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
-import { BUBBLE_COLOR_PRESETS, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { updateMapPin, type MapPin as MapPinType } from "@/app/actions/worldMap";
 
 import { ColorInput } from "./ColorInput";
@@ -194,7 +193,7 @@ export function PinVisualDialog({
               </label>
             </div>
             {!noBg && (
-              <ColorInput color={bgColor} onChange={setBgColor} presets={BUBBLE_COLOR_PRESETS} />
+              <ColorInput color={bgColor} onChange={setBgColor} />
             )}
           </div>
 
@@ -202,7 +201,7 @@ export function PinVisualDialog({
           {iconName && (
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">{t("iconColor")}</span>
-              <ColorInput color={iconColor} onChange={setIconColor} presets={ACCENT_COLOR_PRESETS} />
+              <ColorInput color={iconColor} onChange={setIconColor} />
             </div>
           )}
 
@@ -249,7 +248,7 @@ export function PinVisualDialog({
                     </button>
                   ))}
                 </div>
-                <ColorInput color={borderColor} onChange={setBorderColor} presets={BUBBLE_COLOR_PRESETS} />
+                <ColorInput color={borderColor} onChange={setBorderColor} />
               </div>
             )}
           </div>

@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { BUBBLE_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { updateMapRegion, type MapRegion } from "@/app/actions/worldMap";
 import type { WikiPageOption } from "./types";
 import { ColorInput } from "./ColorInput";
@@ -112,7 +111,7 @@ export function RegionPanel({
 
       {editing && (
         <>
-          <ColorInput color={color} onChange={setColor} presets={BUBBLE_COLOR_PRESETS} />
+          <ColorInput color={color} onChange={setColor} />
           <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t("wikiPage")}
             <select
