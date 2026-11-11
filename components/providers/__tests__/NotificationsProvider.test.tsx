@@ -871,3 +871,54 @@ describe("Granularité des contextes de notifications", () => {
         await waitFor(() => expect(screen.getByTestId("room-c1").textContent).toBe("0"));
     });
 });
+
+describe("Adhésion et retrait d'un monde (migration 208)", () => {
+    function emitMembership(mock: SupabaseMock, payload: Record<string, unknown>) {
+        const perso = mock.channelNamed("msgs:u1")!;
+        act(() => {
+            perso.emit(
+                h => h.type === "broadcast" && (h.config as { event?: string }).event === "membership",
+                { type: "broadcast", event: "membership", payload },
+            );
+        });
+    }
+
+    it("retiré d'un monde : ferme son canal, efface ses non-lus et prévient les autres composants", async () => {
+        const { onMembershipChange } = await import("@/lib/membershipEvents");
+        const recu = vi.fn();
+        const desabonner = onMembershipChange(recu);
+        const mock = setupUnreads();
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+        const canalMonde = mock.channelNamed("world-msgs:w1")!;
+
+        emitMembership(mock, { world_id: "w1", change: "removed" });
+
+        expect(mock.removeChannel).toHaveBeenCalledWith(canalMonde);
+        await waitFor(() => {
+            expect(screen.getByTestId("room-c1").textContent).toBe("0");
+            expect(screen.getByTestId("world-w1").textContent).toBe("0");
+        });
+        expect(recu).toHaveBeenCalledWith({ worldId: "w1", change: "removed" });
+        desabonner();
+    });
+
+    it("ajouté à un monde : ouvre son canal privé sans recharger", async () => {
+        const mock = setupUnreads();
+        await waitFor(() => expect(mock.channelNamed("msgs:u1")).toBeDefined());
+
+        emitMembership(mock, { world_id: "w9", change: "added" });
+
+        expect(mock.channel).toHaveBeenCalledWith("world-msgs:w9", { config: { private: true } });
+    });
+
+    it("ignore un avis malformé", async () => {
+        const mock = setupUnreads();
+        await waitFor(() => expect(mock.channelNamed("msgs:u1")).toBeDefined());
+        const avant = mock.channel.mock.calls.length;
+
+        emitMembership(mock, { world_id: "w9", change: "autre" });
+
+        expect(mock.channel.mock.calls.length).toBe(avant);
+    });
+});

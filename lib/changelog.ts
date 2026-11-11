@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Mondes",
+    text: "Rejoindre un monde fait apparaître ses non-lus en direct, sans recharger ; en être retiré coupe aussitôt tout ce qui en venait. Les départs d’un monde ne sont plus signalés qu’à la personne concernée.",
+  },
+  {
+    date: "2026-11",
     tag: "Salons",
     text: "On peut répondre à un message : « Répondre » dans son menu (appui long sur mobile). La réponse s’affiche avec une citation de l’original — auteur et extrait — qui ramène à lui d’un clic, même s’il est loin dans l’historique.",
   },

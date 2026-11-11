@@ -17,6 +17,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
 import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { emitMembershipChange } from "@/lib/membershipEvents";
 
 // Compteurs par clé — à préférer quand un composant ne suit qu'une salle ou
 // qu'un monde, plutôt que de lire le `Record` complet. Voir lib/unreadStore.ts.
@@ -433,18 +434,55 @@ export default function NotificationsProvider({ children }: { children: React.Re
                 setRoomUnread(prev => ({ ...prev, [chatId]: (prev[chatId] ?? 0) + 1 }));
             };
             const prive = { config: { private: true } };
-            for (const wid of shell.world_ids) {
-                enregistrer(openRealtimeChannel(
+            // Canal de chaque monde, refermable seul (retrait du monde).
+            const canauxMondes = new Map<string, () => void>();
+            const ouvrirMonde = (wid: string) => {
+                if (!mounted || canauxMondes.has(wid)) return;
+                canauxMondes.set(wid, openRealtimeChannel(
                     supabase,
                     channel.worldMessages(wid),
                     (ch) => ch.on("broadcast", { event: "message" }, surNouveauMessage).subscribe(),
                     prive,
                 ));
-            }
+            };
+            const fermerMonde = (wid: string) => {
+                canauxMondes.get(wid)?.();
+                canauxMondes.delete(wid);
+            };
+            enregistrer(() => {
+                for (const fermer of canauxMondes.values()) fermer();
+                canauxMondes.clear();
+            });
+            for (const wid of shell.world_ids) ouvrirMonde(wid);
+
+            // Adhésion / retrait (migration 208), sur le canal personnel : le
+            // canal du monde suit, ses non-lus disparaissent avec lui, et les
+            // autres composants (WorldMembershipGuard) sont prévenus.
+            const surAdhesion = (msg: { payload?: Record<string, unknown> }) => {
+                const avis = (msg.payload ?? {}) as { world_id?: string; change?: string };
+                if (!avis.world_id || (avis.change !== "added" && avis.change !== "removed")) return;
+                const wid = avis.world_id;
+                if (avis.change === "added") {
+                    ouvrirMonde(wid);
+                } else {
+                    fermerMonde(wid);
+                    const salles = new Set(
+                        Object.entries(roomWorldRef.current).filter(([, w]) => w === wid).map(([c]) => c),
+                    );
+                    if (salles.size) {
+                        setRoomUnread(prev => Object.fromEntries(Object.entries(prev).filter(([c]) => !salles.has(c))));
+                        setNeverOpenedRooms(prev => new Set([...prev].filter(c => !salles.has(c))));
+                    }
+                }
+                emitMembershipChange({ worldId: wid, change: avis.change });
+            };
             enregistrer(openRealtimeChannel(
                 supabase,
                 channel.userMessages(userId),
-                (ch) => ch.on("broadcast", { event: "message" }, surNouveauMessage).subscribe(),
+                (ch) => ch
+                    .on("broadcast", { event: "message" }, surNouveauMessage)
+                    .on("broadcast", { event: "membership" }, surAdhesion)
+                    .subscribe(),
                 prive,
             ));
 

@@ -2,19 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { onMembershipChange } from "@/lib/membershipEvents";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
 /**
- * Garde de membership : si l'utilisateur courant est retiré du monde
- * (DELETE sur world_members), il est redirigé vers ses personnages.
+ * Garde de membership : si l'utilisateur courant est retiré du monde, il est
+ * redirigé vers ses personnages.
  *
- * Note : les événements DELETE realtime ne portent que la clé primaire
- * (world_id, user_id) et ne sont pas filtrés par RLS — c'est voulu ici,
- * l'utilisateur retiré doit recevoir l'événement alors qu'il a déjà
- * perdu l'accès en lecture.
+ * L'avis de retrait arrive sur son canal personnel privé (migration 208),
+ * relayé par NotificationsProvider (lib/membershipEvents). Avant, ce garde
+ * écoutait TOUTES les suppressions de `world_members` — les DELETE ne passant
+ * pas par la policy de lecture, chaque utilisateur connecté apprenait chaque
+ * retrait de membre, de tous les mondes.
  */
 export function WorldMembershipGuard({
   worldId,
@@ -25,35 +25,16 @@ export function WorldMembershipGuard({
 }) {
   const t = useTranslations("worlds");
   const router = useRouter();
-  const reconnectEpoch = useReconnectEpoch();
 
   useEffect(() => {
     if (!worldId || !selfId) return;
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel(`membership-guard:${worldId}:${selfId}`)
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "world_members" },
-        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          const old = payload.old as {
-            world_id?: string;
-            user_id?: string;
-          } | null;
-          if (old?.world_id === worldId && old?.user_id === selfId) {
-            toast.info(t("removedFromWorld"));
-            router.replace("/p");
-            router.refresh();
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [worldId, selfId, router, reconnectEpoch, t]);
+    return onMembershipChange(({ worldId: wid, change }) => {
+      if (change !== "removed" || wid !== worldId) return;
+      toast.info(t("removedFromWorld"));
+      router.replace("/p");
+      router.refresh();
+    });
+  }, [worldId, selfId, router, t]);
 
   return null;
 }
