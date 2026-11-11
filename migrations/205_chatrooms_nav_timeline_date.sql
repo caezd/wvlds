@@ -1,4 +1,4 @@
--- 204 — `list_chatrooms_nav` rend la date de chronologie de chaque salon.
+-- 205 — `list_chatrooms_nav` rend la date de chronologie de chaque salon.
 --
 -- La page d'un monde dont la chronologie est activée relisait `chatrooms`
 -- (`id, timeline_date`) APRÈS le retour de cette fonction, pour attacher les
@@ -6,14 +6,13 @@
 -- de `/w/[id]`. La colonne vient désormais avec le reste.
 --
 -- Ajouter une colonne au `RETURNS TABLE` change le type de retour : `CREATE OR
--- REPLACE` le refuse, d'où le DROP + CREATE dans une transaction. Le corps est
+-- REPLACE` le refuse, d'où le DROP + CREATE (la migration s'applique d'un
+-- bloc : pas de fenêtre où la fonction manque). Le corps est
 -- celui de la migration 130 (identique à la production), plus `timeline_date`
 -- en dernière colonne ; le `search_path` est celui posé par la migration 131.
 --
 -- Déploiement : le code accepte les deux formes. Tant que la migration n'est
 -- pas passée, il relit les dates comme avant (cf. WorldHomeContent.tsx).
-
-BEGIN;
 
 DROP FUNCTION IF EXISTS public.list_chatrooms_nav(uuid);
 
@@ -74,8 +73,6 @@ $function$;
 -- Le DROP a emporté les droits d'exécution : on rend ceux qu'une fonction
 -- neuve reçoit par défaut sur Supabase, comme avant.
 GRANT EXECUTE ON FUNCTION public.list_chatrooms_nav(uuid) TO anon, authenticated, service_role;
-
-COMMIT;
 
 -- ── RETOUR ARRIÈRE ───────────────────────────────────────────
 -- Rejouer la définition de la migration 130 après un

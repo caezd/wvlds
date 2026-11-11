@@ -75,7 +75,7 @@ export default async function WorldHomeContent({
     (async (): Promise<NavRoom[]> => {
       const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
-      // Depuis la migration 204, `list_chatrooms_nav` rend la date de
+      // Depuis la migration 205, `list_chatrooms_nav` rend la date de
       // chronologie de chaque salon : plus de seconde requête en cascade.
       // La relecture ci-dessous ne sert qu'avant la migration, ou quand le
       // getter est retombé sur sa liste nue (RPC indisponible).
