@@ -54,13 +54,13 @@ import {
   TABLE,
   RPC,
   SCROLL_THRESHOLD_PX,
-  CHAT_MESSAGES_PAGE_SIZE,
   LOAD_OLDER_THRESHOLD_PX,
 } from "@/lib/constants";
 import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
+import { decorateMessagePage, fetchMessagePage } from "@/lib/chatMessagePage";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -279,28 +279,10 @@ export default function ChatRoomView({
   // Les couleurs de groupe arrivent en props (résolues côté serveur) : plus
   // d'aller-retour réseau après l'hydratation pour cette donnée.
 
-  /* challenge badges — charge + met à jour en Realtime */
-  const loadChallengeBadges = useCallback(async (ids: number[]) => {
-    if (!ids.length) return;
-    type Row = { message_id: number; challenge: { title: string; description: string | null } | null };
-    const { data } = await supabase
-      .from(TABLE.CHALLENGE_ATTEMPTS)
-      .select("message_id, challenge:challenge_id(title, description)")
-      .in("message_id", ids)
-      .eq("status", "won");
-    if (!data) return;
-    setChallengeBadges((prev) => {
-      const next = new Map(prev);
-      for (const row of data as Row[]) {
-        if (row.challenge) next.set(Number(row.message_id), row.challenge);
-      }
-      return next;
-    });
-  }, [supabase]);
-
+  /* challenge badges — mis à jour en Realtime */
   useEffect(() => {
-    // Les badges des messages initiaux viennent des props ; `loadChallengeBadges`
-    // ne sert plus qu'au Realtime ci-dessous et aux pages d'historique.
+    // Les badges des messages initiaux viennent des props, ceux de l'historique
+    // de la page chargée (lib/chatMessagePage) ; ne reste que le Realtime.
 
     const sub = supabase
       .channel(`challenge-badges-${chatId}`)
@@ -534,70 +516,30 @@ export default function ChatRoomView({
     setLoadingOlder(true);
 
     try {
-      const { data: older, error } = await supabase
-        .from(TABLE.CHAT_MESSAGES)
-        .select(
-          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
-        )
-        .eq("chat_id", chatId)
-        .lt("created_at", oldest.created_at)
-        .order("created_at", { ascending: false })
-        .limit(CHAT_MESSAGES_PAGE_SIZE);
+      // Même chargement que la première page (lib/chatMessagePage) : réactions,
+      // VOTES et badges joints aux messages, en une requête. Cette page-ci ne
+      // lisait pas les votes — un sondage plus ancien que la première page
+      // s'affichait à zéro, sans le choix de l'utilisateur.
+      const page = await fetchMessagePage(supabase, chatId, { before: oldest.created_at });
 
-      if (error || !older) return;
+      hasMoreRef.current = page.hasMore;
+      setHasMore(page.hasMore);
+      if (!page.messages.length) return;
 
-      hasMoreRef.current = older.length === CHAT_MESSAGES_PAGE_SIZE;
-      setHasMore(hasMoreRef.current);
-      if (!older.length) return;
+      const pageWithReactions = (await decorateMessagePage(
+        page.messages,
+        page,
+        userId,
+        roomKeyRef.current,
+      )) as unknown as ChatMessageWithPersona[];
 
-      const page = older
-        .slice()
-        .reverse() as unknown as ChatMessageWithPersona[];
-
-      // Réactions des messages chargés
-      const { data: rows } = await supabase
-        .from(TABLE.CHAT_MESSAGE_REACTIONS)
-        .select("message_id, emoji, user_id")
-        .eq("chat_id", chatId)
-        .in(
-          "message_id",
-          page.map((m) => m.id),
-        );
-
-      const byMessage = new Map<
-        number,
-        Map<string, { count: number; me: boolean }>
-      >();
-      for (const r of (rows ?? []) as Array<{ message_id: number; emoji: string; user_id: string }>) {
-        const mid = Number(r.message_id);
-        const emoji = String(r.emoji);
-        const uid = String(r.user_id);
-        if (!byMessage.has(mid)) byMessage.set(mid, new Map());
-        const emMap = byMessage.get(mid)!;
-        const prev = emMap.get(emoji) ?? { count: 0, me: false };
-        emMap.set(emoji, {
-          count: prev.count + 1,
-          me: prev.me || (!!userId && uid === userId),
+      if (page.challengeBadges.length) {
+        setChallengeBadges((prev) => {
+          const next = new Map(prev);
+          for (const [mid, badge] of page.challengeBadges) next.set(mid, badge);
+          return next;
         });
       }
-
-      const key = roomKeyRef.current;
-      const pageWithReactions = await Promise.all(
-        page.map(async (m) => {
-          const emMap = byMessage.get(m.id);
-          const reactions: ReactionSummary[] = emMap
-            ? Array.from(emMap.entries())
-              .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
-              .sort(
-                (a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji),
-              )
-            : [];
-          const content = key
-            ? await decryptMessage(m.content ?? "", key)
-            : (m.content ?? "");
-          return { ...m, content, reactions };
-        }),
-      );
 
       const vp = getViewport();
       if (vp) {
@@ -609,7 +551,6 @@ export default function ChatRoomView({
       setMessages((prev) => {
         const existing = new Set(prev.map((m) => m.id));
         const fresh = pageWithReactions.filter((m) => !existing.has(m.id));
-        if (fresh.length) void loadChallengeBadges(fresh.map((m) => m.id));
         return fresh.length ? [...fresh, ...prev] : prev;
       });
     } finally {

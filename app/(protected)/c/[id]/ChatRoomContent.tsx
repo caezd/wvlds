@@ -1,12 +1,11 @@
 import ChatRoomView from "./view";
 import { createClient } from "@/lib/supabase/server";
-import { decryptMessage } from "@/lib/crypto";
-import { aggregateChoiceVotes } from "@/lib/choiceVotes";
-import type { ChatMessageWithPersona, ChoiceVoteSummary } from "@/types/db";
+import type { ChatMessageWithPersona } from "@/types/db";
 import { canEditChatroom, hasWorldPermission } from "@/lib/worldPermissions";
 import { getChatroomsNav, getFollowedChatroomIds, getWorldMembership, type NavRoom, type WorldMembershipData } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
-import { getChatroomMessages, type VoteRow } from "./getChatroomMessages";
+import { getChatroomMessages } from "./getChatroomMessages";
+import { decorateMessagePage } from "@/lib/chatMessagePage";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 
@@ -28,8 +27,6 @@ export default async function ChatRoomContent({
   // la lecture du salon (cf. getChatroomMessages). Les lectures qui ont
   // besoin du `world_id` partent ici, en parallèle de la fin de celles-là —
   // il n'y a plus de seconde vague attendant les ids des messages.
-  type ReactionSummary = { emoji: string; count: number; me: boolean };
-
   // Données du monde associé (extracted pour usage multiple)
   const rawWorld = chatroom.worlds as unknown;
   const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
@@ -77,50 +74,12 @@ export default async function ChatRoomContent({
     initialPersona,
   } = messagesData;
 
-  const byMessage = new Map<
-    number,
-    Map<string, { count: number; me: boolean }>
-  >();
-
-  for (const r of reactionRows) {
-    const mid = Number(r.message_id);
-    const emoji = String(r.emoji);
-    const uid = String(r.user_id);
-
-    if (!byMessage.has(mid)) byMessage.set(mid, new Map());
-    const emMap = byMessage.get(mid)!;
-
-    const prev = emMap.get(emoji) ?? { count: 0, me: false };
-    emMap.set(emoji, {
-      count: prev.count + 1,
-      me: prev.me || uid === userId,
-    });
-  }
-
-  const votesByMessage = new Map<number, VoteRow[]>();
-  for (const r of voteRows) {
-    const mid = Number(r.message_id);
-    const arr = votesByMessage.get(mid) ?? [];
-    arr.push(r);
-    votesByMessage.set(mid, arr);
-  }
-
-  const initialMessagesWithReactions = await Promise.all(
-    initialMessages.map(async (m) => {
-      const emMap = byMessage.get(m.id);
-      const reactions: ReactionSummary[] = emMap
-        ? Array.from(emMap.entries())
-            .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
-            .sort((a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji))
-        : [];
-      const votes: ChoiceVoteSummary[] = aggregateChoiceVotes(votesByMessage.get(m.id) ?? [], userId);
-      const content = chatroomKey
-        ? await decryptMessage((m as { content?: string }).content ?? "", chatroomKey)
-        : ((m as { content?: string }).content ?? "");
-      return { ...m, content, reactions, votes };
-    }),
+  const initialMessagesWithReactions = await decorateMessagePage(
+    initialMessages,
+    { reactionRows, voteRows },
+    userId,
+    chatroomKey,
   );
-  /* reactions */
 
   // Droits d'édition / d'admin monde, dérivés des données déjà chargées.
   // Règles partagées avec le reste de l'app (lib/worldPermissions.ts), elles-

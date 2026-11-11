@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Correctif",
+    text: "Les sondages plus anciens d’un salon, chargés en remontant la conversation, affichent de nouveau leurs votes et votre choix — ils apparaissaient à zéro.",
+  },
+  {
+    date: "2026-11",
     tag: "Performance",
     text: "Le serveur de l’application tourne désormais à Londres, à côté de la base de données, au lieu de l’autre côté de l’Atlantique : chaque page gagne plusieurs centaines de millisecondes.",
   },
