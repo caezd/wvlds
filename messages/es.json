@@ -1486,7 +1486,9 @@
       "hereWarning": "Va a notificar a {count, plural, =0 {nadie} one {# miembro presente} other {# miembros presentes}} con @aquí.",
       "everyoneWarningUnknown": "Va a notificar a todos los miembros del mundo.",
       "hereWarningUnknown": "Va a notificar a los miembros presentes."
-    }
+    },
+    "edited": "(editado)",
+    "editedAt": "Editado el {date, date, long} a las {date, time, short}"
   },
   "changelog": {
     "title": "Historial de cambios",

@@ -1486,7 +1486,9 @@
       "hereWarning": "You are about to notify {count, plural, =0 {nobody} one {# member here} other {# members here}} with @here.",
       "everyoneWarningUnknown": "You are about to notify every member of the world.",
       "hereWarningUnknown": "You are about to notify the members who are here."
-    }
+    },
+    "edited": "(edited)",
+    "editedAt": "Edited on {date, date, long} at {date, time, short}"
   },
   "changelog": {
     "title": "Changelog",

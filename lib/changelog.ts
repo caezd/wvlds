@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Salons",
+    text: "Un message retouché par son auteur porte la mention « (modifié) » à côté de sa date ; la survoler indique quand.",
+  },
+  {
+    date: "2026-11",
     tag: "Technique",
     text: "Les compteurs de messages non lus arrivent en direct par un canal plus léger, prévu pour tenir la charge des grands mondes très actifs.",
   },

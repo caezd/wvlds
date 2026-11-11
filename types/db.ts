@@ -101,6 +101,12 @@ export type ChatMessageMeta = {
   word_count?: number;
   visible_to_labels?: string[];
   content_warnings?: string[];
+  /**
+   * Instant (ISO) de la dernière modification du message par son auteur.
+   * Posé par l'édition seulement (useChatroomMessageEdit) — pas par les blocs
+   * de jeu qui réécrivent leur état (dés, PV…), qui ne sont pas des retouches.
+   */
+  edited_at?: string;
 };
 
 export type ChatMessage = {
