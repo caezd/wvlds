@@ -17,11 +17,13 @@ vi.mock("@/hooks/useWorldReviewActive", () => ({ useWorldReviewActive: () => rev
 import { PersonaSubmitBar, PersonaReviewSection } from "@/components/personas/PersonaReviewPanel";
 import { PersonaSheetBadge } from "@/components/personas/PersonaSheetBadge";
 
-const TEMPLATE_SECTIONS = [{ id: "ts1", persona_id: "t", name: "Identité", position: 0 }];
 const TEMPLATE_FIELDS = [
   { id: "tf-title", section_id: "ts1", type: "title", position: 0, data: { text: "Biographie" }, locked: true, required: false },
   { id: "tf-bio", section_id: "ts1", type: "text", position: 1, data: { text: "" }, locked: true, required: true },
 ];
+// Sections du modèle avec leurs champs joints : une seule requête
+// (cf. fetchSectionsByPersona).
+const TEMPLATE_SECTIONS = [{ id: "ts1", persona_id: "t", name: "Identité", position: 0, persona_section_fields: TEMPLATE_FIELDS }];
 
 function sheet(text: string, linked = true): PersonaSectionWithFields[] {
   return [{
@@ -33,7 +35,7 @@ function sheet(text: string, linked = true): PersonaSectionWithFields[] {
 /**
  * Ordre des `.from()` de PersonaSubmitBar : personas (le modèle) puis, dans le
  * même tick, persona_review_comments (dernier renvoi, en brouillon seulement),
- * puis persona_sections et persona_section_fields du modèle.
+ * puis persona_sections du modèle, champs joints.
  */
 function setupSubmit(lastComment: unknown = null, extra: { data: unknown }[] = []) {
   const mock = createSupabaseMock({
@@ -41,7 +43,6 @@ function setupSubmit(lastComment: unknown = null, extra: { data: unknown }[] = [
       { data: { id: "t" } },
       { data: lastComment },
       { data: TEMPLATE_SECTIONS },
-      { data: TEMPLATE_FIELDS },
       ...extra,
     ],
   });
@@ -123,7 +124,7 @@ describe("PersonaSubmitBar", () => {
   it("sans relecture dans le monde : la liste de ce qui manque, mais ni statut ni bouton", async () => {
     review.active = false;
     // Sans relecture, le dernier renvoi n'est pas demandé : la file n'a pas ce cran.
-    const mock = createSupabaseMock({ results: [{ data: { id: "t" } }, { data: TEMPLATE_SECTIONS }, { data: TEMPLATE_FIELDS }] });
+    const mock = createSupabaseMock({ results: [{ data: { id: "t" } }, { data: TEMPLATE_SECTIONS }] });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const { rerender } = render(<PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("")} initialReviewStatus="draft" />);
     await screen.findByTestId("missing-fields");

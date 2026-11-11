@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveWorldPanel, SETTINGS_PERMISSIONS } from "./worldView";
 import { useState } from "react";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useScrolledPast } from "@/hooks/useScrolledPast";
@@ -96,8 +97,7 @@ export function WorldHome({
 
   const can = (perm: WorldPermission) => permissionListHas(permissions, perm);
   const canPost = can("messages.post");
-  const canOpenSettings =
-    can("world.settings") || can("roles.manage") || can("categories.manage") || can("relations.manage");
+  const canOpenSettings = SETTINGS_PERMISSIONS.some((perm) => can(perm));
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || can("catalog.edit"));
@@ -163,16 +163,23 @@ export function WorldHome({
     void toggleWorldFavorite(worldId, next);
   }
 
-  const showCanvas = view === "canvas";
-  const showCatalogue = view === "catalogue";
-  // Masquer le lien ne suffit pas : `?view=wiki` reste tapable dans la barre
-  // d'adresse, et un lien partagé avant la désactivation continue de circuler.
-  const showWiki = view === "wiki" && world.enable_wiki !== false;
-  const showMap = view === "map" && world.enable_map !== false;
-  const showTimeline = view === "timeline";
-  const showMembers = view === "members";
-  const showPersonas = view === "personas";
-  const showSettings = view === "settings" && canOpenSettings;
+  // Même résolution que côté serveur (WorldHomeContent), qui ne charge les
+  // données des widgets de l'accueil que lorsque c'est lui qui s'affiche.
+  const panel = resolveWorldPanel(view, {
+    enableWiki: world.enable_wiki,
+    enableMap: world.enable_map,
+    worldMapFlag: world_map,
+    hasTimeline,
+    canOpenSettings,
+  });
+  const showCanvas = panel === "canvas";
+  const showCatalogue = panel === "catalogue";
+  const showWiki = panel === "wiki";
+  const showMap = panel === "map";
+  const showTimeline = panel === "timeline";
+  const showMembers = panel === "members";
+  const showPersonas = panel === "personas";
+  const showSettings = panel === "settings";
 
   return (
     <>
@@ -226,7 +233,7 @@ export function WorldHome({
             label={world.wiki_label}
             initialSlug={initialWikiSlug}
           />
-        ) : showMap && world_map ? (
+        ) : showMap ? (
           <WorldMap
             worldId={worldId}
             canEdit={can("map.edit")}
@@ -236,7 +243,7 @@ export function WorldHome({
             initialPinId={initialPinId}
             timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : null}
           />
-        ) : showTimeline && hasTimeline ? (
+        ) : showTimeline ? (
           <WorldTimeline
             worldId={worldId}
             rooms={initialRooms.map(r => ({ ...r, timeline_date: r.timeline_date ?? null }))}

@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Performance",
+    text: "Moins d’attente dans les mondes : les onglets Wiki, Carte, Membres… ne chargent plus les blocs de l’accueil qu’ils n’affichent pas, l’onglet Personas arrive en une seule requête, et la chronologie des salons vient avec leur liste. Les salons d’une liste ne se préparent plus tous à l’affichage, seulement celui que l’on survole ou touche.",
+  },
+  {
+    date: "2026-11",
+    tag: "Performance",
     text: "Les salons s’ouvrent plus vite : messages, réactions, votes et défis remportés arrivent ensemble au lieu d’en plusieurs allers-retours. À l’entrée dans un monde, la page s’affiche sans attendre la barre latérale, qui la rejoint un instant après. Et revenir sur un salon ou un monde quitté depuis moins de 30 secondes est instantané.",
   },
   {

@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
-import { revalidatePath } from "next/cache";
-import { FLAG_KEYS, type FlagKey } from "@/lib/featureFlags";
+import { revalidatePath, updateTag } from "next/cache";
+import { FEATURE_FLAGS_TAG, FLAG_KEYS, type FlagKey } from "@/lib/featureFlags";
 import { FeatureSubGroup } from "../_components/FeatureSubGroup";
 import { getTranslations } from "next-intl/server";
 import { echecEnregistrement } from "@/lib/actionErrors";
@@ -76,6 +76,11 @@ async function toggleFlag(key: FlagKey, enabled: boolean) {
   // du segment protégé prend le relais.
   if (error) throw new Error(echecEnregistrement(`toggleFlag(${key})`, error));
 
+  // Vide le cache serveur partagé des drapeaux (cf. getCachedFeatureFlags) :
+  // sans lui, les pages continueraient d'appliquer l'ancienne valeur jusqu'à
+  // une minute. `updateTag` et non `revalidateTag` : l'admin doit voir son
+  // propre changement dès le rendu qui suit.
+  updateTag(FEATURE_FLAGS_TAG);
   revalidatePath("/admin/features");
   revalidatePath("/", "layout");
 }

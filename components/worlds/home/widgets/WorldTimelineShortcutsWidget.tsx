@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import Image from "next/image";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -217,7 +218,7 @@ export function WorldTimelineShortcutsWidget({
             const label = room.title ?? room.name ?? "Conversation";
             return (
               <li key={room.id}>
-                <Link
+                <ChatroomLink
                   href={`/c/${room.id}`}
                   className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-hoverCard"
                 >
@@ -235,7 +236,7 @@ export function WorldTimelineShortcutsWidget({
                     </span>
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 transition-transform group-hover:translate-x-0.5" />
-                </Link>
+                </ChatroomLink>
               </li>
             );
           })}

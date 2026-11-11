@@ -3,8 +3,9 @@ import { getUserId } from "@/lib/auth";
 import type { WorldMembership } from "@/lib/worldPermissions";
 import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
-import { fetchSectionsByPersona } from "@/lib/personaSections";
-import { getChatroomCategories, getChatroomsNav, type WorldWithMembership } from "@/lib/currentRequest";
+import { EMBEDDED_SECTIONS_COLUMNS, fetchSectionsByPersona, normalizeEmbeddedSections } from "@/lib/personaSections";
+import { getCachedFeatureFlags, getChatroomCategories, getChatroomsNav, type WorldWithMembership } from "@/lib/currentRequest";
+import { resolveWorldPanel, SETTINGS_PERMISSIONS } from "@/components/worlds/home/worldView";
 import { getWorldMaps } from "@/app/actions/worldMap";
 import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
@@ -47,10 +48,22 @@ export default async function WorldHomeContent({
   initialPlayPinId?: string | null;
 }) {
   const supabase = await createClient();
-  const userId = await getUserId(supabase);
+  const [userId, flags] = await Promise.all([getUserId(supabase), getCachedFeatureFlags()]);
 
   const isShared = true; // garanti par la garde d'appartenance de page.tsx
   const permissions = [...membership.permissions];
+
+  // Onglet réellement affiché — même règle que `WorldHome`. Les widgets de la
+  // grille n'existent que sur l'accueil : sur le wiki, la carte, les membres…
+  // leurs données (personas récents, pages, cartes, anniversaires) étaient
+  // chargées puis jetées à chaque rendu.
+  const panel = resolveWorldPanel(view, {
+    enableWiki: world.enable_wiki,
+    enableMap: world.enable_map,
+    worldMapFlag: flags.world_map,
+    hasTimeline: flags.world_timeline && !!world.timeline_enabled && !!world.timeline_config,
+    canOpenSettings: SETTINGS_PERMISSIONS.some((perm) => membership.permissions.has(perm)),
+  });
 
   // Ces chargements (nav, préférences UI, personas…) sont indépendants les uns
   // des autres → on les exécute en parallèle plutôt que d'enchaîner les
@@ -62,6 +75,11 @@ export default async function WorldHomeContent({
     (async (): Promise<NavRoom[]> => {
       const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
+      // Depuis la migration 204, `list_chatrooms_nav` rend la date de
+      // chronologie de chaque salon : plus de seconde requête en cascade.
+      // La relecture ci-dessous ne sert qu'avant la migration, ou quand le
+      // getter est retombé sur sa liste nue (RPC indisponible).
+      if ("timeline_date" in rooms[0]) return rooms;
       const roomIds = rooms.map((r) => r.id);
       const { data: timelineDates } = await supabase
         .from("chatrooms")
@@ -97,19 +115,36 @@ export default async function WorldHomeContent({
       // puis champs) partaient aussi pour l'accueil, le wiki, la carte, les
       // membres… et leur résultat était jeté. Les `data` jsonb des champs
       // peuvent être volumineux.
-      if (!userId || view !== "personas") return [];
-      const { data: personaRows } = await supabase
-        .from("personas")
-        .select(
-          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, faceclaim, marital_status, spouse_persona_id, narrative_status, review_status, sheet_complete, created_at, frame:avatar_frame_id(asset_url)",
-        )
-        .eq("user_id", userId)
-        .eq("world_id", worldId)
-        .eq("is_template", false)
-        .eq("is_npc", false)
-        .order("name", { ascending: true });
+      if (!userId || panel !== "personas") return [];
+      const personaColumns =
+        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, faceclaim, marital_status, spouse_persona_id, narrative_status, review_status, sheet_complete, created_at, frame:avatar_frame_id(asset_url)";
+      const personasQuery = (columns: string) =>
+        supabase
+          .from("personas")
+          .select(columns)
+          .eq("user_id", userId)
+          .eq("world_id", worldId)
+          .eq("is_template", false)
+          .eq("is_npc", false)
+          .order("name", { ascending: true });
 
-      const rows = (personaRows ?? []) as Omit<AsidePersona, "sections">[];
+      // Personas, sections et champs en UNE requête (jointures), au lieu de
+      // trois successives (personas → sections → champs).
+      const { data: embedded, error } = await personasQuery(
+        `${personaColumns}, persona_sections(${EMBEDDED_SECTIONS_COLUMNS})`,
+      );
+      if (!error) {
+        type Row = Omit<AsidePersona, "sections"> & { persona_sections?: unknown };
+        return ((embedded ?? []) as unknown as Row[]).map(({ persona_sections, ...p }) => ({
+          ...p,
+          sections: normalizeEmbeddedSections(persona_sections),
+        }));
+      }
+
+      // Repli : jointure refusée — l'ancien chargement en cascade.
+      console.error("[WorldHomeContent] jointure des fiches refusée : %s", error.message);
+      const { data: personaRows } = await personasQuery(personaColumns);
+      const rows = (personaRows ?? []) as unknown as Omit<AsidePersona, "sections">[];
       if (rows.length === 0) return [];
 
       const sectionsByPersona = await fetchSectionsByPersona(
@@ -130,6 +165,7 @@ export default async function WorldHomeContent({
     // temps d'un aller-retour. On ne charge QUE les blocs réellement placés
     // dans la grille de ce monde, avec la limite configurée sur le bloc.
     (async (): Promise<{ recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] }> => {
+      if (panel !== "home") return {};
       const items = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html);
       const personasItem = items.find((i) => i.widgetId === "personas_recent");
       const wikiItem = items.find((i) => i.widgetId === "wiki_shortcuts");
@@ -176,7 +212,7 @@ export default async function WorldHomeContent({
     (async (): Promise<InitialWorldMap | null> => {
       // Un monde qui a désactivé sa carte n'ouvre jamais cet onglet : la
       // requête ne servirait à rien.
-      if (view !== "map" || world.enable_map === false) return null;
+      if (panel !== "map") return null;
       return getWorldMaps(worldId);
     })(),
   ]);
