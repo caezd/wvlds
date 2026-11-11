@@ -35,6 +35,12 @@ type Props = {
   onReactionChange: (messageId: number, emoji: string, delta: 1 | -1) => void;
   onVoteChange?: (messageId: number, prevOptionId: string | null, nextOptionId: string | null) => void;
   onPersonaUpdated?: (personaId: string, avatarUrl: string | null) => void;
+  /**
+   * Le message est-il déjà affiché ? Un message que l'on vient d'envoyer est
+   * ajouté par la vue dès la réponse de l'insertion : son INSERT Realtime n'a
+   * alors pas à être relu.
+   */
+  isMessageKnown?: (id: number) => boolean;
 };
 
 export function useRealtimeChatSync({
@@ -48,6 +54,7 @@ export function useRealtimeChatSync({
   onReactionChange,
   onVoteChange,
   onPersonaUpdated,
+  isMessageKnown,
 }: Props) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -72,6 +79,7 @@ export function useRealtimeChatSync({
     onReactionChange,
     onVoteChange,
     onPersonaUpdated,
+    isMessageKnown,
   });
   callbacksRef.current = {
     onMessageInserted,
@@ -81,6 +89,7 @@ export function useRealtimeChatSync({
     onReactionChange,
     onVoteChange,
     onPersonaUpdated,
+    isMessageKnown,
   };
 
   // Un seul canal Realtime par chatroom (au lieu d'un canal par table/événement) :
@@ -156,6 +165,7 @@ export function useRealtimeChatSync({
         const id = (payload.new as { id: number }).id;
         if (latestIdRef.current !== null && id <= latestIdRef.current) return;
         latestIdRef.current = id;
+        if (callbacksRef.current.isMessageKnown?.(id)) return;
 
         const { data, error } = await supabase
           .from(TABLE.CHAT_MESSAGES)

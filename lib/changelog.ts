@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Salons",
+    text: "Envoyer un message est instantané : il s’affiche dès qu’il est enregistré et la zone de saisie se libère aussitôt, sans attendre les mentions ni l’attribution des points, qui se font en arrière-plan.",
+  },
+  {
+    date: "2026-11",
     tag: "Correctif",
     text: "Les sondages plus anciens d’un salon, chargés en remontant la conversation, affichent de nouveau leurs votes et votre choix — ils apparaissaient à zéro.",
   },

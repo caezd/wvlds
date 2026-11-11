@@ -259,3 +259,15 @@ describe("useRealtimeChatSync — rattrapage des messages manqués", () => {
     expect(cbs.onMessageInserted).not.toHaveBeenCalled();
   });
 });
+
+describe("useRealtimeChatSync — message déjà affiché", () => {
+  it("ne relit pas un message que la vue affiche déjà (envoyé par soi)", async () => {
+    const { mock, cbs } = setup({ results: [{ data: [] }] }, { isMessageKnown: (id) => id === 5 });
+    await waitFor(() => expect(mock.builders).toHaveLength(1)); // rattrapage seul
+    await act(async () => {
+      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 5 } });
+    });
+    expect(mock.builders).toHaveLength(1);
+    expect(cbs.onMessageInserted).not.toHaveBeenCalled();
+  });
+});

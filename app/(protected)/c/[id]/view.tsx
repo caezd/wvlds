@@ -726,9 +726,15 @@ export default function ChatRoomView({
     router.replace(`/c/${chatId}`, { scroll: false });
   }, [chatId, chat, searchParams, router]);
 
+  // Lu par le Realtime pour ne pas relire un message déjà affiché (le sien,
+  // ajouté dès la réponse de l'insertion).
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   useRealtimeChatSync({
     chatId,
     selfId: userId,
+    isMessageKnown: (id) => messagesRef.current.some((m) => m.id === id),
     initialLatestId: initialMessages.at(-1)?.id ?? null,
     onMessageInserted: (msg, authorId) => {
       void (async () => {
@@ -1080,6 +1086,9 @@ export default function ChatRoomView({
                     if (userId) void pinAnchor(messageId, label, userId);
                   }}
                   onMessageSent={quests ? (mid, cid, text) => void handleMessageSent(mid, cid, text) : undefined}
+                  onMessageCreated={(msg) => {
+                    setMessages((prev) => insertMessageById(prev, { ...msg, reactions: [], votes: [] }));
+                  }}
                 />}
               </div>
             </div>
