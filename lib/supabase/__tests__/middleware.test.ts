@@ -114,3 +114,15 @@ describe("updateSession — préservation de la session", () => {
     expect(res.headers.get("location")).toContain("/auth/login");
   });
 });
+
+describe("updateSession — chemin transmis aux Server Components", () => {
+  it("pose l'en-tête du chemin demandé sur la requête transmise, en écrasant celui du client", async () => {
+    const req = new NextRequest("http://localhost:3000/c/salon-42", {
+      headers: { "x-wvlds-pathname": "/c/usurpe" },
+    });
+    const res = await updateSession(req);
+    // NextResponse.next({ request }) transmet les en-têtes de requête modifiés
+    // via x-middleware-request-<nom>.
+    expect(res.headers.get("x-middleware-request-x-wvlds-pathname")).toBe("/c/salon-42");
+  });
+});

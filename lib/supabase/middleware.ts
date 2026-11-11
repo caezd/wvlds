@@ -1,9 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
+import { PATHNAME_HEADER } from "../requestPath";
 
 export async function updateSession(request: NextRequest) {
     const url = request.nextUrl;
+    // Chemin demandé, pour les layouts qui ne reçoivent pas les paramètres
+    // de leurs segments enfants (cf. lib/requestPath.ts). Posé sur la requête
+    // AVANT tout `NextResponse.next({ request })`, qui la transmet telle quelle.
+    request.headers.set(PATHNAME_HEADER, url.pathname);
     let supabaseResponse = NextResponse.next({
         request,
     });

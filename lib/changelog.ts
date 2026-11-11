@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Salons",
+    text: "Passer d’un salon à l’autre d’un même monde est plus rapide et plus fluide : la barre latérale reste en place, sans se recharger ni perdre sa position de défilement.",
+  },
+  {
+    date: "2026-11",
+    tag: "Salons",
     text: "Au retour d’une coupure réseau ou d’une mise en veille, un salon se remet entièrement à jour : messages modifiés ou supprimés entre-temps, réactions et votes compris.",
   },
   {
