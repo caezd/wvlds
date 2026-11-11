@@ -1,12 +1,12 @@
 import ChatRoomView from "./view";
 import { createClient } from "@/lib/supabase/server";
-import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
-import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
+import type { ChatMessageWithPersona, ChoiceVoteSummary } from "@/types/db";
 import { canEditChatroom, hasWorldPermission } from "@/lib/worldPermissions";
 import { getChatroomsNav, getFollowedChatroomIds, getWorldMembership, type NavRoom, type WorldMembershipData } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
+import { getChatroomMessages, type VoteRow } from "./getChatroomMessages";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 
@@ -23,73 +23,19 @@ export default async function ChatRoomContent({
 }) {
   const supabase = await createClient();
 
-  // Requêtes ne dépendant que de `id`/`userId`, indépendantes entre elles →
-  // chargées en parallèle (messages, clé de chiffrement, persona préférée).
-  const [{ data: messages }, { data: keyRow }, { data: pref }] = await Promise.all([
-    // Derniers messages (ordre décroissant ; on remet en croissant ensuite) ;
-    // le reste est chargé à la demande côté client quand on remonte l'historique
-    supabase
-      .from("chat_messages")
-      .select(
-        "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
-      )
-      .eq("chat_id", id)
-      .order("created_at", { ascending: false })
-      .limit(CHAT_MESSAGES_PAGE_SIZE),
-    // Clé de chiffrement (null = chatroom sans clé, messages en clair)
-    supabase
-      .from(TABLE.CHATROOM_KEYS)
-      .select("key_b64")
-      .eq("chatroom_id", id)
-      .maybeSingle(),
-    // Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
-    supabase
-      .from("chatroom_persona_prefs")
-      .select("persona:personas(id, user_id, name, avatar_url, dialogue_color)")
-      .eq("chat_id", id)
-      .eq("user_id", userId)
-      .maybeSingle(),
-  ]);
-
-  const initialMessages = (messages ?? []).slice().reverse(); // on remet en croissant
-  const initialHasMore = (messages ?? []).length === CHAT_MESSAGES_PAGE_SIZE;
-  const chatroomKey = (keyRow as unknown as { key_b64?: string } | null)?.key_b64 ?? null;
-  const initialPersona = (pref?.persona as unknown as Persona | null) ?? null;
-
-  /* reactions */
+  // Messages (avec réactions, votes et badges joints), clé de chiffrement et
+  // persona préférée : déjà en vol, démarrés par `page.tsx` en même temps que
+  // la lecture du salon (cf. getChatroomMessages). Les lectures qui ont
+  // besoin du `world_id` partent ici, en parallèle de la fin de celles-là —
+  // il n'y a plus de seconde vague attendant les ids des messages.
   type ReactionSummary = { emoji: string; count: number; me: boolean };
-
-  const messageIds = initialMessages.map((m) => m.id);
 
   // Données du monde associé (extracted pour usage multiple)
   const rawWorld = chatroom.worlds as unknown;
   const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
 
-  // Requêtes dépendant de ce qui précède (messageIds, world_id) mais
-  // indépendantes entre elles → en parallèle : réactions, nav des salons du
-  // monde, et rôles de l'utilisateur dans le monde.
-  type ReactionRow = { message_id: number; emoji: string; user_id: string };
-  type VoteRow = { message_id: number; option_id: string; user_id: string };
-
-  const [reactionRows, voteRows, navRooms, worldMembership, followedIds, personaGroupColors, challengeBadges] = await Promise.all([
-    (async (): Promise<ReactionRow[]> => {
-      if (!messageIds.length) return [];
-      const { data: rows } = await supabase
-        .from("chat_message_reactions")
-        .select("message_id, emoji, user_id")
-        .eq("chat_id", id)
-        .in("message_id", messageIds);
-      return (rows ?? []) as ReactionRow[];
-    })(),
-    (async (): Promise<VoteRow[]> => {
-      if (!messageIds.length) return [];
-      const { data: rows } = await supabase
-        .from(TABLE.CHAT_CHOICE_VOTES)
-        .select("message_id, option_id, user_id")
-        .eq("chat_id", id)
-        .in("message_id", messageIds);
-      return (rows ?? []) as VoteRow[];
-    })(),
+  const [messagesData, navRooms, worldMembership, followedIds, personaGroupColors] = await Promise.all([
+    getChatroomMessages(id, userId),
     // Mémoïsé pour la requête et partagé avec `WorldSidebar` (monté par le
     // layout) : c'est la requête la plus lourde du chemin chaud, elle était
     // payée deux fois par rendu. Le repli défensif vit désormais dans le getter.
@@ -117,21 +63,19 @@ export default async function ChatRoomContent({
       }
       return out;
     })(),
-    // Badges « défi remporté » des messages affichés — même raison. L'effet
-    // client subsiste pour le Realtime et pour les pages d'historique.
-    (async (): Promise<[number, { title: string; description: string | null }][]> => {
-      if (!messageIds.length) return [];
-      type Row = { message_id: number; challenge: { title: string; description: string | null } | null };
-      const { data } = await supabase
-        .from(TABLE.CHALLENGE_ATTEMPTS)
-        .select("message_id, challenge:challenge_id(title, description)")
-        .in("message_id", messageIds)
-        .eq("status", "won");
-      return ((data ?? []) as unknown as Row[])
-        .filter((r) => r.challenge)
-        .map((r) => [Number(r.message_id), r.challenge!]);
-    })(),
   ]);
+
+  const {
+    messages: initialMessages,
+    hasMore: initialHasMore,
+    reactionRows,
+    voteRows,
+    // Badges « défi remporté » des messages affichés. L'effet client subsiste
+    // pour le Realtime et pour les pages d'historique.
+    challengeBadges,
+    chatroomKey,
+    initialPersona,
+  } = messagesData;
 
   const byMessage = new Map<
     number,

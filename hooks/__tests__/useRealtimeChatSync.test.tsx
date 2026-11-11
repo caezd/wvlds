@@ -5,7 +5,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 
-import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
+import { useRealtimeChatSync, CATCHUP_PAGE_SIZE } from "@/hooks/useRealtimeChatSync";
 import { createClient } from "@/lib/supabase/client";
 
 function setup(opts: Parameters<typeof createSupabaseMock>[0] = {}, props: Partial<Parameters<typeof useRealtimeChatSync>[0]> = {}) {
@@ -46,7 +46,8 @@ describe("useRealtimeChatSync", () => {
 
   it("récupère et propage un INSERT plus récent", async () => {
     const { mock, cbs } = setup({
-      results: [{ data: { id: 5, content: "salut", author_id: "a2" } }],
+      // 1er `.from()` : le rattrapage lancé à la souscription (rien de neuf).
+      results: [{ data: [] }, { data: { id: 5, content: "salut", author_id: "a2" } }],
     });
     await act(async () => {
       mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 5 } });
@@ -193,5 +194,68 @@ describe("useRealtimeChatSync — cleanup et reconnexion", () => {
     for (const ch of mock.channels) {
       expect(ch.handlers).toHaveLength(attendus);
     }
+  });
+});
+
+describe("useRealtimeChatSync — rattrapage des messages manqués", () => {
+  it("relit, à la souscription, les messages postés après le dernier connu", async () => {
+    const { mock, cbs } = setup({
+      results: [{ data: [
+        { id: 4, content: "manqué 1", author_id: "a1" },
+        { id: 5, content: "manqué 2", author_id: "a2" },
+      ] }],
+    });
+    await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalledTimes(2));
+    const requete = mock.builders[0];
+    expect(requete.table).toBe("chat_messages");
+    expect(requete.builder.eq).toHaveBeenCalledWith("chat_id", "c1");
+    expect(requete.builder.gt).toHaveBeenCalledWith("id", 3);
+    expect(requete.builder.order).toHaveBeenCalledWith("id", { ascending: true });
+    expect(cbs.onMessageInserted).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 4 }), "a1");
+    expect(cbs.onMessageInserted).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 5 }), "a2");
+  });
+
+  it("n'applique pas de borne quand le salon était vide (initialLatestId null)", async () => {
+    const { mock } = setup({ results: [{ data: [] }] }, { initialLatestId: null });
+    await waitFor(() => expect(mock.builders).toHaveLength(1));
+    expect(mock.builders[0].builder.gt).not.toHaveBeenCalled();
+  });
+
+  it("ignore ensuite l'INSERT Realtime d'un message déjà rattrapé", async () => {
+    const { mock, cbs } = setup({
+      results: [{ data: [{ id: 4, content: "manqué", author_id: "a1" }] }],
+    });
+    await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 4 } });
+    });
+    expect(cbs.onMessageInserted).toHaveBeenCalledTimes(1);
+  });
+
+  it("enchaîne les pages tant qu'elles sont pleines", async () => {
+    const pleine = Array.from({ length: CATCHUP_PAGE_SIZE }, (_, i) => ({ id: 4 + i, author_id: "a" }));
+    const derniere = [{ id: 4 + CATCHUP_PAGE_SIZE, author_id: "a" }];
+    const { mock, cbs } = setup({ results: [{ data: pleine }, { data: derniere }] });
+    await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalledTimes(CATCHUP_PAGE_SIZE + 1));
+    // La seconde page repart du dernier id de la première.
+    expect(mock.builders[1].builder.gt).toHaveBeenCalledWith("id", 3 + CATCHUP_PAGE_SIZE);
+  });
+
+  it("rattrape de nouveau après une reconnexion réseau", async () => {
+    const { mock, cbs } = setup({
+      results: [{ data: [] }, { data: [{ id: 9, author_id: "a3" }] }],
+    });
+    await waitFor(() => expect(mock.builders).toHaveLength(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }), "a3"));
+  });
+
+  it("ne livre rien en cas d'erreur de lecture", async () => {
+    const { cbs, mock } = setup({ results: [{ data: null, error: { message: "boom" } }] });
+    await waitFor(() => expect(mock.builders).toHaveLength(1));
+    await act(async () => {});
+    expect(cbs.onMessageInserted).not.toHaveBeenCalled();
   });
 });

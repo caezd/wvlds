@@ -33,7 +33,7 @@ import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBot
 import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
-import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, insertMessageById, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
 import { applyRemoteVoteChange } from "@/lib/choiceVotes";
 import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWarningBanner";
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
@@ -796,9 +796,10 @@ export default function ChatRoomView({
           ? await decryptMessage(msg.content ?? "", key)
           : (msg.content ?? "");
         const decrypted = { ...msg, content };
-        setMessages((prev) =>
-          prev.some((m) => m.id === decrypted.id) ? prev : [...prev, { ...decrypted, reactions: [], votes: [] }],
-        );
+        // Insertion triée par id, pas un simple ajout en fin de liste : le
+        // rattrapage (cf. useRealtimeChatSync) peut livrer des messages plus
+        // anciens qu'un INSERT Realtime arrivé pendant sa lecture.
+        setMessages((prev) => insertMessageById(prev, { ...decrypted, reactions: [], votes: [] }));
         if (authorId) clearTyping(authorId);
       })();
     },

@@ -87,3 +87,20 @@ export function aggregateContentWarnings(messages: ChatMessageWithPersona[]): st
   }
   return result;
 }
+
+/**
+ * Ajoute un message à la liste en respectant l'ordre des ids (croissants),
+ * sans doublon. Les messages arrivent presque toujours dans l'ordre — on
+ * ajoute alors en fin de liste, sans parcours — mais un rattrapage après
+ * coupure peut livrer des messages plus anciens qu'un INSERT Realtime reçu
+ * pendant sa lecture (cf. useRealtimeChatSync).
+ *
+ * Rend la liste d'origine, inchangée, si le message y figure déjà.
+ */
+export function insertMessageById<T extends { id: number }>(list: T[], msg: T): T[] {
+  const last = list.at(-1);
+  if (!last || last.id < msg.id) return [...list, msg];
+  if (list.some((m) => m.id === msg.id)) return list;
+  const index = list.findIndex((m) => m.id > msg.id);
+  return [...list.slice(0, index), msg, ...list.slice(index)];
+}

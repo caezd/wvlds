@@ -9,6 +9,14 @@ import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
+/** Colonnes relues pour un message arrivé en temps réel ou rattrapé. */
+const REALTIME_MESSAGE_COLUMNS =
+  "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc)";
+
+/** Taille d'une page de rattrapage, et nombre maximal de pages par rattrapage. */
+export const CATCHUP_PAGE_SIZE = 50;
+const CATCHUP_MAX_PAGES = 10;
+
 export type ChatroomPatch = {
   title?: string | null;
   name?: string | null;
@@ -85,6 +93,50 @@ export function useRealtimeChatSync({
     // a channel lingering after removeChannel() ignores any late-arriving events.
     let isMounted = true;
 
+    // ── Rattrapage ──────────────────────────────────────────────
+    // Le Realtime ne rejoue rien : un message inséré pendant que le canal
+    // n'était pas (encore) joint est perdu pour lui. Ça arrive dans trois cas :
+    //   - entre le rendu serveur et la souscription (quelques centaines de ms) ;
+    //   - pendant une coupure réseau / un onglet longtemps caché, avant que
+    //     `reconnectEpoch` ne rouvre le canal ;
+    //   - quand la page vient du cache du routeur client (`staleTimes`, cf.
+    //     next.config.ts) : ses messages initiaux datent de la visite
+    //     précédente.
+    // À chaque souscription aboutie, on relit donc les messages d'id supérieur
+    // au dernier connu. Les doublons avec un INSERT Realtime arrivé entre-temps
+    // sont écartés par la vue (dédoublonnage par id, insertion triée).
+    let rattrapageEnCours = false;
+    const rattraper = async () => {
+      if (rattrapageEnCours) return;
+      rattrapageEnCours = true;
+      try {
+        let curseur = latestIdRef.current;
+        for (let page = 0; page < CATCHUP_MAX_PAGES; page++) {
+          let query = supabase
+            .from(TABLE.CHAT_MESSAGES)
+            .select(REALTIME_MESSAGE_COLUMNS)
+            .eq("chat_id", chatId);
+          if (curseur !== null) query = query.gt("id", curseur);
+          const { data, error } = await query
+            .order("id", { ascending: true })
+            .limit(CATCHUP_PAGE_SIZE);
+          if (!isMounted || error || !Array.isArray(data)) return;
+
+          for (const row of data as unknown as ChatMessageWithPersona[]) {
+            const id = Number(row.id);
+            curseur = id;
+            // Le Realtime a pu livrer un message plus récent pendant la
+            // lecture : le curseur partagé ne recule jamais.
+            if (latestIdRef.current === null || id > latestIdRef.current) latestIdRef.current = id;
+            callbacksRef.current.onMessageInserted(row, row.author_id ?? undefined);
+          }
+          if (data.length < CATCHUP_PAGE_SIZE) return;
+        }
+      } finally {
+        rattrapageEnCours = false;
+      }
+    };
+
     // Nom de canal stable, ouverture sérialisée : une réouverture attend la
     // fermeture précédente. Cf. lib/realtimeChannel.
     const fermerCanal = openRealtimeChannel(supabase, CH.chatMessages(chatId), (ch) => {
@@ -107,9 +159,7 @@ export function useRealtimeChatSync({
 
         const { data, error } = await supabase
           .from(TABLE.CHAT_MESSAGES)
-          .select(
-            "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc)",
-          )
+          .select(REALTIME_MESSAGE_COLUMNS)
           .eq("id", id)
           .single();
 
@@ -243,8 +293,12 @@ export function useRealtimeChatSync({
       );
     }
 
-ch.subscribe();
-return ch;
+    // Rattrapage à chaque (re)jonction : la première souscription, mais aussi
+    // les re-jonctions automatiques de supabase-js après une coupure brève.
+    ch.subscribe((status) => {
+      if (status === "SUBSCRIBED") void rattraper();
+    });
+    return ch;
     });
 
     return () => {

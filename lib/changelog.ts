@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Performance",
+    text: "Les salons s’ouvrent plus vite : messages, réactions, votes et défis remportés arrivent ensemble au lieu d’en plusieurs allers-retours. À l’entrée dans un monde, la page s’affiche sans attendre la barre latérale, qui la rejoint un instant après. Et revenir sur un salon ou un monde quitté depuis moins de 30 secondes est instantané.",
+  },
+  {
+    date: "2026-11",
+    tag: "Correctif",
+    text: "Les messages postés pendant une coupure réseau ou pendant que l’onglet était en veille s’affichent dès le retour, à leur place dans la conversation — il fallait jusqu’ici recharger la page pour les voir.",
+  },
+  {
+    date: "2026-11",
     tag: "Interface",
     text: "Nouveau sélecteur de couleur dans toute l’application : une rangée de pastilles, puis saturation, luminosité, teinte et code hexadécimal. Toutes les couleurs acceptent aussi une opacité : texte, bulles de dialogue, encadrés, bannières d’accueil, jauges, rôles, relations et carte.",
   },
