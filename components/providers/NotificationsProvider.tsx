@@ -412,35 +412,41 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
             applyUnreads(shell.room_unreads);
 
-            // Realtime : un SEUL canal pour les messages de tous les mondes
-            // (un binding filtré par monde), au lieu d'un canal par monde.
-            // Les compteurs sont incrémentés localement — aucune RPC ici.
-            const fermerMsg = openRealtimeChannel(supabase, channel.userMessages(userId), (msgCh) => {
+            // Realtime : avis de nouveaux messages DIFFUSÉS par la base
+            // (trigger `broadcast_new_chat_message`, migration 206) sur des
+            // canaux privés — un par monde, plus un personnel pour les messages
+            // à destinataires restreints. L'accès est vérifié une fois, à
+            // l'abonnement. Avant : `postgres_changes` sur `chat_messages`, où
+            // Realtime réévaluait la policy de lecture pour chaque abonné à
+            // chaque message posté. Les compteurs restent incrémentés
+            // localement — aucune RPC ici.
+            const surNouveauMessage = (msg: { payload?: Record<string, unknown> }) => {
+                const row = (msg.payload ?? {}) as { chat_id?: string; author_id?: string | null; world_id?: string | null };
+                if (!row.chat_id) return;
+                if (row.author_id === userIdRef.current) return;
+                if (activeChatRef.current === row.chat_id) {
+                    void markChatRead(row.chat_id);
+                    return;
+                }
+                if (row.world_id) roomWorldRef.current[row.chat_id] = row.world_id;
+                const chatId = row.chat_id;
+                setRoomUnread(prev => ({ ...prev, [chatId]: (prev[chatId] ?? 0) + 1 }));
+            };
+            const prive = { config: { private: true } };
             for (const wid of shell.world_ids) {
-                msgCh.on(
-                    "postgres_changes",
-                    {
-                        event: "INSERT",
-                        schema: "public",
-                        table: TABLE.CHAT_MESSAGES,
-                        filter: `world_id=eq.${wid}`,
-                    },
-                    (payload: { new: Record<string, unknown> }) => {
-                        const row = payload.new as { chat_id: string; author_id: string | null };
-                        if (row.author_id === userIdRef.current) return;
-                        if (activeChatRef.current === row.chat_id) {
-                            void markChatRead(row.chat_id);
-                            return;
-                        }
-                        roomWorldRef.current[row.chat_id] = wid;
-                        setRoomUnread(prev => ({ ...prev, [row.chat_id]: (prev[row.chat_id] ?? 0) + 1 }));
-                    },
-                );
+                enregistrer(openRealtimeChannel(
+                    supabase,
+                    channel.worldMessages(wid),
+                    (ch) => ch.on("broadcast", { event: "message" }, surNouveauMessage).subscribe(),
+                    prive,
+                ));
             }
-            msgCh.subscribe();
-            return msgCh;
-            });
-            enregistrer(fermerMsg);
+            enregistrer(openRealtimeChannel(
+                supabase,
+                channel.userMessages(userId),
+                (ch) => ch.on("broadcast", { event: "message" }, surNouveauMessage).subscribe(),
+                prive,
+            ));
 
             // Realtime : nouvelles notifications + mises à jour agrégées (chatroom_reply)
             const fermerNotif = openRealtimeChannel(supabase, channel.userNotifs(userId), (notifCh) => notifCh

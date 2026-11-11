@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Technique",
+    text: "Les compteurs de messages non lus arrivent en direct par un canal plus léger, prévu pour tenir la charge des grands mondes très actifs.",
+  },
+  {
+    date: "2026-11",
     tag: "Salons",
     text: "Passer d’un salon à l’autre d’un même monde est plus rapide et plus fluide : la barre latérale reste en place, sans se recharger ni perdre sa position de défilement.",
   },

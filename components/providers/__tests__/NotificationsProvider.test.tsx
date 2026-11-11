@@ -513,13 +513,14 @@ function setupUnreads(shell: Partial<AppShellResult> = UNREAD_SHELL) {
     return mock;
 }
 
-function emitMessage(mock: SupabaseMock, row: Record<string, unknown>) {
-    const msgChannel = mock.channels.find(c => c.name === "msgs:u1");
+/** Avis diffusé par la base (migration 206) sur le canal privé du monde. */
+function emitMessage(mock: SupabaseMock, row: Record<string, unknown>, topic = `world-msgs:${row.world_id}`) {
+    const msgChannel = mock.channels.find(c => c.name === topic);
     expect(msgChannel).toBeDefined();
     act(() => {
         msgChannel!.emit(
-            h => h.type === "postgres_changes" && (h.config as { table?: string }).table === "chat_messages",
-            { new: row },
+            h => h.type === "broadcast" && (h.config as { event?: string }).event === "message",
+            { type: "broadcast", event: "message", payload: row },
         );
     });
 }
@@ -574,6 +575,29 @@ describe("Compteurs non-lus — Realtime local, sans RPC", () => {
         // Aucune RPC de recomptage : seule get_app_shell a été appelée
         const rpcNames = mock.rpc.mock.calls.map(call => call[0] as string);
         expect(rpcNames.filter(n => n !== "get_app_shell")).toHaveLength(0);
+    });
+
+    it("écoute un canal PRIVÉ par monde, plus le canal personnel, en broadcast", async () => {
+        const mock = setupUnreads({ ...UNREAD_SHELL, world_ids: ["w1", "w2"], room_unreads: [] });
+
+        await waitFor(() => expect(mock.channelNamed("world-msgs:w2")).toBeDefined());
+        for (const nom of ["world-msgs:w1", "world-msgs:w2", "msgs:u1"]) {
+            expect(mock.channel).toHaveBeenCalledWith(nom, { config: { private: true } });
+            const ch = mock.channelNamed(nom)!;
+            // Plus aucun abonnement aux INSERT de chat_messages.
+            expect(ch.handlers.some(h => h.type === "postgres_changes")).toBe(false);
+            expect(ch.handlers.some(h => h.type === "broadcast")).toBe(true);
+        }
+    });
+
+    it("compte un message à destinataires restreints reçu sur le canal personnel", async () => {
+        const mock = setupUnreads({ ...UNREAD_SHELL, room_unreads: [] });
+
+        await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
+
+        emitMessage(mock, { chat_id: "c1", author_id: "someone-else", world_id: "w1" }, "msgs:u1");
+
+        await waitFor(() => expect(screen.getByTestId("room-c1").textContent).toBe("1"));
     });
 
     it("ignore ses propres messages", async () => {

@@ -68,7 +68,10 @@ export const RPC = {
 
 // --- Realtime channel name factories -----------------------------------------
 export const channel = {
+  /** Canal PRIVÉ : avis des messages à destinataires restreints (migration 206). */
   userMessages: (userId: string) => `msgs:${userId}`,
+  /** Canal PRIVÉ : avis des nouveaux messages d'un monde (migration 206). */
+  worldMessages: (worldId: string) => `world-msgs:${worldId}`,
   worldRooms: (wid: string) => `w:${wid}:rooms`,
   worldMap: (wid: string) => `w:${wid}:map`,
   chatPresence: (chatId: string) => `chat:${chatId}`,
