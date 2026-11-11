@@ -142,6 +142,7 @@ export default async function ChatRoomContent({
       initialIsFollowed={followedIds.has(id)}
       initialPersonaGroupColors={personaGroupColors}
       initialChallengeBadges={challengeBadges}
+      renderedAt={Date.now()}
     />
     </WikiLinkProvider>
     </WorldMembershipProvider>

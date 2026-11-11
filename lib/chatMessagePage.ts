@@ -56,7 +56,7 @@ export type MessagePage = {
 };
 
 /** Sépare les tableaux joints des messages (lignes en ordre décroissant). */
-export function splitEmbeddedMessages(rowsDesc: unknown[]): MessagePage {
+export function splitEmbeddedMessages(rowsDesc: unknown[], pageSize = CHAT_MESSAGES_PAGE_SIZE): MessagePage {
   const rows = (rowsDesc as EmbeddedMessage[]).slice().reverse();
   const reactionRows: ReactionRow[] = [];
   const voteRows: VoteRow[] = [];
@@ -68,7 +68,7 @@ export function splitEmbeddedMessages(rowsDesc: unknown[]): MessagePage {
     if (won?.challenge) challengeBadges.push([Number(m.id), won.challenge]);
     return m;
   });
-  return { messages, hasMore: rows.length === CHAT_MESSAGES_PAGE_SIZE, reactionRows, voteRows, challengeBadges };
+  return { messages, hasMore: rows.length === pageSize, reactionRows, voteRows, challengeBadges };
 }
 
 /**
@@ -82,22 +82,24 @@ export function splitEmbeddedMessages(rowsDesc: unknown[]): MessagePage {
 export async function fetchMessagePage(
   supabase: Pick<SupabaseClient, "from">,
   chatId: string,
-  options: { before?: string } = {},
+  options: { before?: string; since?: string; limit?: number } = {},
 ): Promise<MessagePage> {
+  const limit = options.limit ?? CHAT_MESSAGES_PAGE_SIZE;
   const query = (columns: string) => {
     let q = supabase.from(TABLE.CHAT_MESSAGES).select(columns).eq("chat_id", chatId);
     if (options.before) q = q.lt("created_at", options.before);
-    return q.order("created_at", { ascending: false }).limit(CHAT_MESSAGES_PAGE_SIZE);
+    if (options.since) q = q.gte("created_at", options.since);
+    return q.order("created_at", { ascending: false }).limit(limit);
   };
 
   const { data: embedded, error: embedError } = await query(EMBEDDED_MESSAGE_COLUMNS);
-  if (!embedError) return splitEmbeddedMessages((embedded ?? []) as unknown[]);
+  if (!embedError) return splitEmbeddedMessages((embedded ?? []) as unknown[], limit);
 
   console.error("[fetchMessagePage] jointure refusée pour %s : %s", chatId, embedError.message);
   const { data: plain } = await query(MESSAGE_COLUMNS);
   const rows = (plain ?? []) as unknown as RawMessage[];
   const messages = rows.slice().reverse();
-  const hasMore = rows.length === CHAT_MESSAGES_PAGE_SIZE;
+  const hasMore = rows.length === limit;
   const ids = messages.map((m) => m.id);
   if (!ids.length) return { messages, hasMore, reactionRows: [], voteRows: [], challengeBadges: [] };
 
@@ -178,4 +180,47 @@ export async function decorateMessagePage<T extends RawMessage>(
       votes: votes.get(Number(m.id)) ?? [],
     })),
   );
+}
+
+/**
+ * Fusionne une relecture des messages affichés (resynchronisation après une
+ * coupure, cf. la vue du salon) dans la liste courante.
+ *
+ * - Un message relu remplace sa version affichée (contenu, métadonnées,
+ *   réactions, votes) ; un message nouveau est inséré à sa place.
+ * - Un message affiché ABSENT de la relecture est retiré — il a été supprimé —
+ *   mais seulement s'il tombe dans ce que la relecture couvre : créé à partir
+ *   de `windowStart`, et d'id au plus `maxId`. Un message plus récent que la
+ *   relecture (envoyé pendant qu'elle était en vol) est conservé.
+ *
+ * Rend la liste d'origine si rien ne change.
+ */
+export function mergeResync<T extends { id: number; created_at?: string }>(
+  current: T[],
+  fresh: T[],
+  window: { windowStart: string; maxId: number },
+): T[] {
+  const byId = new Map(fresh.map((m) => [m.id, m]));
+  const couvert = (m: T) => !!m.created_at && m.created_at >= window.windowStart && m.id <= window.maxId;
+  let changed = false;
+  const out: T[] = [];
+  for (const m of current) {
+    const f = byId.get(m.id);
+    if (f) {
+      out.push(f);
+      byId.delete(m.id);
+      changed = true;
+    } else if (couvert(m)) {
+      changed = true; // supprimé pendant la coupure
+    } else {
+      out.push(m);
+    }
+  }
+  if (!changed && byId.size === 0) return current;
+  let merged = out;
+  for (const m of byId.values()) {
+    const index = merged.findIndex((x) => x.id > m.id);
+    merged = index === -1 ? [...merged, m] : [...merged.slice(0, index), m, ...merged.slice(index)];
+  }
+  return merged;
 }

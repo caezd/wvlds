@@ -41,6 +41,12 @@ type Props = {
    * alors pas à être relu.
    */
   isMessageKnown?: (id: number) => boolean;
+  /**
+   * Appelé à chaque (re)jonction du canal, en plus du rattrapage des nouveaux
+   * messages : la vue y relit ce qu'elle affiche (éditions, suppressions,
+   * réactions, votes manqués pendant la coupure).
+   */
+  onSubscribed?: () => void;
 };
 
 export function useRealtimeChatSync({
@@ -55,6 +61,7 @@ export function useRealtimeChatSync({
   onVoteChange,
   onPersonaUpdated,
   isMessageKnown,
+  onSubscribed,
 }: Props) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -80,6 +87,7 @@ export function useRealtimeChatSync({
     onVoteChange,
     onPersonaUpdated,
     isMessageKnown,
+    onSubscribed,
   });
   callbacksRef.current = {
     onMessageInserted,
@@ -90,6 +98,7 @@ export function useRealtimeChatSync({
     onVoteChange,
     onPersonaUpdated,
     isMessageKnown,
+    onSubscribed,
   };
 
   // Un seul canal Realtime par chatroom (au lieu d'un canal par table/événement) :
@@ -306,7 +315,9 @@ export function useRealtimeChatSync({
     // Rattrapage à chaque (re)jonction : la première souscription, mais aussi
     // les re-jonctions automatiques de supabase-js après une coupure brève.
     ch.subscribe((status) => {
-      if (status === "SUBSCRIBED") void rattraper();
+      if (status !== "SUBSCRIBED" || !isMounted) return;
+      void rattraper();
+      callbacksRef.current.onSubscribed?.();
     });
     return ch;
     });

@@ -60,7 +60,7 @@ import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary,
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
-import { decorateMessagePage, fetchMessagePage } from "@/lib/chatMessagePage";
+import { decorateMessagePage, fetchMessagePage, mergeResync } from "@/lib/chatMessagePage";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -75,6 +75,11 @@ const SearchCenter = dynamic(() =>
 );
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
+
+/** Au plus, nombre de messages affichés relus à une reconnexion. */
+const RESYNC_MAX = 100;
+/** En deçà de cet âge, un rendu serveur est assez frais pour ne rien relire. */
+const RESYNC_FRESH_MS = 10_000;
 
 function ChatroomHeader({
   chat,
@@ -180,6 +185,7 @@ export default function ChatRoomView({
   initialIsFollowed,
   initialPersonaGroupColors,
   initialChallengeBadges,
+  renderedAt,
 }: {
   chatId: string;
   initialChat: {
@@ -206,6 +212,12 @@ export default function ChatRoomView({
   initialPersonaGroupColors: Record<string, string>;
   /** Badges « défi remporté » des messages initiaux, résolus côté serveur. */
   initialChallengeBadges: [number, ChallengeBadge][];
+  /**
+   * Instant du rendu serveur (ms). Une page servie par le cache du routeur
+   * client (`staleTimes`) en porte un ancien : ses messages sont alors relus
+   * dès la première connexion du canal.
+   */
+  renderedAt?: number;
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -727,14 +739,60 @@ export default function ChatRoomView({
   }, [chatId, chat, searchParams, router]);
 
   // Lu par le Realtime pour ne pas relire un message déjà affiché (le sien,
-  // ajouté dès la réponse de l'insertion).
+  // ajouté dès la réponse de l'insertion), et par la resynchronisation.
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+
+  // ── Resynchronisation après une coupure ─────────────────────────────
+  // Le rattrapage du hook n'apporte que les NOUVEAUX messages. Une édition,
+  // une suppression, une réaction ou un vote survenus pendant la coupure — ou
+  // depuis le rendu mis en cache par le routeur — restaient invisibles. À
+  // chaque (re)connexion du canal, on relit donc les messages affichés (les
+  // RESYNC_MAX plus récents au plus) et on fusionne (cf. mergeResync).
+  const premiereConnexionRef = useRef(true);
+  const resyncEnCoursRef = useRef(false);
+  const resyncDisplayedMessages = async () => {
+    const premiere = premiereConnexionRef.current;
+    premiereConnexionRef.current = false;
+    // Première connexion sur un rendu serveur tout frais : rien à relire.
+    if (premiere && (!renderedAt || Date.now() - renderedAt < RESYNC_FRESH_MS)) return;
+    if (resyncEnCoursRef.current) return;
+    const affiches = messagesRef.current;
+    const oldest = affiches[0]?.created_at;
+    if (!oldest) return;
+    const maxId = affiches.reduce((max, m) => Math.max(max, m.id), 0);
+
+    resyncEnCoursRef.current = true;
+    try {
+      const page = await fetchMessagePage(supabase, chatId, { since: oldest, limit: RESYNC_MAX });
+      const fresh = (await decorateMessagePage(
+        page.messages,
+        page,
+        userId,
+        roomKeyRef.current,
+      )) as unknown as ChatMessageWithPersona[];
+      // Relecture tronquée : elle ne couvre que depuis son plus ancien message.
+      const windowStart = page.hasMore && fresh[0]?.created_at ? fresh[0].created_at : oldest;
+      setMessages((prev) => mergeResync(prev, fresh, { windowStart, maxId }));
+      if (page.challengeBadges.length) {
+        setChallengeBadges((prev) => {
+          const next = new Map(prev);
+          for (const [mid, badge] of page.challengeBadges) next.set(mid, badge);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("[resync] relecture des messages impossible :", error);
+    } finally {
+      resyncEnCoursRef.current = false;
+    }
+  };
 
   useRealtimeChatSync({
     chatId,
     selfId: userId,
     isMessageKnown: (id) => messagesRef.current.some((m) => m.id === id),
+    onSubscribed: () => void resyncDisplayedMessages(),
     initialLatestId: initialMessages.at(-1)?.id ?? null,
     onMessageInserted: (msg, authorId) => {
       void (async () => {

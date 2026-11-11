@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Salons",
+    text: "Au retour d’une coupure réseau ou d’une mise en veille, un salon se remet entièrement à jour : messages modifiés ou supprimés entre-temps, réactions et votes compris.",
+  },
+  {
+    date: "2026-11",
+    tag: "Salons",
     text: "Envoyer un message est instantané : il s’affiche dès qu’il est enregistré et la zone de saisie se libère aussitôt, sans attendre les mentions ni l’attribution des points, qui se font en arrière-plan.",
   },
   {

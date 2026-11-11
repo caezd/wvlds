@@ -271,3 +271,15 @@ describe("useRealtimeChatSync — message déjà affiché", () => {
     expect(cbs.onMessageInserted).not.toHaveBeenCalled();
   });
 });
+
+describe("useRealtimeChatSync — resynchronisation", () => {
+  it("signale chaque (re)connexion du canal à la vue", async () => {
+    const onSubscribed = vi.fn();
+    setup({ results: [{ data: [] }, { data: [] }] }, { onSubscribed });
+    expect(onSubscribed).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(onSubscribed).toHaveBeenCalledTimes(2));
+  });
+});
