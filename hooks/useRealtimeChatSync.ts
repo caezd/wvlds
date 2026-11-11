@@ -5,13 +5,16 @@ import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
+import { MESSAGE_COLUMNS } from "@/lib/chatMessagePage";
 import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
-/** Colonnes relues pour un message arrivé en temps réel ou rattrapé. */
-const REALTIME_MESSAGE_COLUMNS =
-  "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc)";
+/**
+ * Colonnes relues pour un message arrivé en temps réel ou rattrapé : les mêmes
+ * que la première page (cadre d'avatar, auteur, message cité compris).
+ */
+const REALTIME_MESSAGE_COLUMNS = MESSAGE_COLUMNS;
 
 /** Taille d'une page de rattrapage, et nombre maximal de pages par rattrapage. */
 export const CATCHUP_PAGE_SIZE = 50;

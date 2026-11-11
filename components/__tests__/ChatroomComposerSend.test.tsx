@@ -136,4 +136,27 @@ describe("ChatroomComposer — envoi", () => {
     expect(mock.rpc).not.toHaveBeenCalled();
     expect(screen.getByTestId("editor")).toHaveValue("Bonjour");
   });
+
+  it("envoie le lien de réponse, puis abandonne la réponse", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: ligneInseree }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const onCancelReply = vi.fn();
+    const user = userEvent.setup({ delay: null });
+    localStorage.setItem("draft:chat1", "Bonjour");
+
+    render(
+      <ChatroomComposer
+        chatId="chat1"
+        presetPersona={mockPersona}
+        replyTo={{ id: 7, author: "Bran", excerpt: "Qui va là ?" }}
+        onCancelReply={onCancelReply}
+      />,
+    );
+    expect(screen.getByTestId("composer-reply")).toHaveTextContent("Qui va là ?");
+    await user.click(screen.getByTitle("Envoyer"));
+
+    await waitFor(() => expect(onCancelReply).toHaveBeenCalledTimes(1));
+    const insertion = mock.buildersFor("chat_messages")[0];
+    expect(insertion.insert).toHaveBeenCalledWith(expect.objectContaining({ reply_to_id: 7 }));
+  });
 });

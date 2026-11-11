@@ -26,6 +26,7 @@ export function ChatroomMessageSms({
   showAvatar,
   onEdit,
   onRequestDelete,
+  quote,
 }: {
   message: ChatMessageWithPersona;
   mine: boolean;
@@ -38,6 +39,8 @@ export function ChatroomMessageSms({
   showAvatar: boolean;
   onEdit: () => void;
   onRequestDelete?: () => void;
+  /** Citation du message auquel celui-ci répond, rendue au-dessus de la bulle. */
+  quote?: React.ReactNode;
 }) {
   const tCommon = useTranslations("common");
   const avatar = showAvatar ? (
@@ -54,6 +57,10 @@ export function ChatroomMessageSms({
   );
 
   return (
+    <>
+    {quote && (
+      <div className={cn("flex max-w-[80%]", mine ? "ml-auto justify-end" : "ml-[30px] justify-start")}>{quote}</div>
+    )}
     <div
       data-message-id={message.id}
       className={cn("group/turn-messages flex items-end gap-2", mine ? "justify-end" : "justify-start")}
@@ -110,5 +117,6 @@ export function ChatroomMessageSms({
         </>
       )}
     </div>
+    </>
   );
 }

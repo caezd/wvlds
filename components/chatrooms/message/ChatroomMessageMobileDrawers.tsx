@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Code, FileText, Pencil, Pipette, SmilePlus, Trash2 } from "lucide-react";
+import { Code, CornerUpLeft, FileText, Pencil, Pipette, SmilePlus, Trash2 } from "lucide-react";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   Drawer,
@@ -27,6 +27,7 @@ export function ChatroomMessageMobileDrawers({
   startEdit,
   onRequestDelete,
   toggleReaction,
+  onReply,
 }: {
   personaName?: string | null;
   mine: boolean;
@@ -42,6 +43,7 @@ export function ChatroomMessageMobileDrawers({
   startEdit: () => void;
   onRequestDelete?: () => void;
   toggleReaction: (emoteKey: string) => void | Promise<void>;
+  onReply?: () => void;
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -106,6 +108,19 @@ export function ChatroomMessageMobileDrawers({
               >
                 <Pipette className="h-5 w-5 shrink-0 text-muted-foreground" />
                 {t("copyDialogueColor")}
+              </button>
+            )}
+            {onReply && (
+              <button
+                type="button"
+                className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  onReply();
+                }}
+              >
+                <CornerUpLeft className="h-5 w-5 shrink-0 text-muted-foreground" />
+                {t("reply")}
               </button>
             )}
             {mine && (

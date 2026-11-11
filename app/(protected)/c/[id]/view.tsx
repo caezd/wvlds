@@ -60,7 +60,8 @@ import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary,
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
-import { decorateMessagePage, fetchMessagePage, mergeResync } from "@/lib/chatMessagePage";
+import { decorateMessagePage, decryptReplyTo, fetchMessagePage, mergeResync } from "@/lib/chatMessagePage";
+import { replyAuthorLabel, replyExcerpt } from "@/lib/replyExcerpt";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -800,7 +801,7 @@ export default function ChatRoomView({
         const content = key
           ? await decryptMessage(msg.content ?? "", key)
           : (msg.content ?? "");
-        const decrypted = { ...msg, content };
+        const decrypted = { ...(await decryptReplyTo(msg, key)), content };
         // Insertion triée par id, pas un simple ajout en fin de liste : le
         // rattrapage (cf. useRealtimeChatSync) peut livrer des messages plus
         // anciens qu'un INSERT Realtime arrivé pendant sa lecture.
@@ -912,6 +913,28 @@ export default function ChatRoomView({
     [pinByMessageId, updatePinLabel],
   );
 
+  // ── Réponses ───────────────────────────────────────────────────────
+  // « Répondre » sur un message : le composeur affiche « Réponse à X » et
+  // l'envoi porte reply_to_id (migration 207). Callbacks stables (reçoivent
+  // l'id) pour ne pas défaire le `memo` de ChatroomMessage.
+  const canReply = !!post_message && canPost;
+  const [replyToId, setReplyToId] = useState<number | null>(null);
+  const handleReply = useCallback((id: number) => setReplyToId(id), []);
+  const cancelReply = useCallback(() => setReplyToId(null), []);
+  const replyToRef = useMemo(() => {
+    if (replyToId === null) return null;
+    const m = messages.find((x) => x.id === replyToId);
+    if (!m) return null;
+    return {
+      id: m.id,
+      author: replyAuthorLabel(m) ?? t("replyUnknownAuthor"),
+      excerpt: replyExcerpt(m.content) ?? t("replyBlock"),
+    };
+  }, [replyToId, messages, t]);
+  const scrollToMessageRef = useRef(scrollToMessage);
+  scrollToMessageRef.current = scrollToMessage;
+  const handleJumpToMessage = useCallback((id: number) => scrollToMessageRef.current(id), []);
+
   const renderMessage = (m: ChatMessageWithPersona, smsFlags?: SmsRunFlags) => (
     <ChatroomMessage
       key={m.id}
@@ -935,6 +958,8 @@ export default function ChatRoomView({
       onUpdated={handleUpdated}
       onRequestDelete={handleRequestDelete}
       onAnchorEdited={handleAnchorEdited}
+      onReply={canReply ? handleReply : undefined}
+      onJumpToMessage={handleJumpToMessage}
     />
   );
 
@@ -1145,8 +1170,14 @@ export default function ChatRoomView({
                   }}
                   onMessageSent={quests ? (mid, cid, text) => void handleMessageSent(mid, cid, text) : undefined}
                   onMessageCreated={(msg) => {
-                    setMessages((prev) => insertMessageById(prev, { ...msg, reactions: [], votes: [] }));
+                    void (async () => {
+                      // L'extrait cité revient chiffré avec l'insertion.
+                      const withReply = await decryptReplyTo(msg, roomKeyRef.current);
+                      setMessages((prev) => insertMessageById(prev, { ...withReply, reactions: [], votes: [] }));
+                    })();
                   }}
+                  replyTo={replyToRef}
+                  onCancelReply={cancelReply}
                 />}
               </div>
             </div>

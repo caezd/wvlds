@@ -16,7 +16,7 @@ import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { ContentWarningChipInput } from "@/components/chatrooms/composer/ContentWarningChipInput";
 import { Button } from "../../ui/button";
-import { SendHorizontal, X, Lock, UserPlus } from "lucide-react";
+import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -88,6 +88,10 @@ type ChatroomComposerProps = {
      * l'événement Realtime puis la relecture du message qu'il déclenche.
      */
     onMessageCreated?: (message: ChatMessageWithPersona) => void;
+    /** Message auquel on répond (choisi via « Répondre ») ; null hors réponse. */
+    replyTo?: { id: number; author: string; excerpt: string } | null;
+    /** Abandonne la réponse — appelé aussi après un envoi réussi. */
+    onCancelReply?: () => void;
     worldTimelineConfig?: WorldTimelineConfig | null;
     timelineDate?: WorldTimelineDate | null;
     onTimelineDateChange?: (d: WorldTimelineDate | null) => void;
@@ -122,6 +126,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     typingLine,
     onAnchorSent,
     onMessageCreated,
+    replyTo = null,
+    onCancelReply,
     worldTimelineConfig,
     timelineDate,
     onTimelineDateChange,
@@ -544,12 +550,14 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     persona_id: selectedPersona.id,
                     metadata: finalMetadata,
                     ...(visibleTo !== null ? { visible_to: [userId, ...visibleTo] } : {}),
+                    ...(replyTo ? { reply_to_id: replyTo.id } : {}),
                 })
                 .select(`world_id, ${MESSAGE_COLUMNS}`)
                 .single();
             if (error || !inserted) { toast.error(tChatrooms("sendFailed"), { description: error?.message }); return false; }
             const newMessage = inserted as unknown as ChatMessageWithPersona & { id: number; world_id: string | null };
             onMessageCreated?.({ ...newMessage, content: text });
+            if (replyTo) onCancelReply?.();
             onMessageSent?.(newMessage.id, targetChatId, text);
 
             // Effets annexes, en parallèle et SANS les attendre : le composeur se
@@ -673,6 +681,30 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         </div>
     );
 
+    // « Répondre » sur mobile : le composeur vit dans un tiroir fermé, on l'ouvre.
+    useEffect(() => {
+        if (replyTo && useMobileDrawer) setDrawerOpen(true);
+    }, [replyTo, useMobileDrawer]);
+
+    const replyBar = replyTo ? (
+        <div
+            className="mb-1.5 flex items-center gap-2 rounded-md border-l-2 border-primary/60 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
+            data-testid="composer-reply"
+        >
+            <CornerUpLeft className="size-3.5 shrink-0" />
+            <span className="shrink-0">{tChatrooms("replyingTo", { author: replyTo.author })}</span>
+            <span className="min-w-0 flex-1 truncate">{replyTo.excerpt}</span>
+            <button
+                type="button"
+                onClick={onCancelReply}
+                className="shrink-0 rounded p-0.5 hover:bg-muted hover:text-foreground"
+                aria-label={tChatrooms("cancelReply")}
+            >
+                <X className="size-3.5" />
+            </button>
+        </div>
+    ) : null;
+
     const composerCard = (
         <div
             className={cn(
@@ -790,6 +822,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         )}
                     </div>
                 )}
+
+                {replyBar && <div className="px-2.5 pt-2">{replyBar}</div>}
 
                 {/* Zone de saisie */}
                 <div className={cn(
@@ -923,6 +957,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             stretchCard && "h-full",
         )}>
             {typingBanner}
+            {useMobileDrawer && !drawerOpen && replyBar}
 
             {useMobileDrawer ? (
                 <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>

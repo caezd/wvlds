@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Salons",
+    text: "On peut répondre à un message : « Répondre » dans son menu (appui long sur mobile). La réponse s’affiche avec une citation de l’original — auteur et extrait — qui ramène à lui d’un clic, même s’il est loin dans l’historique.",
+  },
+  {
+    date: "2026-11",
+    tag: "Salons",
     text: "Un message retouché par son auteur porte la mention « (modifié) » à côté de sa date ; la survoler indique quand.",
   },
   {

@@ -1488,7 +1488,14 @@
       "hereWarningUnknown": "You are about to notify the members who are here."
     },
     "edited": "(edited)",
-    "editedAt": "Edited on {date, date, long} at {date, time, short}"
+    "editedAt": "Edited on {date, date, long} at {date, time, short}",
+    "reply": "Reply",
+    "replyingTo": "Replying to {author}",
+    "cancelReply": "Cancel reply",
+    "replyUnavailable": "Message deleted or unavailable",
+    "replyBlock": "[block]",
+    "replyUnknownAuthor": "Someone",
+    "replyJumpTo": "Go to {author}’s message"
   },
   "changelog": {
     "title": "Changelog",

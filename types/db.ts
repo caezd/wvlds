@@ -119,6 +119,8 @@ export type ChatMessage = {
   world_id?: string | null;
   metadata?: ChatMessageMeta | null;
   visible_to?: string[] | null;
+  /** Id du message auquel celui-ci répond (migration 207). */
+  reply_to_id?: number | null;
 };
 
 export type ChatMessageReaction = {
@@ -207,11 +209,22 @@ export type ChoiceVoteSummary = {
   mine: boolean;
 };
 
+/** Message cité par une réponse (joint à la lecture, migration 207). */
+export type ChatMessageReplyRef = {
+  id: number;
+  content: string | null;
+  author_id: string | null;
+  persona?: { name: string | null } | null;
+  author?: { username: string | null } | null;
+};
+
 export type ChatMessageWithPersona = ChatMessage & {
   persona?: Persona | null;
   reactions?: ReactionSummary[];
   votes?: ChoiceVoteSummary[];
   author?: { avatar_url: string | null; username: string | null } | null;
+  /** Message auquel celui-ci répond ; null s'il a été supprimé ou n'est pas lisible. */
+  reply_to?: ChatMessageReplyRef | null;
 };
 
 // --- RPC return types --------------------------------------------------------

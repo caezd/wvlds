@@ -50,6 +50,7 @@ export function ChatroomMessageHeader({
   toggleReaction,
   pickerOpen,
   setPickerOpen,
+  onReply,
 }: {
   message: ChatMessageWithPersona;
   mine: boolean;
@@ -77,6 +78,7 @@ export function ChatroomMessageHeader({
   toggleReaction: (emoteKey: string) => void | Promise<void>;
   pickerOpen: boolean;
   setPickerOpen: (open: boolean) => void;
+  onReply?: () => void;
 }) {
   const t = useTranslations("chatrooms");
   const tPersonaNpc = useTranslations("personas.npc");
@@ -166,7 +168,7 @@ export function ChatroomMessageHeader({
               </Popover>
             )}
 
-            {!editing && !isMobile && (mine || onPin) && (
+            {!editing && !isMobile && (mine || onPin || onReply) && (
               <MessageActionsDropdown
                 mine={mine}
                 isPinned={!!pinId}
@@ -175,6 +177,7 @@ export function ChatroomMessageHeader({
                 onPin={onPin ? () => onPin(message.id) : undefined}
                 onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
                 onRequestDelete={onRequestDelete}
+                onReply={onReply}
               />
             )}
 

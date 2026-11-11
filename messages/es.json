@@ -1488,7 +1488,14 @@
       "hereWarningUnknown": "Va a notificar a los miembros presentes."
     },
     "edited": "(editado)",
-    "editedAt": "Editado el {date, date, long} a las {date, time, short}"
+    "editedAt": "Editado el {date, date, long} a las {date, time, short}",
+    "reply": "Responder",
+    "replyingTo": "Respuesta a {author}",
+    "cancelReply": "Cancelar la respuesta",
+    "replyUnavailable": "Mensaje eliminado o no disponible",
+    "replyBlock": "[bloque]",
+    "replyUnknownAuthor": "Alguien",
+    "replyJumpTo": "Ir al mensaje de {author}"
   },
   "changelog": {
     "title": "Historial de cambios",
