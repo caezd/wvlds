@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Performance",
+    text: "Le serveur de l’application tourne désormais à Londres, à côté de la base de données, au lieu de l’autre côté de l’Atlantique : chaque page gagne plusieurs centaines de millisecondes.",
+  },
+  {
+    date: "2026-11",
+    tag: "Performance",
     text: "Moins d’attente dans les mondes : les onglets Wiki, Carte, Membres… ne chargent plus les blocs de l’accueil qu’ils n’affichent pas, l’onglet Personas arrive en une seule requête, et la chronologie des salons vient avec leur liste. Les salons d’une liste ne se préparent plus tous à l’affichage, seulement celui que l’on survole ou touche.",
   },
   {
