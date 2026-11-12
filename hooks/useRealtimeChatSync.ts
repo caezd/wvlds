@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
 import { MESSAGE_COLUMNS } from "@/lib/chatMessagePage";
+import type { ChatroomTurn } from "@/lib/chatroomTurns";
 import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -50,6 +51,8 @@ type Props = {
    * réactions, votes manqués pendant la coupure).
    */
   onSubscribed?: () => void;
+  /** Ordre de passage du salon créé ou modifié (migration 211). */
+  onTurnChanged?: (turn: ChatroomTurn) => void;
 };
 
 export function useRealtimeChatSync({
@@ -65,6 +68,7 @@ export function useRealtimeChatSync({
   onPersonaUpdated,
   isMessageKnown,
   onSubscribed,
+  onTurnChanged,
 }: Props) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -91,6 +95,7 @@ export function useRealtimeChatSync({
     onPersonaUpdated,
     isMessageKnown,
     onSubscribed,
+    onTurnChanged,
   });
   callbacksRef.current = {
     onMessageInserted,
@@ -102,6 +107,7 @@ export function useRealtimeChatSync({
     onPersonaUpdated,
     isMessageKnown,
     onSubscribed,
+    onTurnChanged,
   };
 
   // Un seul canal Realtime par chatroom (au lieu d'un canal par table/événement) :
@@ -269,6 +275,20 @@ export function useRealtimeChatSync({
         callbacksRef.current.onReactionChange(row.message_id, row.emoji, ev === "INSERT" ? 1 : -1);
       },
     );
+
+    // Ordre de passage (INSERT / UPDATE ; le retrait est un UPDATE, cf. removeTurn)
+    if (callbacksRef.current.onTurnChanged) {
+      for (const event of ["INSERT", "UPDATE"] as const) {
+        ch.on(
+          "postgres_changes",
+          { event, schema: "public", table: TABLE.CHATROOM_TURNS, filter: `chat_id=eq.${chatId}` },
+          (payload: { new: Record<string, unknown> }) => {
+            if (!isMounted) return;
+            callbacksRef.current.onTurnChanged?.(payload.new as unknown as ChatroomTurn);
+          },
+        );
+      }
+    }
 
     // Personas UPDATE — avatar_url mis à jour
     if (callbacksRef.current.onPersonaUpdated) {

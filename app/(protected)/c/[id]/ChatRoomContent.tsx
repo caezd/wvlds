@@ -6,6 +6,7 @@ import { getChatroomsNav, getFollowedChatroomIds, getWorldMembership, type NavRo
 import type { ChatroomWithWorld } from "./getChatroom";
 import { getChatroomMessages } from "./getChatroomMessages";
 import { decorateMessagePage } from "@/lib/chatMessagePage";
+import { fetchTurn } from "@/lib/chatroomTurns";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 
@@ -31,7 +32,7 @@ export default async function ChatRoomContent({
   const rawWorld = chatroom.worlds as unknown;
   const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
 
-  const [messagesData, navRooms, worldMembership, followedIds, personaGroupColors] = await Promise.all([
+  const [messagesData, navRooms, worldMembership, followedIds, personaGroupColors, initialTurn] = await Promise.all([
     getChatroomMessages(id, userId),
     // Mémoïsé pour la requête et partagé avec `WorldSidebar` (monté par le
     // layout) : c'est la requête la plus lourde du chemin chaud, elle était
@@ -60,6 +61,8 @@ export default async function ChatRoomContent({
       }
       return out;
     })(),
+    // Ordre de passage du salon (migration 211), s'il en a un.
+    fetchTurn(supabase, id),
   ]);
 
   const {
@@ -143,6 +146,7 @@ export default async function ChatRoomContent({
       initialPersonaGroupColors={personaGroupColors}
       initialChallengeBadges={challengeBadges}
       renderedAt={Date.now()}
+      initialTurn={initialTurn}
     />
     </WikiLinkProvider>
     </WorldMembershipProvider>

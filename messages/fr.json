@@ -1519,7 +1519,21 @@
     "reportSubmit": "Signaler",
     "reportSent": "Signalement envoyé aux modérateurs",
     "reportDuplicate": "Vous avez déjà signalé ce message",
-    "reportFailed": "Le signalement n’a pas abouti"
+    "reportFailed": "Le signalement n’a pas abouti",
+    "turnTitle": "Ordre de passage",
+    "turnDescription": "Rangez les joueurs : le tour passe au suivant dès que le joueur dont c’est le tour poste un message. Poster hors tour reste possible.",
+    "turnEnabled": "Ordre de passage actif",
+    "turnEmpty": "Aucun joueur dans l’ordre. Ajoutez-en ci-dessous.",
+    "turnMoveUp": "Monter",
+    "turnMoveDown": "Descendre",
+    "turnRemovePlayer": "Retirer de l’ordre",
+    "turnRemove": "Retirer l’ordre",
+    "turnSave": "Enregistrer",
+    "turnSaveFailed": "L’ordre de passage n’a pas été enregistré",
+    "turnYours": "À toi de jouer",
+    "turnOf": "Au tour de {name}",
+    "turnNext": "ensuite : {names}",
+    "turnSkip": "Passer"
   },
   "changelog": {
     "title": "Changelog",

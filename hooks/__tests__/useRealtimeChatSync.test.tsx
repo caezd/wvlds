@@ -283,3 +283,21 @@ describe("useRealtimeChatSync — resynchronisation", () => {
     await waitFor(() => expect(onSubscribed).toHaveBeenCalledTimes(2));
   });
 });
+
+describe("useRealtimeChatSync — ordre de passage", () => {
+  it("relaie les changements d'ordre du salon (INSERT et UPDATE, filtrés sur le salon)", async () => {
+    const onTurnChanged = vi.fn();
+    const { mock } = setup({ results: [{ data: [] }] }, { onTurnChanged });
+    const ch = mock.channelNamed("chat-c1")!;
+    const bindings = ch.handlers.filter((h) => h.config.table === "chatroom_turns");
+    expect(bindings.map((h) => h.config.event).sort()).toEqual(["INSERT", "UPDATE"]);
+    expect(bindings.every((h) => h.config.filter === "chat_id=eq.c1")).toBe(true);
+
+    await act(async () => {
+      ch.emit((h) => h.config.table === "chatroom_turns" && h.config.event === "UPDATE", {
+        new: { chat_id: "c1", enabled: true, order_user_ids: ["a"], current_index: 0 },
+      });
+    });
+    expect(onTurnChanged).toHaveBeenCalledWith(expect.objectContaining({ chat_id: "c1", current_index: 0 }));
+  });
+});

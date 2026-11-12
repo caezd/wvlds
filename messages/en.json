@@ -1519,7 +1519,21 @@
     "reportSubmit": "Report",
     "reportSent": "Report sent to the moderators",
     "reportDuplicate": "You already reported this message",
-    "reportFailed": "The report failed"
+    "reportFailed": "The report failed",
+    "turnTitle": "Turn order",
+    "turnDescription": "Order the players: the turn passes to the next one as soon as the current player posts. Posting out of turn is still possible.",
+    "turnEnabled": "Turn order active",
+    "turnEmpty": "No players in the order yet. Add some below.",
+    "turnMoveUp": "Move up",
+    "turnMoveDown": "Move down",
+    "turnRemovePlayer": "Remove from the order",
+    "turnRemove": "Remove the order",
+    "turnSave": "Save",
+    "turnSaveFailed": "The turn order was not saved",
+    "turnYours": "Your turn",
+    "turnOf": "{name}’s turn",
+    "turnNext": "then: {names}",
+    "turnSkip": "Skip"
   },
   "changelog": {
     "title": "Changelog",

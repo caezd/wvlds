@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { amorcerCleDeSalon } from "@/lib/chatroomKeyBootstrap";
 import { decryptMessage } from "@/lib/crypto";
 import Link from "next/link";
-import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
+import { BarChart3, Globe, GlobeLock, ListOrdered, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,9 @@ import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { ReportMessageDialog } from "@/components/chatrooms/moderation/ReportMessageDialog";
+import { ChatroomTurnBar } from "@/components/chatrooms/turns/ChatroomTurnBar";
+import { ChatroomTurnDialog } from "@/components/chatrooms/turns/ChatroomTurnDialog";
+import { skipTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -188,6 +191,7 @@ export default function ChatRoomView({
   initialPersonaGroupColors,
   initialChallengeBadges,
   renderedAt,
+  initialTurn = null,
 }: {
   chatId: string;
   initialChat: {
@@ -220,6 +224,8 @@ export default function ChatRoomView({
    * dès la première connexion du canal.
    */
   renderedAt?: number;
+  /** Ordre de passage du salon (migration 211), null s'il n'en a pas. */
+  initialTurn?: ChatroomTurn | null;
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -240,6 +246,9 @@ export default function ChatRoomView({
   const [statsOpen, setStatsOpen] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [turnSettingsOpen, setTurnSettingsOpen] = useState(false);
+  const [turn, setTurn] = useState<ChatroomTurn | null>(initialTurn);
+  useEffect(() => setTurn(initialTurn), [initialTurn]);
 
   async function handleToggleFollow() {
     const next = !isFollowed;
@@ -795,6 +804,7 @@ export default function ChatRoomView({
     selfId: userId,
     isMessageKnown: (id) => messagesRef.current.some((m) => m.id === id),
     onSubscribed: () => void resyncDisplayedMessages(),
+    onTurnChanged: setTurn,
     initialLatestId: initialMessages.at(-1)?.id ?? null,
     onMessageInserted: (msg, authorId) => {
       void (async () => {
@@ -932,6 +942,14 @@ export default function ChatRoomView({
       excerpt: replyExcerpt(m.content) ?? t("replyBlock"),
     };
   }, [replyToId, messages, t]);
+  // Ordre de passage : « passer » le tour (qui règle l'ordre seulement).
+  const handleSkipTurn = useCallback(async () => {
+    if (!turn) return;
+    const res = await skipTurn(supabase, turn);
+    if (res.turn) setTurn(res.turn);
+    else toast.error(t("turnSaveFailed"), { description: res.error });
+  }, [turn, supabase, t]);
+
   // Signalement : une seule fenêtre pour tout le salon.
   const [reportMessageId, setReportMessageId] = useState<number | null>(null);
   const handleReport = useCallback((id: number) => setReportMessageId(id), []);
@@ -1017,6 +1035,21 @@ export default function ChatRoomView({
                     </TooltipContent>
                   </Tooltip>
                 )}
+                {canEdit && chat.worlds && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setTurnSettingsOpen(true)}
+                        aria-label={t("turnTitle")}
+                        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      >
+                        <ListOrdered className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8}>{t("turnTitle")}</TooltipContent>
+                  </Tooltip>
+                )}
                 {canEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1068,6 +1101,12 @@ export default function ChatRoomView({
                       <DropdownMenuItem onClick={() => void handleToggleFollow()}>
                         <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-yellow-500")} />
                         {isFollowed ? t("unfollow") : t("follow")}
+                      </DropdownMenuItem>
+                    )}
+                    {canEdit && chat.worlds && (
+                      <DropdownMenuItem onClick={afterMenuClose(() => setTurnSettingsOpen(true))}>
+                        <ListOrdered className="mr-2 h-3.5 w-3.5" />
+                        {t("turnTitle")}
                       </DropdownMenuItem>
                     )}
                     {canEdit && (
@@ -1159,6 +1198,12 @@ export default function ChatRoomView({
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
+                <ChatroomTurnBar
+                  turn={turn}
+                  selfId={userId}
+                  canManage={canEdit}
+                  onSkip={() => void handleSkipTurn()}
+                />
                 {post_message && canPost && <ChatroomComposer
                   chatId={chatId}
                   worldId={chat?.worlds?.id ?? null}
@@ -1198,6 +1243,18 @@ export default function ChatRoomView({
       </div>
 
       <ReportMessageDialog messageId={reportMessageId} onClose={closeReport} />
+
+      {canEdit && chat.worlds && (
+        <ChatroomTurnDialog
+          open={turnSettingsOpen}
+          onOpenChange={setTurnSettingsOpen}
+          chatId={chatId}
+          worldId={chat.worlds.id}
+          ownerId={chat.worlds.owner_id}
+          turn={turn}
+          onSaved={setTurn}
+        />
+      )}
 
       <DeleteConfirmDialog
         open={pendingDeleteId !== null}

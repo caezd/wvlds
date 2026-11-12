@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Salons",
+    text: "Ordre de passage : le créateur d’un salon (ou qui gère les salons) peut ranger les joueurs depuis l’en-tête du salon. Un bandeau au-dessus de la zone de saisie indique « À toi de jouer » ou à qui c’est le tour, et le tour passe tout seul au suivant dès que le joueur concerné poste. Poster hors tour reste possible.",
+  },
+  {
+    date: "2026-11",
+    tag: "Salons",
     text: "On peut signaler le message d’un autre joueur (« Signaler » dans son menu), avec une raison. Les membres qui gèrent les salons du monde retrouvent les signalements dans un nouvel onglet « Signalements » des réglages : voir le message, classer le signalement, ou supprimer le message.",
   },
   {

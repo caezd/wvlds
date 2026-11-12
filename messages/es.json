@@ -1519,7 +1519,21 @@
     "reportSubmit": "Denunciar",
     "reportSent": "Denuncia enviada a los moderadores",
     "reportDuplicate": "Ya denunciaste este mensaje",
-    "reportFailed": "La denuncia no se completó"
+    "reportFailed": "La denuncia no se completó",
+    "turnTitle": "Orden de turnos",
+    "turnDescription": "Ordena a los jugadores: el turno pasa al siguiente en cuanto el jugador de turno publica. Publicar fuera de turno sigue siendo posible.",
+    "turnEnabled": "Orden de turnos activo",
+    "turnEmpty": "Aún no hay jugadores en el orden. Añádelos abajo.",
+    "turnMoveUp": "Subir",
+    "turnMoveDown": "Bajar",
+    "turnRemovePlayer": "Quitar del orden",
+    "turnRemove": "Quitar el orden",
+    "turnSave": "Guardar",
+    "turnSaveFailed": "No se guardó el orden de turnos",
+    "turnYours": "Te toca",
+    "turnOf": "Turno de {name}",
+    "turnNext": "luego: {names}",
+    "turnSkip": "Pasar"
   },
   "changelog": {
     "title": "Historial de cambios",
