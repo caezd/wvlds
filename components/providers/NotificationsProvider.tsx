@@ -18,6 +18,7 @@ import { fetchAppShell } from "@/lib/appShell";
 import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { emitMembershipChange } from "@/lib/membershipEvents";
+import { emitRoomMessage, type RoomMessageEvent } from "@/lib/roomMessageEvents";
 
 // Compteurs par clé — à préférer quand un composant ne suit qu'une salle ou
 // qu'un monde, plutôt que de lire le `Record` complet. Voir lib/unreadStore.ts.
@@ -482,6 +483,13 @@ export default function NotificationsProvider({ children }: { children: React.Re
                 (ch) => ch
                     .on("broadcast", { event: "message" }, surNouveauMessage)
                     .on("broadcast", { event: "membership" }, surAdhesion)
+                    // Notes privées d'un salon (migration 212) : relayées au
+                    // salon ouvert, jamais annoncées sur le canal du salon.
+                    .on("broadcast", { event: "room_message" }, (msg: { payload?: Record<string, unknown> }) => {
+                        const avis = (msg.payload ?? {}) as Partial<RoomMessageEvent>;
+                        if (!avis.chat_id || typeof avis.id !== "number" || !avis.op) return;
+                        emitRoomMessage({ op: avis.op, id: avis.id, chat_id: avis.chat_id, author_id: avis.author_id ?? null });
+                    })
                     .subscribe(),
                 prive,
             ));

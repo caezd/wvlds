@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Technique",
+    text: "Le direct d’un salon (messages, réactions, votes, ordre de passage) passe par un canal plus léger et mieux protégé : les notes privées ne sont plus jamais annoncées à ceux qui ne peuvent pas les lire.",
+  },
+  {
+    date: "2026-11",
     tag: "Salons",
     text: "Ordre de passage : le créateur d’un salon (ou qui gère les salons) peut ranger les joueurs depuis l’en-tête du salon. Un bandeau au-dessus de la zone de saisie indique « À toi de jouer » ou à qui c’est le tour, et le tour passe tout seul au suivant dès que le joueur concerné poste. Poster hors tour reste possible.",
   },

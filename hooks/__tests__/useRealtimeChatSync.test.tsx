@@ -6,6 +6,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 
 import { useRealtimeChatSync, CATCHUP_PAGE_SIZE } from "@/hooks/useRealtimeChatSync";
+import { emitRoomMessage } from "@/lib/roomMessageEvents";
 import { createClient } from "@/lib/supabase/client";
 
 function setup(opts: Parameters<typeof createSupabaseMock>[0] = {}, props: Partial<Parameters<typeof useRealtimeChatSync>[0]> = {}) {
@@ -24,14 +25,13 @@ function setup(opts: Parameters<typeof createSupabaseMock>[0] = {}, props: Parti
   return { mock, cbs, unmount: view.unmount };
 }
 
-// Tous les bindings sont désormais multiplexés sur un seul canal ("chat-c1") :
-// les prédicats doivent donc désambiguïser par event + table, pas seulement par event.
+// Tout passe par le canal PRIVÉ du salon (`room:c1`, migration 212) : la base y
+// diffuse des avis `broadcast`, distingués par leur nom d'événement.
 type Handler = { type: string; config: Record<string, unknown> };
-const isInsert = (h: Handler) => h.config.event === "INSERT" && h.config.table === "chat_messages";
-const isDelete = (h: Handler) => h.config.event === "DELETE" && h.config.table === "chat_messages";
-const isMessageUpdate = (h: Handler) => h.config.event === "UPDATE" && h.config.table === "chat_messages";
-const isChatroomUpdate = (h: Handler) => h.config.event === "UPDATE" && h.config.table === "chatrooms";
-const isReaction = (h: Handler) => h.config.event === "*" && h.config.table === "chat_message_reactions";
+const evenement = (nom: string) => (h: Handler) => h.type === "broadcast" && h.config.event === nom;
+function diffuser(mock: ReturnType<typeof createSupabaseMock>, nom: string, payload: Record<string, unknown>) {
+  mock.channelNamed("room:c1")!.emit(evenement(nom), { type: "broadcast", event: nom, payload });
+}
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -39,7 +39,7 @@ describe("useRealtimeChatSync", () => {
   it("ignore un INSERT déjà connu (id <= initialLatestId)", async () => {
     const { mock, cbs } = setup();
     await act(async () => {
-      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 2 } });
+      diffuser(mock, "message", { op: "INSERT", id: 2 });
     });
     expect(cbs.onMessageInserted).not.toHaveBeenCalled();
   });
@@ -50,7 +50,7 @@ describe("useRealtimeChatSync", () => {
       results: [{ data: [] }, { data: { id: 5, content: "salut", author_id: "a2" } }],
     });
     await act(async () => {
-      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 5 } });
+      diffuser(mock, "message", { op: "INSERT", id: 5 });
     });
     await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalled());
     expect(cbs.onMessageInserted).toHaveBeenCalledWith(
@@ -62,81 +62,82 @@ describe("useRealtimeChatSync", () => {
   it("propage une suppression de message", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-c1")!.emit(isDelete, { old: { id: 7 } });
+      diffuser(mock, "message", { op: "DELETE", id: 7 });
     });
     expect(cbs.onMessageDeleted).toHaveBeenCalledWith(7);
   });
 
-  it("propage une édition de contenu", async () => {
-    const { mock, cbs } = setup();
-    act(() => {
-      mock.channelNamed("chat-c1")!.emit(isMessageUpdate, {
-        new: { id: 9, content: "édité" },
-      });
+  it("propage une édition : contenu et metadata relus (l'avis ne porte que l'id)", async () => {
+    const { mock, cbs } = setup({
+      results: [{ data: [] }, { data: { id: 9, content: "édité", metadata: { sms: true } } }],
     });
-    expect(cbs.onMessageUpdated).toHaveBeenCalledWith(9, "édité", null);
-  });
-
-  it("propage la metadata mise à jour (ex. sms/bubbles décoché)", async () => {
-    const { mock, cbs } = setup();
-    act(() => {
-      mock.channelNamed("chat-c1")!.emit(isMessageUpdate, {
-        new: { id: 9, content: "édité", metadata: { sms: true } },
-      });
+    await act(async () => {
+      diffuser(mock, "message", { op: "UPDATE", id: 9 });
     });
-    expect(cbs.onMessageUpdated).toHaveBeenCalledWith(9, "édité", { sms: true });
+    await waitFor(() => expect(cbs.onMessageUpdated).toHaveBeenCalledWith(9, "édité", { sms: true }));
   });
 
   it("propage un patch de chatroom (titre/bannière)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-c1")!.emit(isChatroomUpdate, {
-        new: { title: "Nouveau titre" },
-      });
+      diffuser(mock, "chatroom", { title: "Nouveau titre" });
     });
     expect(cbs.onChatroomPatched).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Nouveau titre" }),
     );
   });
 
-  it("applique une réaction d'un autre utilisateur (delta +1)", async () => {
+  it("applique une réaction d'un autre utilisateur (delta +1, puis -1)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-c1")!.emit(isReaction, {
-        eventType: "INSERT",
-        new: { message_id: 1, emoji: "👍", user_id: "autre" },
-      });
+      diffuser(mock, "reaction", { op: "INSERT", message_id: 1, emoji: "👍", user_id: "autre" });
+      diffuser(mock, "reaction", { op: "DELETE", message_id: 1, emoji: "👍", user_id: "autre" });
     });
-    expect(cbs.onReactionChange).toHaveBeenCalledWith(1, "👍", 1);
+    expect(cbs.onReactionChange).toHaveBeenNthCalledWith(1, 1, "👍", 1);
+    expect(cbs.onReactionChange).toHaveBeenNthCalledWith(2, 1, "👍", -1);
   });
 
   it("ignore sa propre réaction (évite le double comptage)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-c1")!.emit(isReaction, {
-        eventType: "INSERT",
-        new: { message_id: 1, emoji: "👍", user_id: "me" },
-      });
+      diffuser(mock, "reaction", { op: "INSERT", message_id: 1, emoji: "👍", user_id: "me" });
     });
     expect(cbs.onReactionChange).not.toHaveBeenCalled();
   });
 
-  it("ne crée qu'un seul canal Realtime pour toute la salle (INSERT/DELETE/UPDATE/réactions fusionnés)", () => {
-    const { mock } = setup();
-    expect(mock.channels).toHaveLength(1);
-    expect(mock.channels[0].name).toBe("chat-c1");
+  it("relaie les votes des autres (ancien → nouveau choix) et l'avatar d'une persona", () => {
+    const onVoteChange = vi.fn();
+    const onPersonaUpdated = vi.fn();
+    const { mock } = setup({}, { onVoteChange, onPersonaUpdated });
+    act(() => {
+      diffuser(mock, "vote", { op: "UPDATE", message_id: 3, user_id: "autre", old_option_id: "a", new_option_id: "b" });
+      diffuser(mock, "vote", { op: "INSERT", message_id: 3, user_id: "me", old_option_id: null, new_option_id: "a" });
+      diffuser(mock, "persona", { id: "p1", avatar_url: "x.png" });
+    });
+    expect(onVoteChange).toHaveBeenCalledTimes(1);
+    expect(onVoteChange).toHaveBeenCalledWith(3, "a", "b");
+    expect(onPersonaUpdated).toHaveBeenCalledWith("p1", "x.png");
   });
 
-  it("ajoute les bindings votes/personas sur le même canal quand les callbacks optionnels sont fournis", () => {
-    const { mock } = setup({}, {
-      onVoteChange: vi.fn(),
-      onPersonaUpdated: vi.fn(),
-    });
-    // Toujours un seul canal, avec deux bindings supplémentaires.
+  it("un seul canal, PRIVÉ, pour toute la salle — sans aucun postgres_changes", () => {
+    const { mock } = setup({}, { onVoteChange: vi.fn(), onPersonaUpdated: vi.fn() });
     expect(mock.channels).toHaveLength(1);
-    const events = mock.channels[0].handlers.map(h => `${h.config.event}:${h.config.table}`);
-    expect(events).toContain("*:chat_choice_votes");
-    expect(events).toContain("UPDATE:personas");
+    expect(mock.channels[0].name).toBe("room:c1");
+    expect(mock.channel).toHaveBeenCalledWith("room:c1", { config: { private: true } });
+    expect(mock.channels[0].handlers.some((h) => h.type === "postgres_changes")).toBe(false);
+  });
+
+  it("reçoit les notes privées de CE salon, relayées depuis le canal personnel", async () => {
+    const { mock, cbs } = setup({
+      results: [{ data: [] }, { data: { id: 8, content: "chut", author_id: "a3" } }],
+    });
+    await waitFor(() => expect(mock.builders).toHaveLength(1));
+    await act(async () => {
+      emitRoomMessage({ op: "INSERT", id: 8, chat_id: "autre-salon", author_id: "a3" });
+      emitRoomMessage({ op: "INSERT", id: 8, chat_id: "c1", author_id: "a3" });
+    });
+    await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalledTimes(1));
+    expect(cbs.onMessageInserted).toHaveBeenCalledWith(expect.objectContaining({ id: 8 }), "a3");
   });
 });
 
@@ -227,7 +228,7 @@ describe("useRealtimeChatSync — rattrapage des messages manqués", () => {
     });
     await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalledTimes(1));
     await act(async () => {
-      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 4 } });
+      diffuser(mock, "message", { op: "INSERT", id: 4 });
     });
     expect(cbs.onMessageInserted).toHaveBeenCalledTimes(1);
   });
@@ -265,7 +266,7 @@ describe("useRealtimeChatSync — message déjà affiché", () => {
     const { mock, cbs } = setup({ results: [{ data: [] }] }, { isMessageKnown: (id) => id === 5 });
     await waitFor(() => expect(mock.builders).toHaveLength(1)); // rattrapage seul
     await act(async () => {
-      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 5 } });
+      diffuser(mock, "message", { op: "INSERT", id: 5 });
     });
     expect(mock.builders).toHaveLength(1);
     expect(cbs.onMessageInserted).not.toHaveBeenCalled();
@@ -285,18 +286,11 @@ describe("useRealtimeChatSync — resynchronisation", () => {
 });
 
 describe("useRealtimeChatSync — ordre de passage", () => {
-  it("relaie les changements d'ordre du salon (INSERT et UPDATE, filtrés sur le salon)", async () => {
+  it("relaie les changements d'ordre du salon", async () => {
     const onTurnChanged = vi.fn();
     const { mock } = setup({ results: [{ data: [] }] }, { onTurnChanged });
-    const ch = mock.channelNamed("chat-c1")!;
-    const bindings = ch.handlers.filter((h) => h.config.table === "chatroom_turns");
-    expect(bindings.map((h) => h.config.event).sort()).toEqual(["INSERT", "UPDATE"]);
-    expect(bindings.every((h) => h.config.filter === "chat_id=eq.c1")).toBe(true);
-
-    await act(async () => {
-      ch.emit((h) => h.config.table === "chatroom_turns" && h.config.event === "UPDATE", {
-        new: { chat_id: "c1", enabled: true, order_user_ids: ["a"], current_index: 0 },
-      });
+    act(() => {
+      diffuser(mock, "turn", { chat_id: "c1", enabled: true, order_user_ids: ["a"], current_index: 0 });
     });
     expect(onTurnChanged).toHaveBeenCalledWith(expect.objectContaining({ chat_id: "c1", current_index: 0 }));
   });

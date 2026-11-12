@@ -77,7 +77,8 @@ export const channel = {
   worldRooms: (wid: string) => `w:${wid}:rooms`,
   worldMap: (wid: string) => `w:${wid}:map`,
   chatPresence: (chatId: string) => `chat:${chatId}`,
-  chatMessages: (chatId: string) => `chat-${chatId}`,
+  /** Canal PRIVÉ du salon : messages, réactions, votes, ordre… (migration 212). */
+  chatMessages: (chatId: string) => `room:${chatId}`,
   chatPins: (chatId: string) => `chat-pins-${chatId}`,
   navMessages: (worldId: string) => `nav-messages-${worldId}`,
   navReads: (selfId: string) => `nav-reads-${selfId}`,

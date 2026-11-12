@@ -922,3 +922,23 @@ describe("Adhésion et retrait d'un monde (migration 208)", () => {
         expect(mock.channel.mock.calls.length).toBe(avant);
     });
 });
+
+describe("Notes privées d'un salon (migration 212)", () => {
+    it("relaie l'avis `room_message` du canal personnel au salon ouvert", async () => {
+        const { onRoomMessage } = await import("@/lib/roomMessageEvents");
+        const recu = vi.fn();
+        const desabonner = onRoomMessage(recu);
+        const mock = setupUnreads();
+        await waitFor(() => expect(mock.channelNamed("msgs:u1")).toBeDefined());
+
+        act(() => {
+            mock.channelNamed("msgs:u1")!.emit(
+                h => h.type === "broadcast" && (h.config as { event?: string }).event === "room_message",
+                { type: "broadcast", event: "room_message", payload: { op: "INSERT", id: 12, chat_id: "c1", author_id: "x" } },
+            );
+        });
+
+        expect(recu).toHaveBeenCalledWith({ op: "INSERT", id: 12, chat_id: "c1", author_id: "x" });
+        desabonner();
+    });
+});

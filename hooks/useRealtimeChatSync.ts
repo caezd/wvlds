@@ -7,6 +7,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
 import { MESSAGE_COLUMNS } from "@/lib/chatMessagePage";
 import type { ChatroomTurn } from "@/lib/chatroomTurns";
+import { onRoomMessage } from "@/lib/roomMessageEvents";
 import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -164,176 +165,113 @@ export function useRealtimeChatSync({
       }
     };
 
+    // ── Avis de messages ─────────────────────────────────────────
+    // Même traitement que l'avis vienne du canal du salon (message public) ou,
+    // relayé par NotificationsProvider, du canal personnel (note privée).
+    const surAvisMessage = async (avis: { op?: string; id?: number }) => {
+      if (!isMounted || typeof avis.id !== "number") return;
+      const id = avis.id;
+
+      if (avis.op === "DELETE") {
+        callbacksRef.current.onMessageDeleted(id);
+        return;
+      }
+
+      if (avis.op === "UPDATE") {
+        // Les avis ne portent pas le contenu : relu sous la policy de lecture.
+        const { data } = await supabase
+          .from(TABLE.CHAT_MESSAGES)
+          .select("id, content, metadata")
+          .eq("id", id)
+          .maybeSingle();
+        if (!isMounted || !data) return;
+        const row = data as { id: number; content: string; metadata: ChatMessageMeta | null };
+        callbacksRef.current.onMessageUpdated(row.id, row.content, row.metadata ?? null);
+        return;
+      }
+
+      // INSERT — re-fetch avec join persona pour garder la structure uniforme
+      if (latestIdRef.current !== null && id <= latestIdRef.current) return;
+      latestIdRef.current = id;
+      if (callbacksRef.current.isMessageKnown?.(id)) return;
+
+      const { data, error } = await supabase
+        .from(TABLE.CHAT_MESSAGES)
+        .select(REALTIME_MESSAGE_COLUMNS)
+        .eq("id", id)
+        .single();
+
+      if (!isMounted) return;
+
+      if (error || !data) {
+        toast.error(t("loadMessageFailed"));
+        return;
+      }
+
+      callbacksRef.current.onMessageInserted(
+        data as unknown as ChatMessageWithPersona,
+        (data as unknown as { author_id?: string | null }).author_id ?? undefined,
+      );
+    };
+
+    // Notes privées de ce salon, relayées depuis le canal personnel.
+    const desabonnerPrives = onRoomMessage((avis) => {
+      if (avis.chat_id === chatId) void surAvisMessage(avis);
+    });
+
     // Nom de canal stable, ouverture sérialisée : une réouverture attend la
     // fermeture précédente. Cf. lib/realtimeChannel.
+    //
+    // Canal PRIVÉ `room:<id>` (migration 212) : la base y diffuse des avis
+    // (ids seulement) à chaque changement ; l'accès est vérifié une fois, à
+    // l'abonnement. Remplace sept flux `postgres_changes`, dont un abonnement
+    // NON FILTRÉ à toutes les mises à jour de `personas`.
+    type Avis = { payload?: Record<string, unknown> };
     const fermerCanal = openRealtimeChannel(supabase, CH.chatMessages(chatId), (ch) => {
 
-    // INSERT — re-fetch avec join persona pour garder la structure uniforme
-    ch.on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: TABLE.CHAT_MESSAGES,
-        filter: `chat_id=eq.${chatId}`,
-      },
-      async (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-        if (!isMounted) return;
+    ch.on("broadcast", { event: "message" }, (msg: Avis) => {
+      void surAvisMessage((msg.payload ?? {}) as { op?: string; id?: number });
+    });
 
-        const id = (payload.new as { id: number }).id;
-        if (latestIdRef.current !== null && id <= latestIdRef.current) return;
-        latestIdRef.current = id;
-        if (callbacksRef.current.isMessageKnown?.(id)) return;
+    // Salon — titre / bannière / icône
+    ch.on("broadcast", { event: "chatroom" }, (msg: Avis) => {
+      if (!isMounted) return;
+      callbacksRef.current.onChatroomPatched((msg.payload ?? {}) as ChatroomPatch);
+    });
 
-        const { data, error } = await supabase
-          .from(TABLE.CHAT_MESSAGES)
-          .select(REALTIME_MESSAGE_COLUMNS)
-          .eq("id", id)
-          .single();
-
-        if (!isMounted) return;
-
-        if (error || !data) {
-          toast.error(t("loadMessageFailed"));
-          return;
-        }
-
-        callbacksRef.current.onMessageInserted(
-          data as unknown as ChatMessageWithPersona,
-          data.author_id ?? undefined,
-        );
-      },
-    );
-
-    // DELETE — suppression de message
-    ch.on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: TABLE.CHAT_MESSAGES,
-        filter: `chat_id=eq.${chatId}`,
-      },
-      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-        if (!isMounted) return;
-        const id = (payload.old as { id: number }).id;
-        if (id) callbacksRef.current.onMessageDeleted(id);
-      },
-    );
-
-    // UPDATE — édition de contenu
-    ch.on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: TABLE.CHAT_MESSAGES,
-        filter: `chat_id=eq.${chatId}`,
-      },
-      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-        if (!isMounted) return;
-        const next = payload.new as { id: number; content: string; metadata: ChatMessageMeta | null };
-        callbacksRef.current.onMessageUpdated(next.id, next.content, next.metadata ?? null);
-      },
-    );
-
-    // UPDATE chatroom — titre / bannière / icône
-    ch.on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: TABLE.CHATROOMS,
-        filter: `id=eq.${chatId}`,
-      },
-      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-        if (!isMounted) return;
-        callbacksRef.current.onChatroomPatched(payload.new as ChatroomPatch);
-      },
-    );
-
-    // Reactions INSERT / DELETE
-    ch.on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: TABLE.CHAT_MESSAGE_REACTIONS,
-        filter: `chat_id=eq.${chatId}`,
-      },
-      (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-        if (!isMounted) return;
-        const ev = payload.eventType;
-        if (ev !== "INSERT" && ev !== "DELETE") return;
-
-        type ReactionRow = { message_id: number; emoji: string; user_id: string };
-        const row = (ev === "DELETE" ? payload.old : payload.new) as ReactionRow | null;
-        if (!row) return;
-
-        if (selfId && row.user_id === selfId) return;
-
-        callbacksRef.current.onReactionChange(row.message_id, row.emoji, ev === "INSERT" ? 1 : -1);
-      },
-    );
+    // Réactions INSERT / DELETE
+    ch.on("broadcast", { event: "reaction" }, (msg: Avis) => {
+      if (!isMounted) return;
+      const row = (msg.payload ?? {}) as { op?: string; message_id?: number; emoji?: string; user_id?: string };
+      if ((row.op !== "INSERT" && row.op !== "DELETE") || row.message_id === undefined || !row.emoji) return;
+      if (selfId && row.user_id === selfId) return;
+      callbacksRef.current.onReactionChange(row.message_id, row.emoji, row.op === "INSERT" ? 1 : -1);
+    });
 
     // Ordre de passage (INSERT / UPDATE ; le retrait est un UPDATE, cf. removeTurn)
-    if (callbacksRef.current.onTurnChanged) {
-      for (const event of ["INSERT", "UPDATE"] as const) {
-        ch.on(
-          "postgres_changes",
-          { event, schema: "public", table: TABLE.CHATROOM_TURNS, filter: `chat_id=eq.${chatId}` },
-          (payload: { new: Record<string, unknown> }) => {
-            if (!isMounted) return;
-            callbacksRef.current.onTurnChanged?.(payload.new as unknown as ChatroomTurn);
-          },
-        );
-      }
-    }
+    ch.on("broadcast", { event: "turn" }, (msg: Avis) => {
+      if (!isMounted) return;
+      callbacksRef.current.onTurnChanged?.((msg.payload ?? {}) as unknown as ChatroomTurn);
+    });
 
-    // Personas UPDATE — avatar_url mis à jour
-    if (callbacksRef.current.onPersonaUpdated) {
-      ch.on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "personas" },
-        (payload: { new: Record<string, unknown> }) => {
-          if (!isMounted) return;
-          const row = payload.new as { id: string; avatar_url?: string | null };
-          if (row.id) callbacksRef.current.onPersonaUpdated?.(row.id, row.avatar_url ?? null);
-        },
-      );
-    }
+    // Avatar d'une persona ayant écrit dans ce salon
+    ch.on("broadcast", { event: "persona" }, (msg: Avis) => {
+      if (!isMounted) return;
+      const row = (msg.payload ?? {}) as { id?: string; avatar_url?: string | null };
+      if (row.id) callbacksRef.current.onPersonaUpdated?.(row.id, row.avatar_url ?? null);
+    });
 
     // Votes de choix INSERT / UPDATE (revote) / DELETE
-    if (callbacksRef.current.onVoteChange) {
-      ch.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: TABLE.CHAT_CHOICE_VOTES,
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (!isMounted) return;
-          const ev = payload.eventType;
-          if (ev !== "INSERT" && ev !== "UPDATE" && ev !== "DELETE") return;
-
-          type VoteRow = { message_id: number; option_id: string; user_id: string };
-          const newRow = payload.new as VoteRow | null;
-          const oldRow = payload.old as VoteRow | null;
-          const row = ev === "DELETE" ? oldRow : newRow;
-          if (!row) return;
-
-          if (selfId && row.user_id === selfId) return;
-
-          callbacksRef.current.onVoteChange?.(
-            row.message_id,
-            ev === "INSERT" ? null : (oldRow?.option_id ?? null),
-            ev === "DELETE" ? null : (newRow?.option_id ?? null),
-          );
-        },
-      );
-    }
+    ch.on("broadcast", { event: "vote" }, (msg: Avis) => {
+      if (!isMounted) return;
+      const row = (msg.payload ?? {}) as {
+        op?: string; message_id?: number; user_id?: string;
+        old_option_id?: string | null; new_option_id?: string | null;
+      };
+      if (!row.op || row.message_id === undefined) return;
+      if (selfId && row.user_id === selfId) return;
+      callbacksRef.current.onVoteChange?.(row.message_id, row.old_option_id ?? null, row.new_option_id ?? null);
+    });
 
     // Rattrapage à chaque (re)jonction : la première souscription, mais aussi
     // les re-jonctions automatiques de supabase-js après une coupure brève.
@@ -343,15 +281,14 @@ export function useRealtimeChatSync({
       callbacksRef.current.onSubscribed?.();
     });
     return ch;
-    });
+    }, { config: { private: true } });
 
     return () => {
       isMounted = false;
+      desabonnerPrives();
       fermerCanal();
     };
-    // onVoteChange/onPersonaUpdated délibérément absents des deps : seule leur
-    // présence (fournis ou non par l'appelant) compte pour construire les
-    // bindings, lue via callbacksRef au moment où l'effet tourne — pas leur
-    // identité de fonction, qui changerait à chaque rendu du parent.
+    // Les callbacks sont lus via callbacksRef au moment de l'événement : leur
+    // identité, qui change à chaque rendu du parent, n'a pas à rouvrir le canal.
   }, [chatId, supabase, selfId, reconnectEpoch, t]);
 }
