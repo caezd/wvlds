@@ -5,7 +5,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 
-import { useRealtimeChatSync, CATCHUP_PAGE_SIZE } from "@/hooks/useRealtimeChatSync";
+import { useRealtimeChatSync, CATCHUP_PAGE_SIZE, CATCHUP_MAX_PAGES } from "@/hooks/useRealtimeChatSync";
 import { emitRoomMessage } from "@/lib/roomMessageEvents";
 import { createClient } from "@/lib/supabase/client";
 
@@ -293,5 +293,34 @@ describe("useRealtimeChatSync — ordre de passage", () => {
       diffuser(mock, "turn", { chat_id: "c1", enabled: true, order_user_ids: ["a"], current_index: 0 });
     });
     expect(onTurnChanged).toHaveBeenCalledWith(expect.objectContaining({ chat_id: "c1", current_index: 0 }));
+  });
+});
+
+describe("useRealtimeChatSync — trou trop grand pour le rattrapage", () => {
+  const pagesPleines = () =>
+    Array.from({ length: CATCHUP_MAX_PAGES }, (_, p) => ({
+      data: Array.from({ length: CATCHUP_PAGE_SIZE }, (_, i) => ({ id: 4 + p * CATCHUP_PAGE_SIZE + i, author_id: "a" })),
+    }));
+
+  it("au-delà de la limite, la vue recharge la dernière page et le hook repart de là", async () => {
+    const onCatchUpGap = vi.fn(async () => 10_000);
+    const { mock, cbs } = setup({ results: [...pagesPleines(), { data: { id: 9_000 } }] }, { onCatchUpGap });
+
+    await waitFor(() => expect(onCatchUpGap).toHaveBeenCalledTimes(1));
+    expect(mock.builders.filter((b) => b.table === "chat_messages")).toHaveLength(CATCHUP_MAX_PAGES);
+
+    // Un message plus ancien que la page rechargée n'est plus relu.
+    const avant = cbs.onMessageInserted.mock.calls.length;
+    await act(async () => {
+      diffuser(mock, "message", { op: "INSERT", id: 9_000 });
+    });
+    expect(cbs.onMessageInserted.mock.calls.length).toBe(avant);
+  });
+
+  it("sans relais fourni, le rattrapage continue au-delà de la limite", async () => {
+    const { mock } = setup({ results: [...pagesPleines(), { data: [{ id: 99_999, author_id: "a" }] }] });
+    await waitFor(() =>
+      expect(mock.builders.filter((b) => b.table === "chat_messages")).toHaveLength(CATCHUP_MAX_PAGES + 1),
+    );
   });
 });

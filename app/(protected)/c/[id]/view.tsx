@@ -799,11 +799,43 @@ export default function ChatRoomView({
     }
   };
 
+  // Trop de messages manqués pour les rattraper un à un (longue absence) :
+  // on repart de la page la plus récente, comme un rechargement — l'historique
+  // reste accessible en remontant. Les messages arrivés en direct pendant la
+  // lecture, plus récents que la page, sont conservés.
+  const rechargerDernierePage = async (): Promise<number | null> => {
+    try {
+      const page = await fetchMessagePage(supabase, chatId);
+      const fresh = (await decorateMessagePage(
+        page.messages,
+        page,
+        userId,
+        roomKeyRef.current,
+      )) as unknown as ChatMessageWithPersona[];
+      const dernier = fresh.reduce((max, m) => Math.max(max, m.id), 0);
+      setMessages((prev) => [...fresh, ...prev.filter((m) => m.id > dernier)]);
+      hasMoreRef.current = page.hasMore;
+      setHasMore(page.hasMore);
+      if (page.challengeBadges.length) {
+        setChallengeBadges((prev) => {
+          const next = new Map(prev);
+          for (const [mid, badge] of page.challengeBadges) next.set(mid, badge);
+          return next;
+        });
+      }
+      return dernier || null;
+    } catch (error) {
+      console.error("[rattrapage] rechargement de la dernière page impossible :", error);
+      return null;
+    }
+  };
+
   useRealtimeChatSync({
     chatId,
     selfId: userId,
     isMessageKnown: (id) => messagesRef.current.some((m) => m.id === id),
     onSubscribed: () => void resyncDisplayedMessages(),
+    onCatchUpGap: rechargerDernierePage,
     onTurnChanged: setTurn,
     initialLatestId: initialMessages.at(-1)?.id ?? null,
     onMessageInserted: (msg, authorId) => {

@@ -20,7 +20,7 @@ const REALTIME_MESSAGE_COLUMNS = MESSAGE_COLUMNS;
 
 /** Taille d'une page de rattrapage, et nombre maximal de pages par rattrapage. */
 export const CATCHUP_PAGE_SIZE = 50;
-const CATCHUP_MAX_PAGES = 10;
+export const CATCHUP_MAX_PAGES = 10;
 
 export type ChatroomPatch = {
   title?: string | null;
@@ -54,6 +54,15 @@ type Props = {
   onSubscribed?: () => void;
   /** Ordre de passage du salon créé ou modifié (migration 211). */
   onTurnChanged?: (turn: ChatroomTurn) => void;
+  /**
+   * Le rattrapage a atteint sa limite (CATCHUP_MAX_PAGES pages pleines) : trop
+   * de messages manqués pour les rejouer un à un. La vue recharge alors la page
+   * la plus récente et rend l'id du plus récent message affiché ; le hook
+   * repart de là. Sans ce relais, le reste du trou était perdu : un INSERT en
+   * direct faisait avancer le curseur au-delà, et les rattrapages suivants
+   * l'ignoraient. Absent : le rattrapage continue sans limite.
+   */
+  onCatchUpGap?: () => Promise<number | null>;
 };
 
 export function useRealtimeChatSync({
@@ -70,6 +79,7 @@ export function useRealtimeChatSync({
   isMessageKnown,
   onSubscribed,
   onTurnChanged,
+  onCatchUpGap,
 }: Props) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -97,6 +107,7 @@ export function useRealtimeChatSync({
     isMessageKnown,
     onSubscribed,
     onTurnChanged,
+    onCatchUpGap,
   });
   callbacksRef.current = {
     onMessageInserted,
@@ -109,6 +120,7 @@ export function useRealtimeChatSync({
     isMessageKnown,
     onSubscribed,
     onTurnChanged,
+    onCatchUpGap,
   };
 
   // Un seul canal Realtime par chatroom (au lieu d'un canal par table/événement) :
@@ -139,7 +151,15 @@ export function useRealtimeChatSync({
       rattrapageEnCours = true;
       try {
         let curseur = latestIdRef.current;
-        for (let page = 0; page < CATCHUP_MAX_PAGES; page++) {
+        for (let page = 0; ; page++) {
+          // Trop de messages manqués : la vue recharge la page la plus récente.
+          if (page >= CATCHUP_MAX_PAGES && callbacksRef.current.onCatchUpGap) {
+            const dernier = await callbacksRef.current.onCatchUpGap();
+            if (isMounted && dernier !== null && (latestIdRef.current === null || dernier > latestIdRef.current)) {
+              latestIdRef.current = dernier;
+            }
+            return;
+          }
           let query = supabase
             .from(TABLE.CHAT_MESSAGES)
             .select(REALTIME_MESSAGE_COLUMNS)
