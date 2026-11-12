@@ -18,7 +18,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { ReportMessageDialog } from "@/components/chatrooms/moderation/ReportMessageDialog";
 import { ChatroomTurnBar } from "@/components/chatrooms/turns/ChatroomTurnBar";
 import { ChatroomTurnDialog } from "@/components/chatrooms/turns/ChatroomTurnDialog";
-import { skipTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
+import { isTurnActive, skipTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -1230,12 +1230,6 @@ export default function ChatRoomView({
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                <ChatroomTurnBar
-                  turn={turn}
-                  selfId={userId}
-                  canManage={canEdit}
-                  onSkip={() => void handleSkipTurn()}
-                />
                 {post_message && canPost && <ChatroomComposer
                   chatId={chatId}
                   worldId={chat?.worlds?.id ?? null}
@@ -1261,6 +1255,14 @@ export default function ChatRoomView({
                   }}
                   replyTo={replyToRef}
                   onCancelReply={cancelReply}
+                  topTab={isTurnActive(turn) ? (
+                    <ChatroomTurnBar
+                      turn={turn}
+                      selfId={userId}
+                      canManage={canEdit}
+                      onSkip={() => void handleSkipTurn()}
+                    />
+                  ) : null}
                 />}
               </div>
             </div>

@@ -92,6 +92,11 @@ type ChatroomComposerProps = {
     replyTo?: { id: number; author: string; excerpt: string } | null;
     /** Abandonne la réponse — appelé aussi après un envoi réussi. */
     onCancelReply?: () => void;
+    /**
+     * Languette accrochée au haut du composeur (même largeur, la carte en
+     * recouvre le bas) — ex. l'ordre de passage du salon. Rien si null.
+     */
+    topTab?: React.ReactNode;
     worldTimelineConfig?: WorldTimelineConfig | null;
     timelineDate?: WorldTimelineDate | null;
     onTimelineDateChange?: (d: WorldTimelineDate | null) => void;
@@ -128,6 +133,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     onMessageCreated,
     replyTo = null,
     onCancelReply,
+    topTab = null,
     worldTimelineConfig,
     timelineDate,
     onTimelineDateChange,
@@ -957,6 +963,10 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             stretchCard && "h-full",
         )}>
             {typingBanner}
+            {/* Au-dessus de la languette « en train d'écrire » (z-0), sous la
+                carte (z-10) qui en recouvre le bas : elle fait corps avec le
+                composeur. */}
+            {topTab && <div className="relative z-[5] -mb-2.5">{topTab}</div>}
             {useMobileDrawer && !drawerOpen && replyBar}
 
             {useMobileDrawer ? (

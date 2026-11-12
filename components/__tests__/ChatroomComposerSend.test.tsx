@@ -160,3 +160,12 @@ describe("ChatroomComposer — envoi", () => {
     expect(insertion.insert).toHaveBeenCalledWith(expect.objectContaining({ reply_to_id: 7 }));
   });
 });
+
+describe("ChatroomComposer — languette du haut", () => {
+  it("affiche la languette fournie (ex. ordre de passage) au-dessus de la carte", () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(<ChatroomComposer chatId="chat1" presetPersona={mockPersona} topTab={<div data-testid="languette">À toi</div>} />);
+    expect(screen.getByTestId("languette")).toBeInTheDocument();
+  });
+});
