@@ -220,3 +220,12 @@ describe("sortRolesByPosition / highestHoistedRole", () => {
     expect(highestHoistedRole([PLAYER, VIEWER])).toBeNull();
   });
 });
+
+describe("canOpenWorldSettings — signalements", () => {
+  it("« Gérer les salons » suffit à ouvrir les réglages (onglet Signalements)", () => {
+    const moderateur = role({ id: "modo", position: 15, permissions: ["chatrooms.manage"] });
+    const m = buildMembership({ userId: "u1", ownerId: "owner", isMember: true, roles: [...ROLES, moderateur], myRoleIds: ["modo"] });
+    expect(canOpenWorldSettings(m)).toBe(true);
+    expect(canOpenWorldSettings(member(["player"]))).toBe(false);
+  });
+});

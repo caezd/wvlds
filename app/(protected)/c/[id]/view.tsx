@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { ReportMessageDialog } from "@/components/chatrooms/moderation/ReportMessageDialog";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -931,6 +932,10 @@ export default function ChatRoomView({
       excerpt: replyExcerpt(m.content) ?? t("replyBlock"),
     };
   }, [replyToId, messages, t]);
+  // Signalement : une seule fenêtre pour tout le salon.
+  const [reportMessageId, setReportMessageId] = useState<number | null>(null);
+  const handleReport = useCallback((id: number) => setReportMessageId(id), []);
+  const closeReport = useCallback(() => setReportMessageId(null), []);
   const scrollToMessageRef = useRef(scrollToMessage);
   scrollToMessageRef.current = scrollToMessage;
   const handleJumpToMessage = useCallback((id: number) => scrollToMessageRef.current(id), []);
@@ -960,6 +965,7 @@ export default function ChatRoomView({
       onAnchorEdited={handleAnchorEdited}
       onReply={canReply ? handleReply : undefined}
       onJumpToMessage={handleJumpToMessage}
+      onReport={userId ? handleReport : undefined}
     />
   );
 
@@ -1190,6 +1196,8 @@ export default function ChatRoomView({
           onUsePersona={(p) => setSelectedPersona(p)}
         />
       </div>
+
+      <ReportMessageDialog messageId={reportMessageId} onClose={closeReport} />
 
       <DeleteConfirmDialog
         open={pendingDeleteId !== null}

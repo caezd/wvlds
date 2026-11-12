@@ -54,4 +54,4 @@ export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPan
 }
 
 /** Permissions qui ouvrent l'onglet Réglages d'un monde (cf. WorldHome). */
-export const SETTINGS_PERMISSIONS = ["world.settings", "roles.manage", "categories.manage", "relations.manage"] as const;
+export const SETTINGS_PERMISSIONS = ["world.settings", "roles.manage", "categories.manage", "relations.manage", "chatrooms.manage"] as const;

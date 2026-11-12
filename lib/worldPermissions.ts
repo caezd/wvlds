@@ -160,6 +160,8 @@ export function canOpenWorldSettings(m: WorldMembership | null): boolean {
     hasWorldPermission(m, "roles.manage") ||
     hasWorldPermission(m, "categories.manage") ||
     hasWorldPermission(m, "relations.manage") ||
-    hasWorldPermission(m, "personas.review")
+    hasWorldPermission(m, "personas.review") ||
+    // Onglet Signalements (migration 209).
+    hasWorldPermission(m, "chatrooms.manage")
   );
 }

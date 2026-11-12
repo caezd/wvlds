@@ -7,6 +7,9 @@
 -- `world_permission_keys()` de la production diverge du dépôt (branches non
 -- fusionnées) et ne peut pas être réécrite sans risque.
 --
+-- (Les références de personnes pointent vers `profiles` : corrigé en prod par
+-- la migration 210, appliquée après une première version vers `auth.users`.)
+--
 -- Le traitement passe par `resolve_message_report` : classer le signalement,
 -- ou supprimer le message signalé. La policy de suppression de
 -- `chat_messages` reste « l'auteur seul » : un modérateur ne supprime que des
@@ -19,13 +22,13 @@ CREATE TABLE IF NOT EXISTS public.message_reports (
   chat_id     uuid        NOT NULL REFERENCES public.chatrooms(id) ON DELETE CASCADE,
   world_id    uuid        NOT NULL REFERENCES public.worlds(id) ON DELETE CASCADE,
   -- Auteur du message signalé, conservé si le message disparaît.
-  message_author_id uuid  REFERENCES auth.users(id) ON DELETE SET NULL,
-  reporter_id uuid        NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
+  message_author_id uuid  REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reporter_id uuid        NOT NULL DEFAULT auth.uid() REFERENCES public.profiles(id) ON DELETE CASCADE,
   reason      text        NOT NULL CHECK (char_length(btrim(reason)) BETWEEN 1 AND 500),
   status      text        NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'dismissed', 'actioned')),
   created_at  timestamptz NOT NULL DEFAULT now(),
   resolved_at timestamptz,
-  resolved_by uuid        REFERENCES auth.users(id) ON DELETE SET NULL
+  resolved_by uuid        REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 -- Un signalement ouvert par personne et par message.

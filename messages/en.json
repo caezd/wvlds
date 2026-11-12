@@ -772,7 +772,22 @@
     "personaReview": {
       "label": "Sheet review",
       "help": "A new sheet starts as a draft; once complete, its player submits it and a member with “Review sheets” approves it or sends it back. Only approved sheets play."
-    }
+    },
+    "tabReports": "Reports",
+    "reportsIntro": "Messages reported by members. Dismissing a report removes it from the queue; deleting the message settles all its reports.",
+    "reportsEmpty": "No pending reports.",
+    "reportsBy": "Reported by {name}",
+    "reportsInRoom": "in {room}",
+    "reportsUnknown": "unknown",
+    "reportsBlock": "[block]",
+    "reportsMessageGone": "Message already deleted",
+    "reportsView": "View message",
+    "reportsDismiss": "Dismiss",
+    "reportsDelete": "Delete message",
+    "reportsDeleteConfirm": "The reported message will be deleted for everyone. This cannot be undone.",
+    "reportsDeleted": "Message deleted",
+    "reportsDismissed": "Report dismissed",
+    "reportsActionFailed": "The action failed"
   },
   "auth": {
     "signin": "Sign in",
@@ -1495,7 +1510,16 @@
     "replyUnavailable": "Message deleted or unavailable",
     "replyBlock": "[block]",
     "replyUnknownAuthor": "Someone",
-    "replyJumpTo": "Go to {author}’s message"
+    "replyJumpTo": "Go to {author}’s message",
+    "report": "Report",
+    "reportTitle": "Report this message",
+    "reportDescription": "The world’s moderators will see your report and the message. The author is not notified.",
+    "reportPlaceholder": "Why are you reporting this message?",
+    "reportCancel": "Cancel",
+    "reportSubmit": "Report",
+    "reportSent": "Report sent to the moderators",
+    "reportDuplicate": "You already reported this message",
+    "reportFailed": "The report failed"
   },
   "changelog": {
     "title": "Changelog",

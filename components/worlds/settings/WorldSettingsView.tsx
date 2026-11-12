@@ -83,6 +83,7 @@ const SETTINGS_TAB_TRIGGER_CLASS =
     "relative shrink-0 px-0.5 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 import { LabelWithHelp } from "./LabelWithHelp";
+import { WorldReportsTab } from "./WorldReportsTab";
 import { WorldRolesTab } from "./WorldRolesTab";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
@@ -119,6 +120,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         relations: can("world.settings") || can("relations.manage"),
         roles: can("world.settings") || can("roles.manage"),
         community: public_worlds && can("world.settings"),
+        // Signalements (migration 209) : « Gérer les salons » — administrateurs inclus.
+        reports: can("chatrooms.manage"),
     };
     const firstTab = (Object.keys(tabs) as (keyof typeof tabs)[]).find((k) => tabs[k]) ?? "appearance";
     // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
@@ -314,6 +317,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 )}
                                 {tabs.community && (
                                     <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCommunity")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.reports && (
+                                    <TabsPrimitive.Trigger value="reports" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabReports")}</TabsPrimitive.Trigger>
                                 )}
                             </TabsPrimitive.List>
                             <ScrollBar orientation="horizontal" />
@@ -569,6 +575,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         {tabs.roles && (
                             <TabsContent value="roles" className="mt-0">
                                 <WorldRolesTab key={`roles-${world.id}`} worldId={world.id} />
+                            </TabsContent>
+                        )}
+
+                        {/* ── Signalements ─────────────────────────────── */}
+                        {tabs.reports && (
+                            <TabsContent value="reports" className="mt-0">
+                                <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
                             </TabsContent>
                         )}
 

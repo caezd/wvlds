@@ -51,6 +51,7 @@ export function ChatroomMessageHeader({
   pickerOpen,
   setPickerOpen,
   onReply,
+  onReport,
 }: {
   message: ChatMessageWithPersona;
   mine: boolean;
@@ -79,6 +80,7 @@ export function ChatroomMessageHeader({
   pickerOpen: boolean;
   setPickerOpen: (open: boolean) => void;
   onReply?: () => void;
+  onReport?: () => void;
 }) {
   const t = useTranslations("chatrooms");
   const tPersonaNpc = useTranslations("personas.npc");
@@ -168,7 +170,7 @@ export function ChatroomMessageHeader({
               </Popover>
             )}
 
-            {!editing && !isMobile && (mine || onPin || onReply) && (
+            {!editing && !isMobile && (mine || onPin || onReply || onReport) && (
               <MessageActionsDropdown
                 mine={mine}
                 isPinned={!!pinId}
@@ -178,6 +180,7 @@ export function ChatroomMessageHeader({
                 onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
                 onRequestDelete={onRequestDelete}
                 onReply={onReply}
+                onReport={onReport}
               />
             )}
 

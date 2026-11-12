@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Salons",
+    text: "On peut signaler le message d’un autre joueur (« Signaler » dans son menu), avec une raison. Les membres qui gèrent les salons du monde retrouvent les signalements dans un nouvel onglet « Signalements » des réglages : voir le message, classer le signalement, ou supprimer le message.",
+  },
+  {
+    date: "2026-11",
     tag: "Mondes",
     text: "Rejoindre un monde fait apparaître ses non-lus en direct, sans recharger ; en être retiré coupe aussitôt tout ce qui en venait. Les départs d’un monde ne sont plus signalés qu’à la personne concernée.",
   },

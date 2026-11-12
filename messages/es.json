@@ -772,7 +772,22 @@
     "personaReview": {
       "label": "Validación de las fichas",
       "help": "Una ficha nueva nace como borrador; una vez completa, su jugador la envía y un miembro con «Validar las fichas» la valida o la devuelve. Solo las fichas validadas juegan."
-    }
+    },
+    "tabReports": "Denuncias",
+    "reportsIntro": "Mensajes denunciados por los miembros. Archivar una denuncia la quita de la cola; eliminar el mensaje resuelve todas sus denuncias.",
+    "reportsEmpty": "No hay denuncias pendientes.",
+    "reportsBy": "Denunciado por {name}",
+    "reportsInRoom": "en {room}",
+    "reportsUnknown": "desconocido",
+    "reportsBlock": "[bloque]",
+    "reportsMessageGone": "Mensaje ya eliminado",
+    "reportsView": "Ver el mensaje",
+    "reportsDismiss": "Archivar",
+    "reportsDelete": "Eliminar el mensaje",
+    "reportsDeleteConfirm": "El mensaje denunciado se eliminará para todos. Esta acción es definitiva.",
+    "reportsDeleted": "Mensaje eliminado",
+    "reportsDismissed": "Denuncia archivada",
+    "reportsActionFailed": "La acción no se completó"
   },
   "auth": {
     "signin": "Iniciar sesión",
@@ -1495,7 +1510,16 @@
     "replyUnavailable": "Mensaje eliminado o no disponible",
     "replyBlock": "[bloque]",
     "replyUnknownAuthor": "Alguien",
-    "replyJumpTo": "Ir al mensaje de {author}"
+    "replyJumpTo": "Ir al mensaje de {author}",
+    "report": "Denunciar",
+    "reportTitle": "Denunciar este mensaje",
+    "reportDescription": "Los moderadores del mundo verán tu denuncia y el mensaje. El autor no recibe aviso.",
+    "reportPlaceholder": "¿Por qué denuncias este mensaje?",
+    "reportCancel": "Cancelar",
+    "reportSubmit": "Denunciar",
+    "reportSent": "Denuncia enviada a los moderadores",
+    "reportDuplicate": "Ya denunciaste este mensaje",
+    "reportFailed": "La denuncia no se completó"
   },
   "changelog": {
     "title": "Historial de cambios",

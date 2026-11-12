@@ -772,7 +772,22 @@
     "personaReview": {
       "label": "Validation des fiches",
       "help": "Une nouvelle fiche naît en brouillon ; une fois complète, son joueur la soumet et un membre ayant « Valider les fiches » la valide ou la renvoie. Seules les fiches validées jouent."
-    }
+    },
+    "tabReports": "Signalements",
+    "reportsIntro": "Messages signalés par les membres. Classer un signalement le retire de la file ; supprimer le message règle tous ses signalements.",
+    "reportsEmpty": "Aucun signalement en attente.",
+    "reportsBy": "Signalé par {name}",
+    "reportsInRoom": "dans {room}",
+    "reportsUnknown": "inconnu",
+    "reportsBlock": "[bloc]",
+    "reportsMessageGone": "Message déjà supprimé",
+    "reportsView": "Voir le message",
+    "reportsDismiss": "Classer",
+    "reportsDelete": "Supprimer le message",
+    "reportsDeleteConfirm": "Le message signalé sera supprimé pour tout le monde. Cette action est définitive.",
+    "reportsDeleted": "Message supprimé",
+    "reportsDismissed": "Signalement classé",
+    "reportsActionFailed": "L’action n’a pas abouti"
   },
   "auth": {
     "signin": "Connexion",
@@ -1495,7 +1510,16 @@
     "replyUnavailable": "Message supprimé ou indisponible",
     "replyBlock": "[bloc]",
     "replyUnknownAuthor": "Quelqu’un",
-    "replyJumpTo": "Aller au message de {author}"
+    "replyJumpTo": "Aller au message de {author}",
+    "report": "Signaler",
+    "reportTitle": "Signaler ce message",
+    "reportDescription": "Les modérateurs du monde verront votre signalement et le message. L’auteur n’est pas prévenu.",
+    "reportPlaceholder": "Pourquoi signalez-vous ce message ?",
+    "reportCancel": "Annuler",
+    "reportSubmit": "Signaler",
+    "reportSent": "Signalement envoyé aux modérateurs",
+    "reportDuplicate": "Vous avez déjà signalé ce message",
+    "reportFailed": "Le signalement n’a pas abouti"
   },
   "changelog": {
     "title": "Changelog",

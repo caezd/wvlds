@@ -2,6 +2,7 @@
 export const TABLE = {
   CHAT_MESSAGES: "chat_messages",
   CHAT_MESSAGE_REACTIONS: "chat_message_reactions",
+  MESSAGE_REPORTS: "message_reports",
   CHAT_CHOICE_VOTES: "chat_choice_votes",
   CHATROOMS: "chatrooms",
   CHATROOM_KEYS: "chatroom_keys",
