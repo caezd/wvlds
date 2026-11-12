@@ -1,5 +1,5 @@
 // app/(protected)/w/[id]/layout.tsx
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { getWorldById, getWorldMembership } from "@/lib/currentRequest";
@@ -12,6 +12,7 @@ import { AgeGate } from "@/components/worlds/AgeGate";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
+import { WorldSidebarSkeleton } from "@/components/worlds/sidebar/WorldSidebarSkeleton";
 
 export default async function WorldLayout({
   children,
@@ -81,7 +82,14 @@ export default async function WorldLayout({
         <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
           <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
           <div className="flex min-h-0 w-full flex-1 flex-row">
-            <WorldSidebar worldId={id} />
+            {/* La sidebar (salons, non-lus, mondes, quota… ~8 requêtes) n'est
+                plus attendue avant d'envoyer la page : elle arrive en streaming
+                derrière son squelette. Sans risque de clignotement en naviguant
+                dans le monde : changer de `?view=` ne remonte pas ce layout, la
+                limite Suspense ne se redéclenche qu'à l'entrée dans un monde. */}
+            <Suspense fallback={<WorldSidebarSkeleton />}>
+              <WorldSidebar worldId={id} />
+            </Suspense>
             {children}
           </div>
         </main>

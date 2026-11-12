@@ -7,7 +7,8 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { getInitials } from "@/lib/textFormatting";
-import type { Persona } from "@/types/db";
+import type { ChatMessageWithPersona, Persona } from "@/types/db";
+import { MESSAGE_COLUMNS } from "@/lib/chatMessagePage";
 import { TABLE, RPC } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -15,7 +16,7 @@ import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { ContentWarningChipInput } from "@/components/chatrooms/composer/ContentWarningChipInput";
 import { Button } from "../../ui/button";
-import { SendHorizontal, X, Lock, UserPlus } from "lucide-react";
+import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -81,6 +82,21 @@ type ChatroomComposerProps = {
     onMessageSent?: (messageId: number, chatId: string, plainText: string) => void;
     /** Appelé après l'envoi d'un bloc anchor avec le message_id et le label. */
     onAnchorSent?: (messageId: number, label: string) => void;
+    /**
+     * Appelé dès que le message est enregistré, avec la ligne complète (persona,
+     * auteur) et le contenu EN CLAIR : la vue l'affiche aussitôt, sans attendre
+     * l'événement Realtime puis la relecture du message qu'il déclenche.
+     */
+    onMessageCreated?: (message: ChatMessageWithPersona) => void;
+    /** Message auquel on répond (choisi via « Répondre ») ; null hors réponse. */
+    replyTo?: { id: number; author: string; excerpt: string } | null;
+    /** Abandonne la réponse — appelé aussi après un envoi réussi. */
+    onCancelReply?: () => void;
+    /**
+     * Languette accrochée au haut du composeur (même largeur, la carte en
+     * recouvre le bas) — ex. l'ordre de passage du salon. Rien si null.
+     */
+    topTab?: React.ReactNode;
     worldTimelineConfig?: WorldTimelineConfig | null;
     timelineDate?: WorldTimelineDate | null;
     onTimelineDateChange?: (d: WorldTimelineDate | null) => void;
@@ -114,6 +130,10 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     onMessageSent,
     typingLine,
     onAnchorSent,
+    onMessageCreated,
+    replyTo = null,
+    onCancelReply,
+    topTab = null,
     worldTimelineConfig,
     timelineDate,
     onTimelineDateChange,
@@ -525,7 +545,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 visibleToLabels: buildVisibleToLabels(visibleTo, participants),
                 contentWarnings: applyContentWarnings ? contentWarningsChips.tags : null,
             });
-            const { data: newMessage, error } = await supabase
+            // La ligne complète revient avec l'insertion (mêmes colonnes que la
+            // vue) : le message s'affiche dès cette réponse.
+            const { data: inserted, error } = await supabase
                 .from(TABLE.CHAT_MESSAGES)
                 .insert({
                     chat_id: targetChatId,
@@ -534,35 +556,57 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     persona_id: selectedPersona.id,
                     metadata: finalMetadata,
                     ...(visibleTo !== null ? { visible_to: [userId, ...visibleTo] } : {}),
+                    ...(replyTo ? { reply_to_id: replyTo.id } : {}),
                 })
-                .select("id, world_id")
+                .select(`world_id, ${MESSAGE_COLUMNS}`)
                 .single();
-            if (error) { toast.error(tChatrooms("sendFailed"), { description: error.message }); return false; }
+            if (error || !inserted) { toast.error(tChatrooms("sendFailed"), { description: error?.message }); return false; }
+            const newMessage = inserted as unknown as ChatMessageWithPersona & { id: number; world_id: string | null };
+            onMessageCreated?.({ ...newMessage, content: text });
+            if (replyTo) onCancelReply?.();
             onMessageSent?.(newMessage.id, targetChatId, text);
-            await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
-                { chat_id: targetChatId, user_id: userId, persona_id: selectedPersona.id },
-                { onConflict: "chat_id,user_id" },
-            );
-            const { error: rpcErr } = await supabase.rpc(RPC.AWARD_EVENT, {
-                p_event: "message_posted",
-                p_ref: newMessage.id,
-                p_meta: { chat_id: targetChatId, world_id: newMessage.world_id, persona_id: selectedPersona.id },
-            });
-            if (rpcErr) console.error("award_event failed:", rpcErr);
 
+            // Effets annexes, en parallèle et SANS les attendre : le composeur se
+            // libère dès l'enregistrement du message. Ils retenaient le champ
+            // pendant trois à cinq allers-retours (préférence de persona, puis
+            // points, puis mentions), chacun attendant le précédent.
+            const annexes: Promise<unknown>[] = [
+                Promise.resolve(
+                    supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
+                        { chat_id: targetChatId, user_id: userId, persona_id: selectedPersona.id },
+                        { onConflict: "chat_id,user_id" },
+                    ),
+                ).then(({ error: prefErr }) => {
+                    if (prefErr) console.error("persona pref upsert failed:", prefErr);
+                }),
+                Promise.resolve(
+                    supabase.rpc(RPC.AWARD_EVENT, {
+                        p_event: "message_posted",
+                        p_ref: newMessage.id,
+                        p_meta: { chat_id: targetChatId, world_id: newMessage.world_id, persona_id: selectedPersona.id },
+                    }),
+                ).then(({ error: rpcErr }) => {
+                    if (rpcErr) console.error("award_event failed:", rpcErr);
+                }),
+            ];
             // Mentions : côté client car le contenu peut être chiffré côté serveur
             if (newMessage.world_id && text) {
-                await notifyMentions(supabase, {
-                    text,
-                    messageId: newMessage.id,
-                    chatId: targetChatId,
-                    worldId: newMessage.world_id,
-                    selfId: userId,
-                    selfUsername: username,
-                    roles: worldRoles,
-                    onlineMemberIds,
-                });
+                annexes.push(
+                    notifyMentions(supabase, {
+                        text,
+                        messageId: newMessage.id,
+                        chatId: targetChatId,
+                        worldId: newMessage.world_id,
+                        selfId: userId,
+                        selfUsername: username,
+                        roles: worldRoles,
+                        onlineMemberIds,
+                    }),
+                );
             }
+            void Promise.allSettled(annexes).then((results) => {
+                for (const r of results) if (r.status === "rejected") console.error("effet annexe de l'envoi :", r.reason);
+            });
 
             // Si c'est un bloc anchor, notifier le parent pour qu'il insère un chat_pin
             if (onAnchorSent && text.startsWith('{"_type":"anchor"')) {
@@ -642,6 +686,30 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             </div>
         </div>
     );
+
+    // « Répondre » sur mobile : le composeur vit dans un tiroir fermé, on l'ouvre.
+    useEffect(() => {
+        if (replyTo && useMobileDrawer) setDrawerOpen(true);
+    }, [replyTo, useMobileDrawer]);
+
+    const replyBar = replyTo ? (
+        <div
+            className="mb-1.5 flex items-center gap-2 rounded-md border-l-2 border-primary/60 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
+            data-testid="composer-reply"
+        >
+            <CornerUpLeft className="size-3.5 shrink-0" />
+            <span className="shrink-0">{tChatrooms("replyingTo", { author: replyTo.author })}</span>
+            <span className="min-w-0 flex-1 truncate">{replyTo.excerpt}</span>
+            <button
+                type="button"
+                onClick={onCancelReply}
+                className="shrink-0 rounded p-0.5 hover:bg-muted hover:text-foreground"
+                aria-label={tChatrooms("cancelReply")}
+            >
+                <X className="size-3.5" />
+            </button>
+        </div>
+    ) : null;
 
     const composerCard = (
         <div
@@ -760,6 +828,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         )}
                     </div>
                 )}
+
+                {replyBar && <div className="px-2.5 pt-2">{replyBar}</div>}
 
                 {/* Zone de saisie */}
                 <div className={cn(
@@ -893,6 +963,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             stretchCard && "h-full",
         )}>
             {typingBanner}
+            {/* Au-dessus de la languette « en train d'écrire » (z-0), sous la
+                carte (z-10) qui en recouvre le bas : elle fait corps avec le
+                composeur. */}
+            {topTab && <div className="relative z-[5] -mb-2.5">{topTab}</div>}
+            {useMobileDrawer && !drawerOpen && replyBar}
 
             {useMobileDrawer ? (
                 <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>

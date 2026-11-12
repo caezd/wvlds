@@ -17,6 +17,8 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
 import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { emitMembershipChange } from "@/lib/membershipEvents";
+import { emitRoomMessage, type RoomMessageEvent } from "@/lib/roomMessageEvents";
 
 // Compteurs par clé — à préférer quand un composant ne suit qu'une salle ou
 // qu'un monde, plutôt que de lire le `Record` complet. Voir lib/unreadStore.ts.
@@ -412,35 +414,85 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
             applyUnreads(shell.room_unreads);
 
-            // Realtime : un SEUL canal pour les messages de tous les mondes
-            // (un binding filtré par monde), au lieu d'un canal par monde.
-            // Les compteurs sont incrémentés localement — aucune RPC ici.
-            const fermerMsg = openRealtimeChannel(supabase, channel.userMessages(userId), (msgCh) => {
-            for (const wid of shell.world_ids) {
-                msgCh.on(
-                    "postgres_changes",
-                    {
-                        event: "INSERT",
-                        schema: "public",
-                        table: TABLE.CHAT_MESSAGES,
-                        filter: `world_id=eq.${wid}`,
-                    },
-                    (payload: { new: Record<string, unknown> }) => {
-                        const row = payload.new as { chat_id: string; author_id: string | null };
-                        if (row.author_id === userIdRef.current) return;
-                        if (activeChatRef.current === row.chat_id) {
-                            void markChatRead(row.chat_id);
-                            return;
-                        }
-                        roomWorldRef.current[row.chat_id] = wid;
-                        setRoomUnread(prev => ({ ...prev, [row.chat_id]: (prev[row.chat_id] ?? 0) + 1 }));
-                    },
-                );
-            }
-            msgCh.subscribe();
-            return msgCh;
+            // Realtime : avis de nouveaux messages DIFFUSÉS par la base
+            // (trigger `broadcast_new_chat_message`, migration 206) sur des
+            // canaux privés — un par monde, plus un personnel pour les messages
+            // à destinataires restreints. L'accès est vérifié une fois, à
+            // l'abonnement. Avant : `postgres_changes` sur `chat_messages`, où
+            // Realtime réévaluait la policy de lecture pour chaque abonné à
+            // chaque message posté. Les compteurs restent incrémentés
+            // localement — aucune RPC ici.
+            const surNouveauMessage = (msg: { payload?: Record<string, unknown> }) => {
+                const row = (msg.payload ?? {}) as { chat_id?: string; author_id?: string | null; world_id?: string | null };
+                if (!row.chat_id) return;
+                if (row.author_id === userIdRef.current) return;
+                if (activeChatRef.current === row.chat_id) {
+                    void markChatRead(row.chat_id);
+                    return;
+                }
+                if (row.world_id) roomWorldRef.current[row.chat_id] = row.world_id;
+                const chatId = row.chat_id;
+                setRoomUnread(prev => ({ ...prev, [chatId]: (prev[chatId] ?? 0) + 1 }));
+            };
+            const prive = { config: { private: true } };
+            // Canal de chaque monde, refermable seul (retrait du monde).
+            const canauxMondes = new Map<string, () => void>();
+            const ouvrirMonde = (wid: string) => {
+                if (!mounted || canauxMondes.has(wid)) return;
+                canauxMondes.set(wid, openRealtimeChannel(
+                    supabase,
+                    channel.worldMessages(wid),
+                    (ch) => ch.on("broadcast", { event: "message" }, surNouveauMessage).subscribe(),
+                    prive,
+                ));
+            };
+            const fermerMonde = (wid: string) => {
+                canauxMondes.get(wid)?.();
+                canauxMondes.delete(wid);
+            };
+            enregistrer(() => {
+                for (const fermer of canauxMondes.values()) fermer();
+                canauxMondes.clear();
             });
-            enregistrer(fermerMsg);
+            for (const wid of shell.world_ids) ouvrirMonde(wid);
+
+            // Adhésion / retrait (migration 208), sur le canal personnel : le
+            // canal du monde suit, ses non-lus disparaissent avec lui, et les
+            // autres composants (WorldMembershipGuard) sont prévenus.
+            const surAdhesion = (msg: { payload?: Record<string, unknown> }) => {
+                const avis = (msg.payload ?? {}) as { world_id?: string; change?: string };
+                if (!avis.world_id || (avis.change !== "added" && avis.change !== "removed")) return;
+                const wid = avis.world_id;
+                if (avis.change === "added") {
+                    ouvrirMonde(wid);
+                } else {
+                    fermerMonde(wid);
+                    const salles = new Set(
+                        Object.entries(roomWorldRef.current).filter(([, w]) => w === wid).map(([c]) => c),
+                    );
+                    if (salles.size) {
+                        setRoomUnread(prev => Object.fromEntries(Object.entries(prev).filter(([c]) => !salles.has(c))));
+                        setNeverOpenedRooms(prev => new Set([...prev].filter(c => !salles.has(c))));
+                    }
+                }
+                emitMembershipChange({ worldId: wid, change: avis.change });
+            };
+            enregistrer(openRealtimeChannel(
+                supabase,
+                channel.userMessages(userId),
+                (ch) => ch
+                    .on("broadcast", { event: "message" }, surNouveauMessage)
+                    .on("broadcast", { event: "membership" }, surAdhesion)
+                    // Notes privées d'un salon (migration 212) : relayées au
+                    // salon ouvert, jamais annoncées sur le canal du salon.
+                    .on("broadcast", { event: "room_message" }, (msg: { payload?: Record<string, unknown> }) => {
+                        const avis = (msg.payload ?? {}) as Partial<RoomMessageEvent>;
+                        if (!avis.chat_id || typeof avis.id !== "number" || !avis.op) return;
+                        emitRoomMessage({ op: avis.op, id: avis.id, chat_id: avis.chat_id, author_id: avis.author_id ?? null });
+                    })
+                    .subscribe(),
+                prive,
+            ));
 
             // Realtime : nouvelles notifications + mises à jour agrégées (chatroom_reply)
             const fermerNotif = openRealtimeChannel(supabase, channel.userNotifs(userId), (notifCh) => notifCh

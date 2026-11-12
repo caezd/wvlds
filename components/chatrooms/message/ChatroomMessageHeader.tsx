@@ -50,6 +50,8 @@ export function ChatroomMessageHeader({
   toggleReaction,
   pickerOpen,
   setPickerOpen,
+  onReply,
+  onReport,
 }: {
   message: ChatMessageWithPersona;
   mine: boolean;
@@ -77,6 +79,8 @@ export function ChatroomMessageHeader({
   toggleReaction: (emoteKey: string) => void | Promise<void>;
   pickerOpen: boolean;
   setPickerOpen: (open: boolean) => void;
+  onReply?: () => void;
+  onReport?: () => void;
 }) {
   const t = useTranslations("chatrooms");
   const tPersonaNpc = useTranslations("personas.npc");
@@ -166,7 +170,7 @@ export function ChatroomMessageHeader({
               </Popover>
             )}
 
-            {!editing && !isMobile && (mine || onPin) && (
+            {!editing && !isMobile && (mine || onPin || onReply || onReport) && (
               <MessageActionsDropdown
                 mine={mine}
                 isPinned={!!pinId}
@@ -175,6 +179,8 @@ export function ChatroomMessageHeader({
                 onPin={onPin ? () => onPin(message.id) : undefined}
                 onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
                 onRequestDelete={onRequestDelete}
+                onReply={onReply}
+                onReport={onReport}
               />
             )}
 
@@ -216,6 +222,18 @@ export function ChatroomMessageHeader({
         <div className="flex justify-between items-center gap-2 min-h-7">
           <div className="flex items-center gap-2 text-zinc-400 text-xs">
             <DateDisplay value={date} />
+            {message.metadata?.edited_at && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-default select-none" data-testid="message-edited">
+                    {t("edited")}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("editedAt", { date: new Date(message.metadata.edited_at) })}
+                </TooltipContent>
+              </Tooltip>
+            )}
             {challengeWon && (
               <Tooltip>
                 <TooltipTrigger asChild>

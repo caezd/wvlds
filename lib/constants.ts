@@ -2,6 +2,8 @@
 export const TABLE = {
   CHAT_MESSAGES: "chat_messages",
   CHAT_MESSAGE_REACTIONS: "chat_message_reactions",
+  MESSAGE_REPORTS: "message_reports",
+  CHATROOM_TURNS: "chatroom_turns",
   CHAT_CHOICE_VOTES: "chat_choice_votes",
   CHATROOMS: "chatrooms",
   CHATROOM_KEYS: "chatroom_keys",
@@ -68,11 +70,15 @@ export const RPC = {
 
 // --- Realtime channel name factories -----------------------------------------
 export const channel = {
+  /** Canal PRIVÉ : avis des messages à destinataires restreints (migration 206). */
   userMessages: (userId: string) => `msgs:${userId}`,
+  /** Canal PRIVÉ : avis des nouveaux messages d'un monde (migration 206). */
+  worldMessages: (worldId: string) => `world-msgs:${worldId}`,
   worldRooms: (wid: string) => `w:${wid}:rooms`,
   worldMap: (wid: string) => `w:${wid}:map`,
   chatPresence: (chatId: string) => `chat:${chatId}`,
-  chatMessages: (chatId: string) => `chat-${chatId}`,
+  /** Canal PRIVÉ du salon : messages, réactions, votes, ordre… (migration 212). */
+  chatMessages: (chatId: string) => `room:${chatId}`,
   chatPins: (chatId: string) => `chat-pins-${chatId}`,
   navMessages: (worldId: string) => `nav-messages-${worldId}`,
   navReads: (selfId: string) => `nav-reads-${selfId}`,

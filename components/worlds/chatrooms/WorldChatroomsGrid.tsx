@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { WorldHomeRoom as Room } from "@/types/worlds";
 import Image from "next/image";
-import Link from "next/link";
+import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import { ChevronRight, MessagesSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -160,7 +160,7 @@ export function WorldChatroomsGrid({
           const subtitle = relativeTime(room.last_message_at);
           return (
             <li key={room.id}>
-              <Link
+              <ChatroomLink
                 href={href}
                 onClick={
                   onRoomClick
@@ -218,7 +218,7 @@ export function WorldChatroomsGrid({
                 </span>
 
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 transition-transform group-hover:translate-x-0.5" />
-              </Link>
+              </ChatroomLink>
             </li>
           );
         })}

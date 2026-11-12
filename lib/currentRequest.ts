@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { getFeatureFlags, type FeatureFlags } from "@/lib/featureFlags";
+import { unstable_cache } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { FEATURE_FLAGS_TAG, FLAG_KEYS, flagsFromRows, getFeatureFlags, type FeatureFlags } from "@/lib/featureFlags";
 import { getUserQuotaWithClient, type Plan, type Quota } from "@/lib/userQuota";
 import type { World } from "@/types/worlds";
 import { buildMembership, sortRolesByPosition, type WorldMembership, type WorldRoleRow } from "@/lib/worldPermissions";
@@ -67,8 +69,49 @@ export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> 
   return (data as CurrentProfile) ?? null;
 });
 
-/** Feature flags — une seule requête `feature_flags`, mémoïsée. */
+/**
+ * Lecture des drapeaux partagée ENTRE les requêtes (cache de données Next).
+ *
+ * Les drapeaux sont les mêmes pour tout le monde et lus sur chaque page : on
+ * les garde en cache au lieu d'interroger la base à chaque rendu. Invalidé
+ * aussitôt par l'action admin qui les modifie (`updateTag(FEATURE_FLAGS_TAG)`),
+ * et au plus tard au bout d'une minute pour une modification faite
+ * directement en base.
+ *
+ * Client « service » et non celui de la session : un cache partagé ne peut
+ * pas lire les cookies de la requête, et la policy de lecture de
+ * `feature_flags` est réservée aux comptes connectés. La requête est fixe et
+ * ne lit que des valeurs déjà exposées à tous les clients.
+ *
+ * Une erreur LÈVE au lieu de rendre les valeurs par défaut : un échec ne doit
+ * pas être mis en cache pour une minute.
+ */
+const readSharedFeatureFlags = unstable_cache(
+  async (): Promise<FeatureFlags> => {
+    const { data, error } = await createAdminClient()
+      .from("feature_flags")
+      .select("key, enabled")
+      .in("key", [...FLAG_KEYS]);
+    if (error) throw new Error(error.message);
+    return flagsFromRows(data as { key: string; enabled: boolean }[] | null);
+  },
+  ["feature-flags"],
+  { tags: [FEATURE_FLAGS_TAG], revalidate: 60 },
+);
+
+/**
+ * Feature flags — servis par le cache partagé ci-dessus, mémoïsés pour la
+ * requête. Sans clé de service (développement local) ou si la lecture
+ * partagée échoue, on retombe sur la lecture par la session, comme avant.
+ */
 export const getCachedFeatureFlags = cache(async (): Promise<FeatureFlags> => {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      return await readSharedFeatureFlags();
+    } catch (error) {
+      console.error("[getCachedFeatureFlags] lecture partagée impossible : %s", (error as Error).message);
+    }
+  }
   const supabase = await createClient();
   return getFeatureFlags(supabase);
 });

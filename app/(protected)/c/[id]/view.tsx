@@ -8,13 +8,17 @@ import dynamic from "next/dynamic";
 import { amorcerCleDeSalon } from "@/lib/chatroomKeyBootstrap";
 import { decryptMessage } from "@/lib/crypto";
 import Link from "next/link";
-import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
+import { BarChart3, Globe, GlobeLock, ListOrdered, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { ReportMessageDialog } from "@/components/chatrooms/moderation/ReportMessageDialog";
+import { ChatroomTurnBar } from "@/components/chatrooms/turns/ChatroomTurnBar";
+import { ChatroomTurnDialog } from "@/components/chatrooms/turns/ChatroomTurnDialog";
+import { isTurnActive, skipTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -33,7 +37,7 @@ import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBot
 import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
-import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, insertMessageById, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
 import { applyRemoteVoteChange } from "@/lib/choiceVotes";
 import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWarningBanner";
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
@@ -54,13 +58,14 @@ import {
   TABLE,
   RPC,
   SCROLL_THRESHOLD_PX,
-  CHAT_MESSAGES_PAGE_SIZE,
   LOAD_OLDER_THRESHOLD_PX,
 } from "@/lib/constants";
 import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
+import { decorateMessagePage, decryptReplyTo, fetchMessagePage, mergeResync } from "@/lib/chatMessagePage";
+import { replyAuthorLabel, replyExcerpt } from "@/lib/replyExcerpt";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -75,6 +80,11 @@ const SearchCenter = dynamic(() =>
 );
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
+
+/** Au plus, nombre de messages affichés relus à une reconnexion. */
+const RESYNC_MAX = 100;
+/** En deçà de cet âge, un rendu serveur est assez frais pour ne rien relire. */
+const RESYNC_FRESH_MS = 10_000;
 
 function ChatroomHeader({
   chat,
@@ -180,6 +190,8 @@ export default function ChatRoomView({
   initialIsFollowed,
   initialPersonaGroupColors,
   initialChallengeBadges,
+  renderedAt,
+  initialTurn = null,
 }: {
   chatId: string;
   initialChat: {
@@ -206,6 +218,14 @@ export default function ChatRoomView({
   initialPersonaGroupColors: Record<string, string>;
   /** Badges « défi remporté » des messages initiaux, résolus côté serveur. */
   initialChallengeBadges: [number, ChallengeBadge][];
+  /**
+   * Instant du rendu serveur (ms). Une page servie par le cache du routeur
+   * client (`staleTimes`) en porte un ancien : ses messages sont alors relus
+   * dès la première connexion du canal.
+   */
+  renderedAt?: number;
+  /** Ordre de passage du salon (migration 211), null s'il n'en a pas. */
+  initialTurn?: ChatroomTurn | null;
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -226,6 +246,9 @@ export default function ChatRoomView({
   const [statsOpen, setStatsOpen] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [turnSettingsOpen, setTurnSettingsOpen] = useState(false);
+  const [turn, setTurn] = useState<ChatroomTurn | null>(initialTurn);
+  useEffect(() => setTurn(initialTurn), [initialTurn]);
 
   async function handleToggleFollow() {
     const next = !isFollowed;
@@ -279,28 +302,10 @@ export default function ChatRoomView({
   // Les couleurs de groupe arrivent en props (résolues côté serveur) : plus
   // d'aller-retour réseau après l'hydratation pour cette donnée.
 
-  /* challenge badges — charge + met à jour en Realtime */
-  const loadChallengeBadges = useCallback(async (ids: number[]) => {
-    if (!ids.length) return;
-    type Row = { message_id: number; challenge: { title: string; description: string | null } | null };
-    const { data } = await supabase
-      .from(TABLE.CHALLENGE_ATTEMPTS)
-      .select("message_id, challenge:challenge_id(title, description)")
-      .in("message_id", ids)
-      .eq("status", "won");
-    if (!data) return;
-    setChallengeBadges((prev) => {
-      const next = new Map(prev);
-      for (const row of data as Row[]) {
-        if (row.challenge) next.set(Number(row.message_id), row.challenge);
-      }
-      return next;
-    });
-  }, [supabase]);
-
+  /* challenge badges — mis à jour en Realtime */
   useEffect(() => {
-    // Les badges des messages initiaux viennent des props ; `loadChallengeBadges`
-    // ne sert plus qu'au Realtime ci-dessous et aux pages d'historique.
+    // Les badges des messages initiaux viennent des props, ceux de l'historique
+    // de la page chargée (lib/chatMessagePage) ; ne reste que le Realtime.
 
     const sub = supabase
       .channel(`challenge-badges-${chatId}`)
@@ -534,70 +539,30 @@ export default function ChatRoomView({
     setLoadingOlder(true);
 
     try {
-      const { data: older, error } = await supabase
-        .from(TABLE.CHAT_MESSAGES)
-        .select(
-          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
-        )
-        .eq("chat_id", chatId)
-        .lt("created_at", oldest.created_at)
-        .order("created_at", { ascending: false })
-        .limit(CHAT_MESSAGES_PAGE_SIZE);
+      // Même chargement que la première page (lib/chatMessagePage) : réactions,
+      // VOTES et badges joints aux messages, en une requête. Cette page-ci ne
+      // lisait pas les votes — un sondage plus ancien que la première page
+      // s'affichait à zéro, sans le choix de l'utilisateur.
+      const page = await fetchMessagePage(supabase, chatId, { before: oldest.created_at });
 
-      if (error || !older) return;
+      hasMoreRef.current = page.hasMore;
+      setHasMore(page.hasMore);
+      if (!page.messages.length) return;
 
-      hasMoreRef.current = older.length === CHAT_MESSAGES_PAGE_SIZE;
-      setHasMore(hasMoreRef.current);
-      if (!older.length) return;
+      const pageWithReactions = (await decorateMessagePage(
+        page.messages,
+        page,
+        userId,
+        roomKeyRef.current,
+      )) as unknown as ChatMessageWithPersona[];
 
-      const page = older
-        .slice()
-        .reverse() as unknown as ChatMessageWithPersona[];
-
-      // Réactions des messages chargés
-      const { data: rows } = await supabase
-        .from(TABLE.CHAT_MESSAGE_REACTIONS)
-        .select("message_id, emoji, user_id")
-        .eq("chat_id", chatId)
-        .in(
-          "message_id",
-          page.map((m) => m.id),
-        );
-
-      const byMessage = new Map<
-        number,
-        Map<string, { count: number; me: boolean }>
-      >();
-      for (const r of (rows ?? []) as Array<{ message_id: number; emoji: string; user_id: string }>) {
-        const mid = Number(r.message_id);
-        const emoji = String(r.emoji);
-        const uid = String(r.user_id);
-        if (!byMessage.has(mid)) byMessage.set(mid, new Map());
-        const emMap = byMessage.get(mid)!;
-        const prev = emMap.get(emoji) ?? { count: 0, me: false };
-        emMap.set(emoji, {
-          count: prev.count + 1,
-          me: prev.me || (!!userId && uid === userId),
+      if (page.challengeBadges.length) {
+        setChallengeBadges((prev) => {
+          const next = new Map(prev);
+          for (const [mid, badge] of page.challengeBadges) next.set(mid, badge);
+          return next;
         });
       }
-
-      const key = roomKeyRef.current;
-      const pageWithReactions = await Promise.all(
-        page.map(async (m) => {
-          const emMap = byMessage.get(m.id);
-          const reactions: ReactionSummary[] = emMap
-            ? Array.from(emMap.entries())
-              .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
-              .sort(
-                (a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji),
-              )
-            : [];
-          const content = key
-            ? await decryptMessage(m.content ?? "", key)
-            : (m.content ?? "");
-          return { ...m, content, reactions };
-        }),
-      );
 
       const vp = getViewport();
       if (vp) {
@@ -609,7 +574,6 @@ export default function ChatRoomView({
       setMessages((prev) => {
         const existing = new Set(prev.map((m) => m.id));
         const fresh = pageWithReactions.filter((m) => !existing.has(m.id));
-        if (fresh.length) void loadChallengeBadges(fresh.map((m) => m.id));
         return fresh.length ? [...fresh, ...prev] : prev;
       });
     } finally {
@@ -785,9 +749,94 @@ export default function ChatRoomView({
     router.replace(`/c/${chatId}`, { scroll: false });
   }, [chatId, chat, searchParams, router]);
 
+  // Lu par le Realtime pour ne pas relire un message déjà affiché (le sien,
+  // ajouté dès la réponse de l'insertion), et par la resynchronisation.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  // ── Resynchronisation après une coupure ─────────────────────────────
+  // Le rattrapage du hook n'apporte que les NOUVEAUX messages. Une édition,
+  // une suppression, une réaction ou un vote survenus pendant la coupure — ou
+  // depuis le rendu mis en cache par le routeur — restaient invisibles. À
+  // chaque (re)connexion du canal, on relit donc les messages affichés (les
+  // RESYNC_MAX plus récents au plus) et on fusionne (cf. mergeResync).
+  const premiereConnexionRef = useRef(true);
+  const resyncEnCoursRef = useRef(false);
+  const resyncDisplayedMessages = async () => {
+    const premiere = premiereConnexionRef.current;
+    premiereConnexionRef.current = false;
+    // Première connexion sur un rendu serveur tout frais : rien à relire.
+    if (premiere && (!renderedAt || Date.now() - renderedAt < RESYNC_FRESH_MS)) return;
+    if (resyncEnCoursRef.current) return;
+    const affiches = messagesRef.current;
+    const oldest = affiches[0]?.created_at;
+    if (!oldest) return;
+    const maxId = affiches.reduce((max, m) => Math.max(max, m.id), 0);
+
+    resyncEnCoursRef.current = true;
+    try {
+      const page = await fetchMessagePage(supabase, chatId, { since: oldest, limit: RESYNC_MAX });
+      const fresh = (await decorateMessagePage(
+        page.messages,
+        page,
+        userId,
+        roomKeyRef.current,
+      )) as unknown as ChatMessageWithPersona[];
+      // Relecture tronquée : elle ne couvre que depuis son plus ancien message.
+      const windowStart = page.hasMore && fresh[0]?.created_at ? fresh[0].created_at : oldest;
+      setMessages((prev) => mergeResync(prev, fresh, { windowStart, maxId }));
+      if (page.challengeBadges.length) {
+        setChallengeBadges((prev) => {
+          const next = new Map(prev);
+          for (const [mid, badge] of page.challengeBadges) next.set(mid, badge);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("[resync] relecture des messages impossible :", error);
+    } finally {
+      resyncEnCoursRef.current = false;
+    }
+  };
+
+  // Trop de messages manqués pour les rattraper un à un (longue absence) :
+  // on repart de la page la plus récente, comme un rechargement — l'historique
+  // reste accessible en remontant. Les messages arrivés en direct pendant la
+  // lecture, plus récents que la page, sont conservés.
+  const rechargerDernierePage = async (): Promise<number | null> => {
+    try {
+      const page = await fetchMessagePage(supabase, chatId);
+      const fresh = (await decorateMessagePage(
+        page.messages,
+        page,
+        userId,
+        roomKeyRef.current,
+      )) as unknown as ChatMessageWithPersona[];
+      const dernier = fresh.reduce((max, m) => Math.max(max, m.id), 0);
+      setMessages((prev) => [...fresh, ...prev.filter((m) => m.id > dernier)]);
+      hasMoreRef.current = page.hasMore;
+      setHasMore(page.hasMore);
+      if (page.challengeBadges.length) {
+        setChallengeBadges((prev) => {
+          const next = new Map(prev);
+          for (const [mid, badge] of page.challengeBadges) next.set(mid, badge);
+          return next;
+        });
+      }
+      return dernier || null;
+    } catch (error) {
+      console.error("[rattrapage] rechargement de la dernière page impossible :", error);
+      return null;
+    }
+  };
+
   useRealtimeChatSync({
     chatId,
     selfId: userId,
+    isMessageKnown: (id) => messagesRef.current.some((m) => m.id === id),
+    onSubscribed: () => void resyncDisplayedMessages(),
+    onCatchUpGap: rechargerDernierePage,
+    onTurnChanged: setTurn,
     initialLatestId: initialMessages.at(-1)?.id ?? null,
     onMessageInserted: (msg, authorId) => {
       void (async () => {
@@ -795,10 +844,11 @@ export default function ChatRoomView({
         const content = key
           ? await decryptMessage(msg.content ?? "", key)
           : (msg.content ?? "");
-        const decrypted = { ...msg, content };
-        setMessages((prev) =>
-          prev.some((m) => m.id === decrypted.id) ? prev : [...prev, { ...decrypted, reactions: [], votes: [] }],
-        );
+        const decrypted = { ...(await decryptReplyTo(msg, key)), content };
+        // Insertion triée par id, pas un simple ajout en fin de liste : le
+        // rattrapage (cf. useRealtimeChatSync) peut livrer des messages plus
+        // anciens qu'un INSERT Realtime arrivé pendant sa lecture.
+        setMessages((prev) => insertMessageById(prev, { ...decrypted, reactions: [], votes: [] }));
         if (authorId) clearTyping(authorId);
       })();
     },
@@ -906,6 +956,40 @@ export default function ChatRoomView({
     [pinByMessageId, updatePinLabel],
   );
 
+  // ── Réponses ───────────────────────────────────────────────────────
+  // « Répondre » sur un message : le composeur affiche « Réponse à X » et
+  // l'envoi porte reply_to_id (migration 207). Callbacks stables (reçoivent
+  // l'id) pour ne pas défaire le `memo` de ChatroomMessage.
+  const canReply = !!post_message && canPost;
+  const [replyToId, setReplyToId] = useState<number | null>(null);
+  const handleReply = useCallback((id: number) => setReplyToId(id), []);
+  const cancelReply = useCallback(() => setReplyToId(null), []);
+  const replyToRef = useMemo(() => {
+    if (replyToId === null) return null;
+    const m = messages.find((x) => x.id === replyToId);
+    if (!m) return null;
+    return {
+      id: m.id,
+      author: replyAuthorLabel(m) ?? t("replyUnknownAuthor"),
+      excerpt: replyExcerpt(m.content) ?? t("replyBlock"),
+    };
+  }, [replyToId, messages, t]);
+  // Ordre de passage : « passer » le tour (qui règle l'ordre seulement).
+  const handleSkipTurn = useCallback(async () => {
+    if (!turn) return;
+    const res = await skipTurn(supabase, turn);
+    if (res.turn) setTurn(res.turn);
+    else toast.error(t("turnSaveFailed"), { description: res.error });
+  }, [turn, supabase, t]);
+
+  // Signalement : une seule fenêtre pour tout le salon.
+  const [reportMessageId, setReportMessageId] = useState<number | null>(null);
+  const handleReport = useCallback((id: number) => setReportMessageId(id), []);
+  const closeReport = useCallback(() => setReportMessageId(null), []);
+  const scrollToMessageRef = useRef(scrollToMessage);
+  scrollToMessageRef.current = scrollToMessage;
+  const handleJumpToMessage = useCallback((id: number) => scrollToMessageRef.current(id), []);
+
   const renderMessage = (m: ChatMessageWithPersona, smsFlags?: SmsRunFlags) => (
     <ChatroomMessage
       key={m.id}
@@ -929,6 +1013,9 @@ export default function ChatRoomView({
       onUpdated={handleUpdated}
       onRequestDelete={handleRequestDelete}
       onAnchorEdited={handleAnchorEdited}
+      onReply={canReply ? handleReply : undefined}
+      onJumpToMessage={handleJumpToMessage}
+      onReport={userId ? handleReport : undefined}
     />
   );
 
@@ -978,6 +1065,21 @@ export default function ChatRoomView({
                     <TooltipContent side="bottom" sideOffset={8}>
                       {isFollowed ? t("unfollow") : t("follow")}
                     </TooltipContent>
+                  </Tooltip>
+                )}
+                {canEdit && chat.worlds && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setTurnSettingsOpen(true)}
+                        aria-label={t("turnTitle")}
+                        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      >
+                        <ListOrdered className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8}>{t("turnTitle")}</TooltipContent>
                   </Tooltip>
                 )}
                 {canEdit && (
@@ -1031,6 +1133,12 @@ export default function ChatRoomView({
                       <DropdownMenuItem onClick={() => void handleToggleFollow()}>
                         <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-yellow-500")} />
                         {isFollowed ? t("unfollow") : t("follow")}
+                      </DropdownMenuItem>
+                    )}
+                    {canEdit && chat.worlds && (
+                      <DropdownMenuItem onClick={afterMenuClose(() => setTurnSettingsOpen(true))}>
+                        <ListOrdered className="mr-2 h-3.5 w-3.5" />
+                        {t("turnTitle")}
                       </DropdownMenuItem>
                     )}
                     {canEdit && (
@@ -1138,6 +1246,23 @@ export default function ChatRoomView({
                     if (userId) void pinAnchor(messageId, label, userId);
                   }}
                   onMessageSent={quests ? (mid, cid, text) => void handleMessageSent(mid, cid, text) : undefined}
+                  onMessageCreated={(msg) => {
+                    void (async () => {
+                      // L'extrait cité revient chiffré avec l'insertion.
+                      const withReply = await decryptReplyTo(msg, roomKeyRef.current);
+                      setMessages((prev) => insertMessageById(prev, { ...withReply, reactions: [], votes: [] }));
+                    })();
+                  }}
+                  replyTo={replyToRef}
+                  onCancelReply={cancelReply}
+                  topTab={isTurnActive(turn) ? (
+                    <ChatroomTurnBar
+                      turn={turn}
+                      selfId={userId}
+                      canManage={canEdit}
+                      onSkip={() => void handleSkipTurn()}
+                    />
+                  ) : null}
                 />}
               </div>
             </div>
@@ -1150,6 +1275,20 @@ export default function ChatRoomView({
           onUsePersona={(p) => setSelectedPersona(p)}
         />
       </div>
+
+      <ReportMessageDialog messageId={reportMessageId} onClose={closeReport} />
+
+      {canEdit && chat.worlds && (
+        <ChatroomTurnDialog
+          open={turnSettingsOpen}
+          onOpenChange={setTurnSettingsOpen}
+          chatId={chatId}
+          worldId={chat.worlds.id}
+          ownerId={chat.worlds.owner_id}
+          turn={turn}
+          onSaved={setTurn}
+        />
+      )}
 
       <DeleteConfirmDialog
         open={pendingDeleteId !== null}

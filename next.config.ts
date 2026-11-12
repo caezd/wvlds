@@ -20,6 +20,19 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev",
   },
+  experimental: {
+    // Cache du routeur client pour les pages dynamiques (0 s par défaut) :
+    // revenir sur un salon ou un monde visité dans les 30 dernières secondes
+    // (retour arrière, aller-retour entre deux salons) s'affiche sans
+    // aller-retour serveur. Le temps réel reste juste parce que chaque vue
+    // rouvre ses canaux au montage, et que le salon RATTRAPE les messages
+    // postés depuis le rendu mis en cache (cf. hooks/useRealtimeChatSync.ts).
+    // `router.refresh()` et les Server Actions (`revalidatePath`) vident ce
+    // cache : une modification faite par l'utilisateur reste visible aussitôt.
+    staleTimes: {
+      dynamic: 30,
+    },
+  },
   turbopack: {
     // pnpm virtual store requires explicit root for module resolution
     root: __dirname,

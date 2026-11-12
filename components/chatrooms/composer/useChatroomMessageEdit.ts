@@ -122,6 +122,8 @@ export function useChatroomMessageEdit({
         : {}),
       ...(editSms ? { sms: true as const } : {}),
       ...(contentWarningsChips.tags?.length ? { content_warnings: contentWarningsChips.tags } : {}),
+      // Indique « modifié » aux lecteurs (cf. ChatMessageMeta.edited_at).
+      edited_at: new Date().toISOString(),
     };
 
     const { error } = await supabase

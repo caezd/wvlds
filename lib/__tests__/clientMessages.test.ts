@@ -175,6 +175,7 @@ describe("découpage des messages envoyés au client", () => {
     it("les namespaces d'onglets de monde sont inatteignables depuis une page de salon", () => {
         const reachable = reachableFrom([
             "app/(protected)/layout.tsx",
+            "app/(protected)/c/layout.tsx",
             "app/(protected)/c/[id]/layout.tsx",
             "app/(protected)/c/[id]/page.tsx",
         ]);
@@ -185,7 +186,7 @@ describe("découpage des messages envoyés au client", () => {
 
         // `catalogue` fait exception : la fiche d'un objet (CatalogItemDetail)
         // s'ouvre depuis l'inventaire d'un persona consulté dans le salon, et
-        // `app/(protected)/c/[id]/layout.tsx` remonte ce namespace-là.
+        // `app/(protected)/c/layout.tsx` (commun aux salons) remonte ce namespace-là.
         const offenders: string[] = [];
         for (const ns of WORLD_ROUTE_NAMESPACES.filter((n) => n !== "catalogue")) {
             const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);
@@ -196,7 +197,7 @@ describe("découpage des messages envoyés au client", () => {
             }
         }
         expect(offenders).toEqual([]);
-        const chatLayout = byPath.get(join(ROOT, "app/(protected)/c/[id]/layout.tsx").replace(/\\/g, "/")) ?? "";
+        const chatLayout = byPath.get(join(ROOT, "app/(protected)/c/layout.tsx").replace(/\\/g, "/")) ?? "";
         expect(chatLayout).toContain('withRouteMessages(messages, ["catalogue"])');
     });
 

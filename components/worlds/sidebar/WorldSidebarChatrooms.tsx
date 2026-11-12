@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import { usePathname } from "next/navigation";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useWorldRooms, type WorldRoom } from "@/lib/worldRoomsStore";
@@ -65,7 +65,7 @@ function RoomItem({
   const presence = !showOverlay && lastPosterId ? getUserPresence(lastPosterId) : null;
 
   return (
-    <Link
+    <ChatroomLink
       href={`/c/${room.id}`}
       aria-current={isActive ? "page" : undefined}
       className={cn(
@@ -129,7 +129,7 @@ function RoomItem({
           {unread > 99 ? "99+" : unread}
         </span>
       )}
-    </Link>
+    </ChatroomLink>
   );
 }
 

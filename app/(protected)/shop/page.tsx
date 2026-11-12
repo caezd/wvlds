@@ -1,7 +1,7 @@
 // app/(protected)/shop/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { getFeatureFlags } from "@/lib/featureFlags";
+import { getCachedFeatureFlags } from "@/lib/currentRequest";
 import ShopGrid from "./ShopGrid";
 import type { ShopItem } from "./ShopGrid";
 import { getTranslations } from "next-intl/server";
@@ -21,7 +21,8 @@ export default async function ShopPage() {
   // Le drapeau est vérifié après coup — charger le catalogue d'une boutique
   // désactivée coûte une requête, la garder séquentielle en coûtait trois.
   const [flags, itemsRes, balRes] = await Promise.all([
-    getFeatureFlags(supabase),
+    // Mémoïsé (déjà lu par le layout protégé) et servi par le cache partagé.
+    getCachedFeatureFlags(),
     supabase.rpc("shop_list_items"),
     supabase.from("gamification_balances").select("coins").single(),
   ]);

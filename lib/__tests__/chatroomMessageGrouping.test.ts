@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, insertMessageById } from "@/lib/chatroomMessageGrouping";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessageWithPersona {
@@ -130,5 +130,28 @@ describe("aggregateContentWarnings", () => {
       makeMessage({ id: 3, metadata: { sms: true, content_warnings: ["deuil"] } }),
     ];
     expect(aggregateContentWarnings(messages)).toEqual(["deuil"]);
+  });
+});
+
+describe("insertMessageById", () => {
+  const ids = (list: { id: number }[]) => list.map((m) => m.id);
+
+  it("ajoute en fin de liste un message plus récent", () => {
+    expect(ids(insertMessageById([{ id: 1 }, { id: 2 }], { id: 3 }))).toEqual([1, 2, 3]);
+  });
+
+  it("insère à sa place un message plus ancien (rattrapage après un INSERT Realtime)", () => {
+    expect(ids(insertMessageById([{ id: 1 }, { id: 4 }], { id: 2 }))).toEqual([1, 2, 4]);
+    expect(ids(insertMessageById([{ id: 5 }], { id: 3 }))).toEqual([3, 5]);
+  });
+
+  it("rend la liste inchangée (même référence) pour un doublon", () => {
+    const list = [{ id: 1 }, { id: 2 }];
+    expect(insertMessageById(list, { id: 1 })).toBe(list);
+    expect(insertMessageById(list, { id: 2 })).toBe(list);
+  });
+
+  it("accepte une liste vide", () => {
+    expect(ids(insertMessageById([], { id: 7 }))).toEqual([7]);
   });
 });

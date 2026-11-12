@@ -6,6 +6,7 @@ import type { ReactionSummary } from "@/types/db";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import { ChatroomMessageSms } from "./ChatroomMessageSms";
 import { ChatroomMessageHeader } from "./ChatroomMessageHeader";
+import { MessageReplyQuote } from "./MessageReplyQuote";
 import { ChatroomMessageMobileDrawers } from "./ChatroomMessageMobileDrawers";
 import { useChatroomMessageEdit } from "../composer/useChatroomMessageEdit";
 import { ContentWarningChipInput } from "../composer/ContentWarningChipInput";
@@ -104,6 +105,9 @@ function ChatroomMessage({
   smsSharpTop,
   smsSharpBottom,
   smsShowAvatar,
+  onReply,
+  onJumpToMessage,
+  onReport,
 }: {
   message: import("@/types/db").ChatMessageWithPersona;
   online: Record<string, { avatar_url?: string | null; username?: string | null }>;
@@ -135,6 +139,12 @@ function ChatroomMessage({
   smsSharpTop?: boolean;
   smsSharpBottom?: boolean;
   smsShowAvatar?: boolean;
+  /** Répondre à ce message (reçoit son id — même raison que `onRequestDelete`). */
+  onReply?: (id: number) => void;
+  /** Remonter jusqu'à un message (citation cliquable). */
+  onJumpToMessage?: (id: number) => void;
+  /** Signaler ce message (reçoit son id). */
+  onReport?: (id: number) => void;
 }) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -171,7 +181,7 @@ function ChatroomMessage({
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
-  const hasActions = mine || !!emoji_reactions;
+  const hasActions = mine || !!emoji_reactions || !!onReply || !!onReport;
   const longPressHandlers = useLongPress(useCallback(() => {
     try { navigator.vibrate?.(50); } catch { /* noop */ }
     setDrawerOpen(true);
@@ -202,6 +212,11 @@ function ChatroomMessage({
     () => onRequestDelete?.(message.id),
     [onRequestDelete, message.id],
   );
+  const repondre = useCallback(() => onReply?.(message.id), [onReply, message.id]);
+  const signaler = useCallback(() => onReport?.(message.id), [onReport, message.id]);
+  const citation = message.reply_to_id ? (
+    <MessageReplyQuote replyToId={message.reply_to_id} replyTo={message.reply_to} onJump={onJumpToMessage} />
+  ) : null;
 
   const frameUrl = message.persona?.frame?.asset_url ?? null;
 
@@ -271,6 +286,7 @@ function ChatroomMessage({
   if (message.metadata?.sms && !editing) {
     return (
       <ChatroomMessageSms
+        quote={citation}
         message={message}
         mine={mine}
         label={label}
@@ -339,6 +355,8 @@ function ChatroomMessage({
             toggleReaction={toggleReaction}
             pickerOpen={pickerOpen}
             setPickerOpen={setPickerOpen}
+            onReply={onReply ? repondre : undefined}
+            onReport={onReport ? signaler : undefined}
           />
 
           <div className={cn("relative flex flex-col gap-2 grow")}>
@@ -473,6 +491,7 @@ function ChatroomMessage({
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
+                  {citation}
                   <ChatroomMessageBubble
                     persona={message.persona}
                     message={message}
@@ -499,6 +518,8 @@ function ChatroomMessage({
         startEdit={startEdit}
         onRequestDelete={demanderSuppression}
         toggleReaction={toggleReaction}
+        onReply={onReply ? repondre : undefined}
+        onReport={onReport ? signaler : undefined}
       />
 
       <Dialog open={editColorPickerOpen} onOpenChange={setEditColorPickerOpen}>

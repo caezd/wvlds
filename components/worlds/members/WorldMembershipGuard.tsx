@@ -2,19 +2,25 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { onMembershipChange } from "@/lib/membershipEvents";
+import { isStillWorldMember } from "@/lib/membershipCheck";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
 /**
- * Garde de membership : si l'utilisateur courant est retiré du monde
- * (DELETE sur world_members), il est redirigé vers ses personnages.
+ * Garde de membership : si l'utilisateur courant n'est plus membre du monde,
+ * il est redirigé vers ses personnages.
  *
- * Note : les événements DELETE realtime ne portent que la clé primaire
- * (world_id, user_id) et ne sont pas filtrés par RLS — c'est voulu ici,
- * l'utilisateur retiré doit recevoir l'événement alors qu'il a déjà
- * perdu l'accès en lecture.
+ * Deux voies :
+ * - l'avis de retrait, en direct, sur son canal personnel privé (migration
+ *   208), relayé par NotificationsProvider (lib/membershipEvents) ;
+ * - une VÉRIFICATION au montage et à chaque reconnexion. Une page servie par
+ *   le cache du routeur client (`staleTimes`, next.config.ts) ne repasse pas
+ *   par les contrôles serveur : sans elle, quelqu'un retiré pendant son
+ *   absence revoyait encore le salon ou le monde depuis le cache. Une réponse
+ *   incertaine (coupure) ne renvoie personne.
  */
 export function WorldMembershipGuard({
   worldId,
@@ -29,31 +35,28 @@ export function WorldMembershipGuard({
 
   useEffect(() => {
     if (!worldId || !selfId) return;
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel(`membership-guard:${worldId}:${selfId}`)
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "world_members" },
-        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          const old = payload.old as {
-            world_id?: string;
-            user_id?: string;
-          } | null;
-          if (old?.world_id === worldId && old?.user_id === selfId) {
-            toast.info(t("removedFromWorld"));
-            router.replace("/p");
-            router.refresh();
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
+    let renvoye = false;
+    const renvoyer = () => {
+      if (renvoye) return;
+      renvoye = true;
+      toast.info(t("removedFromWorld"));
+      router.replace("/p");
+      router.refresh();
     };
-  }, [worldId, selfId, router, reconnectEpoch, t]);
+
+    let annule = false;
+    void isStillWorldMember(createClient(), worldId, selfId).then((membre) => {
+      if (!annule && membre === false) renvoyer();
+    });
+
+    const desabonner = onMembershipChange(({ worldId: wid, change }) => {
+      if (change === "removed" && wid === worldId) renvoyer();
+    });
+    return () => {
+      annule = true;
+      desabonner();
+    };
+  }, [worldId, selfId, router, t, reconnectEpoch]);
 
   return null;
 }

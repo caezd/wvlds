@@ -70,17 +70,28 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   quests: false,
 };
 
+/**
+ * Tag du cache serveur partagé des drapeaux (cf. `getCachedFeatureFlags`).
+ * Toute écriture dans `feature_flags` doit l'invalider (`updateTag`).
+ */
+export const FEATURE_FLAGS_TAG = "feature-flags";
+
+/** Applique les lignes de `feature_flags` sur les valeurs par défaut. */
+export function flagsFromRows(rows: { key: string; enabled: boolean }[] | null | undefined): FeatureFlags {
+  const result: FeatureFlags = { ...DEFAULT_FLAGS };
+  for (const row of rows ?? []) {
+    if (row.key in result) {
+      (result as Record<string, boolean>)[row.key] = row.enabled;
+    }
+  }
+  return result;
+}
+
 export async function getFeatureFlags(supabase: SupabaseClient): Promise<FeatureFlags> {
   const { data } = await supabase
     .from("feature_flags")
     .select("key, enabled")
     .in("key", [...FLAG_KEYS]);
 
-  const result: FeatureFlags = { ...DEFAULT_FLAGS };
-  for (const row of data ?? []) {
-    if (row.key in result) {
-      (result as Record<string, boolean>)[row.key] = row.enabled;
-    }
-  }
-  return result;
+  return flagsFromRows(data);
 }

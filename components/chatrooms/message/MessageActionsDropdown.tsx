@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
-import { Pencil, Pin, PinOff, MoreHorizontal, Trash2, Copy, FileText, Code } from "lucide-react";
+import { Pencil, Pin, PinOff, MoreHorizontal, Trash2, Copy, FileText, Code, CornerUpLeft, Flag } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,8 @@ export function MessageActionsDropdown({
   onPin,
   onUnpin,
   onRequestDelete,
+  onReply,
+  onReport,
 }: {
   mine: boolean;
   isPinned: boolean;
@@ -34,6 +36,10 @@ export function MessageActionsDropdown({
   onPin?: () => void;
   onUnpin?: () => void;
   onRequestDelete?: () => void;
+  /** Répondre à ce message (absent si l'on ne peut pas poster). */
+  onReply?: () => void;
+  /** Signaler ce message aux modérateurs (pas pour ses propres messages). */
+  onReport?: () => void;
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -60,6 +66,15 @@ export function MessageActionsDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        {onReply && (
+          <>
+            <DropdownMenuItem onClick={onReply}>
+              <CornerUpLeft className="mr-2 h-3.5 w-3.5" />
+              {t("reply")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger onClick={copyText} className="whitespace-nowrap">
             <Copy className="mr-2 h-3.5 w-3.5" />
@@ -93,6 +108,15 @@ export function MessageActionsDropdown({
             <Pin className="mr-2 h-3.5 w-3.5" />
             {t("pin")}
           </DropdownMenuItem>
+        )}
+        {!mine && onReport && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={afterMenuClose(onReport)}>
+              <Flag className="mr-2 h-3.5 w-3.5" />
+              {t("report")}
+            </DropdownMenuItem>
+          </>
         )}
         {mine && (
           <>

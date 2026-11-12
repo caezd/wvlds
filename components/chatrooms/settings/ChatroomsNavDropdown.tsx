@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { StoredImage } from "@/components/ui/stored-image";
 import { AVATAR_THUMB_SMALL } from "@/lib/storage";
-import Link from "next/link";
+import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import { ChevronDown, ChevronRight, MessagesSquare } from "lucide-react";
 import {
   Popover,
@@ -178,7 +178,7 @@ export function ChatroomsNavDropdown({
             const title = room.title || room.name || "Sans titre";
             const subtitle = relativeTime(room.last_message_at);
             return (
-              <Link
+              <ChatroomLink
                 key={room.id}
                 href={`/c/${room.id}`}
                 onClick={() => setOpen(false)}
@@ -222,7 +222,7 @@ export function ChatroomsNavDropdown({
                 </span>
 
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 transition-transform group-hover:translate-x-0.5" />
-              </Link>
+              </ChatroomLink>
             );
           })}
 

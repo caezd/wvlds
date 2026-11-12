@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { PageSpinner } from "@/components/ui/page-spinner";
 import { getTranslations } from "next-intl/server";
 import { getChatroomWithWorld } from "./getChatroom";
+import { getChatroomMessages } from "./getChatroomMessages";
 
 /**
  * Titre d'onglet = nom du salon. `getChatroomWithWorld` est mémoïsé pour la
@@ -32,6 +33,14 @@ export default async function Page({ params }: { params: { id: string } }) {
   if (!userId) {
     notFound();
   }
+
+  // Préchargement : messages, clé et persona préférée ne dépendent que de
+  // l'id du salon. On les lance MAINTENANT, sans les attendre, pour qu'ils
+  // chargent pendant la lecture du salon ci-dessous ; `ChatRoomContent`
+  // récupère la même promesse (mémoïsée pour la requête). Le `.catch` ne
+  // sert qu'à éviter un rejet non géré si l'on sort par `notFound()` avant
+  // que quiconque ne l'attende — il ne modifie pas la promesse mémoïsée.
+  getChatroomMessages(id, userId).catch(() => {});
 
   // Mémoïsée (React cache()) : `layout.tsx` l'a déjà chargée pour la
   // sidebar, donc pas de requête supplémentaire ici.
