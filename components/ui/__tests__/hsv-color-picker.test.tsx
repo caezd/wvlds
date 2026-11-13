@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import {
+  DEFAULT_COLOR_PRESETS,
   HsvColorPicker,
-  PLAYER_COLOR_PRESETS,
   hexToHsva,
   hsvaToHex,
   normalizeHex,
@@ -89,9 +89,9 @@ describe("HsvColorPicker — palette", () => {
     render(<HsvColorPicker color="#123456" onChange={() => {}} />);
     const palette = screen.getByRole("group", { name: "Couleurs prédéfinies" });
     const labels = Array.from(palette.querySelectorAll("button")).map((b) => b.getAttribute("aria-label"));
-    // La palette « joueurs » (lib/playerColors.ts), comme partout ailleurs.
-    expect(labels).toEqual(PLAYER_COLOR_PRESETS.map((p) => p.label));
-    expect(labels).toHaveLength(12);
+    // La palette de la maquette : noir, six teintes vives, blanc.
+    expect(labels).toEqual(["Noir", "Rouge", "Orange", "Jaune", "Vert", "Bleu", "Violet", "Blanc"]);
+    expect(labels).toEqual(DEFAULT_COLOR_PRESETS.map((p) => p.label));
     expect(screen.getByRole("slider", { name: "Saturation et luminosité" })).toBeInTheDocument();
     expect(screen.getByRole("slider", { name: "Teinte" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Code hexadécimal" })).toHaveValue("#123456");

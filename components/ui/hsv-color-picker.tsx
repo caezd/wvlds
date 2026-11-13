@@ -14,13 +14,13 @@ const PLAYER_COLOR_LABELS = [
   "Menthe", "Sarcelle", "Cyan", "Bleu", "Indigo", "Violet",
 ];
 
-/** Les pastilles proposées par défaut : la palette « joueurs » (lib/playerColors.ts). */
+/** La palette « joueurs » (lib/playerColors.ts), pour les couleurs de joueur et de groupe. */
 export const PLAYER_COLOR_PRESETS: ColorPreset[] = PLAYER_COLORS.map((value, i) => ({
   label: PLAYER_COLOR_LABELS[i] ?? value,
   value,
 }));
 
-/** Noir, six teintes vives, blanc : la palette du texte coloré. */
+/** Les pastilles proposées par défaut, celles de la maquette : noir, six teintes vives, blanc. */
 export const DEFAULT_COLOR_PRESETS: ColorPreset[] = [
   { label: "Noir",   value: "#18181b" },
   { label: "Rouge",  value: "#e8553a" },
@@ -171,7 +171,7 @@ const THUMB_CLASS =
 export function HsvColorPicker({
   color,
   onChange,
-  presets = PLAYER_COLOR_PRESETS,
+  presets = DEFAULT_COLOR_PRESETS,
   alpha = false,
   framed = true,
   className,

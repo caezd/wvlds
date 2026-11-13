@@ -50,6 +50,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-11-12",
+    category: "Interface",
+    text: "Sélecteur de couleur : de nouveau noir, six teintes vives et blanc comme couleurs proposées.",
+  },
+  {
+    date: "2026-11-12",
     category: "Correctif",
     area: "Page d’accueil",
     text: "La page d’un monde dont l’accueil affiche le bloc « Anniversaires » ou « Carte » s’ouvre de nouveau (« Une erreur est survenue »).",

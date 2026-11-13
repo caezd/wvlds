@@ -9,7 +9,7 @@ describe("ColorPickerButton", () => {
     const onChange = vi.fn();
     render(
       <div>
-        <ColorPickerButton color="#FB7185" onChange={onChange} />
+        <ColorPickerButton color="#18181b" onChange={onChange} />
         <p>dehors</p>
       </div>,
     );
@@ -18,10 +18,10 @@ describe("ColorPickerButton", () => {
     await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
 
     expect(screen.getByRole("group", { name: "Couleurs prédéfinies" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Rose" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Noir" })).toHaveAttribute("aria-pressed", "true");
 
     await userEvent.click(screen.getByRole("button", { name: "Bleu" }));
-    expect(onChange).toHaveBeenCalledWith("#60A5FA");
+    expect(onChange).toHaveBeenCalledWith("#47b3f2");
 
     await userEvent.click(screen.getByText("dehors"));
     expect(screen.queryByRole("group", { name: "Couleurs prédéfinies" })).toBeNull();
