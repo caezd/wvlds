@@ -31,6 +31,7 @@ export const FLAG_KEYS = [
   "world_timeline",
   "direct_messages",
   "quests",
+  "world_live_chat",
 ] as const;
 
 export type FlagKey = (typeof FLAG_KEYS)[number];
@@ -68,6 +69,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   world_timeline: false,
   direct_messages: false,
   quests: false,
+  world_live_chat: false,
 };
 
 export async function getFeatureFlags(supabase: SupabaseClient): Promise<FeatureFlags> {

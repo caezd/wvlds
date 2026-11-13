@@ -72,6 +72,8 @@ export const DB_TEXT_LIMITS = {
   "world_wiki_page_annotations.anchor_quote": 1_000,
   "world_wiki_page_annotations.anchor_suffix": 200,
   "world_wiki_page_annotations.body": 4_000,
+  // Chat en direct d'un monde — voir migration 202.
+  "world_live_messages.content": 500,
   "world_wiki_page_note_categories.name": 200,
   "world_wiki_page_notes.body": 5_000,
   "world_wiki_page_notes.title": 200,
