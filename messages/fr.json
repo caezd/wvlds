@@ -1966,7 +1966,15 @@
     "dirOut": "envers",
     "dirIn": "de sa part",
     "panelRelations": "Relations · {count}",
-    "dblClickHint": "Double-clic : vue centrée"
+    "dblClickHint": "Double-clic : vue centrée",
+    "groupBy": "Regrouper",
+    "groupByPlayer": "Par joueur",
+    "groupByGroup": "Par groupe",
+    "hideIsolated": "Sans les isolés",
+    "secondRing": "Second cercle",
+    "viewConstellations": "Constellations",
+    "constellationsLoading": "Placement des personas…",
+    "isolatedCount": "{count, plural, one {# persona sans relation} other {# personas sans relation}}"
   },
   "wiki": {
     "changeIcon": "Changer l'icône",

@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CircleDashed, Crosshair, Minus, MousePointerClick, Plus, Shrink, Waypoints, type LucideIcon } from "lucide-react";
+import { CircleDashed, Crosshair, Minus, MousePointerClick, Network, Plus, Shrink, Waypoints, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { isRetiredStatus } from "@/lib/personaStatus";
@@ -32,17 +32,23 @@ import { RelationsSidePanel } from "./RelationsSidePanel";
 import { DENSE_FROM, RingView } from "./RingView";
 import { FocusView } from "./FocusView";
 import type { PlateInteractions } from "./PlateParts";
+import { GROUPLESS_KEY, groupIdOfKey, parseGroupBy, ringArcsInput, type RingGroupBy } from "./ringGrouping";
+import { ConstellationView } from "./ConstellationView";
+import type { ConstellationInput } from "./constellationLayout";
+import { ViewOptions } from "./ViewOptions";
 
-type View = "ring" | "focus";
+type View = "ring" | "constellations" | "focus";
 
-const VIEWS: ReadonlyArray<[View, "viewRing" | "viewOrbit", LucideIcon]> = [
+const VIEWS: ReadonlyArray<[View, "viewRing" | "viewConstellations" | "viewOrbit", LucideIcon]> = [
   ["ring", "viewRing", CircleDashed],
+  ["constellations", "viewConstellations", Network],
   ["focus", "viewOrbit", Crosshair],
 ];
 
 /** Une vue retenue ; les anciennes valeurs (Réseau, Orbite) retombent sur les nouvelles. */
 function parseView(value: unknown): View | null {
   if (value === "ring" || value === "network") return "ring";
+  if (value === "constellations") return "constellations";
   if (value === "focus" || value === "orbit") return "focus";
   return null;
 }
@@ -196,33 +202,82 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   }, [groupByPersona, groups]);
   const groupColorOf = React.useCallback((pid: string) => groupColor.get(pid), [groupColor]);
 
-  // ── Vue : retenue par monde, dans ce navigateur ──
+  // ── Vue et réglages d'affichage : retenus par monde, dans ce navigateur ──
   const [view, setView] = React.useState<View>("ring");
+  // Découpage de la couronne (et des îlots) : par joueur ou par groupe.
+  const [groupBy, setGroupBy] = React.useState<RingGroupBy>("player");
+  const [hideIsolated, setHideIsolated] = React.useState(false);
+  const [showSecondRing, setShowSecondRing] = React.useState(true);
   const storageKey = `wvlds:relations:${worldId}`;
   const [prefsLoaded, setPrefsLoaded] = React.useState(false);
   React.useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null") as { view?: unknown } | null;
+      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null") as
+        { view?: unknown; groupBy?: unknown; hideIsolated?: unknown; secondRing?: unknown } | null;
       const v = parseView(saved?.view);
       if (v) setView(v);
-    } catch { /* stockage indisponible : la vue par défaut suffit */ }
+      const g = parseGroupBy(saved?.groupBy);
+      if (g) setGroupBy(g);
+      if (typeof saved?.hideIsolated === "boolean") setHideIsolated(saved.hideIsolated);
+      if (typeof saved?.secondRing === "boolean") setShowSecondRing(saved.secondRing);
+    } catch { /* stockage indisponible : les réglages par défaut suffisent */ }
     setPrefsLoaded(true);
   }, [storageKey]);
   React.useEffect(() => {
     // Pas avant la lecture : on écraserait la préférence par la valeur par défaut.
     if (!prefsLoaded) return;
-    try { localStorage.setItem(storageKey, JSON.stringify({ view })); } catch { /* idem */ }
-  }, [prefsLoaded, storageKey, view]);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ view, groupBy, hideIsolated, secondRing: showSecondRing }));
+    } catch { /* idem */ }
+  }, [prefsLoaded, storageKey, view, groupBy, hideIsolated, showSecondRing]);
   const focusMode = view === "focus";
+  // Sans groupe défini, « par groupe » n'a rien à montrer : on reste par joueur.
+  const effectiveGroupBy: RingGroupBy = groups.length > 0 ? groupBy : "player";
 
   // ── Placement ──
   const visibleRelations = React.useMemo(() => relations.filter(relationVisible), [relations, relationVisible]);
   const edges = React.useMemo(() => mergeEdges(visibleRelations, relTypeMap), [visibleRelations, relTypeMap]);
   const typeOrder = React.useMemo(() => new Map(relTypes.map((tp, i) => [tp.id, i])), [relTypes]);
-  const ring = React.useMemo(
-    () => ringLayout(userList.map(({ member, ps }) => ({ userId: member.user_id, personaIds: ps.filter((p) => !personaHidden(p.id)).map((p) => p.id) }))),
-    [userList, personaHidden],
+  /** Personas qui ont au moins un lien visible. */
+  const connected = React.useMemo(() => {
+    const ids = new Set<string>();
+    for (const e of edges) { ids.add(e.from); ids.add(e.to); }
+    return ids;
+  }, [edges]);
+  // Les arcs du cercle et les îlots des constellations : même découpage.
+  const arcsInput = React.useMemo(
+    () => ringArcsInput(
+      effectiveGroupBy, userList, groups, groupByPersona,
+      (id) => !personaHidden(id) && (!hideIsolated || connected.has(id)),
+    ),
+    [effectiveGroupBy, userList, groups, groupByPersona, personaHidden, hideIsolated, connected],
   );
+  const ring = React.useMemo(() => ringLayout(arcsInput), [arcsInput]);
+  const constellationInput = React.useMemo<ConstellationInput>(() => {
+    const clusterByPersona = new Map<string, string>();
+    for (const arc of arcsInput) for (const id of arc.personaIds) clusterByPersona.set(id, arc.userId);
+    return {
+      personaIds: arcsInput.flatMap((a) => a.personaIds),
+      edges,
+      clusterOf: (id) => clusterByPersona.get(id) ?? GROUPLESS_KEY,
+      clusterOrder: arcsInput.filter((a) => a.personaIds.length > 0).map((a) => a.userId),
+      centralKey: effectiveGroupBy === "group" ? GROUPLESS_KEY : undefined,
+    };
+  }, [arcsInput, edges, effectiveGroupBy]);
+  const groupArcs = React.useMemo(() => {
+    if (effectiveGroupBy !== "group") return undefined;
+    const byId = new Map(groups.map((g) => [g.id, g]));
+    return {
+      labelOf: (key: string) => {
+        const gid = groupIdOfKey(key);
+        return gid ? byId.get(gid)?.name ?? t("noGroup") : t("noGroup");
+      },
+      colorOf: (key: string) => {
+        const gid = groupIdOfKey(key);
+        return gid ? byId.get(gid)?.color : undefined;
+      },
+    };
+  }, [effectiveGroupBy, groups, t]);
   const dense = ring.angles.size >= DENSE_FROM;
 
   /** Le persona par défaut de la vue Centré : le premier des miens, sinon le premier tout court. */
@@ -455,7 +510,21 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                   transition: animating ? "width .45s cubic-bezier(.3,.7,.2,1), transform .45s cubic-bezier(.3,.7,.2,1)" : "none",
                 }}
               >
-                {focusMode ? (
+                {view === "constellations" ? (
+                  <ConstellationView
+                    input={constellationInput}
+                    personaMap={personaMap}
+                    ix={ix}
+                    clusterLabel={(key) => (groupArcs ? groupArcs.labelOf(key) : handleOf(key))}
+                    clusterColor={(key) => groupArcs?.colorOf(key)}
+                    onActivatePersona={(pid) => {
+                      setSelectedPersonaId((cur) => (cur === pid ? null : pid));
+                      if (selectedUserId && personaMap.get(pid)?.user_id !== selectedUserId) setSelectedUserId(null);
+                    }}
+                    onOpenFocus={openFocus}
+                    onBackgroundClick={clearSelection}
+                  />
+                ) : focusMode ? (
                   focusId && (
                     <FocusView
                       focusId={focusId}
@@ -465,6 +534,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                       ix={ix}
                       statusOf={statusOf}
                       onRecenter={(id) => { setSelectedPersonaId(id); clearHover(); }}
+                      showSecond={showSecondRing}
                     />
                   )
                 ) : (
@@ -478,6 +548,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                     onOpenFocus={openFocus}
                     onActivatePlayer={activatePlayer}
                     onBackgroundClick={clearSelection}
+                    groupArcs={groupArcs}
                   />
                 )}
               </div>
@@ -501,6 +572,19 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
               <MousePointerClick className="size-3.5 shrink-0" aria-hidden />
               <span className="min-w-0 truncate">{t("canvasHint")}</span>
             </div>
+
+            {!loading && personas.length > 0 && (
+              <ViewOptions
+                focusMode={focusMode}
+                groupBy={effectiveGroupBy}
+                canGroup={groups.length > 0}
+                onGroupBy={setGroupBy}
+                hideIsolated={hideIsolated}
+                onHideIsolated={setHideIsolated}
+                showSecondRing={showSecondRing}
+                onShowSecondRing={setShowSecondRing}
+              />
+            )}
 
             <div
               className="absolute bottom-3 right-4 z-10 flex cursor-default items-center gap-0.5 rounded-lg border border-border bg-background/90 p-[3px]"

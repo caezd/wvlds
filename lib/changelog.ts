@@ -44,6 +44,12 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-13",
+    category: "Fonctionnalité",
+    area: "Relations",
+    text: "La page des relations gagne une vue « Constellations » : chaque persona se place près de ceux qu’il connaît, en îlots par joueur ou par groupe, et les personas sans relation sont rangés à part. Les vues Cercle et Constellations se regroupent au choix par joueur ou par groupe, et peuvent masquer les personas isolés ; la vue Centré peut masquer son second cercle. Les réglages sont retenus pour chaque monde.",
+  },
+  {
     date: "2026-11-12",
     category: "Interface",
     text: "Pastilles de compteur (notifications, non-lus) d’un rouge plus soutenu : le chiffre se lit mieux.",
