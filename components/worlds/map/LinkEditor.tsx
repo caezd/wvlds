@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { Check, Trash2, X } from "lucide-react";
 
 import type { MapPin, MapPinLink } from "@/app/actions/worldMap";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Le formulaire d'un lien : son nom, ou sa suppression.
@@ -64,13 +66,13 @@ export function LinkEditor({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onRename(draft.trim()); }}
-          className="w-36 rounded-md border border-border-soft bg-background px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-primary"
+          className="w-36 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-primary"
         />
         <button
           type="button"
           aria-label={tCommon("save")}
           onClick={() => onRename(draft.trim())}
-          className="rounded p-0.5 text-primary hover:bg-primary/10"
+          className={buttonVariants({ size: "icon-sm" })}
         >
           <Check className="h-3.5 w-3.5" />
         </button>
@@ -78,7 +80,7 @@ export function LinkEditor({
           type="button"
           aria-label={t("deleteLink")}
           onClick={onDelete}
-          className="rounded p-0.5 text-destructive hover:bg-destructive/10"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "text-destructive")}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -86,7 +88,7 @@ export function LinkEditor({
           type="button"
           aria-label={tCommon("close")}
           onClick={onClose}
-          className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
         >
           <X className="h-3.5 w-3.5" />
         </button>

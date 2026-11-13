@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Ghost, HelpCircle, Skull, type LucideIcon } from "lucide-react";
 
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { PersonaNarrativeStatus } from "@/types/db";
 
@@ -12,10 +13,10 @@ const ICONS: Record<Exclude<PersonaNarrativeStatus, "alive">, LucideIcon> = {
   retired: Ghost,
 };
 
-const TONES: Record<Exclude<PersonaNarrativeStatus, "alive">, string> = {
-  missing: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  dead: "bg-red-500/15 text-red-700 dark:text-red-300",
-  retired: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
+const TONES: Record<Exclude<PersonaNarrativeStatus, "alive">, BadgeProps["tone"]> = {
+  missing: "warning",
+  dead: "danger",
+  retired: "neutral",
 };
 
 /**
@@ -36,19 +37,15 @@ export function PersonaStatusBadge({
   const Icon = ICONS[status];
   const label = t(status);
   return (
-    <span
+    <Badge
+      tone={TONES[status]}
       data-narrative-status={status}
       title={compact ? label : undefined}
       aria-label={compact ? label : undefined}
-      className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full font-medium",
-        compact ? "p-0.5" : "px-2 py-0.5 text-[11px]",
-        TONES[status],
-        className,
-      )}
+      className={cn(compact && "h-4 px-0.5", className)}
     >
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      <Icon aria-hidden />
       {!compact && <span className="truncate">{label}</span>}
-    </span>
+    </Badge>
   );
 }

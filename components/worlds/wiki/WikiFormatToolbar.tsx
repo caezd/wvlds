@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { libelleRaccourci, type NomFormat } from "@/lib/markdownFormatting";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 type Outil = {
   nom: NomFormat;
@@ -40,8 +41,7 @@ type Outil = {
  * L'ordre suit celui des barres d'outils usuelles — structure, puis caractère,
  * puis liens, puis blocs — pour que la main sache où aller sans lire.
  */
-const BOUTON =
-  "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground";
+const BOUTON = cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6");
 
 const TITRES: Outil[] = [
   { nom: "h1", Icone: Heading1, cle: "formatHeading1" },

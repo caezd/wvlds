@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import Logo from "@/components/logo";
 import { getTranslations } from "next-intl/server";
 
-/** Étoiles en pur CSS : une poignée de points blancs en radial-gradient */
+/** Étoiles en pur CSS : une poignée de points blancs en radial-gradient, sur les surfaces du thème. */
 const STARRY_SKY: React.CSSProperties = {
   backgroundImage: `
     radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.9), transparent 50%),
@@ -18,7 +18,7 @@ const STARRY_SKY: React.CSSProperties = {
     radial-gradient(1px 1px at 73% 88%, rgba(255,255,255,0.45), transparent 50%),
     radial-gradient(2px 2px at 92% 74%, rgba(170,190,255,0.6), transparent 50%),
     radial-gradient(1px 1px at 8% 55%, rgba(255,255,255,0.55), transparent 50%),
-    linear-gradient(195deg, #0b0d1a 0%, #141a30 55%, #1c2742 100%)
+    linear-gradient(195deg, var(--canvas) 0%, var(--background) 55%, var(--muted) 100%)
   `,
 };
 
@@ -70,7 +70,7 @@ export default async function NotFound() {
         className="relative hidden w-[42%] flex-col justify-end overflow-hidden rounded-2xl p-6 lg:flex"
         style={STARRY_SKY}
       >
-        <p className="max-w-md text-sm leading-relaxed text-white/90">
+        <p className="max-w-md text-sm leading-relaxed text-foreground">
           {t("notFoundHint")}
         </p>
       </aside>

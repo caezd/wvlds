@@ -6,6 +6,7 @@ import { getUserId } from "@/lib/auth";
 import { signBugReportAttachments } from "@/lib/bugReportAttachments";
 import { pageSignaleeDepuis, type BugReportStatus } from "@/lib/bugReports";
 import { BugReportForm } from "@/components/support/BugReportForm";
+import { Badge } from "@/components/ui/badge";
 
 export async function generateMetadata() {
   const t = await getTranslations("bugReport");
@@ -69,12 +70,10 @@ export default async function BugReportPage({
           <h2 className="text-sm font-semibold">{t("mine")}</h2>
           <ul className="space-y-3">
             {reports.map((report) => (
-              <li key={report.id} className="rounded-xl border border-border-soft p-4">
+              <li key={report.id} className="rounded-xl border border-border p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="min-w-0 flex-1 whitespace-pre-line text-sm">{report.description}</p>
-                  <span className="shrink-0 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                    {t(`status.${report.status}`)}
-                  </span>
+                  <Badge>{t(`status.${report.status}`)}</Badge>
                 </div>
 
                 {(report.attachments ?? []).length > 0 && (

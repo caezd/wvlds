@@ -16,23 +16,23 @@ export function DiceBlockView({ block, mine: _mine }: { block: DiceBlock; mine: 
   return (
     <span className="text-sm text-muted-foreground">
       {t("diceRolled")}{" "}
-      <span className="font-mono text-foreground/70">{block.formula}</span>
+      <span className="font-mono text-muted-foreground">{block.formula}</span>
       {" "}{t("diceGot")}{" "}
       <span className={cn(
         "font-semibold text-foreground",
-        isCrit && "text-green-500",
-        isFumble && "text-red-500",
+        isCrit && "text-success",
+        isFumble && "text-destructive",
       )}>
         {block.total}
       </span>
-      {detail && <span className="text-xs text-muted-foreground/60">{detail}</span>}
-      {isCrit && <span className="text-green-500"> — {t("diceCritical")}</span>}
-      {isFumble && <span className="text-red-500"> — {t("diceFumble")}</span>}
+      {detail && <span className="text-xs text-muted-foreground">{detail}</span>}
+      {isCrit && <span className="text-success"> — {t("diceCritical")}</span>}
+      {isFumble && <span className="text-destructive"> — {t("diceFumble")}</span>}
       {block.label && !isCrit && !isFumble && (
         <span> : {block.label}</span>
       )}
       {block.label && (isCrit || isFumble) && (
-        <span className="text-muted-foreground/60"> · {block.label}</span>
+        <span className="text-muted-foreground"> · {block.label}</span>
       )}
     </span>
   );

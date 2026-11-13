@@ -15,6 +15,7 @@ import { CatalogVisual } from "./CatalogVisual";
 import { RarityBadge } from "./CatalogItemDialog";
 import { WikiPageChip, type WikiPageRef } from "./WikiPagePicker";
 import { PrerequisiteSections, RecipeSections, useCatalogRelations } from "./CatalogRelations";
+import { SectionLabel } from "@/components/ui/section-label";
 
 /** Les pages liées d'un objet (migration 186), lues à l'ouverture de la fiche. */
 export function useCatalogItemPages(itemId: string | null, open: boolean): WikiPageRef[] | null {
@@ -147,8 +148,8 @@ export function CatalogItemDetail({
 
           {item.properties && item.properties.length > 0 && (
             <section>
-              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("properties")}</h3>
-              <dl className="divide-y divide-border-soft rounded-lg border border-border-soft">
+              <SectionLabel className="mb-1.5">{t("properties")}</SectionLabel>
+              <dl className="divide-y divide-border rounded-lg border border-border">
                 {item.properties.map((property, index) => (
                   <div key={index} className="flex items-baseline justify-between gap-3 px-3 py-1.5">
                     <dt className="text-xs text-muted-foreground">{property.label}</dt>
@@ -161,7 +162,7 @@ export function CatalogItemDetail({
 
           {pages && pages.length > 0 && (
             <section>
-              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("linkedPages")}</h3>
+              <SectionLabel className="mb-1.5">{t("linkedPages")}</SectionLabel>
               <div className="flex flex-wrap gap-1.5">
                 {pages.map((page) => <WikiPageChip key={page.id} page={page} onOpen={() => openPage(page)} />)}
               </div>

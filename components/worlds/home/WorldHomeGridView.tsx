@@ -6,6 +6,7 @@ import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
+import { WorldHolidaysWidget } from "./widgets/WorldHolidaysWidget";
 import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
@@ -176,7 +177,7 @@ function renderBlock(
     // réglage : pas de conteneur ajouté hors carte, pas d'`overflow`.
     if (!item.h) {
       return item.card ? (
-        <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
+        <div className="rounded-lg border border-border bg-card/40 p-4">{content}</div>
       ) : (
         content
       );
@@ -184,7 +185,7 @@ function renderBlock(
     return (
       <div
         style={{ height: item.h }}
-        className={cn("overflow-y-auto", item.card && "rounded-lg border border-border-soft bg-card/40 p-4")}
+        className={cn("overflow-y-auto", item.card && "rounded-lg border border-border bg-card/40 p-4")}
       >
         {content}
       </div>
@@ -252,6 +253,13 @@ function renderBlock(
           worldId={ctx.worldId}
           days={widgetOptionValue("birthdays", "days", item.options)}
           initialMembers={ctx.widgetData.birthdays}
+        />
+      );
+    case "holidays":
+      return (
+        <WorldHolidaysWidget
+          config={ctx.timelineConfig}
+          limit={widgetOptionValue("holidays", "limit", item.options)}
         />
       );
     case "timeline_shortcuts":

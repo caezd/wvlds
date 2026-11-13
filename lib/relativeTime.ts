@@ -6,8 +6,11 @@
  * progressivement.
  */
 
-/** « il y a 3 min », « hier », « il y a 12 j » ; une date au-delà d'un mois. */
-export function relativeTime(iso: string, locale: string, justNow: string, now: number = Date.now()): string {
+/**
+ * « il y a 3 min », « hier », « il y a 12 j » ; une date au-delà de
+ * `maxDays` jours (un mois par défaut).
+ */
+export function relativeTime(iso: string, locale: string, justNow: string, now: number = Date.now(), maxDays = 30): string {
   const diff = now - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
   if (min < 1) return justNow;
@@ -16,7 +19,7 @@ export function relativeTime(iso: string, locale: string, justNow: string, now: 
   const h = Math.floor(min / 60);
   if (h < 24) return rtf.format(-h, "hour");
   const d = Math.floor(h / 24);
-  if (d < 30) return rtf.format(-d, "day");
+  if (d < maxDays) return rtf.format(-d, "day");
   return new Date(iso).toLocaleDateString(locale);
 }
 

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { daysInMonth, formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
@@ -158,25 +159,29 @@ export function WorldTimelineShortcutsWidget({
       {hasCalendar && activeCursor && (
         <div className="px-1 pb-2 pt-1">
           <div className="flex items-center justify-between gap-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={t("home.timelineShortcuts.previousMonth")}
               onClick={() => goToMonth(-1)}
-              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+              className="size-6"
             >
               <ChevronLeft className="h-4 w-4" />
-            </button>
-            <p className="truncate text-xs font-semibold text-foreground/90">
+            </Button>
+            <p className="truncate text-xs font-semibold text-foreground">
               {formatTimelineLabel(config, { year: activeCursor.year, month: activeCursor.month, day: null })}
             </p>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={t("home.timelineShortcuts.nextMonth")}
               onClick={() => goToMonth(1)}
-              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+              className="size-6"
             >
               <ChevronRight className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
 
           <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
@@ -195,7 +200,7 @@ export function WorldTimelineShortcutsWidget({
                     "flex shrink-0 flex-col items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
                     day === d
                       ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-hoverCard hover:text-foreground",
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <span className="font-medium tabular-nums">{d}</span>
@@ -220,9 +225,9 @@ export function WorldTimelineShortcutsWidget({
               <li key={room.id}>
                 <ChatroomLink
                   href={`/c/${room.id}`}
-                  className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-hoverCard"
+                  className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-muted"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-card-400 text-muted-foreground overflow-hidden">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground overflow-hidden">
                     {room.icon_url ? (
                       <Image src={room.icon_url} alt="" width={32} height={32} className="h-full w-full object-cover" />
                     ) : (
@@ -230,7 +235,7 @@ export function WorldTimelineShortcutsWidget({
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground/90">{label}</span>
+                    <span className="block truncate text-sm font-semibold text-foreground">{label}</span>
                     <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                       {formatTimelineLabel(config, room.timeline_date)}
                     </span>
@@ -243,7 +248,7 @@ export function WorldTimelineShortcutsWidget({
         </ul>
       ) : (
         hasCalendar && (
-          <p className="px-3 py-2.5 text-xs text-muted-foreground/70">{t("home.timelineShortcuts.noEntries")}</p>
+          <p className="px-3 py-2.5 text-xs text-muted-foreground">{t("home.timelineShortcuts.noEntries")}</p>
         )
       )}
 

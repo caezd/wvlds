@@ -43,7 +43,7 @@ export function MessageReplyQuote({
       aria-label={t("replyJumpTo", { author: auteur })}
     >
       <CornerUpLeft className="h-3 w-3 shrink-0" />
-      <span className="shrink-0 font-medium text-foreground/80">{auteur}</span>
+      <span className="shrink-0 font-medium text-foreground">{auteur}</span>
       <span className="truncate">{extrait}</span>
     </button>
   );

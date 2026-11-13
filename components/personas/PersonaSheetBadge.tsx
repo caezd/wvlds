@@ -1,8 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, Clock, FileText, type LucideIcon } from "lucide-react";
 
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
 
@@ -13,11 +15,11 @@ const ICONS: Record<PersonaSheetBadgeKind, LucideIcon> = {
   approved: CheckCircle2,
 };
 
-const TONES: Record<PersonaSheetBadgeKind, string> = {
-  incomplete: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
-  draft: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
-  submitted: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  approved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+const TONES: Record<PersonaSheetBadgeKind, BadgeProps["tone"]> = {
+  incomplete: "warning",
+  draft: "neutral",
+  submitted: "warning",
+  approved: "success",
 };
 
 /**
@@ -45,19 +47,52 @@ export function PersonaSheetBadge({
   const Icon = ICONS[kind];
   const label = t(kind);
   return (
-    <span
+    <Badge
+      tone={TONES[kind]}
       data-sheet-status={kind}
       title={compact ? label : t(`${kind}Hint`)}
       aria-label={compact ? label : undefined}
-      className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full font-medium",
-        compact ? "p-0.5" : "px-2 py-0.5 text-[11px]",
-        TONES[kind],
-        className,
-      )}
+      className={cn(compact && "h-4 px-0.5", className)}
     >
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      <Icon aria-hidden />
       {!compact && <span className="truncate">{label}</span>}
-    </span>
+    </Badge>
+  );
+}
+
+const BANNER_ICON_TONES: Record<PersonaSheetBadgeKind, string> = {
+  incomplete: "text-warning",
+  draft: "text-muted-foreground",
+  submitted: "text-warning",
+  approved: "text-success",
+};
+
+/**
+ * L'état de la fiche en bandeau, en tête de l'onglet de relecture : l'icône,
+ * l'état en gras, son explication, et à droite ce qu'on peut y faire
+ * (`actions` : valider, renvoyer).
+ */
+export function PersonaSheetStatusBanner({
+  persona,
+  actions,
+}: {
+  persona: { review_status?: unknown; sheet_complete?: boolean | null };
+  actions?: ReactNode;
+}) {
+  const t = useTranslations("personas.sheet");
+  const kind = sheetBadgeOf(persona, true) ?? "approved";
+  const Icon = ICONS[kind];
+  return (
+    <div
+      data-sheet-status={kind}
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card px-4 py-3"
+    >
+      <Icon className={cn("h-4 w-4 shrink-0", BANNER_ICON_TONES[kind])} aria-hidden />
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="font-semibold text-foreground">{t(kind)}</span>
+        <span className="text-muted-foreground"> · {t(`${kind}Hint`)}</span>
+      </p>
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+    </div>
   );
 }

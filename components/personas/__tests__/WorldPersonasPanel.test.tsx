@@ -28,7 +28,8 @@ describe("WorldPersonasPanel — CTA de création dans l'en-tête", () => {
     setup();
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
 
-    const button = await screen.findByRole("button", { name: "Nouveau persona" });
+    // L'en-tête d'abord ; ma rangée, vide, porte aussi sa tuile de création.
+    const [button] = await screen.findAllByRole("button", { name: "Nouveau persona" });
     expect(button).toBeInTheDocument();
     expect(button.textContent).toContain("Nouveau persona");
   });

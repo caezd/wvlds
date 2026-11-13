@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { requireAdmin } from "@/lib/admin";
 import { signBugReportAttachments } from "@/lib/bugReportAttachments";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import {
   BUG_REPORT_STATUSES,
   isBugReportStatus,
@@ -111,7 +112,7 @@ export default async function BugReportsPage({
       </nav>
 
       {reports.length === 0 ? (
-        <div className="rounded-lg border border-border-soft p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
           {t("empty")}
         </div>
       ) : (
@@ -133,7 +134,7 @@ export default async function BugReportsPage({
           {page > 0 && (
             <Link
               href={lien({ page: page - 1 })}
-              className="rounded-xl border border-border px-4 py-1.5 text-sm transition-colors hover:bg-muted/50"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               {t("previous")}
             </Link>
@@ -142,7 +143,7 @@ export default async function BugReportsPage({
           {suite && (
             <Link
               href={lien({ page: page + 1 })}
-              className="rounded-xl border border-border px-4 py-1.5 text-sm transition-colors hover:bg-muted/50"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               {t("next")}
             </Link>

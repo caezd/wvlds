@@ -66,7 +66,7 @@ export function CreateWorldDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant="ghost" size="sm" disabled={disabled} className="w-full justify-start">
+          <Button variant="outline" size="sm" disabled={disabled} className="w-full">
             {t("newWorld")}
           </Button>
         )}
@@ -93,7 +93,7 @@ export function CreateWorldDialog({
               <Input id="cwd-desc" name="description" placeholder="Optionnel" />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
               <Button type="submit" disabled={pending}>
                 {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Créer

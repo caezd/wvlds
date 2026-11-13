@@ -7,6 +7,7 @@ import { MapPin } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { Button } from "@/components/ui/button";
 
 type EpingleLiee = { id: string; map_id: string; title: string };
 
@@ -48,17 +49,19 @@ export function WikiPageMapLink({ worldId, pageId }: { worldId: string; pageId: 
   return (
     <div className="mb-4 flex flex-wrap gap-2">
       {epingles.map((epingle) => (
-        <button
+        <Button
           key={epingle.id}
           type="button"
+          variant="outline"
+          size="sm"
+          className="text-xs"
           onClick={() =>
             router.push(`/w/${worldId}?view=map&map=${epingle.map_id}&pin=${epingle.id}`)
           }
-          className="flex items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           <MapPin className="h-3.5 w-3.5" />
           {t("seeOnMap")} : {epingle.title}
-        </button>
+        </Button>
       ))}
     </div>
   );

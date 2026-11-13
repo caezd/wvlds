@@ -44,7 +44,7 @@ export function MessageFontSelector({ currentFont }: { currentFont: string }) {
               "rounded-lg border p-3 text-left transition-colors disabled:opacity-60",
               active
                 ? "border-primary/40 bg-primary/10"
-                : "border-border-soft hover:bg-muted/60",
+                : "border-border hover:bg-muted/60",
             )}
           >
             <p

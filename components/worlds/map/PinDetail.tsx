@@ -13,7 +13,7 @@ import { supabaseThumb } from "@/lib/storage";
 import { pinBannerPath } from "@/lib/storagePaths";
 import { createClient } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MarkdownContent } from "@/components/MarkdownRenderer";
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { PinVisualDialog } from "./PinVisualDialog";
 import { PinLinkGraph } from "./PinLinkGraph";
 import type { PinRoom, WikiPageOption } from "./types";
+import { SectionLabel } from "@/components/ui/section-label";
 
 // Panneau flottant (position: fixed), ancré sur l'épingle et non sur le clic :
 // `WorldMap` le suit pendant les déplacements de la carte.
@@ -50,12 +51,12 @@ function Bloc({ titre, action, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-1.5 rounded-lg border border-border-soft bg-secondary/30 p-2.5">
+    <section className="flex flex-col gap-1.5 rounded-lg border border-border bg-secondary/30 p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <SectionLabel as="h4" className="flex items-center gap-1.5">
           <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/60" />
           {titre}
-        </h4>
+        </SectionLabel>
         {action}
       </div>
       {children}
@@ -66,7 +67,7 @@ function Bloc({ titre, action, children }: {
 /** Une étiquette de repère : la carte du lieu, la région qui l'entoure. */
 function Repere({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex min-w-0 items-center gap-1 rounded border border-border-soft px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+    <span className="flex min-w-0 items-center gap-1 rounded border border-border px-1.5 py-0.5 text-2xs uppercase tracking-wide text-muted-foreground">
       {children}
     </span>
   );
@@ -331,13 +332,14 @@ export function PinDetail({
                     ce qui la nomme. Le bandeau ne prend pas le pointeur — le
                     bouton d'import de bannière est dessous —, ce bouton-ci si. */}
                 {canPost && (
-                  <button
+                  <Button variant="outline"
                     type="button"
+                    size="sm"
+                    className="pointer-events-auto text-xs shadow-sm"
                     onClick={() => router.push(`/w/${worldId}?play=${pin.id}`)}
-                    className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-md border border-white/30 bg-white/15 px-2 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
                     <Play className="h-3.5 w-3.5" /> {t("playHere")}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -411,7 +413,7 @@ export function PinDetail({
                 // hors d'atteinte d'une classe posée par-dessus.
                 <div
                   className={cn(
-                    "prose prose-sm dark:prose-invert max-w-none text-muted-foreground",
+                    "prose prose-sm prose-invert max-w-none text-muted-foreground",
                     "prose-p:text-xs prose-li:text-xs prose-headings:text-sm",
                     "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
                   )}
@@ -449,7 +451,7 @@ export function PinDetail({
                 aria-label={`${t("openWikiPage")} : ${linkedPage.title}`}
                 title={t("openWikiPage")}
                 onClick={() => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(linkedPage.slug)}`)}
-                className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit text-xs")}
               >
                 <BookOpenText aria-hidden className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{linkedPage.title}</span>
@@ -479,7 +481,7 @@ export function PinDetail({
                 aria-label={`${t("openTargetMap")} : ${linkedMap.label?.trim() || t("title")}`}
                 title={t("openTargetMap")}
                 onClick={() => onOpenMap(linkedMap.id)}
-                className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit text-xs")}
               >
                 <MapIcon aria-hidden className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{linkedMap.label?.trim() || t("title")}</span>
@@ -525,15 +527,12 @@ export function PinDetail({
                     variant={pickerVariant}
                     onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
                     trigger={
-                      // Taillé comme « Jouer ici » : deux gestes de même nature,
-                      // qui n'ont pas à peser différemment.
-                      <button
-                        type="button"
-                        className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                      >
+                      // Taillé comme « Jouer ici » (pilule `sm`), un cran en
+                      // dessous : c'est l'action seconde de la fiche.
+                      <Button type="button" variant="outline" size="sm" className="text-xs">
                         <UserPlus className="h-3.5 w-3.5" />
                         {t("settleHere")}
-                      </button>
+                      </Button>
                     }
                   />
                 )}
@@ -557,7 +556,7 @@ export function PinDetail({
                         type="button"
                         aria-label={t("removeFromPlace", { name: persona.name })}
                         onClick={() => onRemovePersona(persona.id)}
-                        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6")}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -609,7 +608,7 @@ export function PinDetail({
         {isEditMode && (
           <div
             data-pin-actions
-            className="flex shrink-0 items-center gap-2 border-t border-border-soft px-4 py-3"
+            className="flex shrink-0 items-center gap-2 border-t border-border px-4 py-3"
           >
             {editing ? (
               <>
@@ -619,7 +618,7 @@ export function PinDetail({
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => {
                     setTitle(pin.title);
                     setDescription(pin.description ?? "");
@@ -635,7 +634,7 @@ export function PinDetail({
               </>
             ) : (
               <>
-                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
                   <Pencil className="h-3.5 w-3.5" />
                   {tCommon("edit")}
                 </Button>
@@ -664,8 +663,8 @@ export function PinDetail({
                 </button>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  variant="destructive"
+                  className="ml-auto"
                   onClick={onDelete}
                 >
                   <Trash2 className="h-3.5 w-3.5" />

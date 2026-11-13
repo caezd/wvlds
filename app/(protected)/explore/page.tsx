@@ -11,6 +11,8 @@ import { ExploreWorldCard, type PublicWorld } from "./ExploreWorldCard";
 import { getTranslations } from "next-intl/server";
 import { buildExploreParams, MAX_FILTER_TAGS } from "./exploreQuery";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { SectionLabel } from "@/components/ui/section-label";
+import { buttonVariants } from "@/components/ui/button";
 
 const PAGE_SIZE = 16;
 const NO_MATCH_SENTINEL = "00000000-0000-0000-0000-000000000000";
@@ -206,7 +208,7 @@ export default async function ExplorePage({
                   {page > 0 && (
                     <Link
                       href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page - 1 })}`}
-                      className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                       {t("previous")}
                     </Link>
@@ -217,7 +219,7 @@ export default async function ExplorePage({
                   {page < totalPages - 1 && (
                     <Link
                       href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page + 1 })}`}
-                      className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                       {t("next")}
                     </Link>
@@ -228,11 +230,11 @@ export default async function ExplorePage({
 
             {/* Derniers mondes créés (1/4) */}
             <aside className="space-y-3 lg:col-span-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <SectionLabel as="p">
                 {t("latestWorlds")}
-              </p>
+              </SectionLabel>
               {latestWorlds.length === 0 ? (
-                <p className="text-xs italic text-muted-foreground/60">{t("noWorlds")}</p>
+                <p className="text-xs italic text-muted-foreground">{t("noWorlds")}</p>
               ) : (
                 <div className="space-y-2">
                   {latestWorlds.map((world) => (
@@ -253,7 +255,7 @@ function LatestWorldRow({ world }: { world: LatestWorld }) {
     <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5">
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-        style={{ backgroundColor: !world.icon_url ? (world.color ?? "#64748b") : undefined }}
+        style={{ backgroundColor: !world.icon_url ? (world.color ?? "var(--muted)") : undefined }}
       >
         {world.icon_url ? (
           <Image src={world.icon_url} alt="" width={36} height={36} className="h-full w-full object-cover" />

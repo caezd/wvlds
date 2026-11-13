@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Anchor, Pencil, Trash2 } from "lucide-react";
 import type { AnchorBlock } from "@/lib/chat-blocks";
+import { Button } from "@/components/ui/button";
 
 export function AnchorBlockView({
   block,
@@ -69,26 +70,30 @@ export function AnchorBlockView({
       {mine && !editing && (onEdit || onDelete) && (
         <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/anchor:opacity-100 focus-within:opacity-100 transition-opacity">
           {onEdit && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-6"
               aria-label={t("anchorEditAriaLabel")}
               title={t("anchorEditAriaLabel")}
               onClick={() => setEditing(true)}
-              className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
             >
               <Pencil className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           )}
           {onDelete && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-6 text-destructive hover:text-destructive"
               aria-label={t("anchorDeleteAriaLabel")}
               title={t("anchorDeleteAriaLabel")}
               onClick={onDelete}
-              className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           )}
         </div>
       )}

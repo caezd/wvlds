@@ -17,8 +17,11 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
+import { SectionLabel } from "@/components/ui/section-label";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { StoredImage } from "@/components/ui/stored-image";
 import { getInitials } from "@/lib/textFormatting";
@@ -34,6 +37,7 @@ import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsS
 import type { WorldCatalogItem } from "@/types/worlds";
 import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
+import { PresenceDot } from "@/components/avatars/PresenceDot";
 
 // -- Timeline collapsible -------------------------------------
 // -- Read-only field renderer ---------------------------------
@@ -73,12 +77,12 @@ function FieldView({
         {visible.map((stat) => (
           <div
             key={stat.id}
-            className="flex flex-col justify-end gap-0.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2"
+            className="flex flex-col justify-end gap-0.5 rounded-lg border border-border bg-muted/30 px-3 py-2"
           >
             {stat.label ? (
-              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+              <SectionLabel as="span">
                 {stat.label}
-              </span>
+              </SectionLabel>
             ) : null}
             <div className="flex items-baseline justify-between gap-1">
               <span className="text-lg font-semibold tabular-nums">
@@ -118,7 +122,7 @@ function FieldView({
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${Math.min(100, ((item.value ?? 0) / (item.max || 1)) * 100)}%`,
-                  backgroundColor: item.color ?? "#6366f1",
+                  backgroundColor: item.color ?? DEFAULT_PLAYER_COLOR,
                 }}
               />
             </div>
@@ -147,7 +151,7 @@ function FieldView({
         {visible.map((item) => (
           <span
             key={item.id}
-            className="rounded-full border border-border-soft bg-muted/40 px-3 py-1 text-xs font-medium"
+            className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium"
           >
             {item.label}
           </span>
@@ -399,7 +403,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             )}
 
             {/* -- Avatar + nom -- */}
-            <div className="flex flex-col items-center gap-2 py-6 border-b border-border-soft">
+            <div className="flex flex-col items-center gap-2 py-6 border-b border-border">
               <AvatarWithFrame
                 src={persona.avatar_url}
                 alt={persona.name}
@@ -415,13 +419,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 </div>
                 {presenceLine && !persona.is_npc && (
                   <div className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        userPresence === "online" ? "bg-[#58F4A8]"
-                        : userPresence === "away" ? "bg-orange-400"
-                        : "bg-muted-foreground/40"
-                      }`}
-                    />
+                    <PresenceDot state={userPresence} />
                     {presenceLine}
                   </div>
                 )}
@@ -433,25 +431,24 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 (persona.user_id === selfId || persona.is_npc) && !usableForSelf ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      {/* Désactivé, il garde les évènements du pointeur : l'infobulle dit pourquoi. */}
+                      <Button variant="outline"
+                        size="sm"
                         disabled
-                        className="mt-1 flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium opacity-50 cursor-not-allowed"
+                        className="mt-1 disabled:pointer-events-auto disabled:cursor-not-allowed"
                       >
                         <Lock className="h-3 w-3" />
                         Utiliser ce persona
-                      </button>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-56 text-center">
                       {t(LOCK_REASON_KEYS[lockReason])}
                     </TooltipContent>
                   </Tooltip>
                 ) : (
-                  <button
-                    className="mt-1 rounded-full border px-4 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-                    onClick={() => { onUsePersona(persona); onClose(); }}
-                  >
+                  <Button variant="outline" size="sm" className="mt-1" onClick={() => { onUsePersona(persona); onClose(); }}>
                     Utiliser ce persona
-                  </button>
+                  </Button>
                 )
               )}
             </div>

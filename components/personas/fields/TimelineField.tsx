@@ -41,7 +41,7 @@ export function TimelineField({
                 value={item.date ?? ""}
                 onChange={(e) => patch(item.id, "date", e.target.value)}
                 placeholder={tPersonas("eraPlaceholder")}
-                className="w-24 shrink-0 bg-transparent text-[0.65rem] text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+                className="w-24 shrink-0 bg-transparent text-2xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
               />
               <input
                 value={item.title}

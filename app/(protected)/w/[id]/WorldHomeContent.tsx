@@ -110,12 +110,12 @@ export default async function WorldHomeContent({
       } | null;
     })(),
     (async (): Promise<AsidePersona[]> => {
-      // Consommées uniquement par l'onglet « Personas » (cf. WorldHome).
+      // Consommées uniquement par les onglets « Personas » et « Membres » (cf. WorldHome).
       // Sans ce garde, les trois requêtes ci-dessous (personas, puis sections,
       // puis champs) partaient aussi pour l'accueil, le wiki, la carte, les
       // membres… et leur résultat était jeté. Les `data` jsonb des champs
       // peuvent être volumineux.
-      if (!userId || panel !== "personas") return [];
+      if (!userId || (panel !== "personas" && panel !== "members")) return [];
       const personaColumns =
         "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, faceclaim, marital_status, spouse_persona_id, narrative_status, review_status, sheet_complete, created_at, frame:avatar_frame_id(asset_url)";
       const personasQuery = (columns: string) =>

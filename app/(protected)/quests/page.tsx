@@ -7,6 +7,8 @@ import { pickRandomChallenge } from "@/lib/challengeTemplates";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { Dices, Trophy, Clock, Coins } from "lucide-react";
 import DateDisplay from "@/components/date-display";
+import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/ui/section-label";
 import { getTranslations } from "next-intl/server";
 
 type TFn = Awaited<ReturnType<typeof getTranslations>>;
@@ -130,10 +132,10 @@ export default async function QuestsPage() {
 
       {/* Défis actifs */}
       {challenges.length === 0 ? (
-        <div className="rounded-xl border border-border-soft bg-muted/30 px-5 py-8 text-center">
-          <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+        <div className="rounded-xl border border-border bg-muted/30 px-5 py-8 text-center">
+          <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{t("empty")}</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">{t("emptyHint")}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("emptyHint")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -144,7 +146,7 @@ export default async function QuestsPage() {
                 "rounded-xl border px-5 py-4 space-y-3 transition-colors",
                 c.already_won
                   ? "border-primary/30 bg-primary/5"
-                  : "border-border-soft bg-background",
+                  : "border-border bg-background",
               ].join(" ")}
             >
               <div className="flex items-start justify-between gap-3">
@@ -153,9 +155,7 @@ export default async function QuestsPage() {
                     {c.already_won && <Trophy className="h-3.5 w-3.5 text-primary shrink-0" />}
                     <span className="font-medium text-sm">{c.title}</span>
                     {c.source === "word_of_day" && (
-                      <span className="text-[0.6rem] uppercase tracking-wider font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-                        {t("todaysWord")}
-                      </span>
+                      <Badge>{t("todaysWord")}</Badge>
                     )}
                   </div>
                   {c.description && (
@@ -167,20 +167,20 @@ export default async function QuestsPage() {
                   )}
                 </div>
                 <div className="shrink-0 text-right space-y-1">
-                  <div className="flex items-center gap-1 justify-end text-xs font-medium text-amber-500">
+                  <div className="flex items-center gap-1 justify-end text-xs font-medium text-warning">
                     <Coins className="h-3 w-3" />
                     <span>+{c.reward_coins}</span>
                   </div>
-                  <div className="text-[0.65rem] text-muted-foreground">+{c.reward_xp} XP</div>
+                  <div className="text-2xs text-muted-foreground">+{c.reward_xp} XP</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1 border-t border-border-soft/60">
+              <div className="flex items-center gap-2 pt-1 border-t border-border/60">
                 <span className="text-xs text-muted-foreground">
                   <ValidationHint validation={c.validation} t={t} />
                 </span>
                 {c.min_word_count > 0 && (
-                  <span className="ml-auto text-[0.65rem] text-muted-foreground shrink-0">
+                  <span className="ml-auto text-2xs text-muted-foreground shrink-0">
                     min. {c.min_word_count} mots
                   </span>
                 )}
@@ -196,24 +196,24 @@ export default async function QuestsPage() {
 
       {/* Journal du jour */}
       <div>
-        <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+        <SectionLabel as="h2" className="mb-3">
           {t("victoriesTitle")}
-        </h2>
+        </SectionLabel>
 
         {entries.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60 text-center py-4">
+          <p className="text-xs text-muted-foreground text-center py-4">
             {t("noVictories")}
           </p>
         ) : (
-          <div className="rounded-xl border border-border-soft overflow-hidden divide-y divide-border-soft">
+          <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
             {entries.map((e, i) => (
               <div key={i} className="flex items-center gap-2 px-4 py-3">
                 <p className="flex-1 min-w-0 text-xs text-muted-foreground truncate">
-                  <span className="text-muted-foreground/50">{t("playerCompleted")}</span>
+                  <span>{t("playerCompleted")}</span>
                   {" · "}
-                  <span className="text-foreground/80 font-medium">{e.challenge_title}</span>
+                  <span className="text-foreground font-medium">{e.challenge_title}</span>
                 </p>
-                <span className="text-[0.65rem] text-muted-foreground shrink-0">
+                <span className="text-2xs text-muted-foreground shrink-0">
                   <DateDisplay value={e.won_at} />
                 </span>
               </div>

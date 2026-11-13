@@ -91,7 +91,7 @@ export default async function SidebarRail() {
           </>
         )}
 
-        <div className="my-0.5 h-px w-8 shrink-0 bg-border-soft" />
+        <div className="my-0.5 h-px w-8 shrink-0 bg-border" />
 
         {/* Notifications */}
         {featureFlags.notifications && <NotificationBellButton />}

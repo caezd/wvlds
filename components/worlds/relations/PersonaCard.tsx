@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+import { CountPip } from "@/components/ui/count-pip";
 import { isRetiredStatus } from "@/lib/personaStatus";
 import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { getInitials } from "@/lib/textFormatting";
@@ -48,7 +49,7 @@ export function PersonaCard({
       tabIndex={0}
       aria-label={persona.name}
       aria-pressed={selected}
-      style={{ width: CW, height: CH, borderColor: selected ? "hsl(var(--primary))" : (gc ?? "transparent") }}
+      style={{ width: CW, height: CH, borderColor: selected ? "var(--primary)" : (gc ?? "transparent") }}
       className={cn(
         "relative cursor-pointer rounded-lg border-2 transition-all",
         selected ? "ring-1 ring-primary/30" : "hover:opacity-90",
@@ -60,7 +61,7 @@ export function PersonaCard({
       onClick={onSelect}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
     >
-      <div className="absolute inset-0 overflow-hidden rounded-[6px]">
+      <div className="absolute inset-0 overflow-hidden rounded-md">
         {persona.avatar_url ? (
           <Image src={persona.avatar_url} alt="" fill sizes={`${CW}px`} className="object-cover" />
         ) : (
@@ -71,21 +72,19 @@ export function PersonaCard({
         )}
         <div className="absolute inset-x-0 bottom-0 px-1.5 pb-1.5 pt-5"
           style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)" }}>
-          <span className="line-clamp-2 text-[9px] font-semibold leading-tight text-white drop-shadow-sm">{persona.name}</span>
+          <span className="line-clamp-2 text-2xs font-semibold leading-tight text-white drop-shadow-sm">{persona.name}</span>
         </div>
         {relationCount > 0 && (
-          <span className="absolute right-1 bottom-1 rounded-full bg-black/50 px-1 text-[9px] font-medium tabular-nums text-white/80" title={t("relationCount", { count: relationCount })}>
+          <span className="absolute right-1 bottom-1 rounded-full bg-black/50 px-1 text-2xs font-medium tabular-nums text-white/80" title={t("relationCount", { count: relationCount })}>
             {relationCount}
           </span>
         )}
       </div>
       {pendingCount > 0 && (
-        <span className="absolute left-1 top-1 z-20 rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground" title={t("pendingCount", { count: pendingCount })}>
-          {pendingCount}
-        </span>
+        <CountPip count={pendingCount} title={t("pendingCount", { count: pendingCount })} className="absolute left-1 top-1 z-20" />
       )}
       {pendingCount === 0 && (
-        <PersonaStatusBadge status={persona.narrative_status} compact className="absolute left-1 top-1 z-20 bg-black/60 text-white dark:text-white" />
+        <PersonaStatusBadge status={persona.narrative_status} compact className="absolute left-1 top-1 z-20 bg-black/60 text-white" />
       )}
       {corner && <div className="absolute right-1 top-0 z-20">{corner}</div>}
     </div>

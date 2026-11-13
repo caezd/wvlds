@@ -18,6 +18,7 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { isPronounOption } from "@/lib/pronouns";
 import { levelInfo } from "@/lib/xp";
+import { MemberWorldCardSection } from "@/components/worlds/members/MemberWorldCardSection";
 
 function formatMemberSince(value: string) {
   return new Intl.DateTimeFormat("fr-CA", {
@@ -172,15 +173,15 @@ export function UserProfileSheetTrigger({
                 />
               </div>
               <div className="flex items-center justify-center gap-3 pt-0.5 text-xs">
-                <span className="flex items-center gap-1 text-yellow-400">
+                <span className="flex items-center gap-1 text-warning">
                   <Coins className="h-3.5 w-3.5" />
                   {balance.coins.toLocaleString()}
                 </span>
-                <span className="flex items-center gap-1 text-orange-400">
+                <span className="flex items-center gap-1 text-accent">
                   <Flame className="h-3.5 w-3.5" />
                   {balance.streak_current} j.
                 </span>
-                <span className="flex items-center gap-1 text-blue-400">
+                <span className="flex items-center gap-1 text-info">
                   <Zap className="h-3.5 w-3.5" />
                   {balance.xp} XP
                 </span>
@@ -193,7 +194,7 @@ export function UserProfileSheetTrigger({
               {profile.pronouns.map((p) => (
                 <span
                   key={p}
-                  className="rounded-full border border-border-soft bg-muted/40 px-2.5 py-0.5 text-xs font-medium"
+                  className="rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs font-medium"
                 >
                   {isPronounOption(p) ? tPronouns(p) : p}
                 </span>
@@ -202,10 +203,13 @@ export function UserProfileSheetTrigger({
           )}
 
           {profile?.bio && (
-            <div className="w-full rounded-lg border border-border-soft bg-muted/30 p-3 text-left">
+            <div className="w-full rounded-lg border border-border bg-muted/30 p-3 text-left">
               <MarkdownRenderer content={profile.bio} className="text-sm prose-sm" />
             </div>
           )}
+
+          {/* Sa carte dans le monde où l'on se trouve (migration 177), après le profil global. */}
+          {userId && <MemberWorldCardSection userId={userId} className="w-full" />}
 
           {profile?.created_at && (
             <p className="text-xs text-muted-foreground">

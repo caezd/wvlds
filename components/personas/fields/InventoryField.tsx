@@ -7,6 +7,8 @@ import { Lock, Plus, TriangleAlert, X } from "lucide-react";
 import { clampQuantity, indexCatalog, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { InventoryItem } from "@/types/personas";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
+import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/ui/section-label";
 import { CatalogPicker, EntryVisual, IconButton, RarityMark, makeItemId } from "./shared";
 
 export function InventoryField({
@@ -67,9 +69,9 @@ export function InventoryField({
 
     return (
       <div className="space-y-2 pr-24">
-        <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
+        <SectionLabel as="div" className="flex items-center gap-1.5 mb-1">
           <Lock className="h-3 w-3" /> {tCatalogue("inventoryFromCatalog")}
-        </div>
+        </SectionLabel>
         {items.map((item) => {
           const resolved = resolveCatalogEntry(item, catalog);
           const source = item.catalog_id ? catalogItems.find((c) => c.id === item.catalog_id) : undefined;
@@ -80,13 +82,13 @@ export function InventoryField({
                 <RarityMark rarity={resolved.rarity} />
                 <span className="truncate text-sm font-medium">{resolved.name}</span>
                 {resolved.orphaned && (
-                  <span
+                  <Badge
+                    tone="danger"
                     title={tCatalogue("orphanedItem")}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive"
                   >
-                    <TriangleAlert className="h-3 w-3" />
+                    <TriangleAlert />
                     {tCatalogue("orphanedItem")}
-                  </span>
+                  </Badge>
                 )}
               </span>
               <div className="flex items-center gap-1 shrink-0">

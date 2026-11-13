@@ -50,7 +50,7 @@ export function SearchWikiResults({
                 </span>
                 {hit.note && <span className="text-xs text-muted-foreground">{page.title}</span>}
                 {hit.excerpt && (
-                  <span className="line-clamp-1 text-xs text-muted-foreground/80">{hit.excerpt}</span>
+                  <span className="line-clamp-1 text-xs text-muted-foreground">{hit.excerpt}</span>
                 )}
               </button>
             </li>

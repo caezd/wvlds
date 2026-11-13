@@ -282,7 +282,7 @@ export function BugReportForm({
           était à l'écran. On ne joint pas ça au nom de quelqu'un sans qu'il
           l'ait lu, ni sans qu'il puisse s'y opposer. */}
       {erreurs.length > 0 && (
-        <div className="space-y-2 rounded-lg border border-border-soft p-3">
+        <div className="space-y-2 rounded-lg border border-border p-3">
           <div className="flex items-start gap-2">
             <Checkbox
               id="bug-report-errors"
@@ -302,7 +302,7 @@ export function BugReportForm({
                 {e.source && (
                   // Pas d'opacité sur ce texte : à cette taille, « /70 » le
                   // ramenait à 3,87:1 là où WCAG AA en demande 4,5.
-                  <p className="break-all font-mono text-[0.65rem] text-muted-foreground">
+                  <p className="break-all font-mono text-2xs text-muted-foreground">
                     {e.source}
                   </p>
                 )}

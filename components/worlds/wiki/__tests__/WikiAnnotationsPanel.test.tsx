@@ -52,6 +52,7 @@ function renderPanel(props: Partial<React.ComponentProps<typeof WikiAnnotationsP
       draft={null}
       currentUserId="u1"
       canModerate
+      canComment
       {...handlers}
       {...props}
     />,
@@ -201,6 +202,19 @@ describe("WikiAnnotationsPanel — écriture", () => {
     await user.click(await screen.findByRole("button", { name: "Supprimer" }));
 
     await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
+  });
+
+  it("sans `wiki.comment`, ni saisie ni bouton de réponse : la lecture reste ouverte", () => {
+    renderPanel({
+      canComment: false,
+      threads: [thread({ id: "a1", body: "Qui sont les Gardiens ?" })],
+      draft: { anchor: { type: "p", quote: "Les Gardiens", prefix: "", suffix: "", index: 0 } },
+    });
+
+    expect(screen.getByText("Qui sont les Gardiens ?")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Répondre" })).toBeNull();
   });
 
   it("ne propose pas de supprimer le fil d'un autre à un simple membre", async () => {

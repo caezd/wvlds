@@ -16,9 +16,13 @@ import { useWorldMembership } from "@/components/providers/WorldMembershipProvid
 import { PersonaEditorContent } from "./PersonaEditSheet";
 import { createPersona } from "@/app/(protected)/p/actions";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { fetchPersonaSections } from "@/lib/personaSections";
+import { TABLE } from "@/lib/constants";
+import type { PersonaPatch } from "@/lib/personaDraft";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
+import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 
 export function PersonaCreateSheet({
   worldId,
@@ -42,6 +46,9 @@ export function PersonaCreateSheet({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
+  // L'éditeur n'écrit plus de lui-même : ce qu'il modifie ici s'écrit à la
+  // fermeture, la création n'ayant pas de pied de page à elle.
+  const [draftPatch, setDraftPatch] = useState<PersonaPatch>({});
   const nameRef = useRef<HTMLInputElement>(null);
   // PNJ partagé (migration 182) : proposé à qui gère les PNJ du monde ;
   // `defaultNpc` précoche la case (bouton « Nouveau PNJ »).
@@ -54,15 +61,27 @@ export function PersonaCreateSheet({
   function handleOpen(v: boolean) {
     setOpen(v);
     if (!v) {
+      if (createdId) void flushDraft(createdId, draftPatch);
       // reset à la fermeture
+      setDraftPatch({});
       setPhase("name");
       setCreatedId(null);
       setCreatedName("");
       setError(null);
       setSections([]);
       setAsNpc(!!defaultNpc);
-      if (createdId) router.refresh();
+      if (createdId) {
+        notifyPersonasChanged();
+        router.refresh();
+      }
     }
+  }
+
+  /** Ce que l'éditeur a modifié depuis la création, écrit à la fermeture. */
+  async function flushDraft(personaId: string, patch: PersonaPatch) {
+    if (Object.keys(patch).length === 0) return;
+    const { error } = await createClient().from(TABLE.PERSONAS).update(patch).eq("id", personaId);
+    if (error) toast.error(t("saveFailed"), { description: error.message });
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -95,7 +114,7 @@ export function PersonaCreateSheet({
           {trigger}
         </span>
       ) : (
-        <Button onClick={() => setOpen(true)}>{t("newPersona")}</Button>
+        <Button variant="outline" onClick={() => setOpen(true)}>{t("newPersona")}</Button>
       )}
 
       <Drawer open={open} onOpenChange={handleOpen} swipeDirection="right">
@@ -129,7 +148,7 @@ export function PersonaCreateSheet({
               </div>
 
               {worldId && canManageNpc && (
-                <label className="flex items-start gap-3 rounded-lg border border-border-soft px-3 py-2.5 text-sm">
+                <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 text-sm">
                   <Checkbox checked={asNpc} onCheckedChange={(v) => setAsNpc(v === true)} className="mt-0.5" aria-label={tNpc("createLabel")} />
                   <span className="space-y-0.5">
                     <span className="block font-medium">{tNpc("createLabel")}</span>
@@ -141,7 +160,7 @@ export function PersonaCreateSheet({
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                   Annuler
                 </Button>
                 <Button type="submit" disabled={pending}>
@@ -151,6 +170,7 @@ export function PersonaCreateSheet({
             </form>
           ) : createdId ? (
             <PersonaEditorContent
+              onPatch={(patch) => setDraftPatch((prev) => ({ ...prev, ...patch }))}
               personaId={createdId}
               personaName={createdName}
               sections={sections}

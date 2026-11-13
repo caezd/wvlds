@@ -113,7 +113,7 @@ export function ChatroomTurnDialog({
             <ol className="space-y-1" data-testid="turn-order">
               {order.length === 0 && <li className="text-sm text-muted-foreground">{t("turnEmpty")}</li>}
               {order.map((id, i) => (
-                <li key={id} className="flex items-center gap-2 rounded-md border border-border-soft px-2 py-1 text-sm">
+                <li key={id} className="flex items-center gap-2 rounded-md border border-border px-2 py-1 text-sm">
                   <span className="w-5 text-xs text-muted-foreground">{i + 1}.</span>
                   <span className="min-w-0 flex-1 truncate">{nom(id)}</span>
                   <Button type="button" variant="ghost" size="icon" className="h-7 w-7" disabled={i === 0}
@@ -138,7 +138,7 @@ export function ChatroomTurnDialog({
                     key={m.user_id}
                     type="button"
                     onClick={() => setOrder((o) => [...o, m.user_id])}
-                    className="inline-flex items-center gap-1 rounded-full border border-border-soft px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
                     <Plus className="h-3 w-3" />
                     {m.username ?? "?"}

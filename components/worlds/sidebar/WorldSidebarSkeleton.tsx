@@ -13,7 +13,7 @@ export function WorldSidebarSkeleton() {
     <aside
       aria-hidden="true"
       data-testid="world-sidebar-skeleton"
-      className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border-soft"
+      className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border"
     >
       <div className="flex items-center gap-2 border-b px-3 py-3">
         <div className="size-8 shrink-0 animate-pulse rounded-lg bg-muted" />

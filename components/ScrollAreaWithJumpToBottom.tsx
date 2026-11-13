@@ -4,7 +4,6 @@ import * as React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ArrowDown } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type Props = {
   className?: string;
@@ -121,12 +120,9 @@ export const ScrollAreaWithJumpToBottom = React.forwardRef<HTMLDivElement, Props
           <Button
             type="button"
             size="icon"
-            variant="secondary"
-            className={
-              cn(
-                "transition-all pointer-events-auto shadow hover:bg-hoverCard hover:text-foreground rounded-lg"
-              )
-            }
+            variant="outline"
+            // Posé sur les messages : un fond plein pour rester lisible.
+            className="pointer-events-auto bg-background shadow"
             tabIndex={showDown ? 0 : -1}
             aria-hidden={!showDown}
             onClick={scrollToBottom}

@@ -31,6 +31,7 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { cn } from "@/lib/utils";
 import { MAX_MAPS_PER_WORLD } from "@/lib/constants";
 import type { WorldMapData } from "@/app/actions/worldMap";
+import { buttonVariants } from "@/components/ui/button";
 
 /** Identifiant DOM d'un onglet, partagé avec le panneau qu'il commande. */
 export const mapTabId = (mapId: string) => `map-tab-${mapId}`;
@@ -117,7 +118,7 @@ function TabButton({
             if (e.key === "Enter") e.currentTarget.blur();
             if (e.key === "Escape") { setRenaming(false); }
           }}
-          className="w-28 rounded-md border border-border-soft bg-background px-2 py-0.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary"
+          className="w-28 rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary"
         />
       ) : (
         <button
@@ -306,14 +307,14 @@ export function MapTabs({
       title={complet ? t("maxMapsReached") : t("addMap")}
       disabled={complet || creating}
       onClick={(e) => { e.stopPropagation(); onAdd(); }}
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+      className={buttonVariants({ variant: "ghost", size: "xs" })}
     >
       {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
     </button>
   );
 
   const classeBarre =
-    "flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border-soft bg-background px-2 py-1";
+    "flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-background px-2 py-1";
 
   // Hors édition, pas de contexte de glisser-déposer : il ne servirait à
   // personne et monterait ses écouteurs pour rien.

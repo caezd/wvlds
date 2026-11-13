@@ -28,7 +28,7 @@ function MemberAvatar({ member, className }: { member: Member; className?: strin
   return (
     <Avatar className={className}>
       <AvatarImage src={member.avatar_url ?? undefined} alt="" className="rounded-full" />
-      <AvatarFallback className="rounded-full text-[10px]">{getLeadingLetter(displayNameOf(member))}</AvatarFallback>
+      <AvatarFallback className="rounded-full text-2xs">{getLeadingLetter(displayNameOf(member))}</AvatarFallback>
     </Avatar>
   );
 }
@@ -151,7 +151,7 @@ export function WorldMembersOnlineWidget({
           </Link>
         </div>
         {shown.length > 0 && (
-          <div className="border-t border-border-soft">
+          <div className="border-t border-border">
             {/* Deux rendus du même contenu, un seul visible à la fois, selon la
                 largeur de la CELLULE (container query, voir WorldHomeGridView) :
                 les noms à la suite, séparés par des virgules, quand le bloc est
@@ -183,7 +183,7 @@ export function WorldMembersOnlineWidget({
   }
 
   return (
-    <Link href={href} className={`${headerClass} rounded-lg border transition-colors hover:bg-hoverCard`}>
+    <Link href={href} className={`${headerClass} rounded-lg border transition-colors hover:bg-muted`}>
       <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate">{countLabel}</span>
       {shown.length > 0 && (
@@ -201,7 +201,7 @@ export function WorldMembersOnlineWidget({
             </Tooltip>
           ))}
           {overflow > 0 && (
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium text-muted-foreground ring-2 ring-background">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-2xs font-medium text-muted-foreground ring-2 ring-background">
               +{overflow}
             </span>
           )}

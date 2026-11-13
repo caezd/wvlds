@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 
 import { DrawerClose, DrawerContent } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Coque des panneaux latéraux (drawers ancrés à droite).
@@ -73,7 +74,9 @@ export function SideSheetContent({
                 <DrawerClose
                     aria-label={tCommon("close")}
                     className={cn(
-                        "absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring",
+                        // La croix de fermeture, la même partout : ghost, icône seule.
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                        "absolute right-2 top-2",
                         closeClassName,
                     )}
                 >

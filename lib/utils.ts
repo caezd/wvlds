@@ -1,5 +1,18 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// Les jetons maison de app/globals.css, déclarés à tailwind-merge : sans cela,
+// il prend `text-xs-plus` pour une couleur (un `text-success` qui suit
+// l'efface) et ne sait pas qu'un `z-popover` remplace un `z-50`.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: ["2xs", "xs-plus"] }],
+      z: [{ z: ["floating", "modal", "modal-raised", "popover", "lightbox"] }],
+      shadow: [{ shadow: ["popover", "floating", "modal"] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

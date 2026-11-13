@@ -3,113 +3,204 @@
 
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* L'application n'a qu'un thème, sombre (`<html class="dark">`). Les variantes
+   `dark:` restent déclarées pour les bibliothèques qui s'en servent, mais le
+   code de l'application n'en écrit pas : la moitié claire d'une paire ne
+   s'afficherait jamais. */
 @custom-variant dark (&:where(.dark, .dark *));
-@custom-variant light (&:where(.light, .light *));
 @custom-variant touch (@media (pointer: coarse));
 
+/* ── Source unique des couleurs ───────────────────────────────────────────
+   Les valeurs vivent ici, et nulle part ailleurs : `@theme inline` plus bas
+   ne fait que les nommer pour Tailwind. Un composant n'écrit ni couleur de
+   la palette Tailwind (`amber-500`), ni hexadécimal, ni `hsl(var(--x))` :
+   il prend un de ces jetons. Contrôle : test/__tests__/designTokens.test.ts. */
 :root {
-    --radius: 1rem;
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.141 0.005 285.823);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.141 0.005 285.823);
-    --primary: oklch(0.21 0.006 285.885);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.967 0.001 286.375);
-    --secondary-foreground: oklch(0.21 0.006 285.885);
-    --muted: oklch(0.967 0.001 286.375);
-    --muted-foreground: oklch(0.552 0.016 285.938);
-    --accent: oklch(0.967 0.001 286.375);
-    --accent-foreground: oklch(0.21 0.006 285.885);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.92 0.004 286.32);
-    --input: oklch(0.92 0.004 286.32);
-    --ring: oklch(0.705 0.015 286.067);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.96 0 0);
-    /* ~#f2f2f2 : canvas clair du kit */
-    --sidebar-foreground: oklch(0.141 0.005 285.823);
-    --sidebar-primary: oklch(0.21 0.006 285.885);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.967 0.001 286.375);
-    --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-    --sidebar-border: oklch(0.92 0.004 286.32);
-    --sidebar-ring: oklch(0.705 0.015 286.067);
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.141 0.005 285.823);
-    /* Surfaces élevées custom (composer, hovers d'icônes) */
-    --hover-400: #e9e9e9;
-    --card-400: #ffffff;
+    --radius: 0.625rem;
 
+    /* Surfaces, de la plus sombre à la plus claire. `muted` sert aussi aux
+       survols et aux puces ; pour une surface de plus, on en choisit une. */
+    --canvas: oklch(0.176 0.006 285.85);           /* ~#111113  rail, fond derrière le panneau */
+    --background: oklch(0.21 0.006 285.885);       /* #18181B  panneau principal, pages */
+    --card: oklch(0.236 0.006 286);                /* #1F1F23  cartes, blocs, stats */
+    --popover: var(--card);                      /* menus, selects, tooltips, dialogs */
+    --muted: oklch(0.274 0.006 286.033);           /* #27272A  pilules, squelettes, avatars vides */
+    --secondary: var(--muted);
+    --hover: var(--muted);                       /* survol et sélection */
+    --border: oklch(0.274 0.006 286.033);          /* #27272A  la bordure unique */
+    --input: var(--border);
+    --ring: oklch(0.552 0.016 285.938);            /* #71717B  focus, bordure active */
+
+    /* Deux gris de texte, pas plus. */
+    --foreground: oklch(0.967 0.001 286.375);      /* #F4F4F5  texte principal */
+    --muted-foreground: oklch(0.705 0.015 286.067); /* #9F9FA9  texte secondaire, icônes */
+    --canvas-foreground: var(--foreground);
+    --card-foreground: var(--foreground);
+    --popover-foreground: var(--foreground);
+    --secondary-foreground: var(--foreground);
+    --hover-foreground: var(--foreground);
+
+    --primary: oklch(0.92 0.004 286.32);           /* #E4E4E7  bouton principal, contrôles cochés */
+    --primary-foreground: oklch(0.21 0.006 285.885); /* #18181B */
+    --accent: #F94B5F;                           /* rouge WVLDS */
+    --accent-foreground: #FAFAFA;
+
+    /* États : une couleur par sens, le texte et le fond doux s'en déduisent. */
+    --destructive: #FF6467;
+    --destructive-foreground: #FFFFFF;
+    --success: oklch(0.765 0.177 163.2);
+    --warning: oklch(0.828 0.189 84.4);
+    --info: oklch(0.746 0.16 232.7);
+    /* Les PNJ, et ce qui est « du monde » plutôt que d'un joueur. */
+    --npc: oklch(0.702 0.183 293.5);
+
+    /* Présence : en ligne, absent (orange), hors ligne (rouge). */
+    --online: #58f4a8;
+    --away: oklch(0.75 0.183 55.9);
+    --offline: oklch(0.637 0.237 25.3);
+
+    /* Sidebar shadcn, branchée sur les mêmes valeurs. */
+    --sidebar: var(--canvas);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--hover);
+    --sidebar-accent-foreground: var(--hover-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
 }
 
-.dark {
-    /* Palette "Constructor X" — gris neutres sans teinte, surfaces en couches.
-       Le canvas (body + sidebar) utilise --sidebar ; --background est le
-       panneau principal flottant, plus clair. */
-    --body: #151517;
-    --background: #1B1B1D;
-    /* ~#1c1c1c : panneau de contenu */
-    --foreground: oklch(0.93 0 0);
-    /* ~#ececec : texte principal */
-    --card: oklch(0.225 0 0);
-    /* ~#212121 : cartes sur le panneau */
-    --card-foreground: oklch(0.93 0 0);
-    --popover: oklch(0.235 0 0);
-    /* menus, modales */
-    --popover-foreground: oklch(0.93 0 0);
-    --primary: oklch(0.985 0 0);
-    /* bouton primaire blanc */
-    --primary-foreground: oklch(0.145 0 0);
-    --secondary: oklch(0.26 0 0);
-    /* ~#2a2a2a : pills, hover */
-    --secondary-foreground: oklch(0.93 0 0);
-    --muted: oklch(0.26 0 0);
-    --muted-foreground: oklch(0.65 0 0);
-    /* ~#9a9a9a : texte secondaire */
-    --accent: #Ba3737;
-    --accent-foreground: oklch(0.93 0 0);
-    --destructive: oklch(0.637 0.237 25.331);
-    /* #ef4444 */
-    --border: #232327;
-    --input: oklch(1 0 0 / 12%);
-    --ring: oklch(0.55 0 0);
-    --chart-1: oklch(0.723 0.219 149.579);
-    /* vert #22c55e */
-    --chart-2: oklch(0.623 0.214 259.815);
-    /* bleu #3b82f6 */
-    --chart-3: oklch(0.705 0.213 47.604);
-    /* orange #f97316 */
-    --chart-4: oklch(0.606 0.25 292.717);
-    /* violet #8b5cf6 */
-    --chart-5: oklch(0.637 0.237 25.331);
-    /* rouge #ef4444 */
-    --sidebar: oklch(0.19 0 0);
-    /* ~#171717 : canvas + sidebar (écart subtil avec le panneau, comme le kit) */
-    --sidebar-foreground: oklch(0.93 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.145 0 0);
-    --sidebar-accent: oklch(0.225 0 0);
-    --sidebar-accent-foreground: oklch(0.93 0 0);
-    --sidebar-border: oklch(1 0 0 / 8%);
-    --sidebar-ring: oklch(0.55 0 0);
-    /* Surfaces élevées custom (composer, hovers d'icônes) */
-    --hover-400: #2e2e2e;
-    --card-400: #242424;
+@theme inline {
+    --color-canvas: var(--canvas);
+    --color-canvas-foreground: var(--canvas-foreground);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-hover: var(--hover);
+    --color-hover-foreground: var(--hover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
 
-    --mist-50: #E5E5EF;
-    --mist-100: #CCCCD5;
-    --mist-200: #8E8E98;
-    --mist-300: #575761;
+    /* Rayons : l'échelle suit `--radius` (10 px pour lg). */
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
 
-    --carbon-700: #232327;
-    --carbon-800: #1B1B1D;
+    /* États, et leur fond doux (`bg-success-soft`) pour badges et bandeaux. */
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-destructive-soft: color-mix(in oklab, var(--destructive) 15%, transparent);
+    --color-success: var(--success);
+    --color-success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+    --color-warning: var(--warning);
+    --color-warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+    --color-info: var(--info);
+    --color-info-soft: color-mix(in oklab, var(--info) 15%, transparent);
+    --color-npc: var(--npc);
+    --color-npc-soft: color-mix(in oklab, var(--npc) 15%, transparent);
+    --color-accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+    --color-online: var(--online);
+    --color-away: var(--away);
+    --color-offline: var(--offline);
+}
 
+@theme {
+    /* ── Palette « joueurs » ─────────────────────────────────────────────
+       Les douze teintes proposées partout où un joueur choisit une couleur
+       (rôles, groupes, arcs, régions, épingles, jauges, encadrés, bulles).
+       Même liste et même couleur par défaut (indigo) dans
+       lib/playerColors.ts, qui les donne aux sélecteurs. */
+    --color-chain-pink: #FF6B9D;
+    --color-chain-orange: #FF8C42;
+    --color-chain-gold: #FFDD57;
+    --color-chain-mint: #70F4B6;
+    --color-chain-cyan: #22D3EE;
+    --color-chain-blue: #60A5FA;
+    --color-chain-violet: #C084FC;
+    --color-chain-amber: #FBBF24;
+    --color-chain-indigo: #818CF8;
+    --color-chain-rose: #FB7185;
+    --color-chain-teal: #2DD4BF;
+    --color-chain-lime: #A3E635;
+
+    /* ── Texte : une échelle fermée ───────────────────────────────────────
+       2xs (10 px) pour les compteurs et intitulés de section, xs-plus
+       (11 px) pour les puces et métadonnées, puis l'échelle de Tailwind
+       (xs 12, sm 14, base 16…). Pas de `text-[Npx]`. */
+    --text-2xs: 0.625rem;
+    --text-2xs--line-height: 0.875rem;
+    --text-xs-plus: 0.6875rem;
+    --text-xs-plus--line-height: 1rem;
+
+    /* ── Élévation ────────────────────────────────────────────────────────
+       `shadow-popover` pour menus et popovers, `shadow-floating` pour les
+       panneaux posés sur un canevas (carte, relations), `shadow-modal` pour
+       les dialogues et tiroirs. */
+    --shadow-popover: 0 4px 12px rgb(0 0 0 / 0.4);
+    --shadow-floating: 0 12px 32px rgb(0 0 0 / 0.5);
+    --shadow-modal: 0 16px 40px rgb(0 0 0 / 0.45);
+}
+
+/* ── Lueur des cartes cliquables (components/ui/interactive-card.tsx) ─────
+   Déclarées comme longueurs, les deux variables deviennent animables : la
+   lueur rejoint le pointeur avec un léger retard, comme une luciole. Elles
+   s'héritent, pour que le pseudo-élément qui dessine la lueur les lise. */
+@property --glow-x {
+    syntax: "<length-percentage>";
+    inherits: true;
+    initial-value: 50%;
+}
+
+@property --glow-y {
+    syntax: "<length-percentage>";
+    inherits: true;
+    initial-value: 50%;
+}
+
+/* ── Plans (z-index) ──────────────────────────────────────────────────────
+   Dans un composant, `z-0` à `z-20` règlent l'empilement local. Au-delà, on
+   nomme le plan : un panneau flottant d'une vue, une modale (dialogue,
+   tiroir), ce qui s'ouvre par-dessus une modale, un popover (qui doit passer
+   devant la modale qui l'a ouvert), la visionneuse d'images. */
+@utility z-floating {
+    z-index: 40;
+}
+
+@utility z-modal {
+    z-index: 50;
+}
+
+@utility z-modal-raised {
+    z-index: 55;
+}
+
+@utility z-popover {
+    z-index: 60;
+}
+
+@utility z-lightbox {
+    z-index: 70;
 }
 
 /* Enveloppe d'un bloc HTML libre de la page d'accueil d'un monde
@@ -127,76 +218,6 @@
    sa feuille étant injectée plus loin dans le document. */
 .wvlds-home-html-block {
     contain: layout paint;
-}
-
-@theme {
-    /* Tokens custom */
-    --color-body: #151517;
-    --color-background: var(--background);
-    --color-foreground: #E5E5EF;
-    --color-hoverCard: #232327;
-    --color-card: oklch(0.21 0.006 285.885);
-    --color-card-foreground: oklch(0.985 0 0);
-    --color-popover: oklch(0.21 0.006 285.885);
-    --color-popover-foreground: oklch(0.985 0 0);
-    --color-primary: oklch(0.92 0.004 286.32);
-    --color-primary-foreground: oklch(0.21 0.006 285.885);
-    --color-secondary: oklch(0.274 0.006 286.033);
-    --color-secondary-foreground: oklch(0.985 0 0);
-    --color-muted: oklch(0.274 0.006 286.033);
-    --color-muted-foreground: oklch(0.705 0.015 286.067);
-    --color-accent: var(--accent);
-    --color-accent-foreground: oklch(0.985 0 0);
-    --color-destructive: oklch(0.704 0.191 22.216);
-    --color-border: var(--border);
-    --color-input: oklch(1 0 0 / 15%);
-    --color-ring: oklch(0.552 0.016 285.938);
-    --color-chart-1: oklch(0.488 0.243 264.376);
-    --color-chart-2: oklch(0.696 0.17 162.48);
-    --color-chart-3: oklch(0.769 0.188 70.08);
-    --color-chart-4: oklch(0.627 0.265 303.9);
-    --color-chart-5: oklch(0.645 0.246 16.439);
-    --color-sidebar: oklch(0.21 0.006 285.885);
-    --color-sidebar-foreground: oklch(0.985 0 0);
-    --color-sidebar-primary: oklch(0.488 0.243 264.376);
-    --color-sidebar-primary-foreground: oklch(0.985 0 0);
-    --color-sidebar-accent: oklch(0.274 0.006 286.033);
-    --color-sidebar-accent-foreground: oklch(0.985 0 0);
-    --color-sidebar-border: oklch(1 0 0 / 10%);
-    --color-sidebar-ring: oklch(0.552 0.016 285.938);
-
-    --color-mist-50: var(--mist-50);
-    --color-mist-100: var(--mist-100);
-    --color-mist-200: var(--mist-200);
-
-    --color-carbon-700: var(--carbon-700);
-    --color-carbon-800: var(--carbon-800);
-
-    /* Tokens utilisés par le shell (sidebar, panneaux) — alignés sur le canvas */
-    --color-token-bg-elevated-secondary: var(--sidebar);
-    --color-border-soft: var(--border);
-    --color-hover-400: var(--hover-400);
-    --color-card-400: var(--card-400);
-
-    /* ── Palette marque ────────────────────────────── */
-    --color-brand-green: #8AE06C;
-    --color-brand-purple: #A77DFF;
-    --color-brand-red: #F56868;
-    --color-brand-yellow: #F1DF38;
-
-    /* ── Chaîne de teintes (compléments RPG) ───────── */
-    --color-chain-pink: #FF6B9D;
-    --color-chain-orange: #FF8C42;
-    --color-chain-gold: #FFDD57;
-    --color-chain-mint: #70F4B6;
-    --color-chain-cyan: #22D3EE;
-    --color-chain-blue: #60A5FA;
-    --color-chain-violet: #C084FC;
-    --color-chain-amber: #FBBF24;
-    --color-chain-indigo: #818CF8;
-    --color-chain-rose: #FB7185;
-    --color-chain-teal: #2DD4BF;
-    --color-chain-lime: #A3E635;
 }
 
 @layer base {
@@ -227,8 +248,8 @@
 
     html,
     body {
-        /* Le canvas derrière le panneau flottant = couleur sidebar */
-        @apply h-full bg-sidebar;
+        /* Le canevas derrière le panneau flottant. */
+        @apply h-full bg-canvas;
     }
 
 
@@ -373,7 +394,7 @@
     }
 
     body {
-        @apply bg-body text-foreground relative;
+        @apply bg-canvas text-foreground relative;
     }
 }
 

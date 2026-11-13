@@ -2,144 +2,189 @@
 
 import * as React from "react";
 
-import { borner, distance, zoomAutourDuPoint, type Point } from "./panZoom";
+import {
+  BUTTON_FACTOR,
+  WHEEL_FACTOR,
+  distance,
+  focusView,
+  zoomAround,
+  type Point,
+  type View,
+} from "./panZoom";
+
+/** En deçà de ce déplacement (px), un appui reste un clic et ne déplace pas le plateau. */
+const DRAG_THRESHOLD = 4;
+/** Durée des déplacements animés (recentrage, zoom sur un persona). */
+export const ANIMATION_MS = 450;
+/** Marge intérieure de la fenêtre, de chaque côté (`p-2`). */
+const VIEWPORT_PADDING = 8;
+
+const HOME: View = { zoom: 1, pan: { x: 0, y: 0 } };
 
 /**
- * Déplacement et zoom du canevas de relations : molette, glisser à la souris,
- * un doigt pour déplacer, deux pour pincer.
+ * Déplacement et zoom du plateau des relations : molette sous le curseur,
+ * glisser (souris ou doigt), pincer à deux doigts, boutons, et les
+ * déplacements animés vers un point du repère.
  *
- * Sorti du composant, où ces quatre gestes occupaient une centaine de lignes au
- * milieu du chargement des données et du rendu. L'arithmétique du zoom est
- * encore un cran plus bas, dans `./panZoom`, et testée à part.
+ * Le plateau change de taille réelle (voir `./panZoom`) : le composant pose
+ * `width: calc(min(100cqw, 100cqh) × zoom)` et `translate(pan)`. Pendant un
+ * geste, aucune transition ; `animating` n'est vrai que le temps d'un
+ * déplacement programmé.
  *
- * @param estEnDeplacementDeBloc rend `true` tant qu'un bloc est saisi. Sans
- *   cette garde, déplacer un bloc déplacerait aussi le canevas sous lui.
+ * Un glisser peut partir d'un avatar : le plateau ne se saisit qu'au-delà de
+ * quelques pixels, et `wasDragged()` permet au clic qui suit de s'ignorer.
  */
-export function useCanvasPanZoom(estEnDeplacementDeBloc: () => boolean) {
-  const [pan, setPan] = React.useState<Point>({ x: 0, y: 0 });
-  const [scale, setScale] = React.useState(1);
+export function useCanvasPanZoom() {
+  const [view, setView] = React.useState<View>(HOME);
+  const [animating, setAnimating] = React.useState(false);
+  const [dragging, setDragging] = React.useState(false);
 
-  // Les gestes lisent la valeur courante depuis un gestionnaire d'événement
-  // natif, hors du cycle de rendu : une ref évite de les recréer à chaque
-  // changement d'échelle.
-  const panRef = React.useRef<Point>({ x: 0, y: 0 });
-  const scaleRef = React.useRef(1);
-  panRef.current = pan;
-  scaleRef.current = scale;
+  // Les gestes lisent la valeur courante depuis un gestionnaire natif, hors
+  // du cycle de rendu : une ref évite de les recréer à chaque changement.
+  const viewRef = React.useRef<View>(HOME);
+  viewRef.current = view;
 
-  const outerRef = React.useRef<HTMLDivElement>(null); // viewport fixe
-  const canvasRef = React.useRef<HTMLDivElement>(null); // div transformée
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const pointers = React.useRef(new Map<number, Point>());
+  const drag = React.useRef<{ start: Point; pan0: Point; moved: boolean } | null>(null);
+  const pinch = React.useRef<{ dist0: number; view0: View; mid0: Point } | null>(null);
+  const dragged = React.useRef(false);
+  const animTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const panDrag = React.useRef<{ start: Point; pan0: Point } | null>(null);
-  const pinchRef = React.useRef<{ dist0: number; scale0: number; pan0: Point; mid0: Point } | null>(null);
-  const touchRef = React.useRef<{ start: Point; pan0: Point } | null>(null);
+  React.useEffect(() => () => { if (animTimer.current) clearTimeout(animTimer.current); }, []);
 
-  // Molette : zoom vers le curseur. Le listener doit être non passif pour
+  /** Un point de l'écran, relatif au centre de la fenêtre. */
+  const fromCenter = React.useCallback((clientX: number, clientY: number): Point => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: clientX - (rect.left + rect.width / 2), y: clientY - (rect.top + rect.height / 2) };
+  }, []);
+
+  const stopAnimation = React.useCallback(() => {
+    if (animTimer.current) clearTimeout(animTimer.current);
+    animTimer.current = null;
+    setAnimating(false);
+  }, []);
+
+  /** Pose une vue d'un mouvement animé. */
+  const animateTo = React.useCallback((next: View) => {
+    if (animTimer.current) clearTimeout(animTimer.current);
+    setAnimating(true);
+    setView(next);
+    animTimer.current = setTimeout(() => { animTimer.current = null; setAnimating(false); }, ANIMATION_MS + 30);
+  }, []);
+
+  // Molette : zoom sous le curseur. Le listener doit être non passif pour
   // pouvoir annuler le défilement de la page.
   React.useEffect(() => {
-    const el = outerRef.current;
+    const el = viewportRef.current;
     if (!el) return;
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      const facteur = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-      const depart = scaleRef.current;
-      const suivant = borner(depart * facteur);
-      const rect = el!.getBoundingClientRect();
-      const ancre = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setScale(suivant);
-      setPan((p) => zoomAutourDuPoint(depart, suivant, p, ancre).pan);
+      stopAnimation();
+      const anchor = fromCenter(e.clientX, e.clientY);
+      setView((v) => zoomAround(v, e.deltaY < 0 ? WHEEL_FACTOR : 1 / WHEEL_FACTOR, anchor));
     }
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [fromCenter, stopAnimation]);
 
-  // Souris : glisser sur le fond du canevas. Les blocs arrêtent la propagation.
-  function onCanvasDown(e: React.PointerEvent) {
-    if (e.button !== 0 || estEnDeplacementDeBloc()) return;
-    panDrag.current = { start: { x: e.clientX, y: e.clientY }, pan0: panRef.current };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    (e.currentTarget as HTMLElement).style.cursor = "grabbing";
+  function startDrag(p: Point) {
+    drag.current = { start: p, pan0: viewRef.current.pan, moved: false };
   }
 
-  function onCanvasMove(e: React.PointerEvent) {
-    const d = panDrag.current;
+  function onPointerDown(e: React.PointerEvent) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 1) {
+      dragged.current = false;
+      startDrag({ x: e.clientX, y: e.clientY });
+    } else if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      pinch.current = { dist0: distance(a, b) || 1, view0: viewRef.current, mid0: fromCenter(mid.x, mid.y) };
+      drag.current = null;
+      dragged.current = true;
+    }
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const p = pinch.current;
+    if (p && pointers.current.size >= 2) {
+      const [a, b] = [...pointers.current.values()];
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      setView(zoomAround(p.view0, distance(a, b) / p.dist0, p.mid0, fromCenter(mid.x, mid.y)));
+      return;
+    }
+    const d = drag.current;
     if (!d) return;
-    setPan({ x: d.pan0.x + e.clientX - d.start.x, y: d.pan0.y + e.clientY - d.start.y });
-  }
-
-  function onCanvasUp(e: React.PointerEvent) {
-    panDrag.current = null;
-    (e.currentTarget as HTMLElement).style.cursor = "grab";
-  }
-
-  // Tactile : un doigt déplace, deux doigts pincent.
-  function onTouchStart(e: React.TouchEvent) {
-    if (e.touches.length === 1) {
-      touchRef.current = {
-        start: { x: e.touches[0].clientX, y: e.touches[0].clientY },
-        pan0: panRef.current,
-      };
-      pinchRef.current = null;
-    } else if (e.touches.length === 2) {
-      const a = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      const b = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-      pinchRef.current = {
-        dist0: distance(a, b),
-        scale0: scaleRef.current,
-        pan0: panRef.current,
-        mid0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
-      };
-      touchRef.current = null;
+    const dx = e.clientX - d.start.x, dy = e.clientY - d.start.y;
+    if (!d.moved) {
+      if (Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
+      d.moved = true;
+      dragged.current = true;
+      stopAnimation();
+      setDragging(true);
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     }
+    setView((v) => ({ zoom: v.zoom, pan: { x: d.pan0.x + dx, y: d.pan0.y + dy } }));
   }
 
-  function onTouchMove(e: React.TouchEvent) {
-    e.preventDefault();
-    if (e.touches.length === 1 && touchRef.current) {
-      const t = touchRef.current;
-      setPan({
-        x: t.pan0.x + e.touches[0].clientX - t.start.x,
-        y: t.pan0.y + e.touches[0].clientY - t.start.y,
-      });
-    } else if (e.touches.length === 2 && pinchRef.current) {
-      const p = pinchRef.current;
-      const a = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      const b = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-      const rect = outerRef.current!.getBoundingClientRect();
-      const coin = { x: rect.left, y: rect.top };
-      const resultat = zoomAutourDuPoint(
-        p.scale0,
-        p.scale0 * (distance(a, b) / p.dist0),
-        p.pan0,
-        { x: p.mid0.x - coin.x, y: p.mid0.y - coin.y },
-        { x: (a.x + b.x) / 2 - coin.x, y: (a.y + b.y) / 2 - coin.y },
-      );
-      setScale(resultat.scale);
-      setPan(resultat.pan);
+  function onPointerUp(e: React.PointerEvent) {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 1) {
+      // Un doigt levé pendant un pincement : on repart d'un simple glisser,
+      // sinon le plateau saute au prochain mouvement.
+      const [rest] = [...pointers.current.values()];
+      startDrag(rest);
+      drag.current!.moved = true;
+      return;
     }
+    if (drag.current?.moved) setDragging(false);
+    drag.current = null;
   }
 
-  function onTouchEnd(e: React.TouchEvent) {
-    if (e.touches.length === 0) {
-      touchRef.current = null;
-      pinchRef.current = null;
-    } else if (e.touches.length === 1) {
-      // Un doigt levé pendant un pincement : on repart d'un simple déplacement,
-      // sinon le canevas saute au prochain mouvement.
-      pinchRef.current = null;
-      touchRef.current = {
-        start: { x: e.touches[0].clientX, y: e.touches[0].clientY },
-        pan0: panRef.current,
-      };
-    }
+  /** Vrai si l'appui qui s'achève a déplacé le plateau : le clic qui suit n'en est pas un. */
+  function wasDragged() {
+    return dragged.current;
+  }
+
+  /** Zoom par paliers (boutons, clavier), autour du centre de la fenêtre. */
+  function zoomBy(factor: number) {
+    stopAnimation();
+    setView((v) => zoomAround(v, factor, { x: 0, y: 0 }));
+  }
+  const zoomIn = () => zoomBy(BUTTON_FACTOR);
+  const zoomOut = () => zoomBy(1 / BUTTON_FACTOR);
+
+  /** Amène un point du repère au centre, à ce zoom, d'un mouvement animé. */
+  function focusOn(point: Point, zoom: number) {
+    const el = viewportRef.current;
+    const base = el ? Math.max(0, Math.min(el.clientWidth, el.clientHeight) - VIEWPORT_PADDING * 2) : 0;
+    animateTo(focusView(point, zoom, base));
+  }
+
+  /** Retour à 100 %, centré ; animé ou non (changement de vue). */
+  function reset(animated = true) {
+    if (animated) animateTo(HOME);
+    else { stopAnimation(); setView(HOME); }
   }
 
   return {
-    pan, setPan,
-    scale, setScale,
-    scaleRef,
-    outerRef, canvasRef,
-    onCanvasDown, onCanvasMove, onCanvasUp,
-    onTouchStart, onTouchMove, onTouchEnd,
+    zoom: view.zoom,
+    pan: view.pan,
+    animating,
+    dragging,
+    viewportRef,
+    wasDragged,
+    zoomBy,
+    zoomIn,
+    zoomOut,
+    focusOn,
+    reset,
+    pointerHandlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp },
   };
 }

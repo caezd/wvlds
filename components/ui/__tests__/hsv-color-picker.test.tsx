@@ -2,10 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import {
-  DEFAULT_COLOR_PRESETS,
   HsvColorPicker,
+  PLAYER_COLOR_PRESETS,
   hexToHsva,
   hsvaToHex,
+  normalizeHex,
   normalizeHexColor,
   parseHexColor,
   type ColorPreset,
@@ -57,13 +58,40 @@ describe("conversions hex", () => {
   });
 });
 
+describe("normalizeHex", () => {
+  it("accepte six chiffres, avec ou sans dièse", () => {
+    expect(normalizeHex("1D4ED8")).toBe("#1d4ed8");
+    expect(normalizeHex("#1d4ed8")).toBe("#1d4ed8");
+    expect(normalizeHex("  #1D4ED8  ")).toBe("#1d4ed8");
+  });
+
+  it("déplie la forme courte", () => {
+    expect(normalizeHex("#abc")).toBe("#aabbcc");
+    expect(normalizeHex("f00")).toBe("#ff0000");
+  });
+
+  it("laisse tomber la transparence collée en queue", () => {
+    expect(normalizeHex("#1d4ed8ff")).toBe("#1d4ed8");
+  });
+
+  it("rend null quand rien d'exploitable n'en sort", () => {
+    expect(normalizeHex("")).toBeNull();
+    expect(normalizeHex("#12")).toBeNull();
+    expect(normalizeHex("#12345")).toBeNull();
+    expect(normalizeHex("rgb(29, 78, 216)")).toBeNull();
+    // Des lettres hexadécimales égarées dans une phrase n'en font pas un code.
+    expect(normalizeHex("color: #1d4ed8;")).toBeNull();
+  });
+});
+
 describe("HsvColorPicker — palette", () => {
   it("affiche la palette par défaut et le sélecteur avancé ensemble", () => {
     render(<HsvColorPicker color="#123456" onChange={() => {}} />);
     const palette = screen.getByRole("group", { name: "Couleurs prédéfinies" });
     const labels = Array.from(palette.querySelectorAll("button")).map((b) => b.getAttribute("aria-label"));
-    expect(labels).toEqual(DEFAULT_COLOR_PRESETS.map((p) => p.label));
-    expect(labels).toEqual(["Noir", "Rouge", "Orange", "Jaune", "Vert", "Bleu", "Violet", "Blanc"]);
+    // La palette « joueurs » (lib/playerColors.ts), comme partout ailleurs.
+    expect(labels).toEqual(PLAYER_COLOR_PRESETS.map((p) => p.label));
+    expect(labels).toHaveLength(12);
     expect(screen.getByRole("slider", { name: "Saturation et luminosité" })).toBeInTheDocument();
     expect(screen.getByRole("slider", { name: "Teinte" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Code hexadécimal" })).toHaveValue("#123456");

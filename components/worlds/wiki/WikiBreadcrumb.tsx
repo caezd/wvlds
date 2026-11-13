@@ -23,7 +23,7 @@ export function WikiBreadcrumb({
     <nav className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground">
       {ancestors.map(ancestor => (
         <Fragment key={ancestor.id}>
-          <span aria-hidden className="shrink-0 text-muted-foreground/50">/</span>
+          <span aria-hidden className="shrink-0 text-muted-foreground">/</span>
           <button
             type="button"
             onClick={() => onExpandFolder(ancestor.id)}

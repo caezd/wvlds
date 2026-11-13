@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 
 export type PersonaItem = {
   id: string;
@@ -255,6 +256,7 @@ export function PersonasView({
             world: drop.toWorldName ?? t("noWorld"),
           }),
         );
+        notifyPersonasChanged();
         router.refresh();
       } else {
         toast.error(res.error ?? tCommon("error"));
@@ -413,7 +415,7 @@ export function PersonasView({
               {tCommon("cancel")}
             </AlertDialogCancel>
             <Button
-              variant="outline"
+              variant="secondary"
               disabled={isSubmitting}
               onClick={() => confirmAction("duplicate")}
             >

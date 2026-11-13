@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Search } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SectionLabel } from "@/components/ui/section-label";
 import { LUCIDE_CATEGORIES, LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
 import { cn } from "@/lib/utils";
 
@@ -204,9 +205,9 @@ export function LucideIconPicker({
       <PopoverTrigger asChild>
         {trigger !== undefined ? (trigger as React.ReactElement) : defaultTrigger}
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0 z-[200]" align="start">
+      <PopoverContent className="w-[280px] p-0" align="start">
         {/* Recherche */}
-        <div className="flex items-center gap-2 border-b border-border-soft px-3">
+        <div className="flex items-center gap-2 border-b border-border px-3">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             value={query}
@@ -239,7 +240,7 @@ export function LucideIconPicker({
                 </p>
               )}
               {searchOverflow > 0 && (
-                <p className="col-span-7 pb-1 text-center text-[11px] text-muted-foreground">
+                <p className="col-span-7 pb-1 text-center text-xs-plus text-muted-foreground">
                   {t("moreResults", { count: searchOverflow })}
                 </p>
               )}
@@ -247,9 +248,9 @@ export function LucideIconPicker({
           ) : (
             LUCIDE_CATEGORIES.map((cat) => (
               <div key={cat.title}>
-                <div className="sticky top-0 z-10 border-b border-border-soft/50 bg-popover px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                <SectionLabel as="div" className="sticky top-0 z-10 border-b border-border/50 bg-popover px-2 py-1.5">
                   {getCategoryLabel(cat.title, locale)}
-                </div>
+                </SectionLabel>
                 <div className="grid grid-cols-7 gap-1 p-2">
                   {cat.icons
                     .filter((n) => VALID_LUCIDE_ICONS.has(n))

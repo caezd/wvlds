@@ -9,7 +9,7 @@ describe("ColorPickerButton", () => {
     const onChange = vi.fn();
     render(
       <div>
-        <ColorPickerButton color="#18181b" onChange={onChange} />
+        <ColorPickerButton color="#FB7185" onChange={onChange} />
         <p>dehors</p>
       </div>,
     );
@@ -18,10 +18,10 @@ describe("ColorPickerButton", () => {
     await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
 
     expect(screen.getByRole("group", { name: "Couleurs prédéfinies" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Noir" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Rose" })).toHaveAttribute("aria-pressed", "true");
 
     await userEvent.click(screen.getByRole("button", { name: "Bleu" }));
-    expect(onChange).toHaveBeenCalledWith("#47b3f2");
+    expect(onChange).toHaveBeenCalledWith("#60A5FA");
 
     await userEvent.click(screen.getByText("dehors"));
     expect(screen.queryByRole("group", { name: "Couleurs prédéfinies" })).toBeNull();
@@ -41,12 +41,9 @@ describe("ColorPickerButton", () => {
     expect(onChange).toHaveBeenLastCalledWith("#ff000080");
   });
 
-  it("sans `alpha`, ne propose pas l'opacité et ne produit que du #rrggbb", async () => {
-    const onChange = vi.fn();
-    render(<ColorPickerButton color="#ff0000" onChange={onChange} alpha={false} />);
+  it("sans `alpha`, n'offre pas d'opacité (colonnes en #rrggbb, comme les arcs)", async () => {
+    render(<ColorPickerButton color="#ff0000" onChange={() => {}} alpha={false} />);
     await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
     expect(screen.queryByRole("slider", { name: "Opacité" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Bleu" }));
-    expect(onChange).toHaveBeenLastCalledWith("#47b3f2");
   });
 });

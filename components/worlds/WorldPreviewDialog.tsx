@@ -56,7 +56,7 @@ export function WorldPreviewDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="p-0 overflow-hidden max-w-sm gap-0 border-border-soft">
+            <DialogContent className="p-0 overflow-hidden max-w-sm gap-0 border-border">
                 <DialogTitle className="sr-only">{world?.name ?? tCommon("worldPreview")}</DialogTitle>
 
                 {/* Hero */}
@@ -80,7 +80,7 @@ export function WorldPreviewDialog({
                                 ? "absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"
                                 : world?.color
                                     ? "absolute inset-0 bg-black/20"
-                                    : "absolute inset-0 bg-gradient-to-br from-card to-card-400"
+                                    : "absolute inset-0 bg-gradient-to-br from-card to-muted"
                         }
                     />
                     <div className="relative flex min-h-32 flex-col justify-end gap-2">

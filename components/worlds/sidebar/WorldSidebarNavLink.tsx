@@ -30,12 +30,12 @@ export function WorldSidebarNavLink({
       prefetch={false}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-hoverCard",
-        isActive && "bg-hoverCard text-foreground",
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted",
+        isActive && "bg-muted text-foreground",
       )}
     >
-      <span className="shrink-0 text-mist-200">{icon}</span>
-      <span className={cn("text-mist-100", isActive && "font-medium")}>{label}</span>
+      <span className="shrink-0 text-muted-foreground">{icon}</span>
+      <span className={cn("text-foreground", isActive && "font-medium")}>{label}</span>
     </Link>
   );
 }

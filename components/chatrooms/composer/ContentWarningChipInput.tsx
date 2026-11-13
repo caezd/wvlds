@@ -4,6 +4,8 @@ import type { KeyboardEvent } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { badgeVariants } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 /**
  * Ligne « avertissement de contenu » : icône + chips retirables + champ de
@@ -35,7 +37,7 @@ export function ContentWarningChipInput({
 
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
-      <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+      <AlertTriangle className="h-3 w-3 shrink-0 text-warning" />
       {tags.map((tagLabel, i) => (
         <button
           key={`${tagLabel}-${i}`}
@@ -47,7 +49,7 @@ export function ContentWarningChipInput({
           // pour en retirer un autre.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onRemove(tagLabel)}
-          className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 transition-colors hover:text-destructive dark:text-amber-400"
+          className={cn(badgeVariants({ tone: "warning" }), "transition-colors hover:text-destructive")}
         >
           {tagLabel}
           <X className="h-2.5 w-2.5" />
@@ -64,16 +66,18 @@ export function ContentWarningChipInput({
         placeholder={tags.length ? "" : placeholder}
         className="min-w-32 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
       />
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="ml-auto size-5 hover:text-destructive"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onDisable}
         aria-label={t("disableContentWarning")}
         title={t("disableContentWarning")}
-        className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
       >
         <X className="h-3 w-3" />
-      </button>
+      </Button>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import type { WorldCatalogItem } from "@/types/worlds";
 import { CatalogVisual } from "./CatalogVisual";
+import { Button } from "@/components/ui/button";
 
 /**
  * La corbeille du catalogue : les objets supprimés, à rendre ou à effacer.
@@ -75,7 +76,7 @@ export function CatalogTrashDialog({
 
           {loading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : items.length === 0 ? (
             <p className="py-2 text-sm italic text-muted-foreground">{t("trashEmpty")}</p>
@@ -101,24 +102,27 @@ export function CatalogTrashDialog({
                         {carried > 0 && ` · ${t("usageCount", { count: carried })}`}
                       </p>
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => onRestore(item)}
                       aria-label={`${t("trashRestore")} — ${item.name}`}
                       title={t("trashRestore")}
-                      className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
                     >
                       <RotateCcw className="h-3.5 w-3.5" /> {t("trashRestore")}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="hover:text-destructive"
                       onClick={() => setConfirming(item)}
                       aria-label={`${t("trashDeleteForever")} — ${item.name}`}
                       title={t("trashDeleteForever")}
-                      className="flex shrink-0 items-center rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   </li>
                 );
               })}

@@ -8,9 +8,14 @@ const activeWorldIdMock = vi.hoisted(() => ({ value: null as string | null }));
 const publicWorldsMock = vi.hoisted(() => ({ value: false }));
 const currentUserIdMock = vi.hoisted(() => ({ value: null as string | null }));
 const leaveWorldMock = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
+const markWorldReadMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/components/providers/NotificationsProvider", () => ({
-  useNotifications: () => ({ worldUnread: worldUnreadMock.value }),
+  useNotifications: () => ({
+    worldUnread: worldUnreadMock.value,
+    notifications: [],
+    markWorldRead: markWorldReadMock,
+  }),
 }));
 
 vi.mock("@/components/providers/MobileSidebarProvider", () => ({
@@ -70,6 +75,7 @@ beforeEach(() => {
   publicWorldsMock.value = false;
   currentUserIdMock.value = null;
   leaveWorldMock.mockClear();
+  markWorldReadMock.mockReset().mockResolvedValue(true);
   mockCoarsePointer(false);
 });
 
@@ -271,5 +277,43 @@ describe("WorldsRail — quitter un monde", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("WorldsRail — marquer un monde comme lu", () => {
+  it("clic droit : action active pour un monde non lu, grisée sinon", async () => {
+    worldUnreadMock.value = { "world-2": 150 };
+    render(<WorldsRail worlds={WORLDS} quota={QUOTA_OK} />);
+
+    fireEvent.contextMenu(screen.getByLabelText("Final Cocktasy"));
+    expect(screen.getByRole("menuitem", { name: "markRead" })).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.contextMenu(screen.getByLabelText("Autre monde"));
+    const item = screen.getByRole("menuitem", { name: "markRead" });
+    expect(item).not.toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(item);
+    await waitFor(() => expect(markWorldReadMock).toHaveBeenCalledWith("world-2"));
+  });
+
+  it("sur mobile, le drawer de l'appui long propose aussi l'action", async () => {
+    mockCoarsePointer(true);
+    worldUnreadMock.value = { "world-1": 3 };
+    vi.useFakeTimers();
+    try {
+      render(<WorldsRail worlds={WORLDS} quota={QUOTA_OK} />);
+
+      fireEvent.touchStart(screen.getByLabelText("Final Cocktasy"));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      const button = screen.getByRole("button", { name: /markRead/ });
+      expect(button).toBeEnabled();
+      fireEvent.click(button);
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(markWorldReadMock).toHaveBeenCalledWith("world-1"));
   });
 });

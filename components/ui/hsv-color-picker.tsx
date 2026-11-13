@@ -4,10 +4,23 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+import { PLAYER_COLORS } from "@/lib/playerColors";
 
 export type ColorPreset = { label: string; value: string };
 
-/** La palette du sélecteur : noir, six teintes vives, blanc. */
+/** Les noms des teintes de PLAYER_COLORS, dans le même ordre (infobulle des pastilles). */
+const PLAYER_COLOR_LABELS = [
+  "Rose", "Rose vif", "Orange", "Ambre", "Or", "Citron vert",
+  "Menthe", "Sarcelle", "Cyan", "Bleu", "Indigo", "Violet",
+];
+
+/** Les pastilles proposées par défaut : la palette « joueurs » (lib/playerColors.ts). */
+export const PLAYER_COLOR_PRESETS: ColorPreset[] = PLAYER_COLORS.map((value, i) => ({
+  label: PLAYER_COLOR_LABELS[i] ?? value,
+  value,
+}));
+
+/** Noir, six teintes vives, blanc : la palette du texte coloré. */
 export const DEFAULT_COLOR_PRESETS: ColorPreset[] = [
   { label: "Noir",   value: "#18181b" },
   { label: "Rouge",  value: "#e8553a" },
@@ -69,6 +82,14 @@ export function rgbaToHex({ r, g, b, a }: Rgba, withAlpha = false): string {
 export function normalizeHexColor(hex: string, withAlpha = false): string | null {
   const rgba = parseHexColor(hex);
   return rgba ? rgbaToHex(rgba, withAlpha) : null;
+}
+
+/**
+ * Ce qu'on colle dans un champ hexadécimal, ramené à `#rrggbb` (l'opacité
+ * éventuelle est ignorée), ou null quand il n'en sort rien d'exploitable.
+ */
+export function normalizeHex(input: string): string | null {
+  return normalizeHexColor(input);
 }
 
 function rgbaToHsva({ r, g, b, a }: Rgba): Hsva {
@@ -150,7 +171,7 @@ const THUMB_CLASS =
 export function HsvColorPicker({
   color,
   onChange,
-  presets = DEFAULT_COLOR_PRESETS,
+  presets = PLAYER_COLOR_PRESETS,
   alpha = false,
   framed = true,
   className,

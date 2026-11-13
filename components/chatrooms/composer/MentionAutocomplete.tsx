@@ -131,7 +131,7 @@ export function MentionAutocomplete({
       role="listbox"
       aria-label={t("mentions.listLabel")}
       style={style}
-      className="fixed z-[60] max-h-64 w-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-sm shadow-md [scrollbar-width:thin]"
+      className="fixed z-popover max-h-64 w-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-sm shadow-md [scrollbar-width:thin]"
     >
       {items.map((item, i) => (
         <li
@@ -147,25 +147,25 @@ export function MentionAutocomplete({
           }}
           className={cn(
             "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5",
-            i === activeIndex ? "bg-accent/15 text-foreground" : "text-foreground/90",
+            i === activeIndex ? "bg-accent/15 text-foreground" : "text-foreground",
           )}
         >
           {item.kind === "user" && (
             <Avatar className="size-5 rounded-full">
               <AvatarImage src={item.avatarUrl ?? undefined} alt="" className="rounded-full" />
-              <AvatarFallback className="rounded-full text-[9px]">{getLeadingLetter(item.label.slice(1))}</AvatarFallback>
+              <AvatarFallback className="rounded-full text-2xs">{getLeadingLetter(item.label.slice(1))}</AvatarFallback>
             </Avatar>
           )}
           {item.kind === "role" && <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />}
-          {item.kind === "everyone" && <Megaphone className="size-3.5 shrink-0 text-amber-500" aria-hidden />}
-          {item.kind === "here" && <Radio className="size-3.5 shrink-0 text-amber-500" aria-hidden />}
+          {item.kind === "everyone" && <Megaphone className="size-3.5 shrink-0 text-warning" aria-hidden />}
+          {item.kind === "here" && <Radio className="size-3.5 shrink-0 text-warning" aria-hidden />}
           <span className="min-w-0 flex-1 truncate">{item.label}</span>
           {item.kind !== "user" && (
             <span className="shrink-0 text-xs text-muted-foreground">
               {item.kind === "role" ? t("mentions.roleHint") : item.kind === "everyone" ? t("mentions.everyoneHint") : t("mentions.hereHint")}
             </span>
           )}
-          {item.kind === "user" && <AtSign className="size-3 shrink-0 text-muted-foreground/60" aria-hidden />}
+          {item.kind === "user" && <AtSign className="size-3 shrink-0 text-muted-foreground" aria-hidden />}
         </li>
       ))}
     </ul>,

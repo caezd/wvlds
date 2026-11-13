@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ALL_WORLD_HOME_WIDGETS, type WorldHomeWidgetId } from "./worldHomeWidgets";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -169,13 +170,15 @@ function WidgetOptionsPopover({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
-          className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+          variant="ghost"
+          size="icon-sm"
+          className="size-5"
           aria-label={t("home.grid.blockOptions")}
         >
           <Settings2 className="h-3 w-3" />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 space-y-3 p-3">
         {defs.map((def) => (
@@ -226,7 +229,7 @@ function WidgetOptionsPopover({
                   onChange={(e) => setDraft((prev) => ({ ...prev, [def.key]: e.target.valueAsNumber }))}
                   className="h-8 text-sm"
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs-plus text-muted-foreground">
                   {t("home.grid.options.range", { min: def.min, max: def.max })}
                 </p>
               </>
@@ -725,7 +728,7 @@ export function WorldHomeGridEditor({
                   ...(resizePreview?.rightId === item.id && { marginLeft: resizePreview.dx }),
                 }}
                 className={cn(
-                  "group relative flex select-none flex-col overflow-hidden rounded-lg border border-border-soft bg-muted/30",
+                  "group relative flex select-none flex-col overflow-hidden rounded-lg border border-border bg-muted/30",
                   // Blocs concernés par le geste en cours, signalés par leur
                   // transparence plutôt que par un contour : une bordure
                   // ajoutée en cours de geste élargit la boîte et fait bouger
@@ -761,14 +764,16 @@ export function WorldHomeGridEditor({
                       tap, éditer/supprimer un bloc était impossible. */}
                   <div className="ml-auto flex shrink-0 items-center gap-0.5">
                     {item.type !== "widget" && (
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => setEditingBlock({ type: item.type as "html" | "markdown" | "banner", item })}
-                        className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        className="size-5"
                         aria-label={t("home.grid.editBlock")}
                       >
                         <Pencil className="h-3 w-3" />
-                      </button>
+                      </Button>
                     )}
                     {item.widgetId && WORLD_HOME_WIDGET_OPTIONS[item.widgetId] && (
                       <WidgetOptionsPopover
@@ -779,14 +784,16 @@ export function WorldHomeGridEditor({
                         )}
                       />
                     )}
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => setConfirmDelete(item)}
-                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="size-5 hover:text-destructive"
                       aria-label={tCommon("delete")}
                     >
                       <Trash2 className="h-3 w-3" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -867,7 +874,7 @@ export function WorldHomeGridEditor({
         )}
 
         {items.length === 0 && (
-          <p className={cn("px-2 py-4 text-center text-xs text-muted-foreground/60")}>{t("home.noWidgets")}</p>
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground">{t("home.noWidgets")}</p>
         )}
       </div>
 
@@ -875,12 +882,9 @@ export function WorldHomeGridEditor({
         {availableWidgets.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-md border border-border-soft px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
+              <Button variant="outline" type="button" size="sm">
                 <Plus className="h-3.5 w-3.5" /> {t("home.addWidget")}
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               {availableWidgets.map((id) => (
@@ -894,12 +898,9 @@ export function WorldHomeGridEditor({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-md border border-border-soft px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
+            <Button type="button" variant="outline" size="sm">
               <Plus className="h-3.5 w-3.5" /> {t("home.grid.addBlock")}
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={afterMenuClose(() => setEditingBlock({ type: "banner" }))}>

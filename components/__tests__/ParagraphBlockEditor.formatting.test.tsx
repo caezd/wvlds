@@ -275,6 +275,6 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     fireEvent.mouseDown(paletteButton);
     fireEvent.click(paletteButton);
     fireEvent.click(screen.getByText("Confirmer"));
-    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "[#e8553a]rouge[/]");
+    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "[#818CF8]rouge[/]");
   });
 });

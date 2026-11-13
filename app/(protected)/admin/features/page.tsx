@@ -4,6 +4,8 @@ import { FEATURE_FLAGS_TAG, FLAG_KEYS, type FlagKey } from "@/lib/featureFlags";
 import { FeatureSubGroup } from "../_components/FeatureSubGroup";
 import { getTranslations } from "next-intl/server";
 import { echecEnregistrement } from "@/lib/actionErrors";
+import { SectionLabel } from "@/components/ui/section-label";
+import { Switch } from "@/components/ui/switch";
 
 type FlagRow = {
   key: FlagKey;
@@ -96,35 +98,20 @@ function FlagRow({ flag, t }: { flag: FlagRow; t: TFn }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">{flag.label}</span>
-          <code className="text-[0.65rem] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+          <code className="text-2xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
             {flag.key}
           </code>
         </div>
         {flag.description && (
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{flag.description}</p>
         )}
-        <p className="text-[0.65rem] text-muted-foreground mt-1">
+        <p className="text-2xs text-muted-foreground mt-1">
           {t("features.editedAt", { date })}
         </p>
       </div>
       <form action={toggle}>
-        <button
-          type="submit"
-          aria-label={flag.enabled ? t("features.disable") : t("features.enable")}
-          className={[
-            "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent",
-            "transition-colors duration-200",
-            flag.enabled ? "bg-primary" : "bg-muted",
-          ].join(" ")}
-        >
-          <span
-            className={[
-              "pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow-lg",
-              "transform transition-transform duration-200",
-              flag.enabled ? "translate-x-5" : "translate-x-0",
-            ].join(" ")}
-          />
-        </button>
+        {/* Le Switch soumet le formulaire : l'action serveur bascule le drapeau. */}
+        <Switch type="submit" checked={flag.enabled} aria-label={flag.enabled ? t("features.disable") : t("features.enable")} />
       </form>
     </div>
   );
@@ -137,22 +124,8 @@ function CompactFlagRow({ flag, t }: { flag: FlagRow; t: TFn }) {
     <div className="flex items-center gap-3 px-4 py-2">
       <span className="flex-1 text-xs text-muted-foreground">{label}</span>
       <form action={toggle}>
-        <button
-          type="submit"
-          aria-label={flag.enabled ? t("features.disable") : t("features.enable")}
-          className={[
-            "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200",
-            flag.enabled ? "bg-primary" : "bg-muted",
-          ].join(" ")}
-        >
-          <span
-            className={[
-              "pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow",
-              "transform transition-transform duration-200",
-              flag.enabled ? "translate-x-4" : "translate-x-0",
-            ].join(" ")}
-          />
-        </button>
+        {/* Le Switch soumet le formulaire : l'action serveur bascule le drapeau. */}
+        <Switch type="submit" checked={flag.enabled} aria-label={flag.enabled ? t("features.disable") : t("features.enable")} />
       </form>
     </div>
   );
@@ -197,10 +170,10 @@ export default async function AdminFeaturesPage() {
 
           return (
             <div key={group.titleKey}>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1 mb-2">
+              <SectionLabel as="h2" className="px-1 mb-2">
                 {t(`features.groups.${group.titleKey}`)}
-              </h2>
-              <div className="rounded-xl border border-border-soft overflow-hidden divide-y divide-border-soft">
+              </SectionLabel>
+              <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
                 {topLevelFlags.map((flag) => (
                   <FlagRow key={flag.key} flag={flag} t={t} />
                 ))}

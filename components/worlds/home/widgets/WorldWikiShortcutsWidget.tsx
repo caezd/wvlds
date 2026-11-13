@@ -81,9 +81,9 @@ export function WorldWikiShortcutsWidget({
             <li key={page.id}>
               <Link
                 href={href}
-                className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-hoverCard"
+                className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-muted"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-card-400 text-muted-foreground">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                   {page.icon && VALID_LUCIDE_ICONS.has(page.icon) ? (
                     <LazyLucideIcon name={page.icon} className="h-4 w-4" />
                   ) : (
@@ -91,7 +91,7 @@ export function WorldWikiShortcutsWidget({
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-foreground/90">
+                  <span className="block truncate text-sm font-semibold text-foreground">
                     {page.title}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">

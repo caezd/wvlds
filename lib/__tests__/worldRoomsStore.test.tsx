@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { StrictMode } from "react";
+import { renderToString } from "react-dom/server";
 
 // ──────────────────────────────────────────────────────────────────────────
 // `WorldSidebar` rend `WorldSidebarChatrooms` deux fois — aside desktop et
@@ -227,6 +228,20 @@ describe("useWorldRooms", () => {
 
     // Et il reste bien UN canal ouvert au bout du compte.
     expect(__openChannelCount()).toBe(1);
+  });
+
+  it("rend côté serveur les salons de la requête, pas une liste déjà en mémoire", () => {
+    // La table du module vit aussi longtemps que le processus serveur : une
+    // liste semée par un rendu précédent ne doit pas remplacer celle de la
+    // requête, sans quoi le HTML montre d'anciens salons et l'hydratation
+    // échoue (« 1 sujet » rendu par le serveur, « 21 sujets » par le client).
+    renderHook(() => useWorldRooms("w1", [A]));
+
+    function Liste() {
+      const rooms = useWorldRooms("w1", [A, B]);
+      return <p>{rooms.map((r) => r.id).join(",")}</p>;
+    }
+    expect(renderToString(<Liste />)).toBe("<p>a,b</p>");
   });
 
   it("ne réutilise jamais un canal déjà souscrit", async () => {

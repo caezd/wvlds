@@ -18,6 +18,7 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { CatalogueList } from "./CatalogueList";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { FaceclaimList } from "./FaceclaimList";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * L'état d'un des deux catalogues, en un cadenas.
@@ -116,14 +117,14 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
         title={t("title")}
         right={
           canEdit && (
+            // Une bascule d'affichage : `outline`, enfoncée (aria-pressed) en mode édition.
             <button
               type="button"
               onClick={() => setEditMode(v => !v)}
+              aria-pressed={editMode}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                editMode
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "text-xs",
               )}
             >
               <Pencil className="h-3 w-3" />

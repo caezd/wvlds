@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Camera, Palette, ChevronsUpDown, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { buildExploreParams, MAX_FILTER_TAGS } from "./exploreQuery";
+
+/** Une bascule de filtre : bouton `outline`, enfoncé tant que le filtre est actif. */
+const FILTER_TOGGLE = "text-xs";
 
 export function ExploreFilters({
   q,
@@ -77,49 +81,45 @@ export function ExploreFilters({
     push([], []);
   }
 
-  const chipClass = (active: boolean) =>
-    cn(
-      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-      active
-        ? "border-primary bg-primary/10 text-primary"
-        : "border-border text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-    );
-
   const tagBadgeCount = tagPickerOpen ? pendingTags.length : selectedTags.length;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => toggleAvatarType("real")}
         aria-pressed={selectedAvatarTypes.includes("real")}
-        className={chipClass(selectedAvatarTypes.includes("real"))}
+        className={FILTER_TOGGLE}
       >
         <Camera className="h-3 w-3" />
         {t("avatarReal")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => toggleAvatarType("illustrated")}
         aria-pressed={selectedAvatarTypes.includes("illustrated")}
-        className={chipClass(selectedAvatarTypes.includes("illustrated"))}
+        className={FILTER_TOGGLE}
       >
         <Palette className="h-3 w-3" />
         {t("avatarIllustrated")}
-      </button>
+      </Button>
 
       {availableTags.length > 0 && (
         <Popover open={tagPickerOpen} onOpenChange={handleTagPickerOpenChange}>
           <PopoverTrigger asChild>
-            <button type="button" className={chipClass(tagBadgeCount > 0)}>
+            <Button type="button" variant="outline" size="sm" className="text-xs">
               {t("tagsLabel")}
               {tagBadgeCount > 0 && (
-                <span className="rounded-full bg-primary/20 px-1.5 text-[10px] leading-4">
+                <span className="rounded-full bg-muted px-1.5 text-2xs leading-4 text-foreground">
                   {tagBadgeCount}
                 </span>
               )}
               <ChevronsUpDown className="h-3 w-3 opacity-60" />
-            </button>
+            </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-56 p-0">
             <Command>
@@ -147,20 +147,17 @@ export function ExploreFilters({
       )}
 
       {selectedTags.map((tag) => (
-        <span
-          key={tag}
-          className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary"
-        >
+        <Badge key={tag} className="pr-0.5">
           #{tag}
           <button
             type="button"
             onClick={() => removeTag(tag)}
-            className="hover:text-destructive transition-colors"
-            aria-label={`Retirer le filtre ${tag}`}
+            className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+            aria-label={t("removeTagFilter", { tag })}
           >
-            <X className="h-3 w-3" />
+            <X />
           </button>
-        </span>
+        </Badge>
       ))}
 
       {hasActiveFilters && (

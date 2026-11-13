@@ -67,16 +67,16 @@ export function WorldBirthdaysWidget({
         <span className="min-w-0 flex-1 truncate">{t("title")}</span>
       </div>
       {upcoming.length === 0 ? (
-        <p className="border-t border-border-soft px-4 py-3 text-xs text-muted-foreground">{t("none", { days })}</p>
+        <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">{t("none", { days })}</p>
       ) : (
-        <ul className="border-t border-border-soft py-1">
+        <ul className="border-t border-border py-1">
           {upcoming.map((m) => {
             const name = m.username ? `@${m.username}` : m.user_id.slice(0, 8);
             return (
               <li key={m.user_id} className="flex items-center gap-2.5 px-4 py-1.5 text-sm">
                 <Avatar className="size-6 rounded-full">
                   <AvatarImage src={m.avatar_url ?? undefined} alt="" className="rounded-full" />
-                  <AvatarFallback className="rounded-full text-[10px]">{getLeadingLetter(name)}</AvatarFallback>
+                  <AvatarFallback className="rounded-full text-2xs">{getLeadingLetter(name)}</AvatarFallback>
                 </Avatar>
                 <span className="min-w-0 flex-1 truncate">{name}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">

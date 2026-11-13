@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ClipboardCheck, NotebookText, Waypoints, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -35,9 +36,10 @@ import type { PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
 import { effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { formatLastSeen, cn } from "@/lib/utils";
+import { cn, formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
@@ -47,6 +49,8 @@ import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
 import { useTranslations } from "next-intl";
 import { StoredImage } from "@/components/ui/stored-image";
+import { SectionLabel } from "@/components/ui/section-label";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 
 export type FieldData = PersonaFieldData | null | undefined;
 
@@ -83,12 +87,12 @@ export function FieldView({
         {visible.map((stat) => (
           <div
             key={stat.id}
-            className="flex flex-col justify-end gap-0.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2"
+            className="flex flex-col justify-end gap-0.5 rounded-lg border border-border bg-muted/30 px-3 py-2"
           >
             {stat.label ? (
-              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+              <SectionLabel as="span">
                 {stat.label}
-              </span>
+              </SectionLabel>
             ) : null}
             <div className="flex items-baseline justify-between gap-1">
               <span className="text-lg font-semibold tabular-nums">
@@ -131,7 +135,7 @@ export function FieldView({
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${Math.min(100, ((item.value ?? 0) / (item.max || 1)) * 100)}%`,
-                  backgroundColor: item.color ?? "#6366f1",
+                  backgroundColor: item.color ?? DEFAULT_PLAYER_COLOR,
                 }}
               />
             </div>
@@ -160,7 +164,7 @@ export function FieldView({
         {visible.map((item) => (
           <span
             key={item.id}
-            className="rounded-full border border-border-soft bg-muted/40 px-3 py-1 text-xs font-medium"
+            className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium"
           >
             {item.label}
           </span>
@@ -222,6 +226,8 @@ export type PersonaProfileBodyProps = {
   bannerUrl: string | null;
   frameUrl: string | null;
   dialogueColor: string | null;
+  /** La couleur du groupe du persona, quand le monde l'utilise : elle borde un avatar sans cadre. */
+  groupColor?: string | null;
   presenceLine: string | null;
   userPresence: "online" | "away" | "offline";
   /** Le joueur est en pause ou absent dans ce monde (cf. WorldMemberCard). */
@@ -237,7 +243,9 @@ export type PersonaProfileBodyProps = {
   onActiveTabChange: (id: string) => void;
   loading: boolean;
   /** Des onglets de plus, après les sections de la fiche — les relations, la relecture. */
-  extraTabs?: { id: string; label: string; content: React.ReactNode }[];
+  extraTabs?: { id: string; label: string; icon: LucideIcon; content: React.ReactNode;
+    /** Un point à côté de l'icône : quelque chose attend (une fiche pas encore validée). */
+    dot?: boolean }[];
   /** Contenu additionnel superposé au coin de la bannière (ex. le bouton
    *  Aperçu/Éditer de PersonaEditSheet.tsx) — rendu après le contenu de la
    *  bannière pour rester visible par-dessus. */
@@ -257,6 +265,7 @@ export function PersonaProfileBody({
   bannerUrl,
   frameUrl,
   dialogueColor,
+  groupColor,
   presenceLine,
   userPresence,
   statusBadge,
@@ -272,10 +281,7 @@ export function PersonaProfileBody({
   headerAction,
 }: PersonaProfileBodyProps) {
   const tCommon = useTranslations("common");
-  const tabs: { id: string; name: string }[] = [
-    ...sections.map((s) => ({ id: s.id, name: s.name })),
-    ...extraTabs.map((t) => ({ id: t.id, name: t.label })),
-  ];
+  const tabs: { id: string }[] = [...sections, ...extraTabs];
 
   return (
     <div>
@@ -296,7 +302,7 @@ export function PersonaProfileBody({
             />
           </div>
         ) : (
-          <div className="h-34 bg-gradient-to-br from-card-400 to-card [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]" />
+          <div className="h-34 bg-gradient-to-br from-muted to-card [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]" />
         )}
         {/* Après le contenu de la bannière dans le DOM — sinon la bannière
             (rendue après en cas contraire) le recouvrirait visuellement,
@@ -305,8 +311,12 @@ export function PersonaProfileBody({
 
         <div className="px-6 pb-4 -mt-16">
           <div className="relative flex items-start gap-4">
-            {/* Avatar */}
-            <div className="shrink-0">
+            {/* Avatar — sans cadre, bordé de la couleur de son groupe (option du monde). */}
+            <div
+              className="shrink-0"
+              style={!frameUrl && groupColor ? ({ "--group-ring": groupColor } as React.CSSProperties) : undefined}
+              data-group-ring={!frameUrl && groupColor ? groupColor : undefined}
+            >
               <AvatarWithFrame
                 src={avatarUrl}
                 alt={name ?? ""}
@@ -314,28 +324,35 @@ export function PersonaProfileBody({
                 presenceState="invisible"
                 size={128}
                 frameUrl={frameUrl}
-                className="outline-4 outline-background rounded-2xl"
+                // Un anneau de 2 px à la couleur du groupe, au-delà du liseré sombre
+                // (`outline-4`, peint par-dessus l'ombre), et un halo de la même teinte.
+                className={cn(
+                  "outline-4 outline-background rounded-2xl",
+                  !frameUrl && groupColor && "shadow-[0_0_0_6px_var(--group-ring),0_0_28px_color-mix(in_oklab,var(--group-ring)_45%,transparent)]",
+                )}
               />
             </div>
 
             {/* Nom + stats */}
             <div className="pb-1 min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-3 pb-2 mb-2">
-                <p className="min-w-0 text-xl font-semibold leading-tight truncate">
+              {/* Le nom et « Suivre » sur une même ligne, centrés l'un sur l'autre. */}
+              <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
+                <p className="min-w-0 text-xl font-semibold leading-8 truncate">
                   {name ?? label ?? "—"}
                 </p>
                 {isFollowing !== null && (
-                  <button
+                  // « Suivre » ouvre un fil de notifications, bascule sans conséquence
+                  // sur la fiche : `outline` ; une fois suivi, `secondary`.
+                  <Button
                     type="button"
+                    size="sm"
+                    variant={isFollowing ? "secondary" : "outline"}
                     onClick={onToggleFollow}
                     disabled={followBusy}
-                    className={cn(
-                      "shrink-0 rounded-full border px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
-                      isFollowing ? "bg-muted" : "hover:bg-muted",
-                    )}
+                    className="shrink-0"
                   >
                     {isFollowing ? "Suivi" : "Suivre"}
-                  </button>
+                  </Button>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -361,7 +378,7 @@ export function PersonaProfileBody({
                         className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
                       >
                         <span
-                          className="h-3 w-3 shrink-0 rounded-full border border-border-soft"
+                          className="h-3 w-3 shrink-0 rounded-full border border-border"
                           style={{ backgroundColor: dialogueColor }}
                         />
                         Couleur de dialogue
@@ -385,11 +402,25 @@ export function PersonaProfileBody({
             className="space-y-4"
           >
             <TabBar>
-              {tabs.map((s) => (
+              {sections.map((s) => (
                 <TabBarTrigger key={s.id} value={s.id}>
                   {s.name}
                 </TabBarTrigger>
               ))}
+              {/* Relations, journal, relecture : des onglets d'icône, après un
+                  filet, pour ne pas se confondre avec les sections de la fiche. */}
+              {extraTabs.length > 0 && sections.length > 0 && (
+                <span aria-hidden className="h-4 w-px shrink-0 self-center bg-border" />
+              )}
+              {extraTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabBarTrigger key={tab.id} value={tab.id} aria-label={tab.label} title={tab.label} className="flex items-center gap-1 px-1">
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {tab.dot && <span aria-hidden data-testid={`tab-dot-${tab.id}`} className="size-1.5 rounded-full bg-muted-foreground" />}
+                  </TabBarTrigger>
+                );
+              })}
             </TabBar>
 
             {sections.map((s) => (
@@ -426,23 +457,25 @@ export function PersonaProfileBody({
   );
 }
 
-export function PersonaProfileSheetTrigger({
-  children,
+/**
+ * Tout ce que montre la fiche d'un persona : chargé depuis la base, puis
+ * assemblé en props de `PersonaProfileBody`. La fiche ouverte depuis un salon
+ * ou une liste (PersonaProfileSheetTrigger) et l'aperçu de l'éditeur
+ * (PersonaEditSheet) passent tous deux par ici : une modification de la fiche
+ * se voit donc dans les deux, sans rien recopier. L'aperçu ne remplace que ce
+ * qu'il tient en local, pas encore enregistré (nom, images, sections).
+ *
+ * `userId` : le joueur du persona ; à défaut, celui de la ligne chargée.
+ * Rien ne se charge avant `load()` (au survol, à l'ouverture).
+ */
+export function usePersonaProfile({
   personaId,
-  userId,
+  userId: ownerIdProp,
   label,
-  hoverPreview = false,
-  triggerClassName = "size-12",
-  openOnMount = false,
 }: {
-  children: React.ReactNode;
   personaId?: string | null;
   userId?: string | null;
   label?: string | null;
-  hoverPreview?: boolean;
-  triggerClassName?: string;
-  /** Ouvre la fiche dès le montage (lien `?persona=<id>` d'une notification). */
-  openOnMount?: boolean;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
@@ -453,13 +486,13 @@ export function PersonaProfileSheetTrigger({
   // Relire exige `personas.review` dans le monde du persona — le contexte
   // n'est celui de ce monde que sous `/w/[id]` ou dans un de ses salons.
   const { worldId: membershipWorldId, can } = useWorldMembership();
-  const [open, setOpen] = React.useState(openOnMount);
 
   const [name, setName] = React.useState<string | null>(label ?? null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = React.useState<string | null>(null);
   const [frameUrl, setFrameUrl] = React.useState<string | null>(null);
   const [dialogueColor, setDialogueColor] = React.useState<string | null>(null);
+  const [groupColor, setGroupColor] = React.useState<string | null>(null);
   const [ownerPresence, setOwnerPresence] = React.useState<{
     last_seen_at: string | null;
     appear_offline: boolean;
@@ -472,6 +505,7 @@ export function PersonaProfileSheetTrigger({
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
   const [worldId, setWorldId] = React.useState<string | null>(null);
+  const [ownerId, setOwnerId] = React.useState<string | null>(ownerIdProp ?? null);
   // Le monde relit-il ses fiches (migration 184) ? Sinon ni badge de relecture ni onglet.
   const reviewActive = useWorldReviewActive(worldId) === true;
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
@@ -482,9 +516,9 @@ export function PersonaProfileSheetTrigger({
   // Évite les double-fetch : on ne charge qu'une fois par (personaId+userId)
   const fetchedKeyRef = React.useRef<string | null>(null);
 
-  const prefetch = React.useCallback(() => {
+  const load = React.useCallback(() => {
     if (!personaId) return;
-    const key = `${personaId}:${userId ?? ""}:${viewerId ?? ""}`;
+    const key = `${personaId}:${ownerIdProp ?? ""}:${viewerId ?? ""}`;
     if (fetchedKeyRef.current === key) return; // déjà chargé
     fetchedKeyRef.current = key;
 
@@ -492,7 +526,8 @@ export function PersonaProfileSheetTrigger({
     let worldIdOfPersona: string | null = null;
     setLoading(true);
 
-    async function load() {
+    async function run() {
+      let userId = ownerIdProp ?? null;
       const { data: persona, error } = await supabase
         .from("personas")
         .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,narrative_status,review_status,sheet_complete,is_npc,frame:avatar_frame_id(asset_url)")
@@ -501,7 +536,9 @@ export function PersonaProfileSheetTrigger({
 
       if (error) { toast.error(error.message ?? "Impossible de charger le profil."); fetchedKeyRef.current = null; return; }
       if (!cancelled && persona) {
-        const row = persona as unknown as { name?: string | null; avatar_url?: string | null; banner_url?: string | null; dialogue_color?: string | null; world_id?: string | null; frame?: { asset_url?: string | null } | null };
+        const row = persona as unknown as { user_id?: string | null; name?: string | null; avatar_url?: string | null; banner_url?: string | null; dialogue_color?: string | null; world_id?: string | null; frame?: { asset_url?: string | null } | null };
+        userId = userId ?? row.user_id ?? null;
+        setOwnerId(userId);
         setName(row.name ?? label ?? null);
         setAvatarUrl(row.avatar_url ?? null);
         setBannerUrl(row.banner_url ?? null);
@@ -513,6 +550,19 @@ export function PersonaProfileSheetTrigger({
         setFrameUrl(row.frame?.asset_url ?? null);
         setWorldId(row.world_id ?? null);
         worldIdOfPersona = row.world_id ?? null;
+
+        // La couleur de son groupe, si le monde l'utilise (migration 201).
+        if (row.world_id) {
+          const [{ data: worldRow }, { data: assignRow }] = await Promise.all([
+            supabase.from("worlds").select("persona_group_color").eq("id", row.world_id).maybeSingle(),
+            supabase.from("persona_group_assignments").select("group:group_id(color)").eq("persona_id", personaId!).maybeSingle(),
+          ]);
+          const on = (worldRow as { persona_group_color?: boolean } | null)?.persona_group_color !== false;
+          const color = (assignRow as { group?: { color?: string | null } | null } | null)?.group?.color ?? null;
+          if (!cancelled) setGroupColor(on ? color : null);
+        } else if (!cancelled) {
+          setGroupColor(null);
+        }
 
         // Le catalogue VIVANT du monde : sans lui, l'inventaire s'afficherait
         // sous les noms copiés dans la fiche au moment de l'ajout. Les lignes
@@ -553,6 +603,7 @@ export function PersonaProfileSheetTrigger({
             last_seen_at?: string | null;
             appear_offline?: boolean | null;
           };
+          // Le statut ne dit que la dernière connexion du joueur.
           setOwnerPresence({
             last_seen_at: row.last_seen_at ?? null,
             appear_offline: !!row.appear_offline,
@@ -601,9 +652,9 @@ export function PersonaProfileSheetTrigger({
       if (!cancelled) setLoading(false);
     }
 
-    load();
+    void run();
     return () => { cancelled = true; };
-  }, [personaId, userId, viewerId, supabase, label]);
+  }, [personaId, ownerIdProp, viewerId, supabase, label]);
 
   async function toggleFollow() {
     if (!personaId || !viewerId || followBusy) return;
@@ -620,15 +671,104 @@ export function PersonaProfileSheetTrigger({
     setFollowBusy(false);
   }
 
-  // Prefetch dès que la sheet s'ouvre (fallback si le hover n'a pas suffi)
-  React.useEffect(() => {
-    if (open) prefetch();
-  }, [open, prefetch]);
-
+  const userId = ownerId;
   const userPresence = userId ? getUserPresence(userId) : "offline";
   // Un PNJ n'a pas de joueur attitré : la présence de son créateur ne dit rien.
   const presenceLine = isNpc ? null : formatPersonaPresenceLine(userPresence, ownerPresence);
   const ownerEffectiveStatus = ownerStatus ? effectiveStatus(ownerStatus) : "active";
+
+  const bodyProps: Omit<PersonaProfileBodyProps, "headerAction"> = {
+    name,
+    label,
+    avatarUrl,
+    bannerUrl,
+    frameUrl,
+    dialogueColor,
+    groupColor,
+    presenceLine,
+    userPresence,
+    statusBadge:
+      isNpc || narrativeStatus !== "alive" || (reviewActive && reviewStatus !== "approved") || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
+        <>
+          <PersonaNpcBadge isNpc={isNpc} />
+          <PersonaStatusBadge status={narrativeStatus} />
+          <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} />
+          {!isNpc && ownerStatus && ownerEffectiveStatus !== "active" && (
+            <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
+          )}
+        </>
+      ) : undefined,
+    isFollowing,
+    followBusy,
+    onToggleFollow: toggleFollow,
+    sections,
+    catalog,
+    activeTab,
+    onActiveTabChange: setActiveTab,
+    loading,
+    extraTabs: personaId && worldId && userId ? [
+      {
+        id: "__relations__",
+        label: tRelations("tab"),
+        icon: Waypoints,
+        content: <PersonaRelationsSection personaId={personaId} worldId={worldId} ownerId={userId} selfId={viewerId ?? null} />,
+      },
+      {
+        id: "__journal__",
+        label: tJournal("tab"),
+        icon: NotebookText,
+        content: <PersonaJournalSection personaId={personaId} worldId={worldId} ownerId={userId} isNpc={isNpc} />,
+      },
+      // La relecture : le propriétaire y lit les commentaires, un
+      // relecteur du monde y valide ou renvoie la fiche.
+      ...((reviewActive && (viewerId === userId || (membershipWorldId === worldId && can("personas.review")))) ? [{
+        id: "__review__",
+        label: tReview("tab"),
+        icon: ClipboardCheck,
+        dot: reviewStatus !== "approved",
+        content: (
+          <PersonaReviewSection
+            personaId={personaId}
+            worldId={worldId}
+            ownerId={userId}
+            reviewStatus={reviewStatus}
+            sheetComplete={sheetComplete}
+            canReview={membershipWorldId === worldId && can("personas.review")}
+            onStatusChange={setReviewStatus}
+          />
+        ),
+      }] : []),
+    ] : [],
+  };
+
+  return { load, bodyProps, name };
+}
+
+export function PersonaProfileSheetTrigger({
+  children,
+  personaId,
+  userId,
+  label,
+  hoverPreview = false,
+  triggerClassName = "size-12",
+  openOnMount = false,
+}: {
+  children: React.ReactNode;
+  personaId?: string | null;
+  userId?: string | null;
+  label?: string | null;
+  hoverPreview?: boolean;
+  triggerClassName?: string;
+  /** Ouvre la fiche dès le montage (lien `?persona=<id>` d'une notification). */
+  openOnMount?: boolean;
+}) {
+  const [open, setOpen] = React.useState(openOnMount);
+  const { load: prefetch, bodyProps, name } = usePersonaProfile({ personaId, userId, label });
+
+  // Prefetch dès que la sheet s'ouvre (fallback si le hover n'a pas suffi)
+  React.useEffect(() => {
+    if (open) prefetch();
+  }, [open, prefetch]);
 
   const TriggerButton = (
     <button
@@ -662,65 +802,7 @@ export function PersonaProfileSheetTrigger({
         </DrawerHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <PersonaProfileBody
-            name={name}
-            label={label}
-            avatarUrl={avatarUrl}
-            bannerUrl={bannerUrl}
-            frameUrl={frameUrl}
-            dialogueColor={dialogueColor}
-            presenceLine={presenceLine}
-            userPresence={userPresence}
-            statusBadge={
-              isNpc || narrativeStatus !== "alive" || (reviewActive && reviewStatus !== "approved") || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
-                <>
-                  <PersonaNpcBadge isNpc={isNpc} />
-                  <PersonaStatusBadge status={narrativeStatus} />
-                  <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} />
-                  {!isNpc && ownerStatus && ownerEffectiveStatus !== "active" && (
-                    <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
-                  )}
-                </>
-              ) : undefined
-            }
-            isFollowing={isFollowing}
-            followBusy={followBusy}
-            onToggleFollow={toggleFollow}
-            sections={sections}
-            catalog={catalog}
-            activeTab={activeTab}
-            onActiveTabChange={setActiveTab}
-            loading={loading}
-            extraTabs={personaId && worldId && userId ? [
-              {
-                id: "__relations__",
-                label: tRelations("tab"),
-                content: <PersonaRelationsSection personaId={personaId} worldId={worldId} ownerId={userId} selfId={viewerId ?? null} />,
-              },
-              {
-                id: "__journal__",
-                label: tJournal("tab"),
-                content: <PersonaJournalSection personaId={personaId} worldId={worldId} ownerId={userId} isNpc={isNpc} />,
-              },
-              // La relecture : le propriétaire y lit les commentaires, un
-              // relecteur du monde y valide ou renvoie la fiche.
-              ...((reviewActive && (viewerId === userId || (membershipWorldId === worldId && can("personas.review")))) ? [{
-                id: "__review__",
-                label: tReview("tab"),
-                content: (
-                  <PersonaReviewSection
-                    personaId={personaId}
-                    worldId={worldId}
-                    ownerId={userId}
-                    reviewStatus={reviewStatus}
-                    sheetComplete={sheetComplete}
-                    canReview={membershipWorldId === worldId && can("personas.review")}
-                    onStatusChange={setReviewStatus}
-                  />
-                ),
-              }] : []),
-            ] : []}
-          />
+          <PersonaProfileBody {...bodyProps} />
         </div>
       </SideSheetContent>
     </Drawer>

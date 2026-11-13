@@ -302,8 +302,8 @@ describe("GaugesField", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Rouge" }));
-    expect(onSave.mock.calls.at(-1)![0][0].color).toBe("#e8553a");
+    await userEvent.click(await screen.findByRole("button", { name: "Orange" }));
+    expect(onSave.mock.calls.at(-1)![0][0].color).toBe("#FF8C42");
 
     // Les jauges acceptent une couleur translucide.
     expect(screen.getByRole("slider", { name: "Opacité" })).toBeInTheDocument();

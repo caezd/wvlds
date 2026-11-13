@@ -14,6 +14,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
+import { CountPip } from "@/components/ui/count-pip";
 
 const PAGE_SIZE = 5;
 
@@ -142,15 +143,11 @@ export function ChatroomsNavDropdown({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex min-w-0 min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-hoverCard transition-colors"
+          className="flex min-w-0 min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
           aria-label={t("worldConversations")}
         >
           <span className="truncate">{label}</span>
-          {totalUnread > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-white">
-              {totalUnread > 99 ? "99+" : totalUnread}
-            </span>
-          )}
+          <CountPip count={totalUnread} />
           <ChevronDown
             className={cn(
               "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
@@ -191,7 +188,7 @@ export function ChatroomsNavDropdown({
                   <span
                     className={cn(
                       "relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full",
-                      !room.icon_url && "bg-card-400",
+                      !room.icon_url && "bg-muted",
                     )}
                   >
                     {room.icon_url ? (
@@ -227,7 +224,7 @@ export function ChatroomsNavDropdown({
           })}
 
           {visible < otherRooms.length && (
-            <p className="py-2 text-center text-[11px] text-muted-foreground">
+            <p className="py-2 text-center text-xs-plus text-muted-foreground">
               Faites défiler pour en voir plus…
             </p>
           )}

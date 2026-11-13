@@ -8,6 +8,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { getInitials } from "@/lib/textFormatting";
+import { SectionLabel } from "@/components/ui/section-label";
 
 const PersonaProfileSheetTrigger = dynamic(() =>
   import("@/components/personas/PersonaProfileSheetTrigger").then((m) => m.PersonaProfileSheetTrigger),
@@ -79,9 +80,9 @@ export function WorldRecentPersonasWidget({
 
   return (
     <div className="rounded-lg border p-3">
-      <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <SectionLabel as="p" className="mb-2.5">
         {t("home.widgets.personas_recent")}
-      </p>
+      </SectionLabel>
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
         {personas.map((persona) => (
           <PersonaProfileSheetTrigger
@@ -101,7 +102,7 @@ export function WorldRecentPersonasWidget({
               frameUrl={persona.frame?.asset_url}
               className="rounded-lg"
             />
-            <span className="w-full truncate text-center text-xs text-foreground/90">{persona.name}</span>
+            <span className="w-full truncate text-center text-xs text-foreground">{persona.name}</span>
           </PersonaProfileSheetTrigger>
         ))}
       </div>

@@ -11,7 +11,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import type { NoteMoveCommand } from "@/hooks/useWikiPageNotes";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
 import {
   DropdownMenu,
@@ -44,7 +44,7 @@ import type { WikiPageNote } from "@/types/worlds";
  */
 const NOTE_PROSE_CLASSES = cn(
   "[&_p]:text-xs [&_li]:text-xs [&_blockquote]:text-xs",
-  "[&_td]:text-xs [&_th]:text-xs [&_code]:text-[11px]",
+  "[&_td]:text-xs [&_th]:text-xs [&_code]:text-xs-plus",
   "[&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_h4]:text-xs [&_h5]:text-xs [&_h6]:text-xs",
   "[&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold",
   // À 12 px, les marges de `prose-base` laissent des trous : on resserre.
@@ -128,7 +128,7 @@ export function WikiNoteCard({
           onChange={e => setTitle(e.target.value)}
           maxLength={DB_TEXT_LIMITS["world_wiki_page_notes.title"]}
           placeholder={t("titlePlaceholder")}
-          className="w-full border-b border-border-soft bg-transparent pb-1 text-sm font-medium outline-none focus:border-primary/50"
+          className="w-full border-b border-border bg-transparent pb-1 text-sm font-medium outline-none focus:border-primary/50"
           autoFocus
           onKeyDown={e => {
             if (e.key === "Escape") { e.preventDefault(); setEditing(false); }
@@ -141,16 +141,16 @@ export function WikiNoteCard({
           placeholder={t("bodyPlaceholder")}
           minRows={3}
           maxRows={14}
-          className="mt-2 w-full resize-none rounded-md border border-border-soft bg-transparent px-2 py-1.5 text-xs outline-none focus:border-primary/50"
+          className="mt-2 w-full resize-none rounded-md border border-border bg-transparent px-2 py-1.5 text-xs outline-none focus:border-primary/50"
           onKeyDown={e => {
             if (e.key === "Escape") { e.preventDefault(); setEditing(false); }
           }}
         />
         <div className="mt-2 flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditing(false)}>
+          <Button variant="secondary" size="sm" className="text-xs" onClick={() => setEditing(false)}>
             {tCommon("cancel")}
           </Button>
-          <Button size="sm" className="h-7 px-2.5 text-xs" onClick={save} disabled={!title.trim()}>
+          <Button size="sm" className="text-xs" onClick={save} disabled={!title.trim()}>
             {tCommon("save")}
           </Button>
         </div>
@@ -165,7 +165,7 @@ export function WikiNoteCard({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "rounded-lg border border-border-soft bg-background",
+        "rounded-lg border border-border bg-background",
         isDragging && "opacity-50",
       )}
     >
@@ -177,7 +177,7 @@ export function WikiNoteCard({
             {...listeners}
             {...SANS_BALAYAGE}
             aria-label={t("reorder")}
-            className="shrink-0 cursor-grab text-muted-foreground/50 hover:text-foreground"
+            className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground"
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
@@ -204,7 +204,7 @@ export function WikiNoteCard({
               <button
                 type="button"
                 aria-label={t("noteActions")}
-                className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
@@ -238,7 +238,7 @@ export function WikiNoteCard({
       </div>
 
       {expanded && (
-        <div className="border-t border-border-soft px-2.5 py-2">
+        <div className="border-t border-border px-2.5 py-2">
           {note.body.trim()
             ? <MarkdownRenderer content={note.body} className={NOTE_PROSE_CLASSES} />
             : <p className="text-xs italic text-muted-foreground">{t("emptyBody")}</p>}

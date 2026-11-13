@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronsUpDown, LogOut, Plus, Star } from "lucide-react";
+import { CheckCheck, ChevronsUpDown, LogOut, Plus, Star } from "lucide-react";
 import { WorldAvatar } from "@/components/avatars/WorldAvatar";
 import { CreateWorldDialog } from "./CreateWorldDialog";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
@@ -14,8 +14,11 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { useMarkWorldRead } from "@/hooks/useMarkWorldRead";
+import { CountPip } from "@/components/ui/count-pip";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import {
   AlertDialog,
@@ -99,6 +102,32 @@ export function WorldPickerHeader({
   const { worldUnread } = useNotifications();
   const currentUnread = worldUnread[currentWorldId] ?? 0;
   const hasOtherUnread = worlds.some((w) => w.id !== currentWorldId && (worldUnread[w.id] ?? 0) > 0);
+  const { hasUnread, markRead } = useMarkWorldRead();
+
+  /** Menu contextuel d'un monde : marquer comme lu, puis quitter si on n'en est pas propriétaire. */
+  function worldMenu(w: WorldItem) {
+    const canLeave = currentUserId !== null && w.owner_id !== currentUserId;
+    return (
+      <ContextMenuContent>
+        <ContextMenuItem disabled={!hasUnread(w.id)} onSelect={() => void markRead(w)}>
+          <CheckCheck className="h-3.5 w-3.5" />
+          {t("markRead")}
+        </ContextMenuItem>
+        {canLeave && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              variant="destructive"
+              onSelect={afterMenuClose(() => { setPendingLeave(w); setOpen(false); })}
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              {t("leave")}
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    );
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -127,10 +156,8 @@ export function WorldPickerHeader({
               ) : (
                 otherWorlds.map((w) => {
                   const unread = worldUnread[w.id] ?? 0;
-                  const canLeave = currentUserId !== null && w.owner_id !== currentUserId;
                   const row = (
                     <button
-                      key={w.id}
                       type="button"
                       onClick={() => { router.push(`/w/${w.id}`); setOpen(false); }}
                       data-testid="world-picker-item"
@@ -138,39 +165,25 @@ export function WorldPickerHeader({
                     >
                       <div className="relative shrink-0">
                         <WorldAvatar world={w} size="md" />
-                        {unread > 0 && (
-                          <span className="absolute -right-0.5 -top-0.5 flex h-3 min-w-3 items-center justify-center rounded-full bg-accent px-0.5 text-[8px] font-bold leading-none text-accent-foreground shadow-[0_0_0_1.5px_hsl(var(--background))]">
-                            {unread > 99 ? "99+" : unread}
-                          </span>
-                        )}
+                        <CountPip count={unread} className="absolute -right-0.5 -top-0.5" />
                       </div>
                       <span className="flex-1 truncate text-left">{w.name}</span>
                       {w.is_favorite && (
-                        <Star className="h-3.5 w-3.5 shrink-0 fill-yellow-500 text-yellow-500" />
+                        <Star className="h-3.5 w-3.5 shrink-0 fill-warning text-warning" />
                       )}
                     </button>
                   );
 
-                  if (!canLeave) return row;
-
                   return (
                     <ContextMenu key={w.id}>
                       <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
-                          variant="destructive"
-                          onSelect={afterMenuClose(() => { setPendingLeave(w); setOpen(false); })}
-                        >
-                          <LogOut className="h-3.5 w-3.5" />
-                          {t("leave")}
-                        </ContextMenuItem>
-                      </ContextMenuContent>
+                      {worldMenu(w)}
                     </ContextMenu>
                   );
                 })
               )}
 
-              <div className="mx-1 my-1 border-t border-border-soft" />
+              <div className="mx-1 my-1 border-t border-border" />
 
               <CreateWorldDialog
                 disabled={disabled}
@@ -210,15 +223,11 @@ export function WorldPickerHeader({
                   <>
                     <div className="relative shrink-0">
                       <WorldAvatar world={currentWorld} size="md" />
-                      {currentUnread > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-0.5 text-[9px] font-bold leading-none text-accent-foreground ring-2 ring-background">
-                          {currentUnread > 99 ? "99+" : currentUnread}
-                        </span>
-                      )}
+                      <CountPip count={currentUnread} className="absolute -right-0.5 -top-0.5" />
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium leading-tight text-mist-100">{currentWorld.name}</span>
-                      <span className="truncate text-[11px] leading-tight text-mist-200">{t('switch')}</span>
+                      <span className="truncate text-sm font-medium leading-tight text-foreground">{currentWorld.name}</span>
+                      <span className="truncate text-xs-plus leading-tight text-muted-foreground">{t('switch')}</span>
                     </div>
 
                   </>
@@ -227,7 +236,7 @@ export function WorldPickerHeader({
                 )}
               </button>
 
-              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center text-mist-200">
+              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground">
                 <ChevronsUpDown className="h-4 w-4" />
                 {hasOtherUnread && !open && (
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent absolute top-1/2 -translate-y-1/2 right-0" />
@@ -236,22 +245,12 @@ export function WorldPickerHeader({
             </div>
           );
 
-          const canLeaveCurrent =
-            !!currentWorld && currentUserId !== null && currentWorld.owner_id !== currentUserId;
-          if (!canLeaveCurrent) return trigger;
+          if (!currentWorld) return trigger;
 
           return (
             <ContextMenu>
               <ContextMenuTrigger asChild>{trigger}</ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem
-                  variant="destructive"
-                  onSelect={afterMenuClose(() => { setPendingLeave(currentWorld); setOpen(false); })}
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  {t("leave")}
-                </ContextMenuItem>
-              </ContextMenuContent>
+              {worldMenu(currentWorld)}
             </ContextMenu>
           );
         })()}
@@ -270,7 +269,7 @@ export function WorldPickerHeader({
             <AlertDialogAction
               onClick={() => confirmLeave()}
               disabled={leaving}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
             >
               {t("leaveConfirmContinue")}
             </AlertDialogAction>

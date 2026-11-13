@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { CatalogVisual } from "./CatalogVisual";
+import { SectionLabel } from "@/components/ui/section-label";
 
 export const MAX_ITEM_RELATIONS = 20;
 
@@ -78,14 +79,14 @@ export function CatalogItemChip({
     </>
   );
   return (
-    <span className={cn("inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border-soft bg-muted/40 px-2 py-1 text-xs", className)}>
+    <span className={cn("inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2 py-1 text-xs", className)}>
       {onOpen && item ? (
         <button type="button" onClick={onOpen} className="inline-flex min-w-0 items-center gap-1.5 hover:underline">{inner}</button>
       ) : (
         <span className="inline-flex min-w-0 items-center gap-1.5">{inner}</span>
       )}
       {quantity !== undefined && onQuantity && (
-        <span className="inline-flex items-center gap-0.5 rounded-md border border-border-soft bg-background">
+        <span className="inline-flex items-center gap-0.5 rounded-md border border-border bg-background">
           <button type="button" aria-label={t("quantityLess")} onClick={() => onQuantity(Math.max(1, quantity - 1))} className="px-1 text-muted-foreground hover:text-foreground"><Minus className="h-3 w-3" /></button>
           <span className="min-w-5 text-center tabular-nums">{quantity}</span>
           <button type="button" aria-label={t("quantityMore")} onClick={() => onQuantity(Math.min(9999, quantity + 1))} className="px-1 text-muted-foreground hover:text-foreground"><Plus className="h-3 w-3" /></button>
@@ -126,7 +127,7 @@ export function CatalogItemPicker({
   return (
     <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery(""); }}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="h-6 rounded-full px-2 text-xs" disabled={disabled || candidates.length === 0}>
+        <Button type="button" variant="outline" size="sm" className="h-6 px-2 text-xs has-[>svg]:px-2" disabled={disabled || candidates.length === 0}>
           <Plus className="mr-1 h-3 w-3" />
           {label}
         </Button>
@@ -227,13 +228,13 @@ export function PrerequisiteSections({
     <>
       {requires.length > 0 && (
         <section data-testid="prerequisites">
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("prerequisites")}</h3>
+          <SectionLabel className="mb-1.5">{t("prerequisites")}</SectionLabel>
           {chips(requires.map((r) => r.to_id))}
         </section>
       )}
       {unlocks.length > 0 && (
         <section data-testid="unlocks">
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("unlocks")}</h3>
+          <SectionLabel className="mb-1.5">{t("unlocks")}</SectionLabel>
           {chips(unlocks.map((r) => r.from_id))}
         </section>
       )}
@@ -274,10 +275,10 @@ function RecipeBranch({
           <span className="h-5 w-5 shrink-0" />
         )}
         <CatalogItemChip item={target} quantity={node.quantity} onOpen={onNavigate && target ? () => onNavigate(target) : undefined} />
-        {node.truncated && <span className="text-[11px] text-muted-foreground">{t("recipeTruncated")}</span>}
+        {node.truncated && <span className="text-xs-plus text-muted-foreground">{t("recipeTruncated")}</span>}
       </div>
       {hasChildren && openState && (
-        <ul className="ml-3 mt-1 space-y-1 border-l border-border-soft pl-3">
+        <ul className="ml-3 mt-1 space-y-1 border-l border-border pl-3">
           {node.children.map((child) => (
             <RecipeBranch key={child.id} node={child} catalog={catalog} onNavigate={onNavigate} depth={depth + 1} />
           ))}
@@ -307,7 +308,7 @@ export function RecipeSections({
     <>
       {tree.children.length > 0 && (
         <section data-testid="recipe">
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("recipe")}</h3>
+          <SectionLabel className="mb-1.5">{t("recipe")}</SectionLabel>
           <ul className="space-y-1">
             {tree.children.map((child) => (
               <RecipeBranch key={child.id} node={child} catalog={catalog} onNavigate={onNavigate} depth={0} />
@@ -317,7 +318,7 @@ export function RecipeSections({
       )}
       {usedIn.length > 0 && (
         <section data-testid="used-in">
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("usedIn")}</h3>
+          <SectionLabel className="mb-1.5">{t("usedIn")}</SectionLabel>
           <div className="flex flex-wrap gap-1.5">
             {usedIn.map((r) => {
               const product = catalog.get(r.from_id);

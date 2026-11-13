@@ -149,7 +149,7 @@ export function LinkLayer({
             key={link.id}
             aria-hidden
             data-link-label={link.id}
-            className="pointer-events-none absolute z-[5] whitespace-nowrap rounded bg-black/70 px-1 py-px text-[10px] font-medium text-white shadow-sm"
+            className="pointer-events-none absolute z-5 whitespace-nowrap rounded bg-black/70 px-1 py-px text-2xs font-medium text-white shadow-sm"
             style={{
               left: `${(a.x + b.x) / 2}%`,
               top: `${(a.y + b.y) / 2}%`,

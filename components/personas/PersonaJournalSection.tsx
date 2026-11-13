@@ -93,7 +93,7 @@ function EntryEditor({
   const trimmed = body.trim();
   return (
     <form
-      className="space-y-2 rounded-lg border border-border-soft bg-muted/30 p-3"
+      className="space-y-2 rounded-lg border border-border bg-muted/30 p-3"
       onSubmit={(e) => { e.preventDefault(); if (trimmed) onSubmit(trimmed, date); }}
     >
       <AutoResizeTextarea
@@ -108,10 +108,10 @@ function EntryEditor({
       />
       {timeline && <TimelineDateFields label={t("dateLabel")} value={date} onChange={setDate} config={timeline} />}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] text-muted-foreground tabular-nums">{body.length}/{BODY_MAX}</span>
+        <span className="text-xs-plus text-muted-foreground tabular-nums">{body.length}/{BODY_MAX}</span>
         <span className="flex items-center gap-2">
           {onCancel && (
-            <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
+            <Button type="button" size="sm" variant="secondary" onClick={onCancel} disabled={busy}>
               <X className="mr-1 h-3.5 w-3.5" />
               {t("cancel")}
             </Button>
@@ -203,7 +203,7 @@ export function PersonaJournalSection({
   return (
     <div className="space-y-4" data-testid="persona-journal">
       {canWrite && !composing && (
-        <Button type="button" size="sm" variant="secondary" onClick={() => setComposing(true)}>
+        <Button variant="outline" type="button" size="sm" onClick={() => setComposing(true)}>
           <Plus className="mr-1.5 h-3.5 w-3.5" />
           {t("newEntry")}
         </Button>
@@ -219,7 +219,7 @@ export function PersonaJournalSection({
       ) : (
         <ol className="space-y-3">
           {sorted.map((e) => (
-            <li key={e.id} className="group/entry rounded-lg border border-border-soft px-3 py-2.5">
+            <li key={e.id} className="group/entry rounded-lg border border-border px-3 py-2.5">
               {editingId === e.id ? (
                 <EntryEditor
                   initialBody={e.body}
@@ -247,20 +247,22 @@ export function PersonaJournalSection({
                     </span>
                     {canWrite && (
                       <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/entry:opacity-100 focus-within:opacity-100">
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => setEditingId(e.id)}
                           aria-label={t("edit")}
                           title={t("edit")}
-                          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="size-6"
                         >
-                          <Pencil className="h-3 w-3" />
-                        </button>
+                          <Pencil className="size-3" />
+                        </Button>
                         <DeleteConfirmDialog
                           trigger={
-                            <button type="button" aria-label={t("delete")} title={t("delete")} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+                            <Button type="button" variant="ghost" size="icon-sm" aria-label={t("delete")} title={t("delete")} className="size-6 hover:text-destructive">
+                              <Trash2 className="size-3" />
+                            </Button>
                           }
                           description={t("deleteDescription")}
                           onConfirm={() => void remove(e.id)}

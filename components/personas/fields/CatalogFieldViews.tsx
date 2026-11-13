@@ -6,6 +6,7 @@ import { RARITY_COLORS, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { InventoryItem, SkillItem } from "@/types/personas";
 import type { WorldCatalogItem, WorldCatalogProperty } from "@/types/worlds";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
 import { CatalogItemDetail } from "@/components/worlds/catalogue/CatalogItemDetail";
 
@@ -70,7 +71,7 @@ export function EntryProperties({ properties, className }: { properties: WorldCa
       {properties.map((property, index) => (
         <div key={index} className="flex items-baseline gap-1">
           <dt className="text-muted-foreground">{property.label}</dt>
-          <dd className="font-medium text-foreground/80">{property.value}</dd>
+          <dd className="font-medium text-foreground">{property.value}</dd>
         </div>
       ))}
     </dl>
@@ -91,7 +92,7 @@ export function InventoryFieldView({
   if (!visible.length) return null;
 
   return (
-    <div className="rounded-lg border border-border-soft bg-muted/30 p-3">
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
       <div className="flex flex-wrap gap-2">
         {visible.map(({ item, resolved }) => (
           <Tooltip key={item.id}>
@@ -104,7 +105,7 @@ export function InventoryFieldView({
                 className={cn(
                   "flex select-none items-center gap-1.5 rounded-md border bg-background px-2 py-1.5",
                   item.catalog_id && !resolved.orphaned ? "cursor-pointer hover:bg-muted/40" : "cursor-default",
-                  resolved.orphaned ? "border-destructive/40" : "border-border-soft",
+                  resolved.orphaned ? "border-destructive/40" : "border-border",
                 )}
                 // La rareté colore la bordure ; un objet retiré garde la
                 // sienne, plus parlante que la couleur d'une rareté périmée.
@@ -158,7 +159,7 @@ export function SkillsFieldView({
           className={cn(
             "flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3 py-2",
             item.catalog_id && !resolved.orphaned && "cursor-pointer hover:bg-muted/50",
-            resolved.orphaned ? "border-destructive/40" : "border-border-soft",
+            resolved.orphaned ? "border-destructive/40" : "border-border",
           )}
         >
           <span className="mt-0.5">
@@ -168,9 +169,9 @@ export function SkillsFieldView({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium leading-tight">{resolved.name}</span>
               {item.level && (
-                <span className="shrink-0 rounded-full border border-border-soft bg-muted/50 px-2 py-0.5 text-[0.65rem] font-medium tabular-nums text-muted-foreground">
+                <Badge className="tabular-nums">
                   {item.level}
-                </span>
+                </Badge>
               )}
             </div>
             {resolved.description && (

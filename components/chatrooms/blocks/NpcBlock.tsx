@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
 import { useTranslations } from "next-intl";
@@ -112,7 +113,7 @@ export function NpcDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
           <Button onClick={handleSend} disabled={!name.trim()}>
             {initialBlock ? "Enregistrer" : "Insérer"}
           </Button>
@@ -139,9 +140,9 @@ export function NpcBlockView({
     : [];
 
   return (
-    <GameBlockSurface className="border-teal-600/20 bg-teal-500/5">
+    <GameBlockSurface className="border-npc/20 bg-npc/5">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-base select-none">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-npc-soft text-base select-none">
           {block.emoji || initials}
         </div>
         <div className="flex-1 min-w-0">
@@ -165,12 +166,9 @@ export function NpcBlockView({
       {statChips.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5 pl-12">
           {statChips.map((stat, i) => (
-            <span
-              key={i}
-              className="text-[10px] text-teal-700 dark:text-teal-300 bg-teal-500/10 px-1.5 py-0.5 rounded"
-            >
+            <Badge key={i} tone="npc">
               {stat}
-            </span>
+            </Badge>
           ))}
         </div>
       )}

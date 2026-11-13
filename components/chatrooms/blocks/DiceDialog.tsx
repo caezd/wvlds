@@ -69,14 +69,16 @@ export function DiceDialog({ onSend, open: controlledOpen, onOpenChange }: {
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex flex-wrap gap-1.5 pt-1">
               {PRESETS.map((p) => (
-                <button
+                <Button
                   key={p}
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
                   onClick={() => setFormula(p)}
-                  className="rounded-full border border-border px-2 py-0.5 text-xs hover:bg-muted transition-colors"
                 >
                   {p}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -91,7 +93,7 @@ export function DiceDialog({ onSend, open: controlledOpen, onOpenChange }: {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>{t("cancelEdit")}</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>{t("cancelEdit")}</Button>
           <Button onClick={handleSend}>
             <Dices className="h-4 w-4 mr-1.5" />
             {t("diceRoll")}

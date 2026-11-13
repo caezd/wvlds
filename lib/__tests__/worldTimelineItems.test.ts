@@ -1,0 +1,372 @@
+import { describe, it, expect } from "vitest";
+import {
+  NO_TIMELINE_FILTERS,
+  assignSuiteLanes,
+  buildTimelineMinimap,
+  buildTimelinePeriods,
+  buildTimelineSections,
+  countActiveFilters,
+  effectiveRoomStatus,
+  eventEndItems,
+  holidayItems,
+  initialTimelineWindow,
+  sliceTimelineSections,
+  timelineMonthStops,
+  timelineRowCount,
+  timelineRowOfYear,
+  timelineRowsById,
+  upcomingHolidays,
+  isFiltering,
+  matchesTimelineFilters,
+  normalizeAges,
+  normalizeSearch,
+  type TimelineEventItem,
+  type TimelineFilters,
+  type TimelineItem,
+  type TimelineRoomContext,
+} from "@/lib/worldTimelineItems";
+
+const salon = (id: string, year: number, month: number | null, day: number | null, extra: Partial<TimelineItem> = {}): TimelineItem => ({
+  kind: "room", id, date: { year, month, day }, title: id, arcId: null, previousIds: [], categoryId: null, status: "active", ...extra,
+} as TimelineItem);
+const evenement = (id: string, year: number, month: number | null, day: number | null, endDate: TimelineEventItem["endDate"] = null): TimelineEventItem => ({
+  kind: "event", id, date: { year, month, day }, endDate, title: `Événement ${id}`, description: null, wikiPageId: null,
+});
+const journal = (id: string, personaId: string, year: number, month: number | null, day: number | null): TimelineItem => ({
+  kind: "journal", id, date: { year, month, day }, personaId, personaName: "Tess", body: "Une nuit sans lune.",
+});
+
+const CTX: TimelineRoomContext = {
+  personas: new Map([["a", new Set(["p-tess"])], ["b", new Set(["p-ivo"])]]),
+  openers: new Map([["a", { name: "Poumon", persona: "Tess" }], ["b", { name: "Mojkkin", persona: "Ivo" }]]),
+};
+const filtres = (patch: Partial<TimelineFilters>): TimelineFilters => ({ ...NO_TIMELINE_FILTERS, ...patch });
+
+describe("buildTimelineSections", () => {
+  it("par année puis par date ; dans une date, l'événement, les salons, les journaux", () => {
+    const sections = buildTimelineSections(
+      [journal("j", "p-tess", 1, 2, 9), salon("b", 1, 2, 9), evenement("e", 1, 2, 9), salon("a", 1, 0, 3), salon("c", 3, null, null)],
+      null,
+    );
+    expect(sections.map((s) => s.year)).toEqual([1, 3]);
+    expect(sections[0].groups.map((g) => g.key)).toEqual(["0:3", "2:9"]);
+    expect(sections[0].groups[1].items.map((i) => i.kind)).toEqual(["event", "room", "journal"]);
+  });
+
+  it("garde l'année demandée même vide, à sa place", () => {
+    const sections = buildTimelineSections([salon("a", 1, 0, 1), salon("b", 9, 0, 1)], 4);
+    expect(sections.map((s) => [s.year, s.groups.length])).toEqual([[1, 1], [4, 0], [9, 1]]);
+  });
+
+  it("rien à placer : rien, même pas l'année actuelle", () => {
+    expect(buildTimelineSections([], 1)).toEqual([]);
+  });
+});
+
+describe("pagination de l'affichage", () => {
+  // An 1 : trois dates ; an 2 : vide (l'année actuelle) ; an 3 : deux dates.
+  const SECTIONS = buildTimelineSections(
+    [salon("a", 1, 0, 1), salon("b", 1, 0, 2), salon("c", 1, 1, 1), salon("d", 3, 0, 1), salon("e", 3, 1, 1)],
+    2,
+  );
+
+  it("une ligne par date, une pour une année vide", () => {
+    expect(timelineRowCount(SECTIONS)).toBe(6);
+    expect(timelineRowOfYear(SECTIONS, 2)).toBe(3);
+    expect(timelineRowOfYear(SECTIONS, 3)).toBe(4);
+    expect(timelineRowOfYear(SECTIONS, 9)).toBe(-1);
+    expect(timelineRowsById(SECTIONS).get("e")).toBe(5);
+  });
+
+  it("une fenêtre garde les dates qui y tombent, année par année", () => {
+    const tranche = sliceTimelineSections(SECTIONS, { start: 2, end: 5 });
+    expect(tranche.map((s) => [s.year, s.groups.map((g) => g.items[0].id)])).toEqual([
+      [1, ["c"]],
+      [2, []],
+      [3, ["d"]],
+    ]);
+    expect(sliceTimelineSections(SECTIONS, { start: 0, end: 6 })).toEqual(SECTIONS);
+  });
+
+  it("s'ouvre un peu avant l'année donnée, sur une page ; sans elle, depuis le début", () => {
+    expect(initialTimelineWindow(SECTIONS, 3, 2)).toEqual({ start: 4, end: 6 });
+    expect(initialTimelineWindow(SECTIONS, 3, 12)).toEqual({ start: 2, end: 6 });
+    expect(initialTimelineWindow(SECTIONS, 9, 2)).toEqual({ start: 0, end: 2 });
+  });
+});
+
+describe("filtres et recherche", () => {
+  it("la recherche ignore casse et accents, et couvre le persona qui a ouvert le salon", () => {
+    expect(normalizeSearch("  Écho ")).toBe("echo");
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), filtres({ query: "tess" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(salon("b", 1, 0, 1), filtres({ query: "tess" }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(evenement("x", 1, 0, 1), filtres({ query: "evenement" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(journal("j", "p-tess", 1, 0, 1), filtres({ query: "LUNE" }), CTX)).toBe(true);
+  });
+
+  it("par type", () => {
+    const seulsSalons = filtres({ kinds: new Set(["room"]) });
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), seulsSalons, CTX)).toBe(true);
+    expect(matchesTimelineFilters(evenement("x", 1, 0, 1), seulsSalons, CTX)).toBe(false);
+  });
+
+  it("par persona : les salons où il a écrit, ses journaux ; les événements restent", () => {
+    const tess = filtres({ personaId: "p-tess" });
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), tess, CTX)).toBe(true);
+    expect(matchesTimelineFilters(salon("b", 1, 0, 1), tess, CTX)).toBe(false);
+    expect(matchesTimelineFilters(journal("j", "p-tess", 1, 0, 1), tess, CTX)).toBe(true);
+    expect(matchesTimelineFilters(journal("k", "p-ivo", 1, 0, 1), tess, CTX)).toBe(false);
+    expect(matchesTimelineFilters(evenement("x", 1, 0, 1), tess, CTX)).toBe(true);
+  });
+
+  it("par joueur, arc, catégorie : des filtres de salon, qui masquent les journaux", () => {
+    expect(matchesTimelineFilters(salon("b", 1, 0, 1), filtres({ player: "Mojkkin" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), filtres({ player: "Mojkkin" }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1, { arcId: "arc" } as Partial<TimelineItem>), filtres({ arcId: "arc" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), filtres({ arcId: "arc" }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1, { categoryId: "cat" } as Partial<TimelineItem>), filtres({ categoryId: "cat" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(journal("j", "p-tess", 1, 0, 1), filtres({ arcId: "arc" }), CTX)).toBe(false);
+  });
+
+  it("compte les filtres actifs, la recherche à part", () => {
+    expect(countActiveFilters(NO_TIMELINE_FILTERS)).toBe(0);
+    expect(isFiltering(filtres({ query: "  " }))).toBe(false);
+    expect(isFiltering(filtres({ query: "x" }))).toBe(true);
+    expect(countActiveFilters(filtres({ kinds: new Set(["room"]), arcId: "a", personaId: "p" }))).toBe(3);
+  });
+});
+
+describe("événements qui durent", () => {
+  it("la fin d'un événement se place à sa date, après les salons du jour ; une fin qui ne suit pas le début n'est pas tracée", () => {
+    const siege = evenement("siege", 2, 2, 3, { year: 3, month: 7, day: 12 });
+    const bref = evenement("bref", 2, 2, 3, { year: 2, month: 2, day: 3 });
+    const flou = evenement("flou", 2, 2, 3, { year: 2, month: null, day: null });
+    const fins = eventEndItems([siege, bref, flou]);
+    expect(fins).toEqual([{ kind: "eventEnd", id: "siege:end", eventId: "siege", date: { year: 3, month: 7, day: 12 }, title: "Événement siege" }]);
+    const sections = buildTimelineSections([...fins, salon("a", 3, 7, 12)], null);
+    expect(sections[0].groups[0].items.map((i) => i.kind)).toEqual(["room", "eventEnd"]);
+  });
+
+  it("la fin suit les filtres de l'événement : le type et la recherche, pas les filtres de salon", () => {
+    const [fin] = eventEndItems([evenement("siege", 2, 2, 3, { year: 3, month: 7, day: 12 })]);
+    expect(matchesTimelineFilters(fin, filtres({ kinds: new Set(["room"]) }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(fin, filtres({ query: "siege" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(fin, filtres({ arcId: "arc", status: "completed" }), CTX)).toBe(true);
+  });
+});
+
+describe("fêtes du calendrier", () => {
+  it("une fête seulement dans les mois donnés (ceux qui ont une entrée), à sa date ; sans nom ou hors calendrier, ignorée", () => {
+    const fetes = holidayItems(
+      [
+        { name: " Fête des lanternes ", month: 5, day: 9 },
+        { name: "", month: 1, day: 1 },
+        { name: "Treizième lune", month: 12, day: 1 },
+        { name: "Moisson", month: 8, day: null },
+      ],
+      // Juin de l'an 1 (deux fois : un mois ne donne ses fêtes qu'une fois),
+      // septembre de l'an 4 ; rien en juin de l'an 4.
+      [{ year: 1, month: 5 }, { year: 1, month: 5 }, { year: 4, month: 8 }],
+      12,
+    );
+    expect(fetes.map((f) => [f.date.year, f.date.month, f.date.day, f.name])).toEqual([
+      [1, 5, 9, "Fête des lanternes"],
+      [4, 8, null, "Moisson"],
+    ]);
+    expect(new Set(fetes.map((f) => f.id)).size).toBe(2);
+    expect(holidayItems(undefined, [{ year: 1, month: 5 }], 12)).toEqual([]);
+  });
+
+  it("en tête de sa date ; cachée par son type ou par la recherche, pas par les filtres de salon", () => {
+    const [fete] = holidayItems([{ name: "Fête des lanternes", month: 5, day: 9 }], [{ year: 1, month: 5 }], 12);
+    const sections = buildTimelineSections([salon("a", 1, 5, 9), evenement("e", 1, 5, 9), fete], null);
+    expect(sections[0].groups[0].items.map((i) => i.kind)).toEqual(["holiday", "event", "room"]);
+    expect(matchesTimelineFilters(fete, filtres({ kinds: new Set(["room", "event"]) }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(fete, filtres({ query: "lanterne" }), CTX)).toBe(true);
+    expect(matchesTimelineFilters(fete, filtres({ query: "moisson" }), CTX)).toBe(false);
+    expect(matchesTimelineFilters(fete, filtres({ personaId: "p-tess", status: "dormant" }), CTX)).toBe(true);
+  });
+});
+
+describe("prochaines fêtes", () => {
+  const FETES = [
+    { name: "Premier de l'an", month: 0, day: 1 },
+    { name: "Fête des lanternes", month: 5, day: 9 },
+    { name: "Lune rousse", month: 5, day: 2 },
+    { name: " ", month: 3, day: 1 },
+    { name: "Hors calendrier", month: 14, day: 1 },
+  ];
+
+  it("de la plus proche à la plus lointaine, l'année suivante pour celles déjà passées", () => {
+    expect(upcomingHolidays(FETES, { year: 4, month: 5 }, 12, 10)).toEqual([
+      { name: "Lune rousse", year: 4, month: 5, day: 2, monthsAway: 0 },
+      { name: "Fête des lanternes", year: 4, month: 5, day: 9, monthsAway: 0 },
+      { name: "Premier de l'an", year: 5, month: 0, day: 1, monthsAway: 7 },
+    ]);
+  });
+
+  it("sans mois courant, depuis le premier ; bornées par la limite ; sans mois au calendrier, aucune", () => {
+    expect(upcomingHolidays(FETES, { year: 4, month: null }, 12, 1)).toEqual([
+      { name: "Premier de l'an", year: 4, month: 0, day: 1, monthsAway: 0 },
+    ]);
+    expect(upcomingHolidays(FETES, { year: 4, month: 0 }, 0, 5)).toEqual([]);
+    expect(upcomingHolidays(undefined, { year: 4, month: 0 }, 12, 5)).toEqual([]);
+  });
+});
+
+describe("statut des salons", () => {
+  const JOUR = 86_400_000;
+  const MAINTENANT = Date.UTC(2026, 8, 26);
+  const ilYA = (jours: number) => new Date(MAINTENANT - jours * JOUR).toISOString();
+
+  it("terminé et abandonné tels quels ; en cours, il s'endort après le délai du monde", () => {
+    expect(effectiveRoomStatus("completed", ilYA(400), 30, MAINTENANT)).toBe("completed");
+    expect(effectiveRoomStatus("abandoned", ilYA(1), 30, MAINTENANT)).toBe("abandoned");
+    expect(effectiveRoomStatus("active", ilYA(10), 30, MAINTENANT)).toBe("active");
+    expect(effectiveRoomStatus("active", ilYA(31), 30, MAINTENANT)).toBe("dormant");
+    // 0 : jamais ; sans date d'activité connue, en cours.
+    expect(effectiveRoomStatus("active", ilYA(400), 0, MAINTENANT)).toBe("active");
+    expect(effectiveRoomStatus("active", null, 30, MAINTENANT)).toBe("active");
+  });
+
+  it("filtre par statut : un filtre de salon, qui masque les journaux", () => {
+    const enSommeil = filtres({ status: "dormant" });
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1, { status: "dormant" } as Partial<TimelineItem>), enSommeil, CTX)).toBe(true);
+    expect(matchesTimelineFilters(salon("a", 1, 0, 1), enSommeil, CTX)).toBe(false);
+    expect(matchesTimelineFilters(journal("j", "p-tess", 1, 0, 1), enSommeil, CTX)).toBe(false);
+    expect(matchesTimelineFilters(evenement("x", 1, 0, 1), enSommeil, CTX)).toBe(true);
+    expect(countActiveFilters(enSommeil)).toBe(1);
+  });
+});
+
+describe("saisons et périodes", () => {
+  it("une saison sans fin court jusqu'à la suivante ; les chevauchements se coupent", () => {
+    expect(normalizeAges([
+      { name: "Âge des Cendres", from_year: 1, to_year: null },
+      { name: " ", from_year: 5, to_year: 9 },
+      { name: "Âge du Sel", from_year: 20, to_year: 60 },
+      { name: "Âge du Verre", from_year: 40, to_year: null },
+    ])).toEqual([
+      { name: "Âge des Cendres", from_year: 1, to_year: 19 },
+      { name: "Âge du Sel", from_year: 20, to_year: 39 },
+      { name: "Âge du Verre", from_year: 40, to_year: null },
+    ]);
+  });
+
+  it("les saisons remplacent les tranches ; les années hors saison gardent une tranche", () => {
+    const ages = normalizeAges([{ name: "Âge des Cendres", from_year: 10, to_year: 19 }]);
+    const { periods, periodOf } = buildTimelinePeriods([1, 2, 12, 15, 47], ages);
+    expect(periods.map((p) => p.label)).toEqual(["1 – 5", "Âge des Cendres", "46 – 50"]);
+    expect(periods[1].firstYear).toBe(12);
+    expect(periodOf(15)).toBe(periodOf(12));
+    expect(periodOf(2)).not.toBe(periodOf(12));
+  });
+
+  it("sans saison, les tranches de cinq ans d'avant", () => {
+    const { periods } = buildTimelinePeriods([1, 6, 12], []);
+    expect(periods.map((p) => p.label)).toEqual(["1 – 5", "6 – 10", "11 – 15"]);
+  });
+});
+
+describe("assignSuiteLanes", () => {
+  it("deux lignes qui se chevauchent n'ont pas le même couloir ; une ligne libérée le rend", () => {
+    expect(assignSuiteLanes([
+      { top: 0, bottom: 100 },
+      { top: 50, bottom: 150 },
+      { top: 120, bottom: 200 },
+      { top: 160, bottom: 180 },
+    ])).toEqual([0, 1, 0, 1]);
+  });
+});
+
+describe("chaînes de suites", () => {
+  it("les paires qui partagent un salon forment une chaîne, colorée par la première paire colorée", async () => {
+    const { buildSuiteChains, suiteChainOf } = await import("@/lib/worldTimelineItems");
+    const paires = [
+      { from: "a", to: "b", color: null },
+      { from: "b", to: "c", color: "#a855f7" },
+      { from: "x", to: "y", color: "#0ea5e9" },
+      { from: "c", to: "d", color: "#f59e0b" },
+    ];
+    const chaines = buildSuiteChains(paires);
+    expect(chaines).toHaveLength(2);
+    expect(chaines[0]).toEqual({ ids: ["a", "b", "c", "d"], color: "#a855f7" });
+    expect(chaines[1]).toEqual({ ids: ["x", "y"], color: "#0ea5e9" });
+    expect([...suiteChainOf(paires, "c")!]).toEqual(["a", "b", "c", "d"]);
+    expect(suiteChainOf(paires, "seul")).toBeNull();
+  });
+
+  it("une passerelle entre deux arcs ne fond pas leurs chaînes", async () => {
+    const { buildSuiteChains, suiteChainOf, isSuiteBridge } = await import("@/lib/worldTimelineItems");
+    const paires = [
+      { from: "a", to: "b", color: "#22c55e" },
+      { from: "b", to: "c", color: "#0ea5e9", bridgeFrom: "#22c55e" },
+      { from: "c", to: "d", color: "#0ea5e9" },
+    ];
+    expect(paires.map(isSuiteBridge)).toEqual([false, true, false]);
+    expect(buildSuiteChains(paires)).toEqual([
+      { ids: ["a", "b"], color: "#22c55e" },
+      { ids: ["c", "d"], color: "#0ea5e9" },
+    ]);
+    expect([...suiteChainOf(paires, "b")!]).toEqual(["a", "b"]);
+  });
+});
+
+describe("arcRanks", () => {
+  it("numérote les salons reliés par une suite de chaque arc, dans l'ordre du récit ; la suite passe après, à date égale", async () => {
+    const { arcRanks } = await import("@/lib/worldTimelineItems");
+    const ranks = arcRanks([
+      salon("c", 3, 0, 1, { arcId: "exil", previousIds: ["b"] } as Partial<TimelineItem>),
+      salon("b", 1, 2, 9, { arcId: "exil", previousIds: ["a"] } as Partial<TimelineItem>),
+      salon("a", 1, 2, 9, { arcId: "exil" } as Partial<TimelineItem>),
+      // Dans l'arc, mais sans suite : pas d'épisode, pas de rang.
+      salon("seul", 1, 0, 5, { arcId: "exil" } as Partial<TimelineItem>),
+      salon("x", 1, 0, 1, { arcId: "crue" } as Partial<TimelineItem>),
+      // Une suite depuis un salon hors arc suffit.
+      salon("y", 1, 3, 1, { arcId: "crue", previousIds: ["libre"] } as Partial<TimelineItem>),
+      salon("libre", 1, 0, 1),
+      evenement("e", 1, 0, 1),
+    ]);
+    expect(Object.fromEntries(ranks)).toEqual({ a: 1, b: 2, c: 3, y: 1 });
+  });
+});
+
+describe("timelineMonthStops", () => {
+  it("un arrêt par mois (salons comptés), par date sans mois, et par année vide", () => {
+    const sections = buildTimelineSections([
+      salon("a", 1, null, null),
+      salon("b", 1, 0, 3),
+      salon("c", 1, 0, 9),
+      evenement("e", 1, 2, 1),
+      salon("d", 3, 1, 1),
+    ], 2);
+    expect(timelineMonthStops(sections)).toEqual([
+      { year: 1, month: null, row: 0, rooms: 1 },
+      { year: 1, month: 0, row: 1, rooms: 2 },
+      { year: 1, month: 2, row: 3, rooms: 0 },
+      { year: 2, month: null, row: 4, rooms: 0 },
+      { year: 3, month: 1, row: 5, rooms: 1 },
+    ]);
+  });
+});
+
+describe("buildTimelineMinimap", () => {
+  it("chaque année, chaque mois du calendrier : salons, contenu, événement, arcs ; max au moins 1", () => {
+    const sections = buildTimelineSections([
+      salon("a", 1, 0, 3, { arcId: "exil" } as Partial<TimelineItem>),
+      salon("b", 1, 0, 9),
+      salon("c", 1, null, null),
+      evenement("e", 1, 2, 1, { year: 3, month: 1, day: 1 }),
+      journal("j", "p", 1, 1, 4),
+    ], 1);
+    const { years, max } = buildTimelineMinimap([...sections, ...buildTimelineSections(eventEndItems([evenement("e", 1, 2, 1, { year: 3, month: 1, day: 1 })]), 3)], 3);
+    expect(years.map((y) => y.year)).toEqual([1, 3]);
+    const [an1, an3] = years;
+    expect(an1.months.map((m) => [m.rooms, m.items, m.hasEvent])).toEqual([[2, 2, false], [0, 1, false], [0, 1, true]]);
+    expect([...an1.months[0].arcIds]).toEqual(["exil"]);
+    // La fin d'un événement qui dure compte comme un événement.
+    expect(an3.months[1].hasEvent).toBe(true);
+    expect(max).toBe(2);
+    expect(buildTimelineMinimap([], 12).max).toBe(1);
+  });
+});

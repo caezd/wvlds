@@ -826,7 +826,7 @@ export function PersonaAvatarPicker({
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={resetToDefault}
               disabled={busy}
             >
@@ -851,7 +851,7 @@ export function PersonaAvatarPicker({
           }}
         >
           <div className="w-full overflow-x-auto">
-            <TabsList className="inline-flex h-10 w-max flex-nowrap justify-start gap-1  bg-transparent">
+            <TabsList className="inline-flex h-10 w-max flex-nowrap justify-start gap-1 border-0 bg-transparent">
               {visibleCategories.map((c) => {
                 const tabThumbUrl = c.tabThumbPath
                   ? assetUrl(c.key, c.tabThumbPath)
@@ -876,7 +876,7 @@ export function PersonaAvatarPicker({
                         draggable={false}
                       />
                     ) : (
-                      <span className="text-[11px] leading-none">
+                      <span className="text-xs-plus leading-none">
                         {c.label}
                       </span>
                     )}
@@ -990,7 +990,7 @@ export function PersonaAvatarPicker({
                         key={part.id}
                         type="button"
                         className={cn(
-                          "relative aspect-square rounded-lg p-1 hover:bg-zinc-100 transition flex items-center justify-center dark:bg-zinc-300",
+                          "relative aspect-square rounded-lg p-1 bg-primary/90 hover:bg-primary transition flex items-center justify-center",
                           isSelected
                             ? "ring-2 ring-accent ring-offset-2 ring-offset-background"
                             : "",
@@ -1012,7 +1012,7 @@ export function PersonaAvatarPicker({
                             draggable={false}
                           />
                         ) : (
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-2xs text-muted-foreground">
                             {part.label}
                           </div>
                         )}
@@ -1022,7 +1022,7 @@ export function PersonaAvatarPicker({
                 </div>
               </ScrollArea>
 
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-xs-plus text-muted-foreground">
                 {c.multi
                   ? "Mode multi: clic = toggle"
                   : "Mode unique: clic = remplacer"}

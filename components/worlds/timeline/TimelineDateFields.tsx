@@ -26,11 +26,11 @@ export function TimelineDateFields({
 }) {
   const t = useTranslations("chatrooms");
   const champ =
-    "h-7 rounded-md border border-border-soft bg-background px-1.5 text-xs outline-none focus:ring-2 focus:ring-primary";
+    "h-7 rounded-md border border-border bg-background px-1.5 text-xs outline-none focus:ring-2 focus:ring-primary";
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-      <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:w-auto sm:normal-case sm:font-normal sm:tracking-normal">
+      <span className="w-full text-2xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-auto sm:normal-case sm:font-normal sm:tracking-normal">
         {label}
       </span>
       <input

@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, Network, X } from "lucide-react";
+import { Check, Waypoints } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SectionLabel } from "@/components/ui/section-label";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/textFormatting";
 import { messageErreurAction } from "@/lib/actionErrors";
@@ -27,7 +30,9 @@ import type { PersonaRelation, WorldRelationType } from "@/types/relations";
  * visé — la notification n'est pas le seul chemin.
  */
 
-type OtherPersona = { id: string; name: string; avatar_url: string | null; user_id: string };
+type OtherPersona = { id: string; name: string; avatar_url: string | null; user_id: string;
+  /** Le pseudo de son joueur, sous son nom. */
+  username?: string | null };
 
 export type RelationEntry = {
   rel: PersonaRelation;
@@ -81,6 +86,12 @@ export function PersonaRelationsSection({
     if (otherIds.length > 0) {
       const { data } = await supabase.from("personas").select("id, name, avatar_url, user_id").in("id", otherIds);
       personas = (data ?? []) as OtherPersona[];
+      const userIds = [...new Set(personas.map((p) => p.user_id))];
+      if (userIds.length > 0) {
+        const { data: profileRows } = await supabase.from("profiles").select("id, username").in("id", userIds);
+        const usernames = new Map(((profileRows ?? []) as { id: string; username: string | null }[]).map((r) => [r.id, r.username]));
+        personas = personas.map((p) => ({ ...p, username: usernames.get(p.user_id) ?? null }));
+      }
     }
     return { list, personas, typeRows: (typeRows ?? []) as WorldRelationType[] };
   }
@@ -117,7 +128,7 @@ export function PersonaRelationsSection({
   if (relations === null) {
     return (
       <div className="space-y-2" data-testid="relations-loading">
-        {[1, 2].map((i) => <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />)}
+        {[1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />)}
       </div>
     );
   }
@@ -147,19 +158,20 @@ export function PersonaRelationsSection({
 
   if (out.length === 0 && incoming.length === 0) {
     return (
-      <div className="space-y-3 py-6 text-center">
-        <p className="text-sm text-muted-foreground">{t("empty")}</p>
-        <Link href={canvasHref} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
-          <Network className="h-3.5 w-3.5" /> {t("openCanvas")}
-        </Link>
+      <div className="space-y-3">
+        <p className="py-4 text-center text-sm text-muted-foreground">{t("empty")}</p>
+        <CanvasLink href={canvasHref} label={t("openCanvas")} />
       </div>
     );
   }
 
+  // Les deux sens ne portent un titre que s'ils coexistent : seul, le sens se lit sur la carte.
+  const titled = out.length > 0 && incoming.length > 0;
+
   return (
     <div className="space-y-5">
       {out.length > 0 && (
-        <RelationGroup title={t("out")}>
+        <RelationGroup title={titled ? t("out") : null}>
           {out.map((e) => (
             <RelationCard key={e.rel.id} entry={e} direction="out"
               canRespond={false}
@@ -170,7 +182,7 @@ export function PersonaRelationsSection({
         </RelationGroup>
       )}
       {incoming.length > 0 && (
-        <RelationGroup title={t("in")}>
+        <RelationGroup title={titled ? t("in") : null}>
           {incoming.map((e) => (
             <RelationCard key={e.rel.id} entry={e} direction="in"
               canRespond={isOwner && e.rel.status === "pending"}
@@ -180,18 +192,28 @@ export function PersonaRelationsSection({
           ))}
         </RelationGroup>
       )}
-      <Link href={canvasHref} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
-        <Network className="h-3.5 w-3.5" /> {t("openCanvas")}
-      </Link>
+      <CanvasLink href={canvasHref} label={t("openCanvas")} />
     </div>
   );
 }
 
-function RelationGroup({ title, children }: { title: string; children: React.ReactNode }) {
+/** Le lien vers la page Relations du monde, centrée sur ce persona : une invite en pointillés. */
+function CanvasLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2.5 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
+    >
+      <Waypoints className="h-3.5 w-3.5" aria-hidden /> {label}
+    </Link>
+  );
+}
+
+function RelationGroup({ title, children }: { title: string | null; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{title}</h3>
-      <div className="space-y-1.5">{children}</div>
+      {title && <SectionLabel as="h3">{title}</SectionLabel>}
+      <div className="space-y-2">{children}</div>
     </section>
   );
 }
@@ -209,60 +231,65 @@ function RelationCard({
 }) {
   const t = useTranslations("personas.relations");
   const { rel, other, type, mutual } = entry;
-  const color = type?.color ?? "#94a3b8";
+  const color = type?.color ?? "var(--muted-foreground)";
   const pending = rel.status === "pending";
 
   return (
     <div
       className={cn(
-        "flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3 py-2",
-        pending ? "border-dashed border-border" : "border-border-soft",
+        "flex items-start gap-3 rounded-lg border bg-card px-3 py-2.5",
+        pending ? "border-dashed border-border" : "border-transparent",
       )}
-      style={!pending ? { borderLeftColor: color, borderLeftWidth: 3 } : undefined}
     >
-      {other.avatar_url
-        ? <Image src={other.avatar_url} alt="" width={28} height={28} className="mt-0.5 h-7 w-7 shrink-0 rounded-full object-cover" />
-        : <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">{getInitials(other.name)}</div>
-      }
+      <Avatar className="size-10 shrink-0 rounded-md">
+        <AvatarImage src={other.avatar_url ?? undefined} alt="" className="object-cover" />
+        <AvatarFallback className="rounded-md bg-muted text-xs font-semibold">{getInitials(other.name)}</AvatarFallback>
+      </Avatar>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-sm font-medium leading-tight">{other.name}</span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color }}>
-            <span aria-hidden className="text-muted-foreground/60">{mutual ? "⇄" : direction === "out" ? "→" : "←"}</span>
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold leading-tight text-foreground">{other.name}</p>
+            {other.username && <p className="truncate text-xs text-muted-foreground">@{other.username}</p>}
+          </div>
+          {/* Le type : son trait (plein ou pointillé) et son nom, à sa couleur. */}
+          <span className="flex shrink-0 items-center gap-1.5 pt-0.5 text-xs font-medium" style={{ color }}>
+            {/* Le sens : réciproque, de lui vers l'autre, ou de l'autre vers lui. */}
+            <span aria-hidden className="text-muted-foreground">
+              {mutual ? "⇄" : direction === "out" ? "→" : "←"}
+            </span>
+            <svg aria-hidden width="16" height="2" className="shrink-0 overflow-visible">
+              <line x1="0" y1="1" x2="16" y2="1" stroke="currentColor" strokeWidth="2" strokeDasharray={type?.dash || undefined} />
+            </svg>
             {type?.name ?? t("unknownType")}
           </span>
-          {pending && (
-            <span className="rounded-full border border-dashed border-border px-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-              {t("pending")}
-            </span>
-          )}
         </div>
+        {pending && <Badge tone="outline" className="mt-1.5">{t("pending")}</Badge>}
         {rel.description && (
-          <p className="mt-0.5 whitespace-pre-wrap text-xs leading-snug text-muted-foreground">{rel.description}</p>
+          <p className="mt-1.5 whitespace-pre-wrap text-xs leading-snug text-muted-foreground">{rel.description}</p>
         )}
-        {canRespond && (
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <button type="button" onClick={() => onAccept(rel.id)}
-              className="flex h-6 items-center gap-1 rounded-lg bg-primary px-2 text-[11px] font-medium text-primary-foreground">
-              <Check className="h-3 w-3" /> {t("accept")}
-            </button>
-            <button type="button" onClick={() => onRemove(rel.id)} aria-label={t("decline")}
-              className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
-              <X className="h-3 w-3" />
-            </button>
+        {(canRespond || canCancel || canBreak) && (
+          <div className="mt-2 flex items-center gap-1.5">
+            {canRespond && (
+              <>
+                <Button type="button" size="xs" onClick={() => onAccept(rel.id)}>
+                  <Check /> {t("accept")}
+                </Button>
+                <Button type="button" variant="secondary" size="xs" onClick={() => onRemove(rel.id)}>
+                  {t("decline")}
+                </Button>
+              </>
+            )}
+            {canCancel && (
+              <Button type="button" variant="ghost" size="xs" onClick={() => onRemove(rel.id)}>
+                {t("cancelRequest")}
+              </Button>
+            )}
+            {canBreak && (
+              <Button type="button" variant="ghost" size="xs" onClick={() => onRemove(rel.id)} className="hover:text-destructive">
+                {t("breakRelation")}
+              </Button>
+            )}
           </div>
-        )}
-        {canCancel && (
-          <button type="button" onClick={() => onRemove(rel.id)}
-            className="mt-1 text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground">
-            {t("cancelRequest")}
-          </button>
-        )}
-        {canBreak && (
-          <button type="button" onClick={() => onRemove(rel.id)}
-            className="mt-1 text-[11px] text-muted-foreground underline underline-offset-2 hover:text-destructive">
-            {t("breakRelation")}
-          </button>
         )}
       </div>
     </div>

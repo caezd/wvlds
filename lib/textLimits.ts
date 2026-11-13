@@ -72,6 +72,10 @@ export const DB_TEXT_LIMITS = {
   "world_wiki_page_annotations.anchor_quote": 1_000,
   "world_wiki_page_annotations.anchor_suffix": 200,
   "world_wiki_page_annotations.body": 4_000,
+  // Des jalons et des arcs de la frise — voir migration 193.
+  "world_timeline_arcs.name": 60,
+  "world_timeline_events.description": 2_000,
+  "world_timeline_events.title": 120,
   "world_wiki_page_note_categories.name": 200,
   "world_wiki_page_notes.body": 5_000,
   "world_wiki_page_notes.title": 200,

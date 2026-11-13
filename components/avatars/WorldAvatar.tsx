@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { avatarThumbWidth } from "@/lib/storage";
 
 const SIZES = {
-  sm: { dim: "h-6 w-6", px: 24, text: "text-[10px]" },
+  sm: { dim: "h-6 w-6", px: 24, text: "text-2xs" },
   md: { dim: "h-8 w-8", px: 32, text: "text-xs" },
   lg: { dim: "h-10 w-10", px: 40, text: "text-sm" },
 } as const;

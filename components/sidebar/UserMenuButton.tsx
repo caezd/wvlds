@@ -36,8 +36,8 @@ type UserMenuButtonProps = {
 };
 
 const STATUS_COLOR: Record<PresenceStatus, string> = {
-  online: "bg-green-500",
-  offline: "bg-red-500",
+  online: "bg-online",
+  offline: "bg-offline",
   invisible: "bg-muted-foreground/40 border border-muted-foreground",
 };
 
@@ -175,6 +175,7 @@ export function UserMenuButton({
             <UserRound className="mr-2 size-4" />
             {tNav("profile")}
           </DropdownMenuItem>
+
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="mr-2 size-4" />
             {tNav("settings")}
