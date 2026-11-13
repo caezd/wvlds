@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
@@ -68,11 +68,7 @@ function mockSetup({
 function canvas() {
   return within(screen.getByTestId("relations-canvas"));
 }
-function panel(name: string) {
-  return within(screen.getByRole("complementary", { name }));
-}
 const node = (id: string) => document.querySelector<HTMLElement>(`[data-persona-node="${id}"]`)!;
-const edges = () => document.querySelectorAll("[data-relation-edge]");
 const viewRadio = (name: string) => screen.getByRole("radio", { name });
 
 async function mount(opts?: Parameters<typeof mockSetup>[0]) {
