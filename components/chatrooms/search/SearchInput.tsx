@@ -6,6 +6,7 @@ import { AtSign, Hash, Paperclip, Search as SearchIcon, SlidersHorizontal, Trash
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   matchesAuthorQuery,
@@ -210,13 +211,13 @@ export function SearchInput({
       <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-ring">
         <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
         {tokens.map((token) => (
-          <Badge key={token.id} variant="secondary" className="gap-1 pr-1">
+          <Badge key={token.id} className="pr-1">
             {prefixLabel(token.type)}: {token.label}
             <button
               type="button"
               onClick={() => onRemoveToken(token.id)}
               aria-label={t("search.removeToken", { label: token.label })}
-              className="rounded-full p-0.5 hover:bg-hoverCard"
+              className="rounded-full p-0.5 hover:bg-muted"
             >
               <X className="h-3 w-3" />
             </button>
@@ -269,14 +270,16 @@ export function SearchInput({
                   <CommandSeparator />
                   <div className="flex items-center justify-between px-2 pt-2 pb-1">
                     <span className="text-muted-foreground px-0 py-1.5 text-xs font-medium">{t("search.historyTitle")}</span>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-6"
                       onClick={clearHistory}
                       aria-label={t("search.clearHistory")}
-                      className="rounded p-1 text-muted-foreground hover:bg-hoverCard hover:text-foreground"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   </div>
                   <CommandGroup>
                     {history.map((term) => (
@@ -355,7 +358,7 @@ function AuthorRow({ option }: { option: SearchAuthorOption }) {
     <div className={cn("flex items-center gap-2")}>
       <Avatar className="h-6 w-6">
         <AvatarImage src={option.avatarUrl ?? undefined} alt="" />
-        <AvatarFallback className="text-[10px]">{option.label.slice(0, 2).toUpperCase()}</AvatarFallback>
+        <AvatarFallback className="text-2xs">{option.label.slice(0, 2).toUpperCase()}</AvatarFallback>
       </Avatar>
       <span className="font-medium">{option.label}</span>
       {option.kind === "persona" && option.sublabel && (

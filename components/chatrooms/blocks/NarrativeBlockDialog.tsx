@@ -126,7 +126,7 @@ export function NarrativeBlockDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="secondary" onClick={() => setOpen(false)}>
             Annuler
           </Button>
           <Button onClick={handleSend} disabled={!text.trim()}>

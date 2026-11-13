@@ -12,6 +12,8 @@ import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
 import type { PersonaNarrativeStatus, PersonaReviewStatus, MaritalStatus } from "@/types/db";
 import { useTranslations } from "next-intl";
+import { SectionLabel } from "@/components/ui/section-label";
+import { Button } from "@/components/ui/button";
 
 export type AsidePersona = {
   id: string;
@@ -62,13 +64,13 @@ export function WorldPersonaAsideClient({
   return (
     <div className="flex h-full flex-col">
       {/* En-tête */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border-soft px-3 py-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+        <SectionLabel as="span">
           Personas
           {sorted.length > 0 && (
-            <span className="ml-1.5 text-muted-foreground/60">{sorted.length}</span>
+            <span className="ml-1.5">{sorted.length}</span>
           )}
-        </span>
+        </SectionLabel>
         <Tooltip>
           <TooltipTrigger asChild>
             <PersonaCreateSheet
@@ -76,13 +78,9 @@ export function WorldPersonaAsideClient({
               restrictInventory={restrictInventory}
               restrictSkills={restrictSkills}
               trigger={
-                <button
-                  type="button"
-                  aria-label={t("newPersona")}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
+                <Button variant="outline" type="button" size="icon-sm" aria-label={t("newPersona")} className="size-6">
+                  <Plus className="size-3.5" />
+                </Button>
               }
             />
           </TooltipTrigger>
@@ -94,8 +92,8 @@ export function WorldPersonaAsideClient({
       <div className="flex-1 overflow-y-auto p-2.5">
         {sorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-            <Users className="h-6 w-6 text-muted-foreground/40" />
-            <p className="text-xs text-muted-foreground/60 leading-snug px-1">
+            <Users className="h-6 w-6 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground leading-snug px-1">
               Aucun persona<br />dans ce monde.
             </p>
           </div>

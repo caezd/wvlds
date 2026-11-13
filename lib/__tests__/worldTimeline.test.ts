@@ -1,16 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  clampDaysPerMonth,
-  compareTimelineDates,
-  isWithinTimeline,
-  DEFAULT_DAYS_PER_MONTH,
-  daysInMonth,
-  formatTimelineLabel,
-  MAX_DAYS_PER_MONTH,
-  MIN_DAYS_PER_MONTH,
-  REAL_DAYS_PER_MONTH,
-  REAL_MONTH_NAMES,
-} from "@/lib/worldTimeline";
+import { clampDaysPerMonth, compareTimelineDates, isWithinTimeline, DEFAULT_DAYS_PER_MONTH, daysInMonth, formatTimelineLabel, MAX_DAYS_PER_MONTH, MIN_DAYS_PER_MONTH, REAL_DAYS_PER_MONTH, REAL_MONTH_NAMES, currentPeriodLock, clampTimelineDate } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
 const CONFIG: WorldTimelineConfig = {
@@ -127,5 +116,42 @@ describe("isWithinTimeline", () => {
     expect(isWithinTimeline(AN(1), null, null)).toBe(true);
     expect(isWithinTimeline(AN(5000), AN(1200), null)).toBe(true);
     expect(isWithinTimeline(AN(-3000), undefined, AN(1300))).toBe(true);
+  });
+});
+
+describe("la période en cours", () => {
+  const base = {
+    year_label: "an",
+    era_name: null,
+    month_names: ["Givre", "Dégel", "Semailles"],
+    days_per_month: [30, 28, 31],
+    current_year: 1,
+    current_month: 1,
+  };
+
+  it("sans restriction, rien n'est figé", () => {
+    expect(currentPeriodLock(base)).toEqual({ year: null, month: null });
+  });
+
+  it("restreinte, elle fige l'année et le mois courants", () => {
+    expect(currentPeriodLock({ ...base, restrict_to_current: true })).toEqual({ year: 1, month: 1 });
+  });
+
+  it("sans mois courant, seule l'année est figée", () => {
+    expect(currentPeriodLock({ ...base, restrict_to_current: true, current_month: null })).toEqual({ year: 1, month: null });
+  });
+
+  it("une date hors période y est ramenée", () => {
+    const config = { ...base, restrict_to_current: true };
+    expect(clampTimelineDate(config, { year: 40, month: 2, day: 5 })).toEqual({ year: 1, month: 1, day: 5 });
+  });
+
+  it("un jour ne dépasse pas la longueur de son mois", () => {
+    expect(clampTimelineDate(base, { year: 3, month: 1, day: 45 })).toEqual({ year: 3, month: 1, day: 28 });
+    expect(clampTimelineDate(base, { year: 3, month: 1, day: 0 })).toEqual({ year: 3, month: 1, day: 1 });
+  });
+
+  it("un mois qui n'existe plus tombe, et le jour avec lui", () => {
+    expect(clampTimelineDate(base, { year: 3, month: 7, day: 4 })).toEqual({ year: 3, month: null, day: null });
   });
 });

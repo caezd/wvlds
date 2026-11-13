@@ -318,7 +318,7 @@ export function WikiAnnotationLayer({
               aria-label={t("title")}
               title={t("title")}
               className={cn(
-                "shrink-0 min-w-4 h-4 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-0.5",
+                "shrink-0 min-w-4 h-4 flex items-center justify-center rounded-full bg-accent-strong text-accent-foreground text-2xs font-bold px-0.5",
                 // Un fil résolu garde sa pastille — savoir qu'une discussion a
                 // eu lieu ici a de la valeur — mais cesse d'appeler l'œil.
                 // Posé après le fond d'accent, que `cn` laisse remplacer.

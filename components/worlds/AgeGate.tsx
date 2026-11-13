@@ -37,7 +37,7 @@ export function AgeGate({ worldId, worldName }: { worldId: string; worldName: st
 
   return (
     <main className="flex h-full flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border-soft bg-card p-6 shadow-sm">
+      <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
           <ShieldAlert className="h-6 w-6 text-destructive" />
         </div>

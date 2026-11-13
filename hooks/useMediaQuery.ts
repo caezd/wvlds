@@ -32,6 +32,7 @@ export function useMediaQuery(query: string): boolean {
 
 /** Points de rupture de Tailwind, pour ne pas les recopier à la main. */
 export const MEDIA = {
+  md: "(min-width: 48rem)",
   lg: "(min-width: 64rem)",
   xl: "(min-width: 80rem)",
   /**

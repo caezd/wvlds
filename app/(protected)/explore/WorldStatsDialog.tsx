@@ -54,7 +54,7 @@ export function WorldStatsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-sm gap-0 overflow-hidden border-border-soft p-0">
+        <DialogContent className="max-w-sm gap-0 overflow-hidden border-border p-0">
           <DialogTitle className="sr-only">{world.name}</DialogTitle>
           <DialogDescription className="sr-only">{t("statsDialogDescription")}</DialogDescription>
 
@@ -74,7 +74,7 @@ export function WorldStatsDialog({
                   ? "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/0"
                   : world.color
                     ? "absolute inset-0 bg-black/20"
-                    : "absolute inset-0 bg-gradient-to-br from-card to-card-400"
+                    : "absolute inset-0 bg-gradient-to-br from-card to-muted"
               }
             />
             <div className="relative flex min-h-28 flex-col justify-end gap-1.5">
@@ -99,25 +99,25 @@ export function WorldStatsDialog({
                   {tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm"
+                      className="inline-flex items-center rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs-plus text-white backdrop-blur-sm"
                     >
                       #{tag}
                     </span>
                   ))}
                   {world.allows_real_avatars && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs-plus text-white backdrop-blur-sm">
                       <Camera className="h-2.5 w-2.5" />
                       {t("avatarReal")}
                     </span>
                   )}
                   {world.allows_illustrated_avatars && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-[11px] text-white backdrop-blur-sm">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs-plus text-white backdrop-blur-sm">
                       <Palette className="h-2.5 w-2.5" />
                       {t("avatarIllustrated")}
                     </span>
                   )}
                   {world.is_age_restricted && (
-                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
+                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs-plus font-bold text-white backdrop-blur-sm">
                       {t("ageRestrictedBadge")}
                     </span>
                   )}
@@ -197,7 +197,7 @@ function StatTile({
       ) : (
         <span className="text-base font-bold tabular-nums">{value ?? 0}</span>
       )}
-      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="text-xs-plus text-muted-foreground">{label}</span>
     </div>
   );
 }

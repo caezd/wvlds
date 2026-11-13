@@ -89,6 +89,31 @@ describe("WorldHome — titre/description hors bannière + panel de contenu", ()
     expect(screen.getByText("Un monde de test")).toBeInTheDocument();
   });
 
+  it("la description se tient sous la bannière, collée au titre : une longue présentation n'étire plus l'image", () => {
+    render(<WorldHome {...baseProps()} />);
+
+    const titleBlock = screen.getByRole("heading", { name: "Avalonia" }).closest("div.relative")!;
+    const bannerContainer = titleBlock.parentElement!;
+    const description = screen.getByText("Un monde de test");
+
+    // Hors du conteneur de la bannière, dont la hauteur ne suit plus que
+    // l'icône et le titre…
+    expect(bannerContainer.contains(description)).toBe(false);
+    // …mais juste après lui, sans marge qui l'éloignerait du titre.
+    const intro = screen.getByTestId("world-home-intro");
+    expect(intro.contains(description)).toBe(true);
+    expect(bannerContainer.nextElementSibling).toBe(intro);
+    expect(titleBlock.className).not.toMatch(/\bpb-/);
+    expect(intro.className).toMatch(/\bpt-1\b/);
+    // Pleine largeur : aucune limite sur le paragraphe.
+    expect(description.className).not.toMatch(/\bmax-w-/);
+  });
+
+  it("sans description ni statistiques, pas de bloc d'introduction vide", () => {
+    render(<WorldHome {...baseProps({ world: { id: "world-1", name: "Avalonia", owner_id: "user-1" } })} />);
+    expect(screen.queryByTestId("world-home-intro")).toBeNull();
+  });
+
   it("n'affiche pas les statistiques quand home_show_stats n'est pas activé", async () => {
     render(<WorldHome {...baseProps({ world: { id: "world-1", name: "Avalonia", owner_id: "user-1", home_layout: ["chatrooms"] } })} />);
 
@@ -140,7 +165,7 @@ describe("WorldHome — titre/description hors bannière + panel de contenu", ()
     // créait la coupure.
     expect(bannerContainer.className).not.toMatch(/md:\[--hero-fade/);
     expect(titleBlock.className).not.toMatch(/md:pt-/);
-    // Présence minimale de la bannière pour un monde sans description.
+    // Présence minimale de la bannière, quelle que soit la longueur du titre.
     expect(bannerContainer.className).toMatch(/\bmin-h-60\b/);
   });
 

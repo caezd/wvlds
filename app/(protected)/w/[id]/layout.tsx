@@ -13,6 +13,7 @@ import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershi
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
 import { WorldSidebarSkeleton } from "@/components/worlds/sidebar/WorldSidebarSkeleton";
+import { WorldLiveChatAnchor } from "@/components/worlds/live-chat/WorldLiveChatAnchor";
 
 export default async function WorldLayout({
   children,
@@ -81,6 +82,7 @@ export default async function WorldLayout({
       >
         <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
           <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
+          <WorldLiveChatAnchor worldId={world.id} />
           <div className="flex min-h-0 w-full flex-1 flex-row">
             {/* La sidebar (salons, non-lus, mondes, quota… ~8 requêtes) n'est
                 plus attendue avant d'envoyer la page : elle arrive en streaming

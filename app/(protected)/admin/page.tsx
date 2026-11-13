@@ -20,7 +20,7 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/admin/bug-reports"
-          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+          className="flex items-center gap-4 rounded-xl border border-border p-5 hover:bg-muted transition-colors"
         >
           <Bug className="h-8 w-8 text-muted-foreground" />
           <div>
@@ -33,7 +33,7 @@ export default async function AdminDashboard() {
 
         <Link
           href="/admin/shop"
-          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+          className="flex items-center gap-4 rounded-xl border border-border p-5 hover:bg-muted transition-colors"
         >
           <ShoppingBag className="h-8 w-8 text-muted-foreground" />
           <div>
@@ -46,7 +46,7 @@ export default async function AdminDashboard() {
 
         <Link
           href="/admin/users"
-          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+          className="flex items-center gap-4 rounded-xl border border-border p-5 hover:bg-muted transition-colors"
         >
           <Users className="h-8 w-8 text-muted-foreground" />
           <div>
@@ -59,7 +59,7 @@ export default async function AdminDashboard() {
 
         <Link
           href="/admin/features"
-          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+          className="flex items-center gap-4 rounded-xl border border-border p-5 hover:bg-muted transition-colors"
         >
           <ToggleLeft className="h-8 w-8 text-muted-foreground" />
           <div>
@@ -72,7 +72,7 @@ export default async function AdminDashboard() {
 
         <Link
           href="/admin/translations"
-          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+          className="flex items-center gap-4 rounded-xl border border-border p-5 hover:bg-muted transition-colors"
         >
           <Languages className="h-8 w-8 text-muted-foreground" />
           <div>

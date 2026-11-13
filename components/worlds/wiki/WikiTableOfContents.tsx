@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { WikiHeading } from "@/lib/wikiToc";
+import { SectionLabel } from "@/components/ui/section-label";
 
 /**
  * Sommaire flottant à droite du contenu, masqué en dessous de deux titres.
@@ -19,10 +20,10 @@ export function WikiTableOfContents({ headings }: { headings: WikiHeading[] }) {
 
   return (
     <nav className="hidden w-48 shrink-0 2xl:block" aria-label={t("tocTitle")}>
-      <div className="sticky top-6 border-l border-border-soft pl-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="sticky top-6 border-l border-border pl-3">
+        <SectionLabel as="p" className="mb-2">
           {t("tocTitle")}
-        </p>
+        </SectionLabel>
         <ul className="space-y-1 text-sm">
           {headings.map(h => (
             <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 0.75}rem` }}>

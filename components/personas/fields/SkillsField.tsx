@@ -7,6 +7,8 @@ import { Lock, Plus, TriangleAlert, X } from "lucide-react";
 import { indexCatalog, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { SkillItem } from "@/types/personas";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
+import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/ui/section-label";
 import { CatalogPicker, EntryVisual, IconButton, RarityMark, makeItemId } from "./shared";
 import { missingPrerequisites } from "@/lib/catalogRelations";
 import { useCatalogRelations } from "@/components/worlds/catalogue/CatalogRelations";
@@ -75,9 +77,9 @@ export function SkillsField({
 
     return (
       <div className="space-y-2 pr-24">
-        <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
+        <SectionLabel as="div" className="flex items-center gap-1.5 mb-1">
           <Lock className="h-3 w-3" /> {tCatalogue("skillsFromCatalog")}
-        </div>
+        </SectionLabel>
         {items.map((item) => {
           const resolved = resolveCatalogEntry(item, catalog);
           const missing = item.catalog_id ? missingFor(item.catalog_id) : [];
@@ -88,22 +90,22 @@ export function SkillsField({
                 <RarityMark rarity={resolved.rarity} />
                 <span className="truncate text-sm font-medium">{resolved.name}</span>
                 {missing.length > 0 && (
-                  <span
+                  <Badge
+                    tone="warning"
                     title={tCatalogue("missingPrerequisites", { names: missing.map(nameOf).join(", ") })}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300"
                   >
-                    <TriangleAlert className="h-3 w-3" />
+                    <TriangleAlert />
                     {tCatalogue("prerequisiteMissingBadge")}
-                  </span>
+                  </Badge>
                 )}
                 {resolved.orphaned && (
-                  <span
+                  <Badge
+                    tone="danger"
                     title={tCatalogue("orphanedItem")}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive"
                   >
-                    <TriangleAlert className="h-3 w-3" />
+                    <TriangleAlert />
                     {tCatalogue("orphanedItem")}
-                  </span>
+                  </Badge>
                 )}
               </span>
               <input

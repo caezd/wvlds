@@ -104,7 +104,7 @@ export function ChatroomMessageBubble({
         const bubble = (
           <div
             className={cn(
-              "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
+              "relative rounded-xl rounded-tl-xs px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
               !color && "bg-muted",
               fontClass,
               textSizeClass,

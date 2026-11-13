@@ -21,6 +21,7 @@ vi.mock("@/hooks/useLongPress", () => ({
 }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => "fr",
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
@@ -91,6 +92,7 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  buttonVariants: () => "",
 }));
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";

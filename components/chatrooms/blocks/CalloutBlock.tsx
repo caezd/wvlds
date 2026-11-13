@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, Palette, ImagePlus, X, Plus, Loader2 } from "lucide-react";
+import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, ImagePlus, X, Plus, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -26,8 +26,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HsvColorPicker, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { ColorSwatchRow } from "@/components/ui/color-swatch-row";
+import { PLAYER_COLORS, DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { cn } from "@/lib/utils";
+import { SectionLabel } from "@/components/ui/section-label";
 import { StoredImage } from "@/components/ui/stored-image";
 import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
@@ -46,19 +48,13 @@ const PRESET_KEYS = ["aside", "memory", "scene", "ellipsis", "atmosphere"] as co
 type PresetKey = typeof PRESET_KEYS[number];
 
 const PRESET_BLOCKS: Record<PresetKey, Omit<CalloutBlock, "_type" | "text">> = {
-  aside: { icon: "quote", iconKind: "lucide", title: "", accent: "#9aa0a6", border: "full", align: "left" },
-  memory: { icon: "clock", iconKind: "lucide", title: "", accent: "#f59e0b", border: "left", align: "left" },
-  scene: { icon: "", iconKind: "lucide", title: "", accent: "#9aa0a6", border: "separator", align: "center" },
-  ellipsis: { icon: "hourglass", iconKind: "lucide", title: "", accent: "#9aa0a6", border: "separator", align: "center" },
+  aside: { icon: "quote", iconKind: "lucide", title: "", accent: "#C084FC", border: "full", align: "left" },
+  memory: { icon: "clock", iconKind: "lucide", title: "", accent: "#FBBF24", border: "left", align: "left" },
+  scene: { icon: "", iconKind: "lucide", title: "", accent: "#2DD4BF", border: "separator", align: "center" },
+  ellipsis: { icon: "hourglass", iconKind: "lucide", title: "", accent: "#818CF8", border: "separator", align: "center" },
   atmosphere: { icon: "☀️", iconKind: "emoji", title: "", accent: "#60A5FA", border: "full", align: "left" },
 };
 
-const DEFAULT_ACCENT = "#9aa0a6";
-
-const GAUGE_COLOR_PRESETS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e",
-  "#3b82f6", "#8b5cf6", "#ec4899", "#9aa0a6",
-];
 
 /* ─── Helpers de rendu ───────────────────────────────────────────────────── */
 
@@ -136,7 +132,7 @@ function renderGauges(gauges: Gauge[], gaugeDefault: string) {
 
 function CalloutMarkdown({ children, className }: { children: string; className?: string }) {
   return (
-    <div className={cn("text-sm leading-relaxed text-foreground/80 [&>*:last-child]:mb-0", className)}>
+    <div className={cn("text-sm leading-relaxed text-foreground [&>*:last-child]:mb-0", className)}>
       <ReactMarkdown
         skipHtml
         remarkPlugins={[remarkGfm, remarkBreaks]}
@@ -215,8 +211,8 @@ export function CalloutBlockView({
           <div className="h-px flex-1 bg-border" />
           <span
             className={cn(
-              "flex shrink-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest",
-              !hasAccent && "text-muted-foreground/70",
+              "flex shrink-0 items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest",
+              !hasAccent && "text-muted-foreground",
             )}
             style={hasAccent ? { color: accent } : undefined}
           >
@@ -257,6 +253,8 @@ export function CalloutBlockView({
 
   const surfaceClass = cn(
     !hasAccent && "bg-transparent",
+    // L'épaisseur vient d'ici ; `surfaceStyle` ne fait que la teinter.
+    border === "full" && "border",
     border === "left" && "border-l-4",
     border === "none" && "border-0 bg-transparent px-0 py-1",
     !rounded && "rounded-none",
@@ -380,7 +378,7 @@ export function CalloutDialog({
   }
 
   function addGauge() {
-    setGauges((prev) => [...prev, { name: "", current: 0, max: 10, color: GAUGE_COLOR_PRESETS[0] }]);
+    setGauges((prev) => [...prev, { name: "", current: 0, max: 10, color: DEFAULT_PLAYER_COLOR }]);
   }
   function updateGauge(i: number, patch: Partial<Gauge>) {
     setGauges((prev) => prev.map((g, j) => (j === i ? { ...g, ...patch } : g)));
@@ -436,12 +434,12 @@ export function CalloutDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] border-t border-border-soft">
+        <div className="grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] border-t border-border">
           {/* Aperçu live — fixe à gauche */}
-          <div className="flex flex-col gap-2 border-b border-border-soft bg-background/40 p-5 sm:border-b-0 sm:border-r">
-            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          <div className="flex flex-col gap-2 border-b border-border bg-background/40 p-5 sm:border-b-0 sm:border-r">
+            <SectionLabel as="p">
               {t("callout.preview")}
-            </Label>
+            </SectionLabel>
             <div className="flex flex-1 items-center">
               <CalloutBlockView block={previewBlock} mine={false} />
             </div>
@@ -455,14 +453,16 @@ export function CalloutDialog({
                 <Label className="text-xs text-muted-foreground">{t("callout.templates")}</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {PRESETS.map((p) => (
-                    <button
+                    <Button
                       key={p.key}
                       type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2.5 text-xs"
                       onClick={() => applyPreset(p)}
-                      className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       {p.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -495,13 +495,15 @@ export function CalloutDialog({
                 <div className="flex items-center justify-between">
                   <Label className="text-xs text-muted-foreground">{t("callout.iconLabel")}</Label>
                   {(icon || hasIconImage) && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
                       onClick={() => { setIcon(""); setIconKind("lucide"); setIconImageUrl(""); }}
-                      className="rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
                     >
                       {t("callout.iconNone")}
-                    </button>
+                    </Button>
                   )}
                 </div>
 
@@ -518,16 +520,14 @@ export function CalloutDialog({
                     onChange={(v) => { setIcon(v); setIconKind("emoji"); setIconImageUrl(""); }}
                   />
                   {/* Bouton image */}
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     disabled={iconImageUploading || !onUploadIconImage}
                     onClick={() => onUploadIconImage && iconFileInputRef.current?.click()}
                     title={!onUploadIconImage ? t("callout.imageDisabled") : undefined}
-                    className={cn(
-                      "flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-colors",
-                      onUploadIconImage && !iconImageUploading ? "hover:bg-muted" : "cursor-not-allowed opacity-40",
-                      hasIconImage && "border-primary/50 bg-primary/10",
-                    )}
+                    // Désactivé, il garde les évènements du pointeur : le `title` qui dit pourquoi doit s'afficher.
+                    className="w-full justify-start px-3 has-[>svg]:px-3 disabled:pointer-events-auto disabled:cursor-not-allowed"
                   >
                     {iconImageUploading ? (
                       <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />
@@ -547,7 +547,7 @@ export function CalloutDialog({
                     <span className={cn("flex-1 truncate text-left text-sm", !hasIconImage && "text-muted-foreground")}>
                       {hasIconImage ? t("callout.imageChange") : t("callout.imageLabel")}
                     </span>
-                  </button>
+                  </Button>
                   <input
                     ref={iconFileInputRef}
                     type="file"
@@ -567,62 +567,16 @@ export function CalloutDialog({
               </div>
 
               {/* Couleur d'accent */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Label className="text-xs text-muted-foreground shrink-0">{t("callout.accentLabel")}</Label>
 
-                {/* Bouton palette → picker dans un Popover */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      title={t("callout.accentChoose")}
-                      className="flex items-center gap-1 shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 hover:border-foreground/40 transition-colors"
-                    >
-                      <Palette className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span
-                        className="h-3 w-3 rounded-full border border-border/40"
-                        style={{ backgroundColor: accent || DEFAULT_ACCENT }}
-                      />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0 z-[200]" align="start">
-                    <HsvColorPicker
-                      color={accent || DEFAULT_ACCENT}
-                      onChange={setAccent}
-                      alpha
-                      framed={false}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                {/* Pastilles preset */}
-                {ACCENT_COLOR_PRESETS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    title={c.label}
-                    onClick={() => setAccent(c.value)}
-                    className={cn(
-                      "h-4 w-4 shrink-0 rounded-sm border border-border/40 hover:ring-1 hover:ring-ring transition-shadow",
-                      accent === c.value && "ring-2 ring-ring",
-                    )}
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-
-                {/* Aucune */}
-                <button
-                  type="button"
-                  onClick={() => setAccent("")}
-                  className={cn(
-                    "ml-auto shrink-0 rounded-md border px-2 py-0.5 text-xs transition-colors",
-                    accent === ""
-                      ? "border-foreground text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t("callout.accentNone")}
-                </button>
+                <ColorSwatchRow
+                  className="contents"
+                  value={accent}
+                  onChange={setAccent}
+                  chooseLabel={t("callout.accentChoose")}
+                  noneLabel={t("callout.accentNone")}
+                />
               </div>
 
               {/* Bordure */}
@@ -630,18 +584,16 @@ export function CalloutDialog({
                 <div className="flex items-center justify-between">
                   <Label className="text-xs text-muted-foreground">{t("callout.borderLabel")}</Label>
                   {border !== "separator" && (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-pressed={rounded}
+                      className="h-6 px-2 text-xs"
                       onClick={() => setRounded((r) => !r)}
-                      className={cn(
-                        "rounded-md border px-2 py-0.5 text-xs transition-colors",
-                        rounded
-                          ? "border-foreground text-foreground"
-                          : "border-border text-muted-foreground hover:text-foreground",
-                      )}
                     >
                       {t("callout.borderRound")}
-                    </button>
+                    </Button>
                   )}
                 </div>
                 <div className="grid grid-cols-4 gap-2">
@@ -651,7 +603,7 @@ export function CalloutDialog({
                       type="button"
                       onClick={() => setBorder(value)}
                       className={cn(
-                        "flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[11px] transition-all",
+                        "flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-xs-plus transition-all",
                         border === value
                           ? "border-primary/50 bg-primary/10 text-primary"
                           : "border-border text-muted-foreground hover:text-foreground",
@@ -694,14 +646,16 @@ export function CalloutDialog({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs text-muted-foreground">{t("callout.gaugesLabel")}</Label>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 px-2.5 text-xs"
                     onClick={addGauge}
-                    className="flex items-center gap-0.5 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Plus className="h-3 w-3" />
                     {t("callout.gaugesAdd")}
-                  </button>
+                  </Button>
                 </div>
                 {gauges.length > 0 && (
                   <div className="space-y-2">
@@ -737,9 +691,9 @@ export function CalloutDialog({
                               aria-label={tCommon("chooseColor")}
                             />
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-2 z-[200]" align="end">
+                          <PopoverContent className="w-auto p-2 z-popover" align="end">
                             <div className="grid grid-cols-4 gap-1">
-                              {GAUGE_COLOR_PRESETS.map((c) => (
+                              {PLAYER_COLORS.map((c) => (
                                 <button
                                   key={c}
                                   type="button"
@@ -755,14 +709,16 @@ export function CalloutDialog({
                             </div>
                           </PopoverContent>
                         </Popover>
-                        <button
+                        <Button
                           aria-label={tCommon("remove")}
                           type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="size-7 hover:text-destructive"
                           onClick={() => removeGauge(i)}
-                          className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <X className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -772,8 +728,8 @@ export function CalloutDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t border-border-soft px-6 py-4">
-          <Button variant="outline" onClick={() => setOpen(false)}>{t("callout.cancel")}</Button>
+        <DialogFooter className="border-t border-border px-6 py-4">
+          <Button variant="secondary" onClick={() => setOpen(false)}>{t("callout.cancel")}</Button>
           <Button onClick={handleSend} disabled={!isValid}>
             {initialBlock ? t("callout.save") : t("callout.insert")}
           </Button>

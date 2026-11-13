@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Compass, LogOut, Plus } from "lucide-react";
+import { CheckCheck, Compass, LogOut, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { WorldAvatar } from "@/components/avatars/WorldAvatar";
@@ -12,13 +12,16 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useLongPress } from "@/hooks/useLongPress";
+import { useMarkWorldRead } from "@/hooks/useMarkWorldRead";
 import { CreateWorldDialog } from "./CreateWorldDialog";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { CountPip } from "@/components/ui/count-pip";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -53,6 +56,7 @@ export function WorldsRail({
   quota: Quota;
 }) {
   const { worldUnread } = useNotifications();
+  const { hasUnread, markRead } = useMarkWorldRead();
   const { activeWorldId } = useMobileSidebar();
   const { public_worlds } = useFeatureFlags();
   const { userId: currentUserId } = useCurrentUser();
@@ -128,15 +132,15 @@ export function WorldsRail({
 
   return (
     <>
-      <aside className="flex w-16 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-r border-border-soft py-2 lg:border-r-0 lg:border-l">
+      <aside className="flex w-16 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-r border-border py-2 lg:border-r-0 lg:border-l">
         {public_worlds && (
           <Link
             href="/explore"
             aria-label={t("explore")}
             aria-current={pathname?.startsWith("/explore") ? "page" : undefined}
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground",
-              pathname?.startsWith("/explore") && "bg-hoverCard text-foreground",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              pathname?.startsWith("/explore") && "bg-muted text-foreground",
             )}
           >
             <Compass className="h-[18px] w-[18px]" />
@@ -151,7 +155,7 @@ export function WorldsRail({
               <button
                 type="button"
                 aria-label={tWorlds("create")}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:bg-accent/90"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-white transition-colors hover:bg-accent/90"
               >
                 <Plus className="h-[18px] w-[18px]" />
               </button>
@@ -159,7 +163,7 @@ export function WorldsRail({
           />
         )}
         {worlds.length > 0 && (
-          <div className="my-0.5 h-px w-8 shrink-0 bg-border-soft" />
+          <div className="my-0.5 h-px w-8 shrink-0 bg-border" />
         )}
         {worlds.map((world) => {
           const isActive = world.id === currentWorldId;
@@ -173,13 +177,9 @@ export function WorldsRail({
               className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
               {...(isTouch ? bindLongPress(world) : {})}
             >
-              {isActive && <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[8px] rounded-full" />}
+              {isActive && <span className="absolute w-[8px] h-[20px] bg-foreground -left-2 -translate-x-[8px] rounded-full" />}
               <WorldAvatar world={world} size="lg" />
-              {unread > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[9px] font-bold leading-none text-accent-foreground ring-2 ring-background">
-                  {unread > 99 ? "99+" : unread}
-                </span>
-              )}
+              <CountPip count={unread} className="absolute -right-1 -top-1" />
             </Link>
           );
 
@@ -196,6 +196,11 @@ export function WorldsRail({
                 <TooltipContent side="right" sideOffset={8}>{world.name}</TooltipContent>
               </Tooltip>
               <ContextMenuContent>
+                <ContextMenuItem disabled={!hasUnread(world.id)} onSelect={() => void markRead(world)}>
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  {tWorlds("markRead")}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
                 <ContextMenuItem
                   variant="destructive"
                   disabled={!canLeave(world)}
@@ -220,6 +225,19 @@ export function WorldsRail({
             <DrawerDescription className="sr-only">{tWorlds("title")}</DrawerDescription>
           </DrawerHeader>
           <div className="flex flex-col pb-6">
+            <button
+              type="button"
+              disabled={!optionsTarget || !hasUnread(optionsTarget.id)}
+              className="flex items-center gap-4 px-6 py-4 text-left text-base transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:pointer-events-none"
+              onClick={() => {
+                const world = optionsTarget;
+                setOptionsTarget(null);
+                if (world) void markRead(world);
+              }}
+            >
+              <CheckCheck className="h-5 w-5 shrink-0" />
+              {tWorlds("markRead")}
+            </button>
             <button
               type="button"
               disabled={!optionsTarget || !canLeave(optionsTarget)}
@@ -251,7 +269,7 @@ export function WorldsRail({
             <AlertDialogAction
               onClick={confirmLeave}
               disabled={leaving}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
             >
               {tWorlds("leaveConfirmContinue")}
             </AlertDialogAction>

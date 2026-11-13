@@ -54,7 +54,7 @@ export function WikiRecentList({
             )}
             <span className="min-w-0 flex-1 truncate">{page.title}</span>
             {hasNewerDraft && (
-              <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
+              <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-1.5 text-2xs font-medium text-primary">
                 {t("draftBadge")}
               </span>
             )}

@@ -228,6 +228,12 @@ describe("réglages de widget (options)", () => {
     expect(sanitizeWidgetOptions("wiki_shortcuts", { limit: 999 })).toEqual({ limit: 20 });
   });
 
+  it("holidays : combien de fêtes annoncer, 3 par défaut, 12 au plus", () => {
+    expect(widgetOptionValue("holidays", "limit", undefined)).toBe(3);
+    expect(widgetOptionValue("holidays", "limit", { limit: 99 })).toBe(12);
+    expect(widgetOptionValue("holidays", "limit", { limit: 0 })).toBe(1);
+  });
+
   it("timeline_shortcuts a un réglage limit enregistré, avec sa valeur par défaut", () => {
     expect(widgetOptionValue("timeline_shortcuts", "limit", undefined)).toBe(6);
     expect(widgetOptionValue("timeline_shortcuts", "limit", { limit: 999 })).toBe(20);

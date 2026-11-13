@@ -34,7 +34,7 @@ export function GameBlockSurface({
   return (
     <div
       className={cn(
-        "group/gblock relative w-full rounded-xl py-3",
+        "group/gblock relative w-full rounded-lg py-3",
         className,
       )}
       style={style}

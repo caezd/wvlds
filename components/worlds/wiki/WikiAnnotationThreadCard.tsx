@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Check, MessageSquare, MoreHorizontal, Trash2, Undo2, Unlink } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,14 +42,14 @@ function AnnotationEntry({
     <div className="flex gap-2">
       <Avatar className="mt-0.5 size-6 shrink-0 rounded-full">
         <AvatarImage src={annotation.author?.avatar_url ?? undefined} alt="" className="rounded-full" />
-        <AvatarFallback className="rounded-full text-[10px]">
+        <AvatarFallback className="rounded-full text-2xs">
           {getLeadingLetter(name)}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className="truncate text-xs font-medium text-foreground">{name}</span>
-          <span className="shrink-0 text-[11px] text-muted-foreground">
+          <span className="shrink-0 text-xs-plus text-muted-foreground">
             {new Date(annotation.created_at).toLocaleString(undefined, {
               dateStyle: "short",
               timeStyle: "short",
@@ -80,6 +80,7 @@ export function WikiAnnotationThreadCard({
   thread,
   currentUserId,
   canModerate,
+  canReply,
   isActive,
   isDetached,
   pending,
@@ -92,6 +93,8 @@ export function WikiAnnotationThreadCard({
   currentUserId: string | null;
   /** Éditeur du monde : peut résoudre et supprimer les fils des autres. */
   canModerate: boolean;
+  /** Répondre dans ce fil (`wiki.comment`). */
+  canReply: boolean;
   isActive: boolean;
   /** L'extrait ancré ne se retrouve plus dans le texte de la page. */
   isDetached: boolean;
@@ -116,7 +119,7 @@ export function WikiAnnotationThreadCard({
     <li
       className={cn(
         "group/thread rounded-xl border p-3 transition-colors",
-        isActive ? "border-primary/50 bg-primary/5" : "border-border-soft bg-background",
+        isActive ? "border-primary/50 bg-primary/5" : "border-border bg-background",
         resolved && "opacity-70",
       )}
     >
@@ -147,7 +150,7 @@ export function WikiAnnotationThreadCard({
             <button
               type="button"
               aria-label={t("threadActions")}
-              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
             </button>
@@ -175,14 +178,14 @@ export function WikiAnnotationThreadCard({
         <div className="mb-2 flex flex-wrap gap-1.5">
           {isDetached && (
             <span
-              className="flex items-center gap-1 rounded-full border border-border-soft px-2 py-0.5 text-[11px] text-muted-foreground"
+              className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs-plus text-muted-foreground"
               title={t("detachedHint")}
             >
               <Unlink className="h-3 w-3" /> {t("detached")}
             </span>
           )}
           {resolved && (
-            <span className="flex items-center gap-1 rounded-full border border-border-soft px-2 py-0.5 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs-plus text-muted-foreground">
               <Check className="h-3 w-3" /> {t("resolved")}
             </span>
           )}
@@ -207,7 +210,7 @@ export function WikiAnnotationThreadCard({
         ))}
       </div>
 
-      {replying ? (
+      {!canReply ? null : replying ? (
         <WikiAnnotationComposer
           className="mt-3"
           placeholder={t("replyPlaceholder")}
@@ -223,7 +226,7 @@ export function WikiAnnotationThreadCard({
         <Button
           variant="ghost"
           size="sm"
-          className="mt-1 h-7 px-2 text-xs text-muted-foreground"
+          className="mt-1 text-xs"
           onClick={() => { onActivate(); setReplying(true); }}
         >
           {t("reply")}

@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { TabBarTrigger } from "@/components/ui/tab-bar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 // Popover + HsvColorPicker : utilisés par HomeColorField, désactivé
@@ -59,8 +60,8 @@ import type { World } from "@/types/worlds";
 // ];
 
 /** Onglets en soulignement plutôt qu'en pastille pleine (style shadcn par
- *  défaut) — remplace TabsList/TabsTrigger par les primitives Radix
- *  directement pour ce seul usage, plus lisible à 6 onglets et mieux espacé.
+ *  défaut) — la liste Radix directement, et les `TabBarTrigger` de
+ *  components/ui/tab-bar.tsx, plus lisibles à 6 onglets et mieux espacés.
  *
  *  Le trait actif est une ombre `inset`, pas un `border-b` : une ombre reste
  *  DANS la boîte de l'élément (jamais comptée dans le « scrollable overflow »
@@ -79,8 +80,7 @@ import type { World } from "@/types/worlds";
  *  trigger, enfant, se peint après son parent) : celle du trigger actif
  *  recouvre entièrement celle du conteneur à cet endroit, comme un seul
  *  trait continu. */
-const SETTINGS_TAB_TRIGGER_CLASS =
-    "relative shrink-0 px-0.5 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
+
 
 import { LabelWithHelp } from "./LabelWithHelp";
 import { WorldReportsTab } from "./WorldReportsTab";
@@ -88,7 +88,7 @@ import { WorldRolesTab } from "./WorldRolesTab";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
-  worldSettingsSchema,
+  buildWorldSettingsSchema,
   truthyOrNull,
   type WorldFormValues,
 } from "./worldSettingsSchema";
@@ -106,6 +106,8 @@ export interface WorldSettingsViewProps {
 export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
   const tCommon = useTranslations("common");
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
+  const schema = React.useMemo(() => buildWorldSettingsSchema(tSettings), [tSettings]);
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds } = useFeatureFlags();
@@ -140,7 +142,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
 
     const form = useForm<WorldFormValues>({
-        resolver: zodResolver(worldSettingsSchema),
+        resolver: zodResolver(schema),
         defaultValues: {
             name: world.name ?? "",
             description: world.description ?? "",
@@ -288,7 +290,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
             <Form {...form}>
                 <Tabs defaultValue={firstTab} className="flex min-h-0 flex-1 flex-col">
-                    <div className="shrink-0 shadow-[inset_0_-1px_0_0_var(--color-border-soft)]">
+                    <div className="shrink-0 shadow-[inset_0_-1px_0_0_var(--color-border)]">
                         {/* ScrollArea plutôt qu'un simple `overflow-x-auto` : la
                             barre de défilement native (toujours visible sur
                             certains systèmes/navigateurs) est remplacée par le
@@ -298,28 +300,28 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         <ScrollArea className="w-full">
                             <TabsPrimitive.List className="flex w-max items-center gap-6 px-4">
                                 {tabs.appearance && (
-                                    <TabsPrimitive.Trigger value="appearance" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabAppearance")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="appearance">{t("tabAppearance")}</TabBarTrigger>
                                 )}
                                 {tabs.categories && (
-                                    <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCategories")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="categories">{t("tabCategories")}</TabBarTrigger>
                                 )}
                                 {tabs.home && (
-                                    <TabsPrimitive.Trigger value="home" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabHome")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="home">{t("tabHome")}</TabBarTrigger>
                                 )}
                                 {tabs.features && (
-                                    <TabsPrimitive.Trigger value="features" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabFeatures")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="features">{t("tabFeatures")}</TabBarTrigger>
                                 )}
                                 {tabs.relations && (
-                                    <TabsPrimitive.Trigger value="relations" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabRelations")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="relations">{t("tabRelations")}</TabBarTrigger>
                                 )}
                                 {tabs.roles && (
-                                    <TabsPrimitive.Trigger value="roles" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabRoles")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="roles">{t("tabRoles")}</TabBarTrigger>
                                 )}
                                 {tabs.community && (
-                                    <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCommunity")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="community">{t("tabCommunity")}</TabBarTrigger>
                                 )}
                                 {tabs.reports && (
-                                    <TabsPrimitive.Trigger value="reports" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabReports")}</TabsPrimitive.Trigger>
+                                    <TabBarTrigger value="reports">{t("tabReports")}</TabBarTrigger>
                                 )}
                             </TabsPrimitive.List>
                             <ScrollBar orientation="horizontal" />
@@ -341,7 +343,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("nameHelp")}>
-                                                    Nom du monde
+                                                    {t("name")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <FormControl>
@@ -368,14 +370,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("tagHelp")}>
-                                                    Description
+                                                    {t("description")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <FormControl>
                                                 <Textarea
                                                     rows={5}
                                                     placeholder={t("descriptionPlaceholder")}
-                                                    className="rounded-2xl"
                                                     {...field}
                                                     onBlur={(e) => {
                                                         field.onBlur();
@@ -396,7 +397,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("iconHelp")}>
-                                                    Icône du monde
+                                                    {tSettings("worldIcon")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <div className="flex items-start gap-3">
@@ -420,7 +421,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                 void persistField("icon_url", "");
                                                             }}
                                                         >
-                                                            Retirer
+                                                            {tCommon("remove")}
                                                         </Button>
                                                     </div>
                                                 ) : (
@@ -481,7 +482,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                             }}
                                                         >
                                                             <span className="mr-2 h-2.5 w-2.5 rounded-full border border-border" />
-                                                            Aucune
+                                                            {tSettings("noColor")}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -500,7 +501,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("bannerHelp")}>
-                                                    Bannière
+                                                    {tSettings("banner")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <ImagePickerCropField
@@ -520,7 +521,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                     }}
                                                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                                 >
-                                                    Retirer la bannière
+                                                    {tSettings("removeBanner")}
                                                 </button>
                                             )}
                                             <FormMessage />
@@ -566,7 +567,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
                         {/* ── Relations ────────────────────────────────── */}
                         <TabsContent value="relations" className="mt-0">
-                            <div className="mx-auto max-w-xl">
+                            <div className="mx-auto max-w-4xl">
                                 <WorldRelationsSettings worldId={world.id} />
                             </div>
                         </TabsContent>
@@ -603,14 +604,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             {/* Supprimer le monde reste au propriétaire : `world.settings`
                 permet de régler le monde, pas d'en disposer. */}
             {membership?.isOwner && (
-            <div className="flex shrink-0 justify-start border-t border-border-soft px-4 py-3">
+            <div className="flex shrink-0 justify-start border-t border-border px-4 py-3">
                 <Button
                     type="button"
-                    variant="ghost"
+                    variant="destructive"
                     size="sm"
                     onClick={() => void handleDelete()}
                     disabled={deleting}
-                    className="inline-flex text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                     {deleting ? (
                         <Loader2 className="mr-1 h-4 w-4 animate-spin" />

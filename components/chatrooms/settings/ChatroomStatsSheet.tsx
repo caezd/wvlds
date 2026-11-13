@@ -12,7 +12,10 @@ import {
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/ui/section-label";
 import { toast } from "sonner";
 import { formatDaysAgo } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
@@ -71,7 +74,7 @@ function ParticipantRow({ label, sublabel, avatarUrl, badge, children }: {
 }) {
   const initials = label.replace(/^@/, "").slice(0, 2).toUpperCase() || "?";
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-border-soft bg-card p-4">
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
       <Avatar className="h-8 w-8 shrink-0 rounded-full">
         <AvatarImage src={supabaseThumb(avatarUrl, 64) ?? undefined} />
         <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
@@ -114,9 +117,9 @@ function StatGrid({ wordCount, avg, lastAt }: {
 function MsgBadge({ count }: { count: number }) {
   const t = useTranslations("chatrooms");
   return (
-    <span className="shrink-0 rounded-full bg-card-400 px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+    <Badge className="tabular-nums">
       {t("statsCount", { count })}
-    </span>
+    </Badge>
   );
 }
 
@@ -193,14 +196,9 @@ export default function ChatroomStatsSheet({
       {!hideTrigger && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              aria-label={t("statsTitle")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-            >
+            <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label={t("statsTitle")}>
               <BarChart3 className="h-4 w-4" />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={8}>{t("statsTitle")}</TooltipContent>
         </Tooltip>
@@ -208,7 +206,7 @@ export default function ChatroomStatsSheet({
 
       <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
         <SideSheetContent width="chat">
-          <DrawerHeader className="border-b border-border-soft px-6 py-4">
+          <DrawerHeader className="border-b border-border px-6 py-4">
             <DrawerTitle>{t("statsTitle")}</DrawerTitle>
           </DrawerHeader>
 
@@ -222,15 +220,15 @@ export default function ChatroomStatsSheet({
                 { label: "Délai min.", value: fmtGap(stats?.min_gap_seconds ?? null) },
                 { label: "Délai max.", value: fmtGap(stats?.max_gap_seconds ?? null) },
               ].map(({ label, value }) => (
-                <div key={label} className="rounded-xl border border-border-soft bg-card p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+                <div key={label} className="rounded-xl border border-border bg-card p-4">
+                  <SectionLabel as="p">{label}</SectionLabel>
                   <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
                 </div>
               ))}
             </div>
 
             {stats?.needs_recompute && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
+              <div className="rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-xs text-warning">
                 Certains messages semblent hors ordre temporel. Les délais min/max peuvent nécessiter un recalcul complet.
               </div>
             )}

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Users } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,18 +23,15 @@ export function PersonaNpcBadge({
   if (!isNpc) return null;
   const label = t("badge");
   return (
-    <span
+    <Badge
+      tone="npc"
       data-npc
       title={compact ? label : t("badgeHint")}
       aria-label={compact ? label : undefined}
-      className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full font-medium bg-violet-500/15 text-violet-700 dark:text-violet-300",
-        compact ? "p-0.5" : "px-2 py-0.5 text-[11px]",
-        className,
-      )}
+      className={cn(compact && "h-4 px-0.5", className)}
     >
-      <Users className="h-3 w-3 shrink-0" aria-hidden />
+      <Users aria-hidden />
       {!compact && <span className="truncate">{label}</span>}
-    </span>
+    </Badge>
   );
 }

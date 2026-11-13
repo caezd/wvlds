@@ -21,6 +21,8 @@ vi.mock("@/hooks/useLongPress", () => ({
 }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  // La carte de monde sur le profil d'un membre (MemberWorldCardSection) lit la locale.
+  useLocale: () => "fr",
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
@@ -91,6 +93,8 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  // La barre de mise en forme de ParagraphBlockEditor en tire ses classes.
+  buttonVariants: () => "",
 }));
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
@@ -129,7 +133,7 @@ describe("ChatroomMessage — avertissements de contenu", () => {
     const message = makeMessage({ metadata: { content_warnings: ["violence", "deuil"] } });
     const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(container.querySelector(".text-amber-700")).not.toBeNull();
+    expect(container.querySelector(".text-warning")).not.toBeNull();
     expect(container.textContent).toContain("violence");
     expect(container.textContent).toContain("deuil");
   });
@@ -138,21 +142,21 @@ describe("ChatroomMessage — avertissements de contenu", () => {
     const message = makeMessage({ metadata: null });
     const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(container.querySelector(".text-amber-700")).toBeNull();
+    expect(container.querySelector(".text-warning")).toBeNull();
   });
 
   it("n'affiche rien quand metadata.content_warnings est un tableau vide", () => {
     const message = makeMessage({ metadata: { content_warnings: [] } });
     const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(container.querySelector(".text-amber-700")).toBeNull();
+    expect(container.querySelector(".text-warning")).toBeNull();
   });
 
   it("n'affiche pas son propre bandeau pour un message SMS : agrégé une fois par bloc par la vue parente", () => {
     const message = makeMessage({ metadata: { sms: true, content_warnings: ["deuil"] } });
     const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(container.querySelector(".text-amber-700")).toBeNull();
+    expect(container.querySelector(".text-warning")).toBeNull();
     const bubbles = container.querySelectorAll('[data-message-id="1"]');
     expect(bubbles.length).toBe(1);
     expect(bubbles[0].className).toContain("justify-start");

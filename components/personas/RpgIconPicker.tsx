@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -83,14 +84,17 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
               className="h-8 text-sm"
             />
             {value && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={handleClear}
-                className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                className="shrink-0 hover:text-destructive"
                 title={t("removeIcon")}
+                aria-label={t("removeIcon")}
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             )}
           </div>
 
@@ -120,7 +124,7 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
                       unoptimized
                       width={24}
                       height={24}
-                      className="h-6 w-6 object-contain dark:invert"
+                      className="h-6 w-6 object-contain invert"
                       loading="lazy"
                     />
                   </button>
@@ -129,23 +133,27 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     disabled={page === 0}
                     onClick={() => setPage((p) => p - 1)}
-                    className="px-2 py-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
+                    className="h-7 px-2 text-xs"
                   >
                     {t("prev")}
-                  </button>
+                  </Button>
                   <span>{page + 1} / {totalPages}</span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage((p) => p + 1)}
-                    className="px-2 py-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
+                    className="h-7 px-2 text-xs"
                   >
                     {t("next")}
-                  </button>
+                  </Button>
                 </div>
               )}
             </>

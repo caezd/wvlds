@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Camera, Globe, Palette } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WorldStatsDialog } from "./WorldStatsDialog";
+import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/hint";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -125,7 +126,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
             ) : (
               <div
                 className="absolute inset-0"
-                style={{ backgroundColor: world.color ?? "hsl(var(--card))" }}
+                style={{ backgroundColor: world.color ?? "var(--card)" }}
               />
             )}
             <div
@@ -149,7 +150,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
             {/* Type d'avatars révélés au survol */}
             <div className="absolute top-0 right-0 flex p-3 transition-opacity delay-100 duration-300 ease-out gap-2">
               {world.is_age_restricted && (
-                <span className="flex items-center rounded-md bg-accent/60 p-1.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                <span className="flex items-center rounded-md bg-accent/60 p-1.5 text-2xs font-bold text-white backdrop-blur-sm">
                   {t("ageRestrictedBadge")}
                 </span>
               )}
@@ -196,7 +197,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
                     {world.description}
                   </p>
                 ) : (
-                  <p className="text-xs italic text-muted-foreground/40">{t("noDescription")}</p>
+                  <p className="text-xs italic text-muted-foreground">{t("noDescription")}</p>
                 )}
               </div>
             </ScrollArea>
@@ -205,12 +206,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
             {tags.length > 0 && (
               <div ref={tagsRef} className="flex shrink-0 flex-wrap gap-1 opacity-0 transition-opacity delay-200 duration-300 ease-out group-hover:opacity-100 focus-within:opacity-100">
                 {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
-                  >
-                    #{tag}
-                  </span>
+                  <Badge key={tag}>#{tag}</Badge>
                 ))}
               </div>
             )}

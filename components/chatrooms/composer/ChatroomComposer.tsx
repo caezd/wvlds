@@ -681,7 +681,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 typingLine ? "translate-y-8 opacity-100" : "translate-y-full opacity-0",
             )}
         >
-            <div className="w-full rounded-t-2xl border border-b-0 border-border bg-body px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
+            <div className="w-full rounded-t-2xl border border-b-0 border-border bg-canvas px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
                 {typingLine}
             </div>
         </div>
@@ -715,7 +715,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         <div
             className={cn(
                 "relative z-10 cursor-text overflow-clip p-2 contain-inline-size bg-background border flex flex-col rounded-lg",
-                smsMode ? "border-mist-200 rounded-tr-[18px] rounded-bl-[18px] rounded-br-[18px]" : "border",
+                smsMode ? "border-muted-foreground rounded-tr-2xl rounded-bl-2xl rounded-br-2xl" : "border",
                 // Dans le drawer mobile, la carte occupe toute la hauteur dispo —
                 // le bloc "content" ci-dessous s'étire pour la remplir, le footer
                 // (actions/envoi) garde sa taille naturelle. Sur desktop,
@@ -767,7 +767,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                             "rounded-full border px-2 py-0.5 text-xs transition-colors",
                                             visibleTo.includes(p.id)
                                                 ? "border-primary/40 bg-primary/10 text-primary"
-                                                : "border-border-soft text-muted-foreground hover:text-foreground",
+                                                : "border-border text-muted-foreground hover:text-foreground",
                                         )}
                                     >
                                         @{p.username ?? p.id.slice(0, 8)}
@@ -776,14 +776,16 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                 {!participants.length && (
                                     <span className="text-xs text-muted-foreground italic">{tChatrooms("noOtherParticipant")}</span>
                                 )}
-                                <button
-                                  aria-label={tCommon("remove")}
+                                <Button
+                                    aria-label={tCommon("remove")}
                                     type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="ml-auto size-5 hover:text-destructive"
                                     onClick={() => { setVisibleTo(null); setParticipants([]); }}
-                                    className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
                                 >
                                     <X className="h-3 w-3" />
-                                </button>
+                                </Button>
                             </div>
                         )}
 
@@ -867,7 +869,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     </div>
                 </div>
                 {groupMention && (
-                    <p className="flex items-center gap-1.5 px-2 pb-1 text-xs text-amber-600 dark:text-amber-400" role="status">
+                    <p className="flex items-center gap-1.5 px-2 pb-1 text-xs text-warning" role="status">
                         <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
                         {groupMention.known
                             ? tChatrooms(groupMention.kind === "everyone" ? "mentions.everyoneWarning" : "mentions.hereWarning", { count: groupMention.count })
@@ -938,7 +940,6 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 >
                     <Button
                         size="icon"
-                        className="rounded-md bg-accent text-white hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed"
                         onClick={() => void send()}
                         disabled={!canSend}
                         aria-disabled={!canSend}
@@ -966,7 +967,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             {/* Au-dessus de la languette « en train d'écrire » (z-0), sous la
                 carte (z-10) qui en recouvre le bas : elle fait corps avec le
                 composeur. */}
-            {topTab && <div className="relative z-[5] -mb-2.5">{topTab}</div>}
+            {topTab && <div className="relative z-5 -mb-2.5">{topTab}</div>}
             {useMobileDrawer && !drawerOpen && replyBar}
 
             {useMobileDrawer ? (
@@ -979,7 +980,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             />
                         }
                     >
-                        <span className="relative size-8 shrink-0 overflow-hidden rounded-md border bg-muted">
+                        <span className="relative size-8 shrink-0 overflow-hidden rounded-full border bg-muted">
                             {selectedPersona ? (
                                 selectedPersona.avatar_url ? (
                                     <Image
@@ -990,7 +991,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                         className="object-cover"
                                     />
                                 ) : (
-                                    <span className="grid h-full w-full place-items-center text-[10px] font-bold text-muted-foreground">
+                                    <span className="grid h-full w-full place-items-center text-2xs font-bold text-muted-foreground">
                                         {getInitials(selectedPersona.name)}
                                     </span>
                                 )

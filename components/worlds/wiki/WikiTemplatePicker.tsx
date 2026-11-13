@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { WIKI_TEMPLATE_ICONS, WIKI_TEMPLATE_IDS, type WikiTemplateId } from "@/lib/wikiTemplates";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /** Choix d'un modèle de départ à la création d'une page (contenu pré-rempli en brouillon). */
 export function WikiTemplatePicker({
@@ -27,7 +29,7 @@ export function WikiTemplatePicker({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-6 gap-1 px-1.5 text-xs has-[>svg]:px-1.5")}
           title={t("pickerLabel")}
         >
           <LayoutTemplate className="h-3 w-3" />

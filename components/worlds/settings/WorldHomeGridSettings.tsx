@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { HelpHint } from "@/components/ui/help-hint";
 
 const GAP_OPTIONS: WorldHomeGridGap[] = ["compact", "comfortable", "spacious"];
 
@@ -73,12 +74,12 @@ export function WorldHomeGridSettings({
 
   return (
     <div className="space-y-6">
-      <div className="divide-y divide-border-soft rounded-lg border border-border-soft">
+      <div className="divide-y divide-border rounded-lg border border-border">
         <div className="flex items-start justify-between gap-4 p-3">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{t("home.showStats")}</p>
-            <p className="text-xs leading-snug text-muted-foreground">{t("home.showStatsDesc")}</p>
-          </div>
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+              {t("home.showStats")}
+              <HelpHint title={t("home.showStats")}>{t("home.showStatsDesc")}</HelpHint>
+          </p>
           <Switch
             checked={showStats}
             disabled={togglingStats}
@@ -88,10 +89,10 @@ export function WorldHomeGridSettings({
         </div>
 
         <div className="space-y-2 p-3">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{t("home.gridGap")}</p>
-            <p className="text-xs leading-snug text-muted-foreground">{t("home.gridGapDesc")}</p>
-          </div>
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+              {t("home.gridGap")}
+              <HelpHint title={t("home.gridGap")}>{t("home.gridGapDesc")}</HelpHint>
+          </p>
           <div className="flex gap-1.5" role="radiogroup" aria-label={t("home.gridGap")}>
             {GAP_OPTIONS.map((option) => (
               <button
@@ -105,7 +106,7 @@ export function WorldHomeGridSettings({
                   "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
                   gap === option
                     ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )}
               >
                 {t(`home.gridGapOptions.${option}`)}

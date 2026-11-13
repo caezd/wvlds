@@ -200,6 +200,7 @@ export const WORLD_HOME_WIDGET_OPTIONS: Partial<Record<WorldHomeWidgetId, WorldH
   timeline_shortcuts: [{ kind: "number", key: "limit", min: 1, max: 20, default: 6 }],
   // Fenêtre, en jours, des anniversaires annoncés.
   birthdays: [{ kind: "number", key: "days", min: 1, max: 90, default: 30 }],
+  holidays: [{ kind: "number", key: "limit", min: 1, max: 12, default: 3 }],
 };
 
 function findOptionDef(widgetId: WorldHomeWidgetId | undefined, key: string): WorldHomeWidgetOption | undefined {

@@ -24,6 +24,8 @@ vi.mock("@/hooks/useLongPress", () => ({
 }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  // La carte de monde sur le profil d'un membre (MemberWorldCardSection) lit la locale.
+  useLocale: () => "fr",
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
@@ -98,6 +100,8 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  // MarkdownRenderer en tire la classe du bouton « Copier ».
+  buttonVariants: () => "",
 }));
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,

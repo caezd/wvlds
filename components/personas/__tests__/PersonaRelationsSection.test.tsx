@@ -66,7 +66,7 @@ describe("PersonaRelationsSection", () => {
     expect(within(inList).getByText("Il m'a trahi.")).toBeInTheDocument();
     expect(within(inList).getByText("Vyper")).toBeInTheDocument();
     expect(screen.getAllByText("En attente")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: /Voir sur le canevas/ })).toHaveAttribute("href", "/w/w1?view=canvas&persona=kolt");
+    expect(screen.getByRole("link", { name: /Voir dans Relations/ })).toHaveAttribute("href", "/w/w1?view=canvas&persona=kolt");
   });
 
   it("un visiteur ne peut ni répondre, ni annuler, ni rompre", async () => {

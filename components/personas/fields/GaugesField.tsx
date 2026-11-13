@@ -7,6 +7,7 @@ import { Plus, X } from "lucide-react";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { GaugeItem } from "@/types/personas";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { makeItemId } from "./shared";
 
 export function GaugesField({
@@ -25,7 +26,7 @@ export function GaugesField({
     update(items.map((it) => (it.id === id ? { ...it, [key]: val } : it)));
   }
   function addItem() {
-    update([...items, { id: makeItemId(), name: "", value: 0, max: 100, color: "#6366f1" }]);
+    update([...items, { id: makeItemId(), name: "", value: 0, max: 100, color: DEFAULT_PLAYER_COLOR }]);
   }
   function removeItem(id: string) { update(items.filter((it) => it.id !== id)); }
 
@@ -68,7 +69,7 @@ export function GaugesField({
                       style={{ backgroundColor: item.color }}
                     />
                   </PopoverTrigger>
-                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0 z-[200]" align="end">
+                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0" align="end">
                     <HsvColorPicker
                       color={item.color}
                       onChange={(hex) => patch(item.id, "color", hex)}

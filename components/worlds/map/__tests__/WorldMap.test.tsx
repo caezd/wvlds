@@ -1051,7 +1051,7 @@ describe("WorldMap — les régions", () => {
       expect(createMapRegion).toHaveBeenCalledWith("w1", "map1", {
         label: "La marche",
         points: [{ x: 10, y: 10 }, { x: 50, y: 10 }, { x: 30, y: 80 }],
-        color: "#22c55e",
+        color: "#FB7185", // première teinte de la palette « joueurs »
       }),
     );
     // La région vient d'être créée : elle est dessinée, et son panneau ouvert.

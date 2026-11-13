@@ -109,14 +109,14 @@ export function WikiVersionHistoryPanel({
 
       <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
         <SideSheetContent>
-          <DrawerHeader className="border-b border-border-soft">
+          <DrawerHeader className="border-b border-border">
             <DrawerTitle className="flex items-center gap-2">
               <History className="h-4 w-4" /> {t("versionHistory")}
             </DrawerTitle>
           </DrawerHeader>
 
           <div className="flex min-h-0 flex-1">
-            <div className={cn("min-h-0 w-64 shrink-0 overflow-y-auto p-3", previewing && "border-r border-border-soft")}>
+            <div className={cn("min-h-0 w-64 shrink-0 overflow-y-auto p-3", previewing && "border-r border-border")}>
               {versions === null ? (
                 <div className="flex items-center justify-center p-6">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -130,7 +130,7 @@ export function WikiVersionHistoryPanel({
                       key={v.id}
                       className={cn(
                         "rounded-md border px-3 py-2",
-                        previewing?.id === v.id ? "border-primary/40 bg-primary/5" : "border-border-soft",
+                        previewing?.id === v.id ? "border-primary/40 bg-primary/5" : "border-border",
                       )}
                     >
                       <button type="button" className="block w-full text-left" onClick={() => setPreviewing(v)}>

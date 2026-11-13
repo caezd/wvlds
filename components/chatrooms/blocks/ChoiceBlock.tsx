@@ -111,14 +111,16 @@ export function ChoiceDialog({
             <div className="flex items-center justify-between">
               <Label className="text-xs text-muted-foreground">{t("choiceOptionsLabel")}</Label>
               {options.length < MAX_OPTIONS && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 px-2.5 text-xs"
                   onClick={addOption}
-                  className="flex items-center gap-0.5 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Plus className="h-3 w-3" />
                   {t("choiceAddOption")}
-                </button>
+                </Button>
               )}
             </div>
             <div className="space-y-2">
@@ -131,22 +133,24 @@ export function ChoiceDialog({
                     className="h-8 text-sm flex-1 min-w-0"
                     onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
                   />
-                  <button
+                  <Button
                     aria-label={tCommon("remove")}
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="hover:text-destructive"
                     onClick={() => removeOption(i)}
                     disabled={options.length <= MIN_OPTIONS}
-                    className="shrink-0 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>{t("callout.cancel")}</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>{t("callout.cancel")}</Button>
           <Button onClick={handleSend} disabled={!canSend}>
             {initialBlock ? t("callout.save") : t("callout.insert")}
           </Button>
@@ -224,10 +228,10 @@ export function ChoiceBlockView({
                     aria-hidden
                   />
                   <span className="relative flex w-full items-center gap-1 text-xs font-medium">
-                    {isMine && <Check className="h-3 w-3 shrink-0 text-accent dark:text-accent" />}
+                    {isMine && <Check className="h-3 w-3 shrink-0 text-accent" />}
                     <span className="truncate">{option.label}</span>
                   </span>
-                  <span className="relative text-[10px] text-muted-foreground">
+                  <span className="relative text-2xs text-muted-foreground">
                     {t("choiceVoteCount", { count })}
                   </span>
                 </button>
@@ -235,7 +239,7 @@ export function ChoiceBlockView({
             })}
           </div>
           {mine && (
-            <p className="mt-2 text-[11px] italic text-muted-foreground">{t("choiceOwnHint")}</p>
+            <p className="mt-2 text-xs-plus italic text-muted-foreground">{t("choiceOwnHint")}</p>
           )}
         </div>
         <GameBlockToolbar

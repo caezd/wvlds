@@ -11,7 +11,7 @@ export function CategoryAvatar({
   bannerUrl,
   iconUrl,
   className,
-  letterClassName = "text-[11px]",
+  letterClassName = "text-xs-plus",
 }: {
   title: string;
   bannerUrl: string | null;

@@ -41,6 +41,8 @@ type Ctx = {
     roomUnread: Record<string, number>;
     setActiveChat: (id: string | null) => void;
     markChatRead: (chatId: string, lastReadAt?: string) => Promise<void>;
+    /** Vide le badge d'un monde : ses salons et ses notifications. `false` en cas d'échec. */
+    markWorldRead: (worldId: string) => Promise<boolean>;
     refreshAll: () => Promise<void>;
     // Notifications feed
     notifications: AppNotification[];
@@ -66,7 +68,7 @@ const NotificationsCtx = createContext<Ctx | null>(null);
  */
 type ActionsCtx = Pick<
     Ctx,
-    "openPanel" | "closePanel" | "togglePanel" | "setActiveChat" | "markChatRead" | "refreshAll"
+    "openPanel" | "closePanel" | "togglePanel" | "setActiveChat" | "markChatRead" | "markWorldRead" | "refreshAll"
 >;
 
 const NotificationsActionsCtx = createContext<ActionsCtx | null>(null);
@@ -77,6 +79,7 @@ const DEFAULT_ACTIONS: ActionsCtx = {
     togglePanel: () => {},
     setActiveChat: () => {},
     markChatRead: async () => {},
+    markWorldRead: async () => false,
     refreshAll: async () => {},
 };
 
@@ -113,6 +116,7 @@ const DEFAULT_CTX: Ctx = {
     roomUnread: {},
     setActiveChat: () => {},
     markChatRead: async () => {},
+    markWorldRead: async () => false,
     refreshAll: async () => {},
     notifications: [],
     unreadNotifCount: 0,
@@ -294,6 +298,44 @@ export default function NotificationsProvider({ children }: { children: React.Re
             }, DELAY.MARK_READ_THROTTLE - elapsed),
         };
     }, [writeChatRead]);
+
+    // Tout un monde d'un coup (menu contextuel du sélecteur et du rail).
+    // Badges vidés aussitôt, puis une seule RPC pour les salons et les
+    // notifications du monde (cf. migration 204, horloge du serveur).
+    const markWorldRead = useCallback(async (worldId: string) => {
+        if (!userIdRef.current) return false;
+        const chatIds = new Set(
+            Object.entries(roomWorldRef.current)
+                .filter(([, wid]) => wid === worldId)
+                .map(([chatId]) => chatId),
+        );
+        setRoomUnread(prev => {
+            const toClear = [...chatIds].filter(id => (prev[id] ?? 0) > 0);
+            if (toClear.length === 0) return prev;
+            const next = { ...prev };
+            for (const id of toClear) next[id] = 0;
+            return next;
+        });
+        setNeverOpenedRooms(prev => {
+            if (![...prev].some(id => chatIds.has(id))) return prev;
+            return new Set([...prev].filter(id => !chatIds.has(id)));
+        });
+        setNotifications(prev => {
+            const kept = prev.filter(n => n.world_id !== worldId);
+            if (kept.length === prev.length) return prev;
+            notifOffsetRef.current = Math.max(0, notifOffsetRef.current - (prev.length - kept.length));
+            return kept;
+        });
+
+        const { error } = await supabase.rpc(RPC.MARK_WORLD_READ, { p_world_id: worldId });
+        if (error) {
+            console.error("[markWorldRead]", error.message);
+            // Les compteurs reviennent à l'état de la base.
+            void refreshAll();
+            return false;
+        }
+        return true;
+    }, [supabase, refreshAll]);
 
     // ── Notifications feed ──────────────────────────────────────────────────
 
@@ -578,6 +620,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         roomUnread,
         setActiveChat,
         markChatRead,
+        markWorldRead,
         refreshAll,
         notifications,
         unreadNotifCount,
@@ -589,15 +632,15 @@ export default function NotificationsProvider({ children }: { children: React.Re
         notifPrefs,
         setNotifPref,
     }), [panelOpen, openPanel, closePanel, togglePanel,
-        worldUnread, roomUnread, setActiveChat, markChatRead, refreshAll,
+        worldUnread, roomUnread, setActiveChat, markChatRead, markWorldRead, refreshAll,
         notifications, unreadNotifCount, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 
     // Toutes ces callbacks sont stables : cette valeur est donc calculée une
     // fois et ne change plus de la vie du provider.
     const actions = useMemo<ActionsCtx>(
-        () => ({ openPanel, closePanel, togglePanel, setActiveChat, markChatRead, refreshAll }),
-        [openPanel, closePanel, togglePanel, setActiveChat, markChatRead, refreshAll],
+        () => ({ openPanel, closePanel, togglePanel, setActiveChat, markChatRead, markWorldRead, refreshAll }),
+        [openPanel, closePanel, togglePanel, setActiveChat, markChatRead, markWorldRead, refreshAll],
     );
 
     const panel = useMemo<PanelCtx>(

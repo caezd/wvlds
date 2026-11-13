@@ -1,3 +1,6 @@
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 /**
  * Bandeau sous l'en-tête du wiki, en trois segments alignés sur les colonnes
  * du corps : les commandes de l'arbre à gauche, le fil d'Ariane au centre, les
@@ -25,7 +28,7 @@ export const WIKI_SUBHEADER =
  * faire — les deux ne doivent pas se confondre.
  */
 export const WIKI_SUBHEADER_COUNT =
-  "rounded-full bg-secondary px-1.5 text-[10px] font-medium text-muted-foreground";
+  "rounded-full bg-secondary px-1.5 text-2xs font-medium text-muted-foreground";
 
 /**
  * Pied d'une colonne du wiki — arbre des pages, panneau de notes, éditeur
@@ -36,8 +39,12 @@ export const WIKI_SUBHEADER_COUNT =
  * dérivé de quatre pixels, ce qui se voit immédiatement.
  */
 export const WIKI_FOOTER =
-  "flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5";
+  "flex shrink-0 items-center gap-1 border-t border-border px-2 py-1";
 
-/** Bouton de ce pied — mêmes mesures partout, pour la même raison. */
-export const WIKI_FOOTER_BUTTON =
-  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground";
+/**
+ * Outil de ce pied (aperçu, historique, lexique…) — mêmes mesures partout,
+ * pour la même raison. Un `ghost` de taille `sm` : h-8, qui avec le `py-1` du
+ * pied donne la hauteur du bandeau (h-10). Les créations, elles, sont des
+ * `Button` en pilule de même taille.
+ */
+export const WIKI_FOOTER_BUTTON = cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs");

@@ -169,6 +169,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -206,6 +207,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -251,6 +253,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={onPageUpdated}
@@ -305,6 +308,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={onPageUpdated}
@@ -354,6 +358,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -406,6 +411,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -446,6 +452,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -490,6 +497,7 @@ describe("WikiPageContent — badge brouillon", () => {
         page={page}
         pages={[page]}
         canEdit
+        canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -527,7 +535,7 @@ describe("WikiPageContent — badge brouillon", () => {
         onRename={vi.fn()}
         page={page}
         pages={[page]}
-        canEdit={false}
+        canEdit={false} canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -566,6 +574,7 @@ describe("WikiPageContent — badge brouillon", () => {
         page={page}
         pages={[page]}
         canEdit
+        canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -601,6 +610,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         page={page}
         pages={[page]}
         canEdit
+        canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -634,6 +644,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         page={page}
         pages={[page]}
         canEdit
+        canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -674,6 +685,7 @@ describe("WikiPageContent — titre de la page", () => {
         page={{ ...BASE_PAGE, content: "Publié" }}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -717,6 +729,7 @@ describe("WikiPageContent — titre de la page", () => {
         page={{ ...BASE_PAGE, content: "Publié" }}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -742,7 +755,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
     content: ["Mara Kline observe la ville.", "Les Gardiens veillent sur Meridian."].join("\n\n"),
   };
 
-  function renderPage(mock: ReturnType<typeof createSupabaseMock>, canEdit = true) {
+  function renderPage(mock: ReturnType<typeof createSupabaseMock>, canEdit = true, canComment = true) {
     return render(
       <WikiPageContent
         worldId="w1"
@@ -758,7 +771,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
         onRename={vi.fn()}
         page={PAGE}
         pages={[PAGE]}
-        canEdit={canEdit}
+        canEdit={canEdit} canComment={canComment}
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -840,6 +853,18 @@ describe("WikiPageContent — commentaires ancrés", () => {
     expect(marque!.textContent).toBe("Les Gardiens veillent sur Meridian.");
   });
 
+  it("sans `wiki.comment`, aucun bouton pour commenter un bloc", async () => {
+    // La lecture reste entière : les fils existants s'affichent, seule
+    // l'écriture disparaît.
+    ecranLarge();
+    const mock = createSupabaseMock({ results: [{ data: [ANNOTATION], error: null }] });
+    renderPage(mock, true, false);
+
+    await userEvent.click(await screen.findByRole("tab", { name: /Commentaires/ }));
+    await waitFor(() => expect(screen.getByText("Qui les a créés ?")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
+  });
+
   it("déplie la colonne repliée pour montrer la saisie", async () => {
     // Le tiroir seul ne suffisait pas : son ouverture est conditionnée à
     // l'absence de colonne. À grande largeur, colonne repliée, la saisie
@@ -909,6 +934,7 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
         page={{ ...BASE_PAGE, content: "Un texte." }}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode={isEditMode}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -968,6 +994,7 @@ describe("WikiPageContent — images collées dans l'article", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -1054,6 +1081,7 @@ describe("WikiPageContent — autocomplétion des liens internes", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE, ARKHAM, ASILE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -1204,6 +1232,7 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -1378,6 +1407,7 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         page={{ ...BASE_PAGE, content: "Un texte." }}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -1414,6 +1444,7 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
         page={{ ...BASE_PAGE, content: "Un texte." }}
         pages={[BASE_PAGE]}
         canEdit
+        canComment
         isEditMode={false}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
@@ -1489,6 +1520,7 @@ describe("WikiPageContent — bannière et description", () => {
         page={page}
         pages={[page]}
         canEdit
+        canComment
         isEditMode={isEditMode}
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}

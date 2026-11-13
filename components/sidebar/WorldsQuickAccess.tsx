@@ -48,22 +48,22 @@ export function WorldsQuickAccess({
     // Le fond englobe d'un seul bloc arrondi le bouton et les mondes
     // favoris — toujours "ouvert" dès qu'il y en a, pas de padding ajouté :
     // le cadre colle exactement à la taille des boutons (h-9 w-9) empilés.
-    <div className={cn("flex flex-col items-center gap-1 rounded-xl", hasFavorites && "bg-carbon-700")}>
+    <div className={cn("flex flex-col items-center gap-1 rounded-md", hasFavorites && "bg-muted")}>
       <Tooltip>
         <TooltipTrigger asChild>
           {(() => {
             const triggerClassName = cn(
-              "relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:text-mist-50",
-              highlighted ? "text-mist-50" : "text-mist-100",
+              "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:text-foreground",
+              highlighted ? "text-foreground" : "text-foreground",
               // Sans favoris, le fond de carte (sur le conteneur) ne s'affiche
               // pas — on le pose alors directement sur le bouton pour que la
               // pastille active ne se retrouve pas seule, sans boîte (cf. RailIcon).
-              isActive && !hasFavorites && "bg-carbon-700",
+              isActive && !hasFavorites && "bg-muted",
             );
             const content = (
               <>
                 {isActive && (
-                  <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[6px] rounded-full" />
+                  <span className="absolute w-[8px] h-[20px] bg-foreground -left-2 -translate-x-[6px] rounded-full" />
                 )}
                 <Globe size={17} />
               </>
@@ -103,7 +103,7 @@ export function WorldsQuickAccess({
             // L'anneau se pose sur l'avatar lui-même (via son `className`),
             // pas sur la boîte 9x9 qui l'entoure — sinon il flotte loin de
             // l'icône plutôt que de l'épouser.
-            const avatar = <WorldAvatar world={world} size="sm" className={isCurrent ? "ring-2 ring-accent" : undefined} />;
+            const avatar = <WorldAvatar world={world} size="sm" className={cn("rounded-sm", isCurrent && "ring-2 ring-accent")} />;
             return (
               <Tooltip key={world.id}>
                 <TooltipTrigger asChild>
@@ -113,12 +113,12 @@ export function WorldsQuickAccess({
                       aria-disabled="true"
                       aria-label={world.name}
                       aria-current="page"
-                      className="flex h-9 w-9 cursor-default items-center justify-center rounded-xl"
+                      className="flex h-9 w-9 cursor-default items-center justify-center rounded-sm"
                     >
                       {avatar}
                     </div>
                   ) : (
-                    <Link href={`/w/${world.id}`} aria-label={world.name} className="flex h-9 w-9 items-center justify-center rounded-xl">
+                    <Link href={`/w/${world.id}`} aria-label={world.name} className="flex h-9 w-9 items-center justify-center rounded-sm">
                       {avatar}
                     </Link>
                   )}

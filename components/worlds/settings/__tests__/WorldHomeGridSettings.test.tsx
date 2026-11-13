@@ -39,6 +39,19 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe("WorldHomeGridSettings — aides", () => {
+  it("les explications derrière une aide en bout de libellé, plus sous les titres", () => {
+    render(<WorldHomeGridSettings world={BASE_WORLD} />);
+    for (const aide of screen.getAllByTestId("help-hint")) {
+      expect(aide).toHaveAccessibleName(/^Aide : /);
+      expect(aide.getAttribute("aria-describedby")).toBeTruthy();
+    }
+    expect(screen.getByRole("button", { name: "Aide : Espacement des blocs" }))
+      .toHaveAccessibleDescription(/^Espace entre les blocs de la grille/);
+    expect(screen.queryByText(/^Espace entre les blocs de la grille/, { selector: "p" })).toBeNull();
+  });
+});
+
 describe("WorldHomeGridSettings — espacement de la grille", () => {
   it("propose les trois préréglages, « comfortable » sélectionné par défaut", () => {
     render(<WorldHomeGridSettings world={BASE_WORLD} />);

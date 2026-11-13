@@ -21,6 +21,8 @@ vi.mock("@/hooks/useLongPress", () => ({
 }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  // La carte de monde sur le profil d'un membre (MemberWorldCardSection) lit la locale.
+  useLocale: () => "fr",
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
@@ -91,6 +93,8 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  // La barre de mise en forme de ParagraphBlockEditor en tire ses classes.
+  buttonVariants: () => "",
 }));
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
@@ -151,7 +155,7 @@ describe("ChatroomMessage — SMS", () => {
     const row = container.querySelector('[data-message-id="1"]');
     expect(row?.className).toContain("justify-start");
     expect(row?.innerHTML).toContain("rounded-tl-xl");
-    expect(row?.innerHTML).not.toContain("rounded-tl-[3px]");
+    expect(row?.innerHTML).not.toContain("rounded-tl-xs");
     expect(screen.getByTestId("avatar")).toBeInTheDocument();
   });
 
@@ -180,8 +184,8 @@ describe("ChatroomMessage — SMS", () => {
     );
 
     const row = container.querySelector('[data-message-id="1"]');
-    expect(row?.innerHTML).toContain("rounded-tr-[3px]");
-    expect(row?.innerHTML).toContain("rounded-br-[3px]");
+    expect(row?.innerHTML).toContain("rounded-tr-xs");
+    expect(row?.innerHTML).toContain("rounded-br-xs");
     expect(screen.queryByTestId("avatar")).toBeNull();
   });
 

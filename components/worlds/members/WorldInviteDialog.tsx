@@ -35,6 +35,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -289,8 +290,8 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" variant="secondary" title={t("open")}>
-                    <UserPlus className="mr-2 h-4 w-4" />
+                <Button size="sm" variant="outline" title={t("open")}>
+                    <UserPlus className="h-3.5 w-3.5" />
                     {t("open")}
                 </Button>
             </DialogTrigger>
@@ -387,7 +388,7 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
                         </Select>
 
                         {/* Récap : les rôles conférés et ce qu'ils permettent */}
-                        <div className="mt-1 space-y-2 rounded-xl border border-border-soft px-3 py-2.5">
+                        <div className="mt-1 space-y-2 rounded-xl border border-border px-3 py-2.5">
                             <div className="flex flex-wrap items-center gap-1">
                                 {previewRoles.length === 0 ? (
                                     <span className="text-xs italic text-muted-foreground">{t("noDefaultRole")}</span>
@@ -399,7 +400,7 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
                                 <ul className="space-y-1">
                                     {permissionListHas(previewPermissions, "administrator") ? (
                                         <li className="flex items-center gap-2 text-xs text-foreground">
-                                            <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                            <Check className="h-3.5 w-3.5 shrink-0 text-success" />
                                             {tRoles("permissions.administrator.label")}
                                         </li>
                                     ) : (
@@ -415,13 +416,13 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
                                                             "flex items-center gap-2 text-xs",
                                                             allowed
                                                                 ? "text-foreground"
-                                                                : "text-muted-foreground/60 line-through decoration-muted-foreground/30",
+                                                                : "text-muted-foreground line-through decoration-muted-foreground/30",
                                                         )}
                                                     >
                                                         {allowed ? (
-                                                            <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                                            <Check className="h-3.5 w-3.5 shrink-0 text-success" />
                                                         ) : (
-                                                            <X className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                                                            <X className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                                         )}
                                                         {tRoles(`permissions.${permissionI18nKey(p)}.label`)}
                                                     </li>
@@ -453,22 +454,24 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
                                             <div key={inv.id} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
                                                 <Avatar className="h-7 w-7 shrink-0">
                                                     <AvatarImage src={inv.avatar_url ?? undefined} alt="" />
-                                                    <AvatarFallback className="text-[10px] uppercase">
+                                                    <AvatarFallback className="text-2xs uppercase">
                                                         {(inv.username ?? "?").slice(0, 2)}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{nameOf(inv)}</span>
-                                                <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                                <Badge tone="warning">
                                                     {role ? role.name : t("defaultRoles")} · {t("pendingBadge")}
-                                                </span>
-                                                <button
+                                                </Badge>
+                                                <Button
                                                     type="button"
+                                                    variant="ghost"
+                                                    size="icon-sm"
                                                     onClick={() => setPendingCancelInvite(inv)}
                                                     aria-label={t("cancelAria", { name: nameOf(inv) })}
-                                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                                    className="size-6 hover:text-destructive"
                                                 >
                                                     <X className="h-3.5 w-3.5" />
-                                                </button>
+                                                </Button>
                                             </div>
                                         );
                                     })}
@@ -494,7 +497,7 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
                     <Separator />
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setOpen(false)}>
+                        <Button variant="secondary" onClick={() => setOpen(false)}>
                             {tCommon("cancel")}
                         </Button>
                         <Button onClick={onSubmit} disabled={!canSubmit || submitting}>

@@ -40,4 +40,10 @@ describe("ColorPickerButton", () => {
     fireEvent.change(screen.getByRole("slider", { name: "Opacité" }), { target: { value: "50" } });
     expect(onChange).toHaveBeenLastCalledWith("#ff000080");
   });
+
+  it("sans `alpha`, n'offre pas d'opacité (colonnes en #rrggbb, comme les arcs)", async () => {
+    render(<ColorPickerButton color="#ff0000" onChange={() => {}} alpha={false} />);
+    await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    expect(screen.queryByRole("slider", { name: "Opacité" })).toBeNull();
+  });
 });

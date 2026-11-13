@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { ClipboardCheck, Drama, Plus, Search } from "lucide-react";
+import { ClipboardCheck, Drama, Ghost, Pencil, Plus, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getInitials } from "@/lib/textFormatting";
+import { RPC } from "@/lib/constants";
 import { PersonaCard } from "./PersonaCard";
 import { PersonaCreateSheet } from "./PersonaCreateSheet";
 import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
@@ -15,21 +15,39 @@ import { fetchSectionsByPersona } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
-import { useTranslations } from "next-intl";
-import { StoredImage } from "@/components/ui/stored-image";
-import { avatarThumbWidth } from "@/lib/storage";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { effectiveStatus } from "@/lib/worldMembers";
-import { NARRATIVE_STATUSES, isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
-import { reviewStatusOf, sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
+import { isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
+import { reviewStatusOf } from "@/lib/personaReview";
+import {
+  EMPTY_PERSONA_FILTERS,
+  PERSONA_FILTER_ALL as ALL,
+  PERSONA_FILTER_OFFSTAGE as OFFSTAGE,
+  applyPersonaFilters,
+  letterKey,
+  memberLabel,
+  sortPersonas,
+  type PersonaFilters,
+} from "./personaFilters";
+import { PersonaFilterBar } from "./PersonaFilterBar";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
+import { ChatroomAvatarWithPresence } from "@/components/chatrooms/persona/ChatroomAvatarWithPresence";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import type { PersonaNarrativeStatus, PersonaReviewStatus, WorldMemberStatus } from "@/types/db";
+import { buildShelves, featuredPersonaId, isShelfMode, type PersonaActivity, SHELF_MODES, type Shelf, type ShelfMode } from "./shelves/buildShelves";
+import { PersonaShelfTile, SHELF_TILE_CLASS } from "./shelves/PersonaShelfTile";
+import { LetterDivider, PersonaListGrid, PersonaWall } from "./shelves/PersonaShelf";
+import { PersonaStatCards, type PersonaStatCard } from "./shelves/PersonaStatCards";
+import { ShelfGroupingToggle } from "./shelves/ShelfGroupingToggle";
+import { AlphaIndex } from "./shelves/AlphaIndex";
+import type { MiniFace } from "./shelves/MiniAvatarStack";
+import { usePersonasChangedVersion } from "@/hooks/usePersonasChanged";
 
 type OtherPersona = {
   id: string;
@@ -53,128 +71,81 @@ type NpcPersona = OtherPersona & Omit<AsidePersona, "sections" | "id" | "name" |
 
 type Group = { id: string; name: string; color: string };
 
-const ALL = "__all__";
-const NO_GROUP = "__none__";
-type SortKey = "name" | "newest" | "oldest";
+// Les filtres et le tri vivent dans `personaFilters.ts` ; ré-exportés pour les tests.
+export { applyPersonaFilters, sortPersonas, PERSONA_FILTER_ALL, PERSONA_FILTER_NO_GROUP, PERSONA_FILTER_OFFSTAGE, SHEET_FILTERS } from "./personaFilters";
+export type { PersonaFilters } from "./personaFilters";
 
-function memberLabel(userId: string, username: string | null) {
-  return username ? `@${username}` : userId.slice(0, 8);
-}
+// ── Tuile lecture seule : persona d'un autre membre ────────────────────────
 
-/** Lettre d'index (accents ignorés) ; "#" pour les noms vides ou non alphabétiques. */
-const DIACRITICS_RE = new RegExp("[\\u0300-\\u036f]", "g");
+/** Les badges posés sur le portrait, fond sombre pour rester lisibles sur l'image. */
+const TILE_BADGE_CLASS = "bg-black/60 text-white";
 
-function letterKey(name: string | null): string {
-  const normalized = (name ?? "").trim().normalize("NFD").replace(DIACRITICS_RE, "");
-  const c = normalized[0]?.toUpperCase() ?? "";
-  return /[A-Z]/.test(c) ? c : "#";
-}
-
-function normalize(text: string) {
-  return text.normalize("NFD").replace(DIACRITICS_RE, "").toLowerCase();
-}
-
-/** Les critères de la barre de filtres, appliqués à une liste (pure, testée). */
-export type PersonaFilters = {
-  query: string;
-  player: string; // ALL | user_id
-  group: string; // ALL | NO_GROUP | group_id
-  status: string; // ALL | PersonaNarrativeStatus
-  /** ALL | PersonaSheetBadgeKind — l'état de la fiche (migration 181). */
-  sheet: string;
-  /** ALL | "player" | "npc" — personas des joueurs ou PNJ (migration 182). */
-  kind: string;
-  /** Le monde relit-il ses fiches (migration 184) ? Sinon le filtre « Fiche » ne connaît qu'« incomplète ». */
-  reviewActive?: boolean;
-};
-
-export const SHEET_FILTERS: readonly PersonaSheetBadgeKind[] = ["submitted", "draft", "incomplete", "approved"];
-
-export function applyPersonaFilters<
-  T extends {
-    id: string; name: string | null; user_id: string; username?: string | null;
-    narrative_status: PersonaNarrativeStatus; review_status?: unknown; sheet_complete?: boolean | null; is_npc?: boolean | null;
-  },
->(list: T[], filters: PersonaFilters, groupByPersona: Map<string, string>): T[] {
-  const q = normalize(filters.query.trim());
-  return list.filter((p) => {
-    if (filters.kind === "npc" && !p.is_npc) return false;
-    if (filters.kind === "player" && p.is_npc) return false;
-    if (filters.player !== ALL && p.user_id !== filters.player) return false;
-    if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
-    if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
-    if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
-    if (filters.sheet !== ALL && (sheetBadgeOf(p, filters.reviewActive ?? true) ?? "approved") !== filters.sheet) return false;
-    if (q && !normalize(p.name ?? "").includes(q) && !normalize(p.username ?? "").includes(q)) return false;
-    return true;
-  });
-}
-
-export function sortPersonas<T extends { name: string | null; created_at?: string | null }>(list: T[], sort: SortKey): T[] {
-  const byName = (a: T, b: T) => (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" });
-  const byDate = (a: T, b: T) => (a.created_at ?? "").localeCompare(b.created_at ?? "");
-  return [...list].sort((a, b) => {
-    if (sort === "name") return byName(a, b);
-    const d = byDate(a, b);
-    if (d !== 0) return sort === "newest" ? -d : d;
-    return byName(a, b);
-  });
-}
-
-export { ALL as PERSONA_FILTER_ALL, NO_GROUP as PERSONA_FILTER_NO_GROUP };
-
-// ── Carte lecture seule : persona d'un autre membre ────────────────────────
-
-function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount, reviewActive = true }: { persona: OtherPersona; groupColor?: string; unnamed: string; openOnMount?: boolean; reviewActive?: boolean }) {
+function OtherPersonaCard({ persona, groupColor, line2, lineSwatch, featured, unnamed, openOnMount, reviewActive = true }: { persona: OtherPersona; groupColor?: string; line2?: string | null; lineSwatch?: boolean; featured?: boolean; unnamed: string; openOnMount?: boolean; reviewActive?: boolean }) {
   const name = persona.name ?? unnamed;
-  const retired = isRetiredStatus(persona.narrative_status);
   return (
     <PersonaProfileSheetTrigger
       personaId={persona.id}
       userId={persona.user_id}
       label={name}
       openOnMount={openOnMount}
-      triggerClassName="group relative block w-full aspect-square rounded-lg overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      triggerClassName={SHELF_TILE_CLASS}
     >
-      <span data-narrative-status={persona.narrative_status} className="contents">
-        {persona.avatar_url ? (
-          <StoredImage
-            url={persona.avatar_url}
-            width={avatarThumbWidth(160)}
-            alt={name}
-            className={cn("object-cover", retired && "grayscale opacity-80")}
-            draggable={false}
-          />
-        ) : (
-          <div className="absolute inset-0 grid place-items-center text-2xl font-bold text-muted-foreground select-none">
-            {getInitials(name, "P")}
-          </div>
-        )}
-      </span>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-      {groupColor && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: groupColor }} />}
-      <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
-        <PersonaNpcBadge isNpc={persona.is_npc} className="bg-black/60 text-white dark:text-white" />
-        <PersonaStatusBadge status={persona.narrative_status} className="bg-black/60 text-white dark:text-white" />
-        <PersonaSheetBadge persona={persona} reviewActive={reviewActive} className="bg-black/60 text-white dark:text-white" />
-        {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
-        {!persona.is_npc && persona.playerStatus !== "active" && (
-          <MemberStatusBadge
-            status={persona.playerStatus}
-            until={persona.playerStatusUntil}
-            note={null}
-            className="bg-black/60 text-white backdrop-blur-sm dark:text-white"
-          />
-        )}
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-2.5">
-        <span className="block text-sm font-semibold text-white leading-tight line-clamp-2">{name}</span>
-        {!persona.is_npc && (
-          <span className="block text-xs text-white/70 leading-tight truncate">{memberLabel(persona.user_id, persona.username)}</span>
-        )}
-      </div>
+      <PersonaShelfTile
+        name={name}
+        avatarUrl={persona.avatar_url}
+        narrativeStatus={persona.narrative_status}
+        groupColor={groupColor}
+        line2={line2}
+        lineSwatch={lineSwatch}
+        featured={featured}
+        badges={
+          <>
+            <PersonaNpcBadge isNpc={persona.is_npc} className={TILE_BADGE_CLASS} />
+            <PersonaStatusBadge status={persona.narrative_status} className={TILE_BADGE_CLASS} />
+            <PersonaSheetBadge persona={persona} reviewActive={reviewActive} className={TILE_BADGE_CLASS} />
+            {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
+            {!persona.is_npc && persona.playerStatus !== "active" && (
+              <MemberStatusBadge
+                status={persona.playerStatus}
+                until={persona.playerStatusUntil}
+                note={null}
+                className={`${TILE_BADGE_CLASS} backdrop-blur-sm`}
+              />
+            )}
+          </>
+        }
+      />
     </PersonaProfileSheetTrigger>
   );
+}
+
+/** L'avatar du joueur en tête de son étagère, avec sa pastille de présence. */
+function PlayerChip({ userId, avatarUrl, name }: { userId: string; avatarUrl: string | null; name: string }) {
+  const { getUserPresence } = useGlobalPresence();
+  const tPresence = useTranslations("presence");
+  const presence = getUserPresence(userId);
+  return (
+    <span className="shrink-0" title={tPresence(presence)} data-presence={presence}>
+      <ChatroomAvatarWithPresence url={avatarUrl} fallback={name} presenceState={presence} size={36} />
+      <span className="sr-only">{tPresence(presence)}</span>
+    </span>
+  );
+}
+
+/** La pastille de l'étagère des PNJ. */
+function ShelfChip({ text }: { text: string }) {
+  return (
+    <span
+      aria-hidden
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-xs-plus font-bold text-foreground ring-1 ring-inset ring-border"
+    >
+      {text}
+    </span>
+  );
+}
+
+function shelfModeKey(worldId: string) {
+  return `personas.shelfMode.${worldId}`;
 }
 
 // ── WorldPersonasPanel ──────────────────────────────────────────────────────
@@ -193,11 +164,12 @@ export function WorldPersonasPanel({
   faceclaimsEnabled?: boolean;
 }) {
   const t = useTranslations("personas.list");
-  const tStatus = useTranslations("personas.narrativeStatus");
-  const tSheet = useTranslations("personas.sheet");
   const tNpc = useTranslations("personas.npc");
+  const tCommon = useTranslations("common");
+  const tMember = useTranslations("worlds.members.status");
+  const locale = useLocale();
   const supabase = useMemo(() => createClient(), []);
-  const { userId: meId, username: myUsername } = useCurrentUser();
+  const { userId: meId, username: myUsername, avatarUrl: myAvatarUrl } = useCurrentUser();
   const { can } = useWorldMembership();
   const canReview = can("personas.review");
   const canManageNpc = can("npc.manage");
@@ -211,11 +183,48 @@ export function WorldPersonasPanel({
   const [npcSections, setNpcSections] = useState<Map<string, PersonaSectionWithFields[]>>(new Map());
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
+  const [avatarByUser, setAvatarByUser] = useState<Map<string, string | null>>(new Map());
+  // L'activité récente de chaque persona : elle choisit la vedette de chaque étagère.
+  // Chargée à part, elle ne retarde pas la liste.
+  const [activity, setActivity] = useState<Map<string, PersonaActivity>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    type ActivityRow = { persona_id: string; message_count: number; last_message_at: string };
+    void supabase
+      .rpc(RPC.GET_WORLD_PERSONA_ACTIVITY, { p_world_id: worldId })
+      .then(({ data }: { data: ActivityRow[] | null }) => {
+        if (cancelled || !Array.isArray(data)) return;
+        setActivity(new Map(data.map((r) => [r.persona_id, { count: r.message_count, lastAt: r.last_message_at }])));
+      });
+    return () => { cancelled = true; };
+  }, [supabase, worldId]);
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
+  // Les personas des autres et les PNJ se chargent ici, côté client :
+  // `router.refresh()` ne les recharge pas, le signal des tiroirs si.
+  const personasVersion = usePersonasChangedVersion();
 
-  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL });
+  const [filters, setFilters] = useState<PersonaFilters>(EMPTY_PERSONA_FILTERS);
   const effectiveFilters = useMemo(() => ({ ...filters, reviewActive }), [filters, reviewActive]);
-  const [sort, setSort] = useState<SortKey>("name");
+
+  // Le rangement est une préférence de lecture, propre à l'appareil : lu après
+  // le montage (le rendu serveur ne connaît pas localStorage).
+  const [mode, setModeState] = useState<ShelfMode>("player");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(shelfModeKey(worldId));
+      setModeState(isShelfMode(saved) ? saved : "player");
+    } catch {
+      // ignore (mode privé…)
+    }
+  }, [worldId]);
+  const setMode = (next: ShelfMode) => {
+    setModeState(next);
+    try {
+      localStorage.setItem(shelfModeKey(worldId), next);
+    } catch {
+      // ignore (mode privé, quota…)
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -249,15 +258,17 @@ export function WorldPersonasPanel({
         : new Map<string, PersonaSectionWithFields[]>();
 
       let usernameByUser = new Map<string, string | null>();
+      let avatarsByUser = new Map<string, string | null>();
       type StatusRow = { user_id: string; status: WorldMemberStatus; status_until: string | null };
       let statusByUser = new Map<string, StatusRow>();
       if (userIds.length > 0) {
         const [{ data: profileRows }, { data: memberRows }] = await Promise.all([
-          supabase.from("profiles").select("id, username").in("id", userIds),
+          supabase.from("profiles").select("id, username, avatar_url").in("id", userIds),
           supabase.from("world_members").select("user_id, status, status_until").eq("world_id", worldId).in("user_id", userIds),
         ]);
-        type ProfileRow = { id: string; username: string | null };
+        type ProfileRow = { id: string; username: string | null; avatar_url?: string | null };
         usernameByUser = new Map(((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p.username]));
+        avatarsByUser = new Map(((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p.avatar_url ?? null]));
         statusByUser = new Map(((memberRows ?? []) as StatusRow[]).map((m) => [m.user_id, m]));
       }
 
@@ -283,6 +294,7 @@ export function WorldPersonasPanel({
           playerStatusUntil: member?.status_until ?? null,
         };
       };
+      setAvatarByUser(avatarsByUser);
       setOthers(otherRows.map(toOther));
       setNpcs(npcRows.map((r) => ({
         ...toOther(r),
@@ -300,9 +312,8 @@ export function WorldPersonasPanel({
     void loadOthers();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, canManageNpc]);
+  }, [worldId, canManageNpc, personasVersion]);
 
-  const groupColorById = useMemo(() => new Map(groups.map((g) => [g.id, g.color])), [groups]);
 
   // Les joueurs proposés par le filtre : ceux qui ont au moins un persona ici.
   const players = useMemo(() => {
@@ -322,17 +333,17 @@ export function WorldPersonasPanel({
       narrative_status: narrativeStatusOf(p.narrative_status),
       is_npc: false,
     }));
-    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupByPersona), sort);
-  }, [myPersonas, meId, myUsername, effectiveFilters, groupByPersona, sort]);
+    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupByPersona), "name");
+  }, [myPersonas, meId, myUsername, effectiveFilters, groupByPersona]);
 
   const filteredOthers = useMemo(
-    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupByPersona), sort),
-    [others, effectiveFilters, groupByPersona, sort],
+    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupByPersona), "name"),
+    [others, effectiveFilters, groupByPersona],
   );
 
   const filteredNpcs = useMemo(
-    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupByPersona), sort),
-    [npcs, effectiveFilters, groupByPersona, sort],
+    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupByPersona), "name"),
+    [npcs, effectiveFilters, groupByPersona],
   );
 
   // Les fiches des autres qui attendent un relecteur — un raccourci vers le filtre.
@@ -341,38 +352,240 @@ export function WorldPersonasPanel({
     [others, reviewActive],
   );
 
-  // Par lettre quand on trie par nom ; à plat sinon, l'ordre parle de lui-même.
-  const otherGroups = useMemo(() => {
-    if (sort !== "name") return [["", filteredOthers] as [string, OtherPersona[]]];
-    const map = new Map<string, OtherPersona[]>();
-    for (const p of filteredOthers) {
-      const key = letterKey(p.name);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(p);
-    }
-    return Array.from(map.entries());
-  }, [filteredOthers, sort]);
-
   const loadingOthers = others === null;
   const total = myPersonas.length + (others?.length ?? 0) + npcs.length;
   const filtering = filters.query.trim() !== "" || filters.player !== ALL || filters.group !== ALL || filters.status !== ALL || filters.sheet !== ALL || filters.kind !== ALL;
   const showPlayers = filters.kind !== "npc";
   const showNpcs = filters.kind !== "player" && (npcs.length > 0 || canManageNpc);
   const unnamed = t("unnamed");
+  const groupById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
+  // « Par groupe » n'a de sens que si le monde a des groupes.
+  const modes = groups.length > 0 ? SHELF_MODES : SHELF_MODES.filter((m) => m !== "group");
+  const effectiveMode: ShelfMode = modes.includes(mode) ? mode : "player";
 
-  const createTrigger = (className: string, label: string, npc = false) => (
+  // Une seule liste, trois provenances : la tuile ouvre l'éditeur ou la fiche selon elle.
+  type Item =
+    | ((typeof mine)[number] & { source: "mine" })
+    | (OtherPersona & { source: "other" })
+    | (NpcPersona & { source: "npc" });
+
+  const shelves = useMemo(
+    () => buildShelves<Item>({
+      mine: showPlayers ? mine.map((p) => ({ ...p, source: "mine" as const })) : [],
+      others: showPlayers ? filteredOthers.map((p) => ({ ...p, source: "other" as const })) : [],
+      npcs: showNpcs ? filteredNpcs.map((p) => ({ ...p, source: "npc" as const })) : [],
+      groups,
+      groupByPersona,
+      mode: effectiveMode,
+      sort: "name",
+      meId,
+      myUsername: myUsername ?? null,
+      keepMine: showPlayers && !filtering,
+      keepNpcs: showNpcs && canManageNpc && !filtering,
+      canCreateNpc: canManageNpc,
+    }),
+    [mine, filteredOthers, filteredNpcs, showPlayers, showNpcs, groups, groupByPersona, effectiveMode, meId, myUsername, filtering, canManageNpc],
+  );
+
+  // ── Cartes de tête : chacune bascule un filtre existant ──
+  const faceOf = (p: { id: string; name: string | null; avatar_url?: string | null; narrative_status?: PersonaNarrativeStatus | null }): MiniFace => ({
+    id: p.id, name: p.name, avatar_url: p.avatar_url ?? null, narrative_status: narrativeStatusOf(p.narrative_status),
+  });
+  const everyone = useMemo(() => [...myPersonas, ...(others ?? []), ...npcs], [myPersonas, others, npcs]);
+  const toggle = (key: "player" | "sheet" | "kind" | "status", value: string) =>
+    setFilters((f) => ({ ...f, [key]: f[key] === value ? ALL : value }));
+  const statCards: PersonaStatCard[] = [];
+  if (meId) {
+    statCards.push({
+      key: "mine", label: t("mine"), icon: UserRound, value: myPersonas.length, faces: myPersonas.map(faceOf),
+      active: filters.player === meId, onToggle: () => toggle("player", meId),
+    });
+  }
+  if (reviewActive && canReview) {
+    statCards.push({
+      key: "toReview", label: t("shelves.stats.toReview"), icon: ClipboardCheck, tone: "warning", value: toReview,
+      faces: (others ?? []).filter((p) => p.review_status === "submitted").map(faceOf),
+      active: filters.sheet === "submitted", onToggle: () => toggle("sheet", "submitted"),
+    });
+  }
+  if (npcs.length > 0 || canManageNpc) {
+    statCards.push({
+      key: "npc", label: tNpc("pickerGroup"), icon: Drama, value: npcs.length, faces: npcs.map(faceOf),
+      active: filters.kind === "npc", onToggle: () => toggle("kind", "npc"),
+    });
+  }
+  const offstage = everyone.filter((p) => isRetiredStatus(narrativeStatusOf(p.narrative_status)));
+  statCards.push({
+    key: "offstage", label: t("shelves.stats.offstage"), icon: Ghost, value: offstage.length, faces: offstage.map(faceOf),
+    active: filters.status === OFFSTAGE, onToggle: () => toggle("status", OFFSTAGE),
+  });
+
+  const createSheet = (trigger: ReactNode, npc = false) => (
     <PersonaCreateSheet
       worldId={worldId}
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
       defaultNpc={npc}
-      trigger={
-        <button type="button" className={className}>
-          <Plus className="h-3.5 w-3.5" />
-          {label}
-        </button>
-      }
+      trigger={trigger}
     />
+  );
+
+  const newTile = (npc: boolean) => createSheet(
+    <button
+      type="button"
+      className="flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-2 text-center text-xs text-muted-foreground transition-colors hover:border-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Plus className="h-5 w-5" aria-hidden />
+      {npc ? tNpc("newNpc") : t("newPersona")}
+    </button>,
+    npc,
+  );
+
+  const editCorner = (
+    <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs-plus font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+      <Pencil className="h-3 w-3" aria-hidden />
+      {tCommon("edit")}
+    </span>
+  );
+
+  const renderTile = (p: Item, featured = false) => {
+    const groupId = groupByPersona.get(p.id);
+    const group = groupId ? groupById.get(groupId) : undefined;
+    // Sous le nom : le groupe quand on range par joueur, le joueur sinon (le PNJ a déjà son badge).
+    const line2 = effectiveMode === "player" ? group?.name ?? null : p.is_npc ? null : memberLabel(p.user_id, p.username);
+    // Le carré de couleur accompagne le nom du groupe, pas le pseudo du joueur.
+    const lineSwatch = effectiveMode === "player";
+    const name = p.name ?? unnamed;
+    if (p.source === "other" || (p.source === "npc" && !canManageNpc)) {
+      return (
+        <OtherPersonaCard
+          persona={p}
+          groupColor={group?.color}
+          line2={line2}
+          lineSwatch={lineSwatch}
+          featured={featured}
+          unnamed={unnamed}
+          openOnMount={p.id === focusPersonaId}
+          reviewActive={reviewActive}
+        />
+      );
+    }
+    const reviewStatus = p.review_status ?? null;
+    const sheetComplete = p.sheet_complete ?? null;
+    return (
+      <PersonaCard
+        personaId={p.id}
+        personaName={name}
+        avatarUrl={p.avatar_url}
+        avatarConfig={p.avatar_config as never}
+        bannerUrl={p.banner_url}
+        initialFrameId={p.avatar_frame_id}
+        initialFrameUrl={p.frame?.asset_url}
+        initialFaceclaim={p.faceclaim ?? null}
+        initialMaritalStatus={p.marital_status ?? null}
+        initialSpousePersonaId={p.spouse_persona_id ?? null}
+        narrativeStatus={p.narrative_status}
+        reviewStatus={reviewStatus}
+        sheetComplete={sheetComplete}
+        reviewActive={reviewActive}
+        isNpc={p.source === "npc"}
+        openOnMount={p.id === focusPersonaId}
+        initialSections={p.source === "mine" ? p.sections : npcSections.get(p.id) ?? []}
+        worldId={worldId}
+        restrictInventory={restrictInventory}
+        restrictSkills={restrictSkills}
+        faceclaimsEnabled={faceclaimsEnabled}
+        trigger={
+          <button type="button" aria-label={name} className={SHELF_TILE_CLASS}>
+            <PersonaShelfTile
+              name={name}
+              avatarUrl={p.avatar_url}
+              narrativeStatus={p.narrative_status}
+              groupColor={group?.color}
+              line2={line2}
+              lineSwatch={lineSwatch}
+              featured={featured}
+              corner={editCorner}
+              badges={
+                <>
+                  <PersonaNpcBadge isNpc={p.source === "npc"} className={TILE_BADGE_CLASS} />
+                  <PersonaStatusBadge status={p.narrative_status} className={TILE_BADGE_CLASS} />
+                  <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} className={TILE_BADGE_CLASS} />
+                </>
+              }
+            />
+          </button>
+        }
+      />
+    );
+  };
+
+  const awayLabel = (status: WorldMemberStatus, until: string | null) => {
+    const date = until
+      ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${until}T00:00:00Z`))
+      : null;
+    return date ? tMember(`${status}Until`, { date }) : tMember(status);
+  };
+
+  // L'en-tête d'un mur : qui (ou quel groupe), une éventuelle absence, les chiffres.
+  const wallHeader = (shelf: Shelf<Item>): { title: ReactNode; accent?: ReactNode; note?: string; stat: string } => {
+    const count = shelf.items.length;
+    const offstageCount = count - shelf.alive;
+    const toReviewCount = reviewActive ? shelf.items.filter((p) => p.review_status === "submitted").length : 0;
+    const stat = [
+      t("shelves.statAlive", { count: shelf.alive }),
+      offstageCount > 0 && t("shelves.statOffstage", { count: offstageCount }),
+      toReviewCount > 0 && t("shelves.statToReview", { count: toReviewCount }),
+    ].filter(Boolean).join(" · ");
+    switch (shelf.kind) {
+      case "me":
+        return {
+          title: t("shelves.me", { name: shelf.label ?? "" }),
+          accent: meId ? <PlayerChip userId={meId} avatarUrl={myAvatarUrl ?? null} name={myUsername ?? ""} /> : undefined,
+          stat: count === 0 ? t("noneMine") : stat,
+        };
+      case "player":
+        return {
+          title: shelf.label,
+          accent: <PlayerChip userId={shelf.key} avatarUrl={avatarByUser.get(shelf.key) ?? null} name={shelf.items[0]?.username ?? ""} />,
+          note: shelf.playerStatus !== "active" ? awayLabel(shelf.playerStatus, shelf.playerStatusUntil) : undefined,
+          stat,
+        };
+      case "npc":
+        return { title: tNpc("pickerGroup"), accent: <ShelfChip text={tNpc("badge")} />, stat: count === 0 ? tNpc("none") : stat };
+      case "group":
+        return { title: shelf.label, stat };
+      default:
+        return { title: t("noGroup"), stat };
+    }
+  };
+
+  // Mode Liste : intercalaires et index des lettres présentes.
+  const byLetter = effectiveMode === "list";
+  const letters = byLetter ? Array.from(new Set((shelves[0]?.items ?? []).map((p) => letterKey(p.name)))) : [];
+
+  const renderListGrid = (items: Item[]) => {
+    const out: ReactNode[] = [];
+    let current = "";
+    for (const p of items) {
+      if (byLetter) {
+        const letter = letterKey(p.name);
+        if (letter !== current) {
+          current = letter;
+          out.push(<LetterDivider key={`letter-${letter}`} letter={letter} />);
+        }
+      }
+      out.push(<div key={p.id} className="min-w-0">{renderTile(p)}</div>);
+    }
+    return out;
+  };
+
+  const skeletonRow = (
+    <PersonaListGrid>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted" />
+      ))}
+    </PersonaListGrid>
   );
 
   return (
@@ -385,275 +598,73 @@ export function WorldPersonasPanel({
             {total > 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{total}</span>}
           </>
         }
-        right={createTrigger(
-          "flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90",
-          t("newPersona"),
+        right={createSheet(
+          <Button variant="outline" type="button" size="sm">
+            <Plus className="h-3.5 w-3.5" />
+            {t("newPersona")}
+          </Button>,
         )}
       />
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className="space-y-8 px-6 py-6">
-          {/* ── Recherche, filtres, tri ── */}
+        <div className="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
           {total > 0 && (
-            <div className="flex flex-wrap items-center gap-2" role="search">
-              <div className="relative min-w-0 flex-1 basis-56">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  value={filters.query}
-                  onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
-                  placeholder={t("searchPlaceholder")}
-                  aria-label={t("searchPlaceholder")}
-                  className="pl-9"
-                />
-              </div>
-              {players.length > 1 && (
-                <Select value={filters.player} onValueChange={(v) => setFilters((f) => ({ ...f, player: v }))}>
-                  <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("filterPlayer")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{t("allPlayers")}</SelectItem>
-                    {players.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {groups.length > 0 && (
-                <Select value={filters.group} onValueChange={(v) => setFilters((f) => ({ ...f, group: v }))}>
-                  <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("filterGroup")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{t("allGroups")}</SelectItem>
-                    {groups.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        <span className="flex items-center gap-2">
-                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.color }} />
-                          {g.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                    <SelectItem value={NO_GROUP}>{t("noGroup")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
-                <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterStatus")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>{t("allStatuses")}</SelectItem>
-                  {NARRATIVE_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{tStatus(s)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(npcs.length > 0 || canManageNpc) && (
-                <Select value={filters.kind} onValueChange={(v) => setFilters((f) => ({ ...f, kind: v }))}>
-                  <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={tNpc("filterKind")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{tNpc("allKinds")}</SelectItem>
-                    <SelectItem value="player">{tNpc("kindPlayers")}</SelectItem>
-                    <SelectItem value="npc">{tNpc("kindNpcs")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={filters.sheet} onValueChange={(v) => setFilters((f) => ({ ...f, sheet: v }))}>
-                <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterSheet")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>{t("allSheets")}</SelectItem>
-                  {(reviewActive ? SHEET_FILTERS : SHEET_FILTERS.filter((k) => k === "incomplete")).map((k) => (
-                    <SelectItem key={k} value={k}>{tSheet(k)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-                <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("sort")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">{t("sortName")}</SelectItem>
-                  <SelectItem value="newest">{t("sortNewest")}</SelectItem>
-                  <SelectItem value="oldest">{t("sortOldest")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <PersonaStatCards cards={statCards} />
+
+              {/* ── Vue, filtres, recherche ── */}
+              <PersonaFilterBar
+                filters={filters}
+                onFiltersChange={setFilters}
+                players={players}
+                groups={groups}
+                showKind={npcs.length > 0 || canManageNpc}
+                reviewActive={reviewActive}
+                leading={<ShelfGroupingToggle mode={effectiveMode} onModeChange={setMode} modes={modes} />}
+                actions={
+                  // Hors du rangement par joueur, plus de rangée des PNJ : leur création passe ici.
+                  canManageNpc && effectiveMode !== "player" && createSheet(
+                    <Button type="button" variant="outline">
+                      <Plus className="h-3.5 w-3.5" />
+                      {tNpc("newNpc")}
+                    </Button>,
+                    true,
+                  )
+                }
+              />
+            </>
           )}
 
-          {/* ── Fiches à relire (relecteurs) ── */}
-          {canReview && toReview > 0 && filters.sheet !== "submitted" && (
-            <button
-              type="button"
-              onClick={() => setFilters((f) => ({ ...f, sheet: "submitted" }))}
-              className="flex w-full items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-left text-sm text-sky-800 transition-colors hover:bg-sky-500/15 dark:text-sky-200"
-            >
-              <ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden />
-              {toReview === 1 ? t("toReviewOne") : t("toReview", { count: toReview })}
-            </button>
-          )}
+          {byLetter && <AlphaIndex letters={letters} />}
 
-          {/* ── Mes personas ── */}
-          {showPlayers && (mine.length > 0 || !filtering) && (
-            <section>
-              <h3 className="mb-4 text-sm font-semibold text-foreground">
-                {t("mine")}
-                {mine.length > 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{mine.length}</span>}
-              </h3>
-
-              {myPersonas.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-soft py-10 text-center">
-                  <p className="text-sm text-muted-foreground">{t("noneMine")}</p>
-                  {createTrigger(
-                    "flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground",
-                    t("createFirst"),
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                  {mine.map((p) => (
-                    <PersonaCard
-                      key={p.id}
-                      personaId={p.id}
-                      personaName={p.name ?? unnamed}
-                      avatarUrl={p.avatar_url}
-                      avatarConfig={p.avatar_config as never}
-                      bannerUrl={p.banner_url}
-                      initialFrameId={p.avatar_frame_id}
-                      initialFrameUrl={p.frame?.asset_url}
-                      initialFaceclaim={p.faceclaim ?? null}
-                      initialMaritalStatus={p.marital_status ?? null}
-                      initialSpousePersonaId={p.spouse_persona_id ?? null}
-                      narrativeStatus={p.narrative_status}
-                      reviewStatus={p.review_status ?? null}
-                      sheetComplete={p.sheet_complete ?? null}
-                      reviewActive={reviewActive}
-                      openOnMount={p.id === focusPersonaId}
-                      initialSections={p.sections}
-                      worldId={worldId}
-                      restrictInventory={restrictInventory}
-                      restrictSkills={restrictSkills}
-                      faceclaimsEnabled={faceclaimsEnabled}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* ── PNJ partagés ── */}
-          {showNpcs && (
-            <section>
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {tNpc("section")}
-                  {filteredNpcs.length > 0 && (
-                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">{filteredNpcs.length}</span>
-                  )}
-                </h3>
-                {canManageNpc && createTrigger(
-                  "flex items-center gap-1 rounded-full border border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                  tNpc("newNpc"),
-                  true,
-                )}
-              </div>
-              {filteredNpcs.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border-soft py-6 text-center text-sm text-muted-foreground">
-                  {filtering ? t("noMatch") : tNpc("none")}
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                  {filteredNpcs.map((p) => canManageNpc ? (
-                    <PersonaCard
-                      key={p.id}
-                      personaId={p.id}
-                      personaName={p.name ?? unnamed}
-                      avatarUrl={p.avatar_url}
-                      avatarConfig={p.avatar_config as never}
-                      bannerUrl={p.banner_url}
-                      initialFrameId={p.avatar_frame_id}
-                      initialFrameUrl={p.frame?.asset_url}
-                      initialFaceclaim={p.faceclaim ?? null}
-                      initialMaritalStatus={p.marital_status ?? null}
-                      initialSpousePersonaId={p.spouse_persona_id ?? null}
-                      narrativeStatus={p.narrative_status}
-                      reviewStatus={p.review_status}
-                      sheetComplete={p.sheet_complete}
-                      reviewActive={reviewActive}
-                      isNpc
-                      openOnMount={p.id === focusPersonaId}
-                      initialSections={npcSections.get(p.id) ?? []}
-                      worldId={worldId}
-                      restrictInventory={restrictInventory}
-                      restrictSkills={restrictSkills}
-                      faceclaimsEnabled={faceclaimsEnabled}
-                    />
-                  ) : (
-                    <OtherPersonaCard
-                      key={p.id}
-                      persona={p}
-                      groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
-                      unnamed={unnamed}
-                      openOnMount={p.id === focusPersonaId}
-                      reviewActive={reviewActive}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* ── Autres personas ── */}
-          {showPlayers && (
-          <section>
-            <h3 className="mb-3 text-sm font-semibold text-foreground">
-              {t("others")}
-              {filteredOthers.length > 0 && (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground">{filteredOthers.length}</span>
-              )}
-            </h3>
-
-            {loadingOthers ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted" />
-                ))}
-              </div>
-            ) : filteredOthers.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
-                {filtering ? t("noMatch") : t("noOthers")}
-              </p>
-            ) : (
-              <div className="space-y-5">
-                {otherGroups.map(([letter, list]) => (
-                  <div key={letter || "flat"}>
-                    {letter && (
-                      <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {letter}
+          {loadingOthers && effectiveMode !== "player" ? (
+            skeletonRow
+          ) : (
+            <div className="space-y-7">
+              {shelves.map((shelf) => {
+                if (shelf.kind === "all") {
+                  return <PersonaListGrid key={shelf.key}>{renderListGrid(shelf.items)}</PersonaListGrid>;
+                }
+                const head = wallHeader(shelf);
+                const featuredId = featuredPersonaId(shelf.items, activity);
+                return (
+                  <PersonaWall key={shelf.key} title={head.title} accent={head.accent} color={shelf.color} note={head.note} stat={head.stat}>
+                    {shelf.items.map((p) => (
+                      <div key={p.id} className={cn("min-w-0", p.id === featuredId && "col-span-2 row-span-2")}>
+                        {renderTile(p, p.id === featuredId)}
                       </div>
-                    )}
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                      {list.map((p) => (
-                        <OtherPersonaCard
-                          key={p.id}
-                          persona={p}
-                          groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
-                          unnamed={unnamed}
-                          openOnMount={p.id === focusPersonaId}
-                          reviewActive={reviewActive}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+                    ))}
+                    {shelf.create && newTile(shelf.create === "npc")}
+                  </PersonaWall>
+                );
+              })}
+              {loadingOthers && skeletonRow}
+              {!loadingOthers && shelves.length === 0 && (
+                <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                  {filtering ? t("noMatch") : t("shelves.empty")}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </ScrollArea>

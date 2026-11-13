@@ -8,7 +8,7 @@ import { useProfileNames } from "./useProfileNames";
 
 /**
  * Ordre de passage, en languette accrochée au haut du composeur (même style
- * que « … est en train d'écrire ») : « À toi de jouer » ou « Au tour de X »,
+ * que « … est en train d'écrire ») : « À vous de jouer » ou « Au tour de X »,
  * puis les suivants. Informatif — poster hors tour reste possible. Qui règle
  * l'ordre peut passer au joueur suivant.
  *
@@ -36,7 +36,7 @@ export function ChatroomTurnBar({
 
   return (
     <div
-      className="flex w-full items-center gap-2 rounded-t-2xl border border-b-0 border-border bg-body px-4 pt-1.5 pb-4 text-xs text-muted-foreground"
+      className="flex w-full items-center gap-2 rounded-t-2xl border border-b-0 border-border bg-canvas px-4 pt-1.5 pb-4 text-xs text-muted-foreground"
       data-testid="turn-bar"
       role="status"
     >

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -86,8 +86,29 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
 
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("");
+  });
+
+  it("une section de la page du wiki ; absente quand le wiki est désactivé", async () => {
+    setup();
+    const user = userEvent.setup();
+    const { unmount } = render(<WorldSettingsView world={BASE_WORLD} />);
+    await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
+    // Une section de la page du wiki, sous son interrupteur.
+    const section = screen.getByRole("region", { name: "Nom du lien" });
+    expect(within(section).getByRole("textbox", { name: "Nom du lien" })).toHaveAttribute("placeholder", "Annexes");
+    const page = screen.getByRole("region", { name: "Wiki" });
+    expect(page).toContainElement(section);
+    expect(within(page).getByRole("switch", { name: "Activer le wiki" })).toHaveAttribute("aria-checked", "true");
+    unmount();
+
+    render(<WorldSettingsView world={{ ...BASE_WORLD, enable_wiki: false }} />);
+    await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
+    expect(screen.queryByPlaceholderText("Annexes")).toBeNull();
   });
 
   it("préremplit le champ avec le libellé déjà enregistré", async () => {
@@ -96,6 +117,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
 
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("Compendium");
   });
@@ -106,6 +128,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     const input = screen.getByPlaceholderText("Annexes");
     await user.type(input, "Compendium");
     await user.tab(); // blur
@@ -122,6 +145,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     const input = screen.getByPlaceholderText("Annexes");
     await user.type(input, "Compendium");
     await user.tab();
@@ -137,6 +161,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    await user.click(screen.getByRole("button", { name: "Wiki" }));
     const input = screen.getByPlaceholderText("Annexes");
     await user.clear(input);
     await user.tab();

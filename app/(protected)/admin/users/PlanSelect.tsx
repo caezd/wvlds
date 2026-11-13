@@ -18,7 +18,7 @@ export function PlanSelect({
         name="plan"
         defaultValue={currentPlan}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="text-sm bg-transparent border border-border-soft rounded px-2 py-1 cursor-pointer"
+        className="text-sm bg-transparent border border-border rounded px-2 py-1 cursor-pointer"
       >
         {PLANS.map((pl) => (
           <option key={pl} value={pl}>{pl}</option>

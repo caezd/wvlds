@@ -77,6 +77,9 @@ function trier(rooms: WorldRoom[]): WorldRoom[] {
  * émise et le rendu d'aucun autre composant n'est déclenché.
  */
 function semerSiAbsent(worldId: string, rooms: WorldRoom[]): void {
+  // Côté serveur, la table du module est commune à toutes les requêtes et à
+  // tous les utilisateurs : rien n'y est écrit, le rendu lit `initialRooms`.
+  if (typeof window === "undefined") return;
   if (mondes.has(worldId)) return;
   mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null });
 }
@@ -248,6 +251,10 @@ export function useWorldRooms(worldId: string, initialRooms: WorldRoom[]): World
   return useSyncExternalStore(
     (l) => abonner(worldId, l),
     () => entree(worldId)?.rooms ?? VIDE,
-    () => entree(worldId)?.rooms ?? VIDE,
+    // Rendu serveur et hydratation : les données de la requête, jamais la
+    // table du module. Celle du serveur survit d'une requête à l'autre et
+    // garderait la liste du premier rendu (salons créés depuis absents,
+    // hydratation en échec) ; celle du client peut déjà différer du HTML reçu.
+    () => initialRooms,
   );
 }

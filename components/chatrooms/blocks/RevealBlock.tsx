@@ -21,7 +21,7 @@ export function RevealBlockView({
   const [revealed, setRevealed] = useState(false);
 
   return (
-    <div className="group/gblock w-full rounded-xl border border-border-soft bg-card overflow-hidden">
+    <div className="group/gblock w-full rounded-lg border border-border bg-card overflow-hidden">
       {/* Ligne toggle + boutons edit/delete alignés à droite */}
       <div className="flex items-center">
         <button
@@ -61,7 +61,7 @@ export function RevealBlockView({
       </div>
 
       {revealed && (
-        <div className="border-t border-border-soft px-4 py-3">
+        <div className="border-t border-border px-4 py-3">
           <MarkdownRenderer content={block.text} proseSize="sm" />
         </div>
       )}

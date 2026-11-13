@@ -12,6 +12,7 @@ import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, P
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { PLAYER_COLORS } from "@/lib/playerColors";
 import { MAX_MAP_IMAGE_MB } from "@/lib/constants";
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { mapImagePath } from "@/lib/storagePaths";
@@ -63,6 +64,7 @@ import type { Point } from "./zoom";
 import { isWithinTimeline } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import type { PendingPin, PinRoom, WikiPageOption } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 /** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
 export type InitialWorldMap = {
@@ -103,8 +105,8 @@ async function optimiste(
   }
 }
 
-/** Les couleurs des régions, dans l'ordre où on les dessine. */
-const REGION_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#84cc16"];
+/** Les couleurs des régions, dans l'ordre où on les dessine : la palette « joueurs ». */
+const REGION_COLORS = PLAYER_COLORS;
 
 
 // ── Main component ─────────────────────────────────────────────────
@@ -1095,11 +1097,10 @@ export function WorldMap({
               aria-label={isEditMode ? t("editingActive") : tCommon("edit")}
               aria-pressed={isEditMode}
               onClick={(e) => { e.stopPropagation(); toggleEditMode(); }}
+              // Une bascule d'affichage : `outline`, enfoncée (aria-pressed) en mode édition.
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium transition-colors sm:px-3",
-                isEditMode
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "text-xs",
               )}
             >
               <Pencil className="h-3 w-3" />
@@ -1127,7 +1128,7 @@ export function WorldMap({
                 const year = parseInt(brut, 10);
                 if (!Number.isNaN(year)) setEpoch({ year, month: null, day: null });
               }}
-              className="h-7 w-16 rounded-md border border-border-soft bg-background px-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary"
+              className="h-7 w-16 rounded-md border border-border bg-background px-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               type="button"
@@ -1135,8 +1136,8 @@ export function WorldMap({
               aria-pressed={epoch === null}
               onClick={() => setEpoch(epoch ? null : { year: timelineConfig.current_year, month: null, day: null })}
               className={cn(
-                "rounded-md px-1.5 py-1 transition-colors",
-                epoch === null ? "bg-secondary text-foreground" : "hover:bg-secondary hover:text-foreground",
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "h-7 px-1.5 text-xs",
               )}
             >
               <span className="hidden sm:inline">{t("allTimes")}</span>
@@ -1151,10 +1152,7 @@ export function WorldMap({
             aria-pressed={calibrating}
             onClick={(e) => { e.stopPropagation(); toggleCalibrating(); }}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
-              calibrating
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+              buttonVariants({ variant: "ghost", size: "sm" }), "text-xs",
             )}
           >
             <Ruler className="h-3.5 w-3.5" />
@@ -1170,10 +1168,7 @@ export function WorldMap({
             // la même chose : refermer la fiche avec elle.
             onClick={(e) => { e.stopPropagation(); if (placesOpen) fermerLaColonne(); else setPlacesOpen(true); }}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
-              placesOpen
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+              buttonVariants({ variant: "ghost", size: "sm" }), "text-xs",
             )}
           >
             <List className="h-3.5 w-3.5" />
@@ -1187,10 +1182,7 @@ export function WorldMap({
             aria-pressed={drawing}
             onClick={(e) => { e.stopPropagation(); toggleDrawing(); }}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
-              drawing
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+              buttonVariants({ variant: "ghost", size: "sm" }), "text-xs",
             )}
           >
             <Hexagon className="h-3.5 w-3.5" />
@@ -1401,14 +1393,14 @@ export function WorldMap({
                           if (e.key === "Enter") void handleCreateRegion();
                           if (e.key === "Escape") setPendingRegion(null);
                         }}
-                        className="w-40 rounded-md border border-border-soft bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        className="w-40 rounded-md border border-border bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary"
                       />
                       <button
                         type="button"
                         aria-label={tCommon("save")}
                         disabled={!pendingRegion.label.trim() || creatingRegion}
                         onClick={() => void handleCreateRegion()}
-                        className="rounded p-1 text-primary hover:bg-primary/10 disabled:opacity-50"
+                        className={buttonVariants({ size: "icon-sm" })}
                       >
                         {creatingRegion ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                       </button>
@@ -1416,7 +1408,7 @@ export function WorldMap({
                         type="button"
                         aria-label={tCommon("cancel")}
                         onClick={() => setPendingRegion(null)}
-                        className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                        className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -1492,7 +1484,7 @@ export function WorldMap({
                       type="button"
                       disabled={!pendingPin.title.trim() || creatingPin}
                       onClick={handleCreatePin}
-                      className="flex h-5 w-5 items-center justify-center rounded text-primary disabled:opacity-40 hover:bg-primary/10"
+                      className={buttonVariants({ size: "icon-sm" })}
                     >
                       {creatingPin ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1504,7 +1496,7 @@ export function WorldMap({
                       aria-label={tCommon("cancel")}
                       type="button"
                       onClick={() => setPendingPin(null)}
-                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-secondary"
+                      className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>

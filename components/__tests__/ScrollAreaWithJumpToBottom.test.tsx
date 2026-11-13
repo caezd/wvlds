@@ -95,14 +95,14 @@ describe("ScrollAreaWithJumpToBottom — bouton « descendre »", () => {
     expect(wrapper.className).not.toContain("translate-y-2");
   });
 
-  it("est un carré arrondi (rounded-lg), pas un cercle", () => {
+  it("est un bouton outline (rounded-md), pas une pilule", () => {
     const { getByLabelText } = render(
       <ScrollAreaWithJumpToBottom>
         <div style={{ height: 2000 }}>contenu</div>
       </ScrollAreaWithJumpToBottom>,
     );
     const button = getByLabelText("Descendre");
-    expect(button.className).toContain("rounded-lg");
+    expect(button.className).toContain("rounded-md");
     expect(button.className).not.toContain("rounded-full");
   });
 });

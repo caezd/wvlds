@@ -120,7 +120,7 @@ export function WorldHomeHtmlBlockEditor({
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
       <SideSheetContent>
-        <DrawerHeader className="border-b border-border-soft">
+        <DrawerHeader className="border-b border-border">
           <DrawerTitle className="flex items-center gap-2">
             <Code2 className="h-4 w-4" /> {t("home.grid.htmlBlockTitle")}
           </DrawerTitle>
@@ -141,7 +141,7 @@ export function WorldHomeHtmlBlockEditor({
             <p className="text-xs text-muted-foreground">{t("home.grid.blockTitleHelp")}</p>
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border-soft p-3">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
             <div className="space-y-0.5">
               <p className="text-sm font-medium text-foreground">{t("home.grid.cardLabel")}</p>
               <p className="text-xs text-muted-foreground leading-snug">{t("home.grid.cardHelp")}</p>
@@ -228,11 +228,11 @@ export function WorldHomeHtmlBlockEditor({
           )}
         </div>
 
-        <DrawerFooter className="flex-row justify-end gap-2 border-t border-border-soft">
-          <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+        <DrawerFooter className="flex-row justify-end gap-2 border-t border-border">
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
-          <Button type="button" size="sm" onClick={handleSave} disabled={tooLong || !html.trim()}>
+          <Button type="button" onClick={handleSave} disabled={tooLong || !html.trim()}>
             {tCommon("save")}
           </Button>
         </DrawerFooter>

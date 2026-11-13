@@ -29,7 +29,7 @@ export function TraitsField({
       {items.map((item) => (
         <div
           key={item.id}
-          className="group/trait flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2.5 py-1"
+          className="group/trait flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1"
         >
           <input
             value={item.label}
@@ -51,7 +51,7 @@ export function TraitsField({
       <button
         type="button"
         onClick={addItem}
-        className="flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         <Plus className="h-3 w-3" /> Trait
       </button>

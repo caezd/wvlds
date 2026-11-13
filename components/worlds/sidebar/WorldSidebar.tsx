@@ -19,7 +19,7 @@ import {
   Home,
   Library,
   Map as MapIcon,
-  Network,
+  Waypoints,
   Settings,
   Users,
 } from "lucide-react";
@@ -115,7 +115,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       {hasWiki && (
         <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={world.wiki_label || t("nav.wiki")} />
       )}
-      <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Network size={14} />} label={t("nav.relations")} />
+      <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Waypoints size={14} />} label={t("nav.relations")} />
       {hasMap && (
         <WorldSidebarNavLink href={`${worldBase}?view=map`} icon={<MapIcon size={14} />} label={t("nav.map")} />
       )}
@@ -155,7 +155,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border-soft">
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border">
         {header}
         {navLinks}
         {chatrooms}

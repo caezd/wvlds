@@ -55,7 +55,7 @@ export function AnchorDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => { setLabel(""); onOpenChange(false); }}>
+          <Button variant="secondary" onClick={() => { setLabel(""); onOpenChange(false); }}>
             {t("cancelEdit")}
           </Button>
           <Button onClick={handleSend} disabled={!label.trim()}>

@@ -45,7 +45,7 @@ export function WikiSearchBar({
           value={query}
           onChange={e => onQueryChange(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="w-full rounded-md border border-border-soft bg-transparent py-1 pl-7 pr-7 text-sm outline-none focus:border-primary/50"
+          className="w-full rounded-md border border-border bg-transparent py-1 pl-7 pr-7 text-sm outline-none focus:border-primary/50"
         />
         {query && (
           <button
@@ -60,7 +60,7 @@ export function WikiSearchBar({
       </div>
 
       {results !== null && (
-        <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-border-soft bg-popover p-1 shadow-md">
+        <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
           {results.length === 0 ? (
             <p className="px-1 py-1 text-xs italic text-muted-foreground">{t("searchNoResults")}</p>
           ) : (
@@ -88,7 +88,7 @@ export function WikiSearchBar({
                   </span>
                 )}
                 {r.excerpt && (
-                  <span className="line-clamp-1 text-xs text-muted-foreground/80">{r.excerpt}</span>
+                  <span className="line-clamp-1 text-xs text-muted-foreground">{r.excerpt}</span>
                 )}
               </button>
             ))

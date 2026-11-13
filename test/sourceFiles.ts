@@ -45,3 +45,24 @@ export function trackedSources(patterns: string[]): { file: string; source: stri
   }
   return out;
 }
+
+/**
+ * Comme `trackedSources`, avec les fichiers nouveaux pas encore ajoutés à
+ * git (hors `.gitignore`) : un contrôle de style doit voir le composant
+ * qu'on est en train d'écrire, pas seulement ceux déjà commités.
+ */
+export function workingSources(patterns: string[]): { file: string; source: string }[] {
+  const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", ...patterns], {
+    encoding: "utf-8",
+    cwd: process.cwd(),
+  })
+    .split("\n")
+    .map((f) => f.trim())
+    .filter(Boolean);
+  const out: { file: string; source: string }[] = [];
+  for (const file of new Set(files)) {
+    const source = readTracked(file);
+    if (source !== null) out.push({ file, source });
+  }
+  return out;
+}

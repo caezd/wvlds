@@ -37,6 +37,7 @@ describe("PersonaEditorContent — qualité de l'avatar", () => {
         personaName="Kael"
         sections={[]}
         onSectionsChange={vi.fn()}
+        onPatch={vi.fn()}
         initialAvatarUrl={AVATAR}
       />,
     );

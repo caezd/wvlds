@@ -12,16 +12,15 @@ import {
   deletePersonaRelation,
   updatePersonaRelation,
 } from "@/app/actions/personaRelations";
-import { BLOCK_W } from "./geometry";
-import type { BlockPos, CGroup, CMember, CPersona, CRelType, CRelation } from "./types";
+import type { CGroup, CMember, CPersona, CRelType, CRelation } from "./types";
 
 // Les données du canevas de relations, et tout ce qu'on peut y écrire.
 //
 // Le canevas desktop et la liste mobile montrent la même chose par deux
 // chemins ; ce crochet est leur seule source. Les écritures sur les relations
 // passent par les actions serveur (validation, décision « acceptée ou en
-// attente ») ; les positions de blocs et les groupes restent des écritures
-// directes, la RLS suffisant à les garder.
+// attente ») ; les groupes restent une écriture directe, la RLS suffisant à
+// les garder.
 
 const RELATION_COLUMNS = "id, from_persona_id, to_persona_id, type, label, description, status";
 const TYPE_COLUMNS = "id, name, color, dash, sort_index, mutual, marital_status";
@@ -43,7 +42,6 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
   const [relTypes, setRelTypes] = React.useState<CRelType[]>([]);
   const [groupByPersona, setGroupByPersona] = React.useState<Map<string, string>>(new Map());
   const [relations, setRelations] = React.useState<CRelation[]>([]);
-  const [blockPos, setBlockPos] = React.useState<Map<string, BlockPos>>(new Map());
   const [ownerId, setOwnerId] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
@@ -56,7 +54,6 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
         { data: gRows },
         { data: aRows },
         { data: rRows },
-        { data: posRows },
         { data: rtRows },
       ] = await Promise.all([
         supabase.from("personas").select("id, name, avatar_url, user_id, narrative_status").eq("world_id", worldId).eq("is_template", false).is("deleted_at", null),
@@ -65,7 +62,6 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
         supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),
         supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
         supabase.from("persona_relations").select(RELATION_COLUMNS).eq("world_id", worldId),
-        supabase.from("user_canvas_positions").select("user_id, x, y").eq("world_id", worldId),
         supabase.from("world_relation_types").select(TYPE_COLUMNS).eq("world_id", worldId).order("sort_index"),
       ]);
 
@@ -78,11 +74,12 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
       // par un admin. Écriture directe : la RLS des types est propriétaire
       // seulement, un admin qui n'est pas propriétaire échoue en silence et
       // retombe sur une liste vide — le message « aucun type » le lui dira.
+      // Couleurs : menthe et rose de la palette joueurs (lib/playerColors.ts).
       let loadedTypes = (rtRows ?? []) as CRelType[];
       if (loadedTypes.length === 0 && canAdmin) {
         const defaults = [
-          { world_id: worldId, name: tRef.current("defaultAlly"), color: "#22c55e", dash: "", sort_index: 0 },
-          { world_id: worldId, name: tRef.current("defaultEnemy"), color: "#ef4444", dash: "", sort_index: 1 },
+          { world_id: worldId, name: tRef.current("defaultAlly"), color: "#70F4B6", dash: "", sort_index: 0 },
+          { world_id: worldId, name: tRef.current("defaultEnemy"), color: "#FB7185", dash: "", sort_index: 1 },
         ];
         const { data: seeded } = await supabase.from("world_relation_types").insert(defaults).select(TYPE_COLUMNS);
         loadedTypes = (seeded ?? []) as CRelType[];
@@ -100,24 +97,6 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
       const { data: profs } = await supabase.from("profiles").select("id, username, avatar_url").in("id", Array.from(uids));
       setMembers(((profs ?? []) as { id: string; username: string | null; avatar_url: string | null }[])
         .map((p) => ({ user_id: p.id, username: p.username, avatar_url: p.avatar_url })));
-
-      // Une position par joueur : celle qu'il a enregistrée, sinon une case
-      // d'une grille de trois colonnes.
-      const saved = new Map<string, BlockPos>();
-      for (const p of (posRows ?? []) as { user_id: string; x: number; y: number }[]) saved.set(p.user_id, { x: p.x, y: p.y });
-      const hasPersonas = new Set(allPersonas.map((p) => p.user_id));
-      let autoIdx = 0;
-      const next = new Map<string, BlockPos>();
-      for (const uid of uids) {
-        if (!hasPersonas.has(uid)) continue;
-        const s = saved.get(uid);
-        if (s) next.set(uid, s);
-        else {
-          next.set(uid, { x: 24 + (autoIdx % 3) * (BLOCK_W + 56), y: 24 + Math.floor(autoIdx / 3) * 320 });
-          autoIdx++;
-        }
-      }
-      setBlockPos(next);
     } finally {
       setLoading(false);
     }
@@ -188,13 +167,6 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
     });
   }
 
-  async function savePos(uid: string, x: number, y: number) {
-    const { error } = await supabase
-      .from("user_canvas_positions")
-      .upsert({ user_id: uid, world_id: worldId, x, y }, { onConflict: "user_id,world_id" });
-    if (error) toast.error(t("savePositionError"), { description: error.message });
-  }
-
   // ── Dérivés ──
 
   const personaMap = React.useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
@@ -219,10 +191,9 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
   const canEditFrom = React.useCallback((personaId: string) => canAdmin || myPersonaIds.has(personaId), [canAdmin, myPersonaIds]);
 
   return {
-    loading, personas, members, groups, relTypes, groupByPersona, relations, blockPos, ownerId,
+    loading, personas, members, groups, relTypes, groupByPersona, relations, ownerId,
     personaMap, relTypeMap, myPersonaIds, personasByUser, userList, canEditFrom,
-    setBlockPos,
-    createRelation, updateRelation, deleteRelation, acceptRelation, assignGroup, savePos,
+    createRelation, updateRelation, deleteRelation, acceptRelation, assignGroup,
   };
 }
 

@@ -142,7 +142,7 @@ function CategoryForm({
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className="space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3"
+      className="space-y-3 rounded-xl border border-border bg-muted/20 p-3"
     >
       <div className="space-y-1.5">
         <ImagePickerCropField
@@ -160,7 +160,7 @@ function CategoryForm({
             disabled={uploadingImage}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            Retirer l&apos;image
+            {t("settings.removeImage")}
           </button>
         )}
       </div>
@@ -174,17 +174,16 @@ function CategoryForm({
       <Textarea
         value={description ?? ""}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Description (optionnel)"
+        placeholder={t("settings.categoryDescriptionPlaceholder")}
         rows={2}
-        className="rounded-lg"
       />
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Annuler
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
+          {tCommon("cancel")}
         </Button>
         <Button type="submit" size="sm" disabled={!title.trim() || saving || uploadingImage}>
           {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-          {initial ? "Enregistrer" : "Créer"}
+          {initial ? tCommon("save") : tCommon("create")}
         </Button>
       </div>
     </form>
@@ -208,8 +207,8 @@ function CategoryRow({
   onSaved: (category: ChatroomCategory) => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
-  const tCatalogue = useTranslations("catalogue");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     disabled: !canEdit,
@@ -241,14 +240,15 @@ function CategoryRow({
       className="group flex items-center gap-2.5 rounded-lg bg-muted/60 px-2.5 py-1.5 transition-colors hover:bg-muted/70"
     >
       {canEdit && (
-        <span
+        <button
+          type="button"
+          aria-label={t("settings.reorderCategory", { title: category.title })}
           {...attributes}
           {...listeners}
-          aria-label={tCatalogue("reorderCategory", { name: category.title })}
-          className="shrink-0 touch-none cursor-grab text-muted-foreground/50"
+          className="shrink-0 touch-none cursor-grab rounded text-muted-foreground opacity-50 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         >
-          <GripVertical className="h-3.5 w-3.5" aria-hidden />
-        </span>
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
       )}
       <CategoryAvatar
         title={category.title}
@@ -267,25 +267,29 @@ function CategoryRow({
         // n'existe pas au tactile, ces boutons restaient sinon inatteignables
         // au tap (même correctif que WorldHomeGridEditor.tsx).
         <div className="flex shrink-0 items-center gap-1">
-          <button
+          <Button
             aria-label={tCommon("edit")}
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={onEdit}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="size-7"
           >
             <Pencil className="h-3.5 w-3.5" />
-          </button>
+          </Button>
           <DeleteConfirmDialog
-            description={`Supprimer « ${category.title} » ? Les chatrooms de cette catégorie repasseront dans « Général ».`}
+            description={t("settings.deleteCategoryConfirm", { title: category.title })}
             onConfirm={onDelete}
             trigger={
-              <button
+              <Button
                 aria-label={tCommon("delete")}
                 type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                variant="ghost"
+                size="icon-sm"
+                className="size-7 hover:text-destructive"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              </Button>
             }
           />
         </div>
@@ -303,6 +307,7 @@ export function WorldCategoryManager({
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const [categories, setCategories] = React.useState<ChatroomCategory[] | null>(null);
   const [creating, setCreating] = React.useState(false);
@@ -401,8 +406,8 @@ export function WorldCategoryManager({
         </DndContext>
 
         {categories.length === 0 && !creating && (
-          <p className="px-2 py-4 text-center text-xs text-muted-foreground/60">
-            Aucune catégorie pour l&apos;instant.
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+            {t("settings.noCategories")}
           </p>
         )}
       </div>
@@ -411,14 +416,10 @@ export function WorldCategoryManager({
         (creating ? (
           <CategoryForm worldId={worldId} onCancel={() => setCreating(false)} onSaved={handleCreated} />
         ) : (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 rounded-md border border-border-soft px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={() => setCreating(true)}>
             <Plus className="h-3.5 w-3.5" />
-            Nouvelle catégorie
-          </button>
+            {t("settings.newCategory")}
+          </Button>
         ))}
     </div>
   );

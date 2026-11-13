@@ -12,6 +12,7 @@ import { BarChart3, Globe, GlobeLock, ListOrdered, Menu, MoreVertical, Pin, Sear
 import { useRouter, useSearchParams } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -103,23 +104,25 @@ function ChatroomHeader({
   const { setDrawerOpen } = useMobileSidebar();
 
   return (
-    <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-background pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition [box-shadow:var(--sharp-edge-top-shadow-placeholder)] border-b border-border-soft">
+    <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-background pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition [box-shadow:var(--sharp-edge-top-shadow-placeholder)] border-b border-border">
       <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
         <div className="flex min-w-0 items-center gap-0.5">
           {/* Ouvre le menu (rail + sidebar du monde) — remplace la barre
               générique de AppShell sur les pages de chatroom (cf. AppShell.tsx). */}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setDrawerOpen(true)}
             aria-label={tCommon("openMenu")}
             // Même repère que le bouton équivalent d'AppShell : sur une page
             // de salon, c'est celui-ci qui est rendu, l'en-tête générique
             // étant masqué.
             data-testid="open-mobile-menu"
-            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+            className="lg:hidden"
           >
             <Menu className="h-4 w-4" />
-          </button>
+          </Button>
           {chat && (
             <>
               {/* Breadcrumbs : retour au monde / conversations */}
@@ -130,7 +133,7 @@ function ChatroomHeader({
                       <Link
                         href={`/w/${world.id}`}
                         aria-label={t("backTo", { name: world.name })}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hoverCard hover:text-foreground transition-colors"
+                        className={buttonVariants({ variant: "ghost", size: "icon", className: "shrink-0" })}
                       >
                         {world.isShared
                           ? <Globe className="h-4 w-4" />
@@ -141,7 +144,7 @@ function ChatroomHeader({
                     <TooltipContent side="bottom" sideOffset={8}>{t("backTo", { name: world.name })}</TooltipContent>
                   </Tooltip>
                 )}
-                <span className="px-0.5 text-muted-foreground/50">/</span>
+                <span className="px-0.5 text-muted-foreground">/</span>
                 <ChatroomsNavDropdown
                   worldId={world?.id ?? null}
                   currentChatId={chatId}
@@ -1036,31 +1039,25 @@ export default function ChatRoomView({
               <div className="hidden lg:flex items-center gap-0.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setSearchOpen(true)}
-                      aria-label={t("search.title")}
-                      className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-                    >
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label={t("search.title")}>
                       <Search className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" sideOffset={8}>{t("search.title")}</TooltipContent>
                 </Tooltip>
                 {userId && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => void handleToggleFollow()}
                         aria-label={isFollowed ? t("unfollow") : t("follow")}
-                        className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-hoverCard",
-                          isFollowed ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
-                        )}
+                        className={cn(isFollowed && "text-warning hover:text-warning")}
                       >
                         <Star size={15} className={isFollowed ? "fill-current" : ""} />
-                      </button>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={8}>
                       {isFollowed ? t("unfollow") : t("follow")}
@@ -1074,7 +1071,7 @@ export default function ChatRoomView({
                         type="button"
                         onClick={() => setTurnSettingsOpen(true)}
                         aria-label={t("turnTitle")}
-                        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
                         <ListOrdered className="h-4 w-4" />
                       </button>
@@ -1085,28 +1082,18 @@ export default function ChatRoomView({
                 {canEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => setSettingsOpen(true)}
-                        aria-label={tCommon("settings")}
-                        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-                      >
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label={tCommon("settings")}>
                         <Settings className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={8}>{tCommon("settings")}</TooltipContent>
                   </Tooltip>
                 )}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setStatsOpen(true)}
-                      aria-label={t("statsTitle")}
-                      className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-                    >
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setStatsOpen(true)} aria-label={t("statsTitle")}>
                       <BarChart3 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" sideOffset={8}>{t("statsTitle")}</TooltipContent>
                 </Tooltip>
@@ -1116,13 +1103,9 @@ export default function ChatRoomView({
               <div className="flex lg:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={t("actions")}
-                      className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-                    >
+                    <Button type="button" variant="ghost" size="icon" aria-label={t("actions")}>
                       <MoreVertical className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={afterMenuClose(() => setSearchOpen(true))}>
@@ -1131,7 +1114,7 @@ export default function ChatRoomView({
                     </DropdownMenuItem>
                     {userId && (
                       <DropdownMenuItem onClick={() => void handleToggleFollow()}>
-                        <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-yellow-500")} />
+                        <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-warning")} />
                         {isFollowed ? t("unfollow") : t("follow")}
                       </DropdownMenuItem>
                     )}
@@ -1204,7 +1187,7 @@ export default function ChatRoomView({
               ref={scrollRef}
               className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
             >
-              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
+              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
                 {loadingOlder && (
                   <div className="py-3 text-center text-xs text-muted-foreground">
                     Chargement de l’historique…
@@ -1226,7 +1209,7 @@ export default function ChatRoomView({
             </ScrollAreaWithJumpToBottom>
           </div>
         </section>
-        <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t lg:before:from-background lg:before:from-50% lg:before:to-transparent before:from-body before:from-50% before:to-transparent">
+        <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t lg:before:from-background lg:before:from-50% lg:before:to-transparent before:from-canvas before:from-50% before:to-transparent">
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">

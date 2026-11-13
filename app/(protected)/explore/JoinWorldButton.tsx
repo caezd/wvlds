@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useJoinWorld } from "./useJoinWorld";
 import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
+import { Button } from "@/components/ui/button";
 
 export function JoinWorldButton({
   worldId,
@@ -40,17 +41,14 @@ export function JoinWorldButton({
 
   return (
     <>
-      <button
+      <Button
         onClick={handleJoin}
         disabled={isPending}
-        className={
-          compact
-            ? "shrink-0 rounded-lg border border-primary bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-            : "w-full rounded-xl border border-primary bg-primary/10 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-        }
+        size="sm"
+        className={compact ? "h-7 shrink-0 px-2.5 text-xs" : "w-full"}
       >
         {isPending ? t("joining") : t("join")}
-      </button>
+      </Button>
 
       {ageRestricted && !onRequestAgeConfirm && (
         <AgeConfirmDialog

@@ -10,6 +10,8 @@ import { ImageIcon, Plus, Search } from "lucide-react";
 
 import { catalogItemMatches, normalizeForSearch, RARITY_COLORS } from "@/lib/worldCatalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SectionLabel } from "@/components/ui/section-label";
+import { Button } from "@/components/ui/button";
 import type { WorldCatalogCategory, WorldCatalogItem, WorldCatalogRarity } from "@/types/worlds";
 import { RpgIconPicker } from "../RpgIconPicker";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
@@ -37,17 +39,20 @@ export function IconButton({
       value={icon}
       onChange={onChangeIcon}
       trigger={
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="icon"
           title={icon ? icon.replace(".svg", "") : t("chooseIcon")}
-          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors"
+          aria-label={t("chooseIcon")}
+          className="size-10"
         >
           {icon ? (
-            <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
+            <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain invert" />
           ) : (
-            <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+            <ImageIcon className="h-4 w-4" />
           )}
-        </button>
+        </Button>
       }
     />
   );
@@ -164,13 +169,13 @@ export function CatalogPicker({
 
           {showSearch && (
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("searchPlaceholder")}
-                className="h-9 w-full rounded-lg border border-border-soft bg-background pl-8 pr-3 text-sm outline-none transition-colors focus:border-primary/40"
+                className="h-9 w-full rounded-lg border border-border bg-background pl-8 pr-3 text-sm outline-none transition-colors focus:border-primary/40"
               />
             </div>
           )}
@@ -182,9 +187,9 @@ export function CatalogPicker({
             {groups.map((group) => (
               <div key={group.id ?? "__uncat__"} className="space-y-1">
                 {group.name && (
-                  <p className="px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                  <SectionLabel as="p" className="px-3">
                     {group.name}
-                  </p>
+                  </SectionLabel>
                 )}
                 {group.items.map((item) => {
                   const reason = disabledReason?.(item) ?? null;

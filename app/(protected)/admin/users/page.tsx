@@ -6,6 +6,7 @@ import { Shield, ShieldOff, Heart } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PlanSelect, PLANS } from "./PlanSelect";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
 import { getPatreonMinCents } from "@/lib/patreon/config";
 import { echecEnregistrement } from "@/lib/actionErrors";
@@ -82,17 +83,17 @@ export default async function AdminUsersPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-border-soft overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border-soft bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
               <th className="px-4 py-3 text-left">{t("users.colUser")}</th>
               <th className="px-4 py-3 text-left">{t("users.colPlan")}</th>
               <th className="px-4 py-3 text-left">{t("users.colPatreon")}</th>
               <th className="px-4 py-3 text-center">{t("users.colAdmin")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-soft">
+          <tbody className="divide-y divide-border">
             {(profiles ?? []).map((p) => {
               const isSelf = p.id === adminUser.id;
               const patreon = patreonByUser.get(p.id);
@@ -146,7 +147,7 @@ export default async function AdminUsersPage() {
                   <td className="px-4 py-3">
                     {patreon ? (
                       <div className="flex items-center gap-1.5">
-                        <Badge variant={isActivePatron && meetsThreshold ? "default" : "secondary"}>
+                        <Badge tone={isActivePatron && meetsThreshold ? "success" : "neutral"}>
                           {isActivePatron
                             ? (meetsThreshold ? t("users.patreonActive") : t("users.patreonBelowThreshold"))
                             : t("users.patreonInactive")}
@@ -163,20 +164,21 @@ export default async function AdminUsersPage() {
                   {/* Toggle admin */}
                   <td className="px-4 py-3 text-center">
                     <form action={toggleAdmin.bind(null, p.id, !p.is_admin)}>
-                      <button
+                      <Button
                         type="submit"
+                        variant="ghost"
+                        size="icon-sm"
                         disabled={isSelf}
                         title={
                           isSelf
                             ? t("users.cantEditSelf")
                             : p.is_admin ? t("users.removeAdmin") : t("users.grantAdmin")
                         }
-                        className="inline-flex items-center justify-center rounded p-1.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {p.is_admin
                           ? <Shield className="h-4 w-4 text-primary" />
                           : <ShieldOff className="h-4 w-4 text-muted-foreground" />}
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 </tr>

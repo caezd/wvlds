@@ -31,14 +31,14 @@ function TimelineItemRow({ item, isLast }: { item: TimelineItem; isLast: boolean
       <div className="flex-1 pb-3 min-w-0">
         <div className="flex items-baseline gap-2">
           {item.date && (
-            <span className="text-[0.65rem] text-muted-foreground shrink-0">{item.date}</span>
+            <span className="text-2xs text-muted-foreground shrink-0">{item.date}</span>
           )}
           <span className="text-sm font-medium leading-tight">{item.title}</span>
           {item.description && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="ml-auto shrink-0 text-[0.65rem] text-muted-foreground hover:text-foreground transition-colors"
+              className="ml-auto shrink-0 text-2xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {expanded ? tCommon("collapse") : tCommon("show")}
             </button>

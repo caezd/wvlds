@@ -9,4 +9,3 @@ export type CPersona = { id: string; name: string; avatar_url: string | null; us
 export type CMember = { user_id: string; username: string | null; avatar_url: string | null };
 export type CGroup = { id: string; name: string; color: string; sort_index: number };
 export type CRelation = { id: string; from_persona_id: string; to_persona_id: string; type: string; label: string | null; description: string | null; status: "pending" | "accepted" };
-export type BlockPos = { x: number; y: number };

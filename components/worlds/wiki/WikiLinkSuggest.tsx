@@ -48,7 +48,7 @@ export function WikiLinkSuggest({
     <div
       role="listbox"
       aria-label={t("linkSuggestLabel")}
-      className="absolute z-30 max-h-56 w-64 overflow-y-auto rounded-md border border-border-soft bg-popover p-1 shadow-md"
+      className="absolute z-30 max-h-56 w-64 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md"
       style={{
         // Sous la ligne, jamais dessus : elle cacherait ce qu'on vient
         // d'écrire, c'est-à-dire ce qui filtre la liste.

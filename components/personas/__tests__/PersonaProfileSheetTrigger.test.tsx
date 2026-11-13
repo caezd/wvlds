@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
-import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
+import { PersonaProfileBody, PersonaProfileSheetTrigger, formatPersonaPresenceLine } from "@/components/personas/PersonaProfileSheetTrigger";
 // Le message passe par next-intl (mocké sur fr.json dans vitest.setup) : on le
 // lit à la source plutôt que de recopier la chaîne.
 import fr from "@/messages/fr.json";
@@ -146,5 +146,46 @@ describe("PersonaProfileSheetTrigger", () => {
 
     expect(writeText).toHaveBeenCalledWith("#ff00aa");
     expect(toast.success).toHaveBeenCalledWith(fr.common.copyDialogueColorSuccess);
+  });
+});
+
+describe("formatPersonaPresenceLine — le statut sous le nom", () => {
+  const hier = new Date(Date.now() - 2 * 3_600_000).toISOString();
+
+  it("en ligne : « En ligne » seul ; absent : « Absent »", () => {
+    expect(formatPersonaPresenceLine("online", { last_seen_at: hier, appear_offline: false })).toBe("En ligne");
+    expect(formatPersonaPresenceLine("away", { last_seen_at: hier, appear_offline: false })).toBe("Absent");
+  });
+
+  it("hors ligne : depuis combien de temps il a été vu", () => {
+    expect(formatPersonaPresenceLine("offline", { last_seen_at: hier, appear_offline: false })).toBe("Vu il y a 2 h");
+  });
+
+  it("présence masquée, ou jamais vu : « Hors ligne » ; pas encore chargé : rien", () => {
+    expect(formatPersonaPresenceLine("offline", { last_seen_at: hier, appear_offline: true })).toBe("Hors ligne");
+    expect(formatPersonaPresenceLine("offline", { last_seen_at: null, appear_offline: false })).toBe("Hors ligne");
+    expect(formatPersonaPresenceLine("offline", null)).toBeNull();
+  });
+});
+
+describe("PersonaProfileBody — bordure de groupe", () => {
+  const base = {
+    name: "Oskar", avatarUrl: null, bannerUrl: null, dialogueColor: null, presenceLine: null,
+    userPresence: "offline" as const, isFollowing: null, followBusy: false, onToggleFollow: () => {},
+    sections: [], activeTab: null, onActiveTabChange: () => {}, loading: false,
+  };
+
+  it("sans cadre, l'avatar est bordé de la couleur de son groupe", () => {
+    const { container } = render(<PersonaProfileBody {...base} frameUrl={null} groupColor="#FBBF24" />);
+    const ring = container.querySelector("[data-group-ring]") as HTMLElement;
+    expect(ring).toHaveAttribute("data-group-ring", "#FBBF24");
+    expect(ring.style.getPropertyValue("--group-ring")).toBe("#FBBF24");
+  });
+
+  it("avec un cadre, ou sans groupe (option coupée), pas de bordure", () => {
+    const { container, rerender } = render(<PersonaProfileBody {...base} frameUrl="https://x/frame.png" groupColor="#FBBF24" />);
+    expect(container.querySelector("[data-group-ring]")).toBeNull();
+    rerender(<PersonaProfileBody {...base} frameUrl={null} groupColor={null} />);
+    expect(container.querySelector("[data-group-ring]")).toBeNull();
   });
 });

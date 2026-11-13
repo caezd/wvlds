@@ -40,7 +40,7 @@ export function PinCard({
       "flex flex-col gap-1.5 p-3 rounded-lg border transition-colors cursor-pointer",
       highlighted
         ? "border-primary/30 bg-primary/8"
-        : "border-border-soft bg-card hover:bg-secondary/50",
+        : "border-border bg-card hover:bg-secondary/50",
     )}>
       <div className="flex items-start gap-2">
         {isAnchor ? (
@@ -53,6 +53,7 @@ export function PinCard({
             alt={personaName ?? ""}
             fallback={personaName?.[0] ?? "?"}
             size={24}
+            circle
           />
         )}
         <div className="flex flex-col gap-0.5 min-w-0">
@@ -66,7 +67,7 @@ export function PinCard({
           )}
         </div>
       </div>
-      <div className="text-[10px] text-muted-foreground pl-8">
+      <div className="text-2xs text-muted-foreground pl-8">
         <DateDisplay value={date} />
       </div>
     </div>
@@ -140,7 +141,7 @@ export function PinBar({
             </button>
           ))}
         </div>
-        <p className="text-center text-[10px] text-muted-foreground/40 select-none">
+        <p className="text-center text-2xs text-muted-foreground select-none">
           {pins.length} épingle{pins.length > 1 ? "s" : ""}
         </p>
       </div>

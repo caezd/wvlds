@@ -53,7 +53,9 @@ import {
 } from "@/hooks/useWikiPageNotes";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
-import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
+import { WIKI_FOOTER } from "./wikiSubHeader";
+import { SectionLabel } from "@/components/ui/section-label";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 /**
  * Les catégories et les fiches vivent dans le même `DndContext` — on doit
@@ -194,7 +196,7 @@ function CategorySection({
             {...listeners}
             {...SANS_BALAYAGE}
             aria-label={t("reorderCategory")}
-            className="shrink-0 cursor-grab text-muted-foreground/50 hover:text-foreground"
+            className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground"
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
@@ -226,11 +228,11 @@ function CategorySection({
                 !collapsed && "rotate-90",
               )}
             />
-            <span className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <SectionLabel as="span" className="truncate">
               {group.category.name}
-            </span>
+            </SectionLabel>
             {group.notes.length > 0 && (
-              <span className="shrink-0 rounded-full bg-secondary px-1.5 text-[10px] text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-secondary px-1.5 text-2xs text-muted-foreground">
                 {group.notes.length}
               </span>
             )}
@@ -243,7 +245,7 @@ function CategorySection({
               type="button"
               onClick={() => { onExpand(); setAdding(true); }}
               aria-label={t("addNote")}
-              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -252,7 +254,7 @@ function CategorySection({
                 <button
                   type="button"
                   aria-label={t("categoryActions")}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </button>
@@ -318,7 +320,7 @@ function CategorySection({
               }}
               maxLength={DB_TEXT_LIMITS["world_wiki_page_notes.title"]}
               placeholder={t("titlePlaceholder")}
-              className="mt-1 w-full rounded-md border border-border-soft bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
+              className="mt-1 w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
               autoFocus
               disabled={pending}
             />
@@ -593,7 +595,7 @@ export function WikiNotesPanel({
               <DragOverlay>
                 {(categorieGlissee ?? ficheGlissee) && (
                   <div className="flex items-center gap-1.5 rounded-md border border-border bg-popover px-2 py-1 text-sm shadow-lg">
-                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="truncate">
                       {categorieGlissee?.name ?? ficheGlissee?.title}
                     </span>
@@ -620,7 +622,7 @@ export function WikiNotesPanel({
               }}
               maxLength={DB_TEXT_LIMITS["world_wiki_page_note_categories.name"]}
               placeholder={t("categoryPlaceholder")}
-              className="mt-2 w-full rounded-md border border-border-soft bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
+              className="mt-2 w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
               autoFocus
               disabled={notes.pending}
             />
@@ -633,8 +635,10 @@ export function WikiNotesPanel({
       {isEditMode && !notes.loading && (
         <div className={WIKI_FOOTER}>
           {notes.groups.length > 0 && (
-            <button
+            <Button variant="outline"
               type="button"
+              size="sm"
+              className="text-xs"
               // La dernière catégorie plutôt que la première : c'est celle qui
               // borde le pied, donc celle qu'on désigne en cliquant là.
               onClick={() => {
@@ -642,18 +646,19 @@ export function WikiNotesPanel({
                 expandCategory(derniere);
                 setCategorieEnAjout(derniere);
               }}
-              className={WIKI_FOOTER_BUTTON}
             >
               <FilePlus className="h-3.5 w-3.5" /> {t("noteLabel")}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs"
             onClick={() => setCreatingCategory(true)}
-            className={WIKI_FOOTER_BUTTON}
           >
             <FolderPlus className="h-3.5 w-3.5" /> {t("categoryLabel")}
-          </button>
+          </Button>
         </div>
       )}
     </>

@@ -92,7 +92,7 @@ export function SearchResultsList({
                 <button
                   type="button"
                   onClick={() => onSelectMessage(msg.chatId, msg.id)}
-                  className="flex items-start gap-2.5 rounded-lg border border-border-soft bg-card p-3 text-left transition-colors hover:bg-secondary/50"
+                  className="flex items-start gap-2.5 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-secondary/50"
                 >
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={author.avatarUrl ?? undefined} alt="" />
@@ -106,7 +106,7 @@ export function SearchResultsList({
                       </span>
                       {msg.pinned && <Pin className="h-3 w-3 text-muted-foreground" />}
                     </div>
-                    <p className="line-clamp-2 text-sm text-foreground/90">{highlight(msg.content, freeText)}</p>
+                    <p className="line-clamp-2 text-sm text-foreground">{highlight(msg.content, freeText)}</p>
                   </div>
                 </button>
               </Fragment>
@@ -123,7 +123,7 @@ export function SearchResultsList({
       )}
 
       {!loading && (hasPrev || hasNext) && (
-        <div className="flex items-center justify-between border-t border-border-soft pt-3">
+        <div className="flex items-center justify-between border-t border-border pt-3">
           <Button type="button" variant="ghost" size="sm" disabled={!hasPrev} onClick={onPrev}>
             {t("search.resultsPrev")}
           </Button>

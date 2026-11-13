@@ -8,7 +8,6 @@ import {
   WORLD_PERMISSION_GROUPS,
   buildMembership,
   canEditChatroom,
-  canEditSystemTabs,
   canLeaveWorld,
   canManageMember,
   canManageRole,
@@ -185,11 +184,6 @@ describe("règles dérivées", () => {
     expect(canLeaveWorld(member([]))).toBe(true);
     expect(canLeaveWorld(buildMembership({ userId: "owner", ownerId: "owner", isMember: true, roles: ROLES, myRoleIds: [] }))).toBe(false);
     expect(canLeaveWorld(null)).toBe(false);
-  });
-
-  it("canEditSystemTabs : le propriétaire direct seulement, même face à un administrateur", () => {
-    expect(canEditSystemTabs(member(["admin"]))).toBe(false);
-    expect(canEditSystemTabs(buildMembership({ userId: "owner", ownerId: "owner", isMember: true, roles: ROLES, myRoleIds: [] }))).toBe(true);
   });
 
   it("canEditChatroom : le créateur, ou `chatrooms.manage`", () => {

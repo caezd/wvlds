@@ -11,8 +11,10 @@ import { useNotificationsPanel } from "@/components/providers/NotificationsProvi
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldsRail } from "./WorldsRail";
+import { WorldLiveChatDock } from "@/components/worlds/live-chat/WorldLiveChatDock";
 import type { Quota } from "@/lib/userQuota";
 
 type WorldRailItem = { id: string; name: string; icon_url: string | null; owner_id: string };
@@ -93,9 +95,8 @@ function AppShellInner({
     if (!open) { closeDms(); closeNotif(); }
   }
 
-  // Gouttière sur trois côtés seulement : le panneau principal n'a plus de
-  // bordure à gauche (voir le `<main>` plus bas), il vient donc s'appuyer
-  // contre la navigation au lieu de flotter à un pixel d'elle.
+  // Gouttière sur trois côtés : à gauche, c'est le rail des mondes qui laisse
+  // l'espace (`pr-2`).
   return (
     <div className="relative flex h-full w-full flex-row lg:py-2 lg:pr-2">
 
@@ -168,23 +169,22 @@ function AppShellInner({
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
         <header className={cn("lg:hidden flex h-12 shrink-0 items-center p-2", (isChatRoute || isWorldRoute || isExploreRoute) && "hidden")}>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setDrawerOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
             aria-label={tCommon("openMenu")}
             // Repère stable pour les tests de bout en bout : le libellé
             // dépend de la langue du navigateur.
             data-testid="open-mobile-menu"
           >
             <Menu className="h-5 w-5" />
-          </button>
+          </Button>
         </header>
 
-        {/* `lg:border-l-0` : le bord gauche du panneau doublait la séparation déjà
-            portée par la navigation qui le précède. Les trois autres côtés restent —
-            ce sont eux qui détachent le panneau des bords de la fenêtre. */}
-        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:border-l-0 lg:bg-background lg:rounded-lg">
+        {/* Bordé sur ses quatre côtés : un espace le sépare du rail des mondes. */}
+        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-lg">
           <div
             id="thread"
             className={cn(
@@ -195,6 +195,11 @@ function AppShellInner({
             {children}
           </div>
         </main>
+
+        {/* Chat en direct du monde courant : barre repliée, ou panneau de la
+            moitié de l'écran qui resserre le contenu au-dessus. Rien hors
+            d'un monde (cf. lib/worldLiveChatStore.ts). */}
+        <WorldLiveChatDock />
       </section>
 
     </div>

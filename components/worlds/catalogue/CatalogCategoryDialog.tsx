@@ -137,7 +137,7 @@ export function CatalogCategoryDialog({
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{tCommon("cancel")}</Button>
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>{tCommon("cancel")}</Button>
             <Button type="submit" disabled={!name.trim() || saving || uploading}>
               {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               {tCommon("save")}

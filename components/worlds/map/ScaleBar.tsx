@@ -21,7 +21,7 @@ export function ScaleBar({ pxPerUnit, unit }: { pxPerUnit: number; unit: string 
     <div
       role="img"
       aria-label={t("scaleBar", { distance: libelle })}
-      className="pointer-events-none absolute bottom-2 left-2 z-10 flex flex-col gap-0.5 rounded-md bg-background/80 px-1.5 py-1 text-[10px] font-medium leading-none text-foreground shadow backdrop-blur-sm"
+      className="pointer-events-none absolute bottom-2 left-2 z-10 flex flex-col gap-0.5 rounded-md bg-background/80 px-1.5 py-1 text-2xs font-medium leading-none text-foreground shadow backdrop-blur-sm"
     >
       <span>{libelle}</span>
       <div data-scale-bar style={{ width: barre.px }} className="h-1.5 border-x-2 border-b-2 border-foreground/80" />
