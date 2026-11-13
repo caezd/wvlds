@@ -12,8 +12,10 @@ import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds"
 import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
-import { WorldMapWidget, type MapWidgetMap } from "./widgets/WorldMapWidget";
-import { WorldBirthdaysWidget, type BirthdayMember } from "./widgets/WorldBirthdaysWidget";
+import { WorldMapWidget } from "./widgets/WorldMapWidget";
+import type { MapWidgetMap } from "@/lib/worldMapWidget";
+import { WorldBirthdaysWidget } from "./widgets/WorldBirthdaysWidget";
+import type { BirthdayMember } from "@/lib/worldBirthdays";
 import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
