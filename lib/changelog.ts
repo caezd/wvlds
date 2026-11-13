@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
+    tag: "Correctif",
+    text: "La page d’un monde dont l’accueil affiche le bloc « Anniversaires » ou « Carte » s’ouvre de nouveau (« Une erreur est survenue »).",
+  },
+  {
+    date: "2026-11",
     tag: "Technique",
     text: "Le direct d’un salon (messages, réactions, votes, ordre de passage) passe par un canal plus léger et mieux protégé : les notes privées ne sont plus jamais annoncées à ceux qui ne peuvent pas les lire.",
   },
