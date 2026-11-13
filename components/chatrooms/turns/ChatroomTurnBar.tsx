@@ -8,7 +8,7 @@ import { useProfileNames } from "./useProfileNames";
 
 /**
  * Ordre de passage, en languette accrochée au haut du composeur (même style
- * que « … est en train d'écrire ») : « À toi de jouer » ou « Au tour de X »,
+ * que « … est en train d'écrire ») : « À vous de jouer » ou « Au tour de X »,
  * puis les suivants. Informatif — poster hors tour reste possible. Qui règle
  * l'ordre peut passer au joueur suivant.
  *

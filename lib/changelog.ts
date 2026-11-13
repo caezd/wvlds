@@ -63,7 +63,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-12",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Ordre de passage : le créateur d’un salon (ou qui gère les salons) peut ranger les joueurs depuis l’en-tête du salon. Un bandeau au-dessus de la zone de saisie indique « À toi de jouer » ou à qui c’est le tour, et le tour passe tout seul au suivant dès que le joueur concerné poste. Poster hors tour reste possible.",
+    text: "Ordre de passage : le créateur d’un salon (ou qui gère les salons) peut ranger les joueurs depuis l’en-tête du salon. Un bandeau au-dessus de la zone de saisie indique « À vous de jouer » ou à qui c’est le tour, et le tour passe tout seul au suivant dès que le joueur concerné poste. Poster hors tour reste possible.",
   },
   {
     date: "2026-11-12",

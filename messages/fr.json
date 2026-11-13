@@ -1859,7 +1859,7 @@
     "turnRemove": "Retirer l’ordre",
     "turnSave": "Enregistrer",
     "turnSaveFailed": "L’ordre de passage n’a pas été enregistré",
-    "turnYours": "À toi de jouer",
+    "turnYours": "À vous de jouer",
     "turnOf": "Au tour de {name}",
     "turnNext": "ensuite : {names}",
     "turnSkip": "Passer",

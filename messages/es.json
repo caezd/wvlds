@@ -1859,7 +1859,7 @@
     "turnRemove": "Quitar el orden",
     "turnSave": "Guardar",
     "turnSaveFailed": "No se guardó el orden de turnos",
-    "turnYours": "Te toca",
+    "turnYours": "Le toca",
     "turnOf": "Turno de {name}",
     "turnNext": "luego: {names}",
     "turnSkip": "Pasar",

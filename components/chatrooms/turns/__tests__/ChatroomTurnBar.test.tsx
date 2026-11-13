@@ -11,7 +11,7 @@ import { ChatroomTurnBar } from "../ChatroomTurnBar";
 const turn = { chat_id: "c1", enabled: true, order_user_ids: ["a", "b", "c"], current_index: 0 };
 
 describe("ChatroomTurnBar", () => {
-  it("annonce « à toi de jouer » au joueur courant", () => {
+  it("annonce « à vous de jouer » au joueur courant", () => {
     render(<ChatroomTurnBar turn={turn} selfId="a" canManage={false} onSkip={vi.fn()} />);
     expect(screen.getByTestId("turn-bar")).toHaveTextContent("turnYours");
     expect(screen.queryByText("turnSkip")).toBeNull();
