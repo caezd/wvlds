@@ -45,6 +45,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-12",
+    category: "Interface",
+    text: "Pastilles de compteur (notifications, non-lus) d’un rouge plus soutenu : le chiffre se lit mieux.",
+  },
+  {
+    date: "2026-11-12",
     category: "Correctif",
     area: "Page d’accueil",
     text: "La page d’un monde dont l’accueil affiche le bloc « Anniversaires » ou « Carte » s’ouvre de nouveau (« Une erreur est survenue »).",

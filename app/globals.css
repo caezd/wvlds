@@ -44,6 +44,9 @@
     --primary-foreground: oklch(0.21 0.006 285.885); /* #18181B */
     --accent: #F94B5F;                           /* rouge WVLDS */
     --accent-foreground: #FAFAFA;
+    /* Le rouge des pastilles de compteur : sous 10 px, le texte blanc sur
+       --accent plafonne à 3.24:1 ; celui-ci tient 4.57:1 (AA). */
+    --accent-strong: #DC2640;
 
     /* États : une couleur par sens, le texte et le fond doux s'en déduisent. */
     --destructive: #FF6467;
@@ -89,6 +92,7 @@
     --color-primary-foreground: var(--primary-foreground);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
+    --color-accent-strong: var(--accent-strong);
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
