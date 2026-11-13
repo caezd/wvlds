@@ -255,8 +255,10 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
             </div>
             <div className="grid gap-1.5">
               <Label>{t("color")}</Label>
+              {/* Sans opacité : world_roles_color_hex n'admet que #rrggbb. */}
               <ColorPickerButton
                 color={selected.color}
+                alpha={false}
                 disabled={!selectedEditable}
                 onChange={(color) => void persist(selected, { color })}
               />

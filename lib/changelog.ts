@@ -84,7 +84,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11",
     tag: "Interface",
-    text: "Nouveau sélecteur de couleur dans toute l’application : une rangée de pastilles, puis saturation, luminosité, teinte et code hexadécimal. Toutes les couleurs acceptent aussi une opacité : texte, bulles de dialogue, encadrés, bannières d’accueil, jauges, rôles, relations et carte.",
+    text: "Nouveau sélecteur de couleur dans toute l’application : une rangée de pastilles, puis saturation, luminosité, teinte et code hexadécimal. Toutes les couleurs acceptent aussi une opacité : texte, bulles de dialogue, encadrés, bannières d’accueil, jauges, relations et carte.",
   },
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
