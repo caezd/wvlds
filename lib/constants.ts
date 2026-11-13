@@ -30,6 +30,7 @@ export const TABLE = {
   WORLD_TIMELINE_ARCS: "world_timeline_arcs",
   CHATROOM_SEQUELS: "chatroom_sequels",
   WORLD_WIKI_PAGES: "world_wiki_pages",
+  WORLD_LIVE_MESSAGES: "world_live_messages",
   WORLD_CATALOG_ITEM_PAGES: "world_catalog_item_pages",
   WORLD_CATALOG_ITEM_RELATIONS: "world_catalog_item_relations",
   CHAT_PINS: "chat_pins",

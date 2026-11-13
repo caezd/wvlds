@@ -14,6 +14,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldsRail } from "./WorldsRail";
+import { WorldLiveChatDock } from "@/components/worlds/live-chat/WorldLiveChatDock";
 import type { Quota } from "@/lib/userQuota";
 
 type WorldRailItem = { id: string; name: string; icon_url: string | null; owner_id: string };
@@ -194,6 +195,11 @@ function AppShellInner({
             {children}
           </div>
         </main>
+
+        {/* Chat en direct du monde courant : barre repliée, ou panneau de la
+            moitié de l'écran qui resserre le contenu au-dessus. Rien hors
+            d'un monde (cf. lib/worldLiveChatStore.ts). */}
+        <WorldLiveChatDock />
       </section>
 
     </div>

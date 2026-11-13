@@ -2402,5 +2402,18 @@
       "resolved": "Resuelto",
       "declined": "Descartado"
     }
+  },
+  "worldLiveChat": {
+    "title": "Chat del mundo",
+    "present": "{count, plural, =0 {nadie aquí} one {# presente} other {# presentes}}",
+    "empty": "Aún no hay mensajes. ¡Inicie la conversación!",
+    "placeholder": "Escriba en el chat del mundo…",
+    "send": "Enviar",
+    "open": "Abrir el chat del mundo",
+    "close": "Cerrar el chat",
+    "deleteMessage": "Eliminar el mensaje",
+    "sendFailed": "Mensaje no enviado.",
+    "tooFast": "Demasiados mensajes: espere un momento.",
+    "deleteFailed": "No se pudo eliminar el mensaje."
   }
 }

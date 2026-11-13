@@ -2402,5 +2402,18 @@
       "resolved": "Resolved",
       "declined": "Declined"
     }
+  },
+  "worldLiveChat": {
+    "title": "World chat",
+    "present": "{count, plural, =0 {nobody here} one {# here} other {# here}}",
+    "empty": "No messages yet. Start the conversation!",
+    "placeholder": "Write in the world chat…",
+    "send": "Send",
+    "open": "Open the world chat",
+    "close": "Close the chat",
+    "deleteMessage": "Delete message",
+    "sendFailed": "Message not sent.",
+    "tooFast": "Too many messages: please wait a moment.",
+    "deleteFailed": "Could not delete the message."
   }
 }
