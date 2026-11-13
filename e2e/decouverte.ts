@@ -57,9 +57,18 @@ export async function trouverLienSalon(page: Page): Promise<string | null> {
     return (await lien.count()) ? lien.getAttribute("href") : null;
   };
 
+  // La barre latérale du monde arrive en streaming derrière son squelette
+  // (Suspense du layout `/w/[id]`) : à `domcontentloaded`, ni ses salons ni le
+  // sélecteur ne sont encore là. Le sélecteur en fait partie : sa présence dit
+  // que la barre est rendue. Sur `/explore`, il n'y en a pas — on n'attend pas
+  // plus que le délai.
+  const attendreBarre = () =>
+    page.getByTestId("world-picker-trigger").waitFor({ state: "attached", timeout: 15_000 }).catch(() => {});
+
   const nomsEssayes = new Set<string>();
 
   for (let tour = 0; tour < MONDES_MAX; tour++) {
+    await attendreBarre();
     const ici = await premierSalon();
     if (ici) return ici;
 
