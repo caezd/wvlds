@@ -24,18 +24,18 @@ describe("HpBlockView", () => {
   it("barre verte au-dessus de 60 %", () => {
     const { container } = render(<HpBlockView block={block(80, 100)} mine={false} />);
     const b = bar(container)!;
-    expect(b.className).toContain("bg-emerald-500");
+    expect(b.className).toContain("bg-success");
     expect(b.style.width).toBe("80%");
   });
 
   it("barre ambre entre 30 % et 60 %", () => {
     const { container } = render(<HpBlockView block={block(50, 100)} mine={false} />);
-    expect(bar(container)!.className).toContain("bg-amber-500");
+    expect(bar(container)!.className).toContain("bg-warning");
   });
 
   it("barre rouge à 30 % ou moins", () => {
     const { container } = render(<HpBlockView block={block(20, 100)} mine={false} />);
-    expect(bar(container)!.className).toContain("bg-red-500");
+    expect(bar(container)!.className).toContain("bg-destructive");
   });
 
   it("largeur 0 % si max invalide (évite division par zéro)", () => {

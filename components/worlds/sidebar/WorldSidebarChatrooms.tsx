@@ -7,7 +7,11 @@ import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useWorldRooms, type WorldRoom } from "@/lib/worldRoomsStore";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { PRESENCE_BG } from "@/components/avatars/PresenceDot";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SectionLabel } from "@/components/ui/section-label";
+import { CountPip } from "@/components/ui/count-pip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, ChevronRight, ArrowLeft, MessagesSquare, Hash } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -34,11 +38,11 @@ type Category = {
   position: number;
 };
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="px-2 mb-1 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase flex gap-1 items-center">
+    <SectionLabel as="p" className="px-2 mb-1 flex gap-1 items-center">
       {children}
-    </p>
+    </SectionLabel>
   );
 }
 
@@ -70,8 +74,8 @@ function RoomItem({
       aria-current={isActive ? "page" : undefined}
       className={cn(
         "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
-        "hover:bg-hoverCard min-w-0",
-        isActive ? "bg-hoverCard" : "",
+        "hover:bg-muted min-w-0",
+        isActive ? "bg-muted" : "",
       )}
     >
       {showOverlay && !showCount ? (
@@ -79,11 +83,11 @@ function RoomItem({
         <div className="relative shrink-0 size-9">
           <Avatar className="absolute top-0 left-0 size-6 rounded-full ring-3 ring-background z-0">
             {secondAvatar && <AvatarImage src={secondAvatar} className="rounded-full" />}
-            <AvatarFallback className="rounded-full text-[11px] bg-muted-foreground/20" />
+            <AvatarFallback className="rounded-full text-xs-plus bg-muted-foreground/20" />
           </Avatar>
           <Avatar className="absolute bottom-0 right-0 size-6 rounded-full ring-3 ring-background z-10">
             {posterAvatar && <AvatarImage src={posterAvatar} className="rounded-full" />}
-            <AvatarFallback className="rounded-full text-[11px] bg-muted-foreground/20">
+            <AvatarFallback className="rounded-full text-xs-plus bg-muted-foreground/20">
               {label[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -93,19 +97,19 @@ function RoomItem({
         <div className="relative shrink-0 size-9">
           <Avatar className="size-9 rounded-full">
             {posterAvatar && <AvatarImage src={posterAvatar} className="rounded-full" />}
-            <AvatarFallback className="rounded-full text-[11px] bg-muted-foreground/20">
+            <AvatarFallback className="rounded-full text-xs-plus bg-muted-foreground/20">
               {label[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
           {showCount && (
-            <span className="absolute -bottom-0.5 -right-1.5 h-[18px] min-w-[18px] flex items-center justify-center rounded-full bg-muted border-2 border-background text-[8px] font-bold text-muted-foreground px-0.5 z-10">
+            <span className="absolute -bottom-0.5 -right-1.5 h-[18px] min-w-[18px] flex items-center justify-center rounded-full bg-muted border-2 border-background text-2xs font-bold text-muted-foreground px-0.5 z-10">
               +{participantCount}
             </span>
           )}
           {presence && (
             <span className={cn(
               "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background z-10",
-              presence === "online" ? "bg-green-500" : presence === "away" ? "bg-amber-400" : "bg-red-500",
+              PRESENCE_BG[presence],
             )} />
           )}
         </div>
@@ -113,22 +117,18 @@ function RoomItem({
       <div className="flex-1 min-w-0">
         <p className={cn(
           "truncate leading-tight text-sm",
-          hasUnread || isActive ? "font-semibold text-mist-100" : "text-mist-50",
+          hasUnread || isActive ? "font-semibold text-foreground" : "text-foreground",
         )}>
           {label}
         </p>
         {categoryName && (
-          <p className="flex items-center gap-1 text-[10px] text-muted-foreground leading-tight">
+          <p className="flex items-center gap-1 text-2xs text-muted-foreground leading-tight">
             <MessagesSquare size={9} className="shrink-0 opacity-70" />
             <span className="truncate">{categoryName}</span>
           </p>
         )}
       </div>
-      {hasUnread && (
-        <span className="shrink-0 min-w-4 h-4 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-0.5">
-          {unread > 99 ? "99+" : unread}
-        </span>
-      )}
+      <CountPip count={unread} className="shrink-0" />
     </Link>
   );
 }
@@ -204,13 +204,16 @@ export function WorldSidebarChatrooms({
     return (
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-2">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setSelectedCat(null)}
-            className="flex items-center gap-1.5 px-2 py-1.5 mb-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted w-full"
+            className="mb-2 w-full justify-start px-2 text-xs"
           >
             <ArrowLeft size={12} />
             {t("sidebar.back")}
-          </button>
+          </Button>
           <p className="px-2 mb-2 text-sm font-semibold text-foreground truncate">
             {selectedCat.title}
           </p>
@@ -242,7 +245,7 @@ export function WorldSidebarChatrooms({
         {/* ACTIF */}
         {actif.length > 0 && (
           <section>
-            <SectionLabel><Hash size={12} /> {t("sidebar.active")}</SectionLabel>
+            <SidebarSectionLabel><Hash size={12} /> {t("sidebar.active")}</SidebarSectionLabel>
             <div className="space-y-0.5 min-w-0">
               {actif.map((room) => (
                 <RoomItem
@@ -260,7 +263,7 @@ export function WorldSidebarChatrooms({
         {/* SUIVI */}
         {suivi.length > 0 && (
           <section>
-            <SectionLabel><Star size={12} /> {t("sidebar.followed")}</SectionLabel>
+            <SidebarSectionLabel><Star size={12} /> {t("sidebar.followed")}</SidebarSectionLabel>
             <div className="space-y-0.5 min-w-0">
               {suivi.map((room) => (
                 <RoomItem
@@ -277,7 +280,7 @@ export function WorldSidebarChatrooms({
 
         {/* TOUS — cartes catégories uniquement */}
         <section>
-          <SectionLabel>{t("sidebar.all")}</SectionLabel>
+          <SidebarSectionLabel>{t("sidebar.all")}</SidebarSectionLabel>
           <div className="space-y-1">
             {categories.map((cat) => {
               const rooms = byCategory.get(cat.id) ?? [];
@@ -298,7 +301,7 @@ export function WorldSidebarChatrooms({
                     <p className="truncate text-sm font-medium text-foreground leading-tight">
                       {cat.title}
                     </p>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
+                    <p className="text-2xs text-muted-foreground leading-tight">
                       {t("sidebar.subjects", { count: rooms.length })}
                     </p>
                   </div>
@@ -315,11 +318,11 @@ export function WorldSidebarChatrooms({
                 className="flex items-center gap-2.5 w-full rounded-lg px-2 py-1.5 hover:bg-muted transition-colors text-left group"
               >
                 <div className="h-9 w-9 shrink-0 rounded-lg bg-muted-foreground/10 flex items-center justify-center">
-                  <span className="text-[11px] font-medium text-muted-foreground">G</span>
+                  <span className="text-xs-plus font-medium text-muted-foreground">G</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium text-foreground leading-tight">{t("sidebar.general")}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">
+                  <p className="text-2xs text-muted-foreground leading-tight">
                     {t("sidebar.subjects", { count: uncategorized.length })}
                   </p>
                 </div>

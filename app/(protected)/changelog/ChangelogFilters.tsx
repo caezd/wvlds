@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Badge, BadgeDot } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SectionLabel } from "@/components/ui/section-label";
 import { Label } from "@/components/ui/label";
 import {
   CHANGELOG,
@@ -19,32 +21,24 @@ import type {
 } from "@/lib/changelog";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 /** Une teinte par catégorie, choisies pour rester distinctes l'une de l'autre. */
 const CATEGORY_COLORS: Record<ChangelogCategory, string> = {
-  Fonctionnalité: "var(--color-brand-green)",
-  Interface:      "var(--color-brand-purple)",
-  Correctif:      "var(--color-brand-red)",
+  Fonctionnalité: "var(--color-chain-lime)",
+  Interface:      "var(--color-chain-violet)",
+  Correctif:      "var(--color-chain-rose)",
   Performance:    "var(--color-chain-amber)",
   Technique:      "var(--color-chain-blue)",
 };
 
-/** Texte teinté mêlé à la couleur du texte : lisible sur fond clair comme sombre. */
-const tintedText = (color: string) => `color-mix(in oklab, ${color} 70%, var(--foreground))`;
-
+/** La teinte de la catégorie en pastille, pas en fond : la puce reste neutre. */
 function CategoryBadge({ category }: { category: ChangelogCategory }) {
-  const color = CATEGORY_COLORS[category];
   return (
-    <span
-      className="inline-flex items-center rounded-full border px-2 py-px text-[11px] font-medium whitespace-nowrap"
-      style={{
-        backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
-        color: tintedText(color),
-        borderColor: `color-mix(in srgb, ${color} 25%, transparent)`,
-      }}
-    >
+    <Badge>
+      <BadgeDot color={CATEGORY_COLORS[category]} />
       {category}
-    </span>
+    </Badge>
   );
 }
 
@@ -57,13 +51,11 @@ function Dot({ category }: { category: ChangelogCategory }) {
   );
 }
 
-const chipClass = (isActive: boolean) =>
-  cn(
-    "shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
-    isActive
-      ? "border-foreground/20 bg-foreground/10 text-foreground"
-      : "border-border text-muted-foreground",
-  );
+/** Une bascule de filtre : bouton `outline`, enfoncé tant que le filtre est actif. */
+const FILTER_TOGGLE = cn(
+  buttonVariants({ variant: "outline", size: "sm" }),
+  "text-xs",
+);
 
 export function ChangelogFilters() {
   const tree = categoryTree(CHANGELOG);
@@ -106,7 +98,7 @@ export function ChangelogFilters() {
               type="button"
               onClick={() => toggleCategory(category)}
               aria-pressed={filter.has(category)}
-              className={chipClass(filter.has(category))}
+              className={FILTER_TOGGLE}
             >
               <Dot category={category} />
               {category}
@@ -134,7 +126,7 @@ export function ChangelogFilters() {
                     onClick={() => toggleArea(category, area)}
                     aria-pressed={isActive}
                     aria-label={`${category} › ${area}`}
-                    className={chipClass(isActive)}
+                    className={FILTER_TOGGLE}
                   >
                     <Dot category={category} />
                     {area}
@@ -193,9 +185,9 @@ export function ChangelogFilters() {
 
       {/* Filtre — sidebar sticky, dès lg */}
       <aside className="hidden lg:block w-52 shrink-0 sticky top-6 rounded-xl border border-border bg-card p-4 space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <SectionLabel as="p">
           Filtrer
-        </p>
+        </SectionLabel>
         <div className="space-y-2">
           {tree.map(({ category, areas }) => {
             const selected = filter.get(category);
@@ -264,7 +256,11 @@ function EntryRow({ entry }: { entry: ChangelogEntry }) {
           </time>
         )}
       </div>
-      <MarkdownRenderer content={entry.text} className="gap-1 text-sm leading-relaxed" />
+      {/* Listes serrées : une énumération ne doit pas étirer l'entrée. */}
+      <MarkdownRenderer
+        content={entry.text}
+        className="gap-1 text-sm leading-relaxed prose-p:my-0 prose-ul:my-1 prose-ul:pl-5 prose-li:my-0"
+      />
     </li>
   );
 }

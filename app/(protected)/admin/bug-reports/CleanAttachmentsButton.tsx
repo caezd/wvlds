@@ -37,7 +37,7 @@ export function CleanAttachmentsButton() {
   }
 
   return (
-    <Button variant="outline" size="sm" disabled={enCours} onClick={() => void nettoyer()}>
+    <Button variant="destructive" size="sm" disabled={enCours} onClick={() => void nettoyer()}>
       <Eraser className="mr-1.5 h-4 w-4" />
       {enCours ? t("cleaning") : t("clean")}
     </Button>

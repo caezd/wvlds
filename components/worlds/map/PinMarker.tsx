@@ -192,7 +192,7 @@ export const PinMarker = React.memo(function PinMarker({
       {presentCount > 0 && !isDragging && (
         <span
           aria-label={t("peopleHere", { count: presentCount })}
-          className="pointer-events-none absolute left-full top-1/2 ml-1 flex h-4 min-w-4 -translate-y-1/2 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-background"
+          className="pointer-events-none absolute left-full top-1/2 ml-1 flex h-4 min-w-4 -translate-y-1/2 items-center justify-center rounded-full bg-foreground px-1 text-2xs font-semibold leading-none text-background ring-2 ring-background"
         >
           {presentCount}
         </span>
@@ -212,7 +212,7 @@ export const PinMarker = React.memo(function PinMarker({
           data-pin-label
           className={cn(
             "pointer-events-none absolute top-full left-1/2 mt-1 max-w-40 -translate-x-1/2 truncate",
-            "rounded px-1.5 py-0.5 text-[11px] font-medium shadow-sm transition-colors",
+            "rounded px-1.5 py-0.5 text-xs-plus font-medium shadow-sm transition-colors",
             // `text-white` valait pour le fond noir et pour lui seul : sur le
             // fond d'accent d'un thème clair, le nom du lieu ouvert
             // disparaissait. Chaque fond porte donc sa couleur de texte.

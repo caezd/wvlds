@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CountPip } from "@/components/ui/count-pip";
+import { SectionLabel } from "@/components/ui/section-label";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useNotifications, useNotificationsActions } from "@/components/providers/NotificationsProvider";
@@ -133,9 +135,9 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     }
 
     if (status === null) return null;
-    if (status === "accepted") return <p className="mt-2 text-[11px] text-muted-foreground">{t("invite.joined")}</p>;
-    if (status === "declined") return <p className="mt-2 text-[11px] text-muted-foreground">{t("invite.declined")}</p>;
-    if (status === "cancelled") return <p className="mt-2 text-[11px] text-muted-foreground">{t("invite.cancelled")}</p>;
+    if (status === "accepted") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("invite.joined")}</p>;
+    if (status === "declined") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("invite.declined")}</p>;
+    if (status === "cancelled") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("invite.cancelled")}</p>;
 
     return (
         <>
@@ -149,13 +151,13 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
                 <button onClick={() => setPreviewOpen(true)} className="flex-1 truncate text-left text-sm font-medium hover:underline">
                     {notif.content ?? t("invite.worldFallback")}
                 </button>
-                <Button size="sm" className="h-7 shrink-0 pl-3 text-xs" onClick={accept} disabled={acting}>
+                <Button size="xs" className="shrink-0 px-3" onClick={accept} disabled={acting}>
                     {t("invite.join")}
                 </Button>
-                <button onClick={decline} disabled={acting} aria-label={t("invite.decline")}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <Button variant="secondary" size="icon-sm" onClick={decline} disabled={acting} aria-label={t("invite.decline")}
+                    className="size-7 shrink-0">
                     <X size={14} />
-                </button>
+                </Button>
             </div>
             <WorldPreviewDialog
                 worldId={notif.world_id}
@@ -240,19 +242,19 @@ function SequelRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMa
     }
 
     if (status === null) return null;
-    if (status === "accepted") return <p className="mt-2 text-[11px] text-muted-foreground">{t("sequelRequest.accepted")}</p>;
-    if (status === "declined") return <p className="mt-2 text-[11px] text-muted-foreground">{t("sequelRequest.declined")}</p>;
-    if (status === "expired") return <p className="mt-2 text-[11px] text-muted-foreground">{t("sequelRequest.expired")}</p>;
+    if (status === "accepted") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("sequelRequest.accepted")}</p>;
+    if (status === "declined") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("sequelRequest.declined")}</p>;
+    if (status === "expired") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("sequelRequest.expired")}</p>;
 
     return (
         <div className="mt-2.5 flex items-center gap-2">
-            <Button size="sm" className="h-7 shrink-0 px-3 text-xs" onClick={accept} disabled={acting}>
+            <Button size="xs" className="shrink-0 px-3" onClick={accept} disabled={acting}>
                 {t("sequelRequest.accept")}
             </Button>
-            <button onClick={decline} disabled={acting} aria-label={t("sequelRequest.decline")}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <Button variant="secondary" size="icon-sm" onClick={decline} disabled={acting} aria-label={t("sequelRequest.decline")}
+                className="size-7 shrink-0">
                 <X size={14} />
-            </button>
+            </Button>
         </div>
     );
 }
@@ -306,19 +308,19 @@ function RelationRequestCard({ notif, onMarkRead }: { notif: AppNotification; on
     }
 
     if (status === null) return null;
-    if (status === "accepted") return <p className="mt-2 text-[11px] text-muted-foreground">{t("maritalRequest.accepted")}</p>;
-    if (status === "declined") return <p className="mt-2 text-[11px] text-muted-foreground">{t("maritalRequest.declined")}</p>;
-    if (status === "expired") return <p className="mt-2 text-[11px] text-muted-foreground">{t("maritalRequest.expired")}</p>;
+    if (status === "accepted") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("maritalRequest.accepted")}</p>;
+    if (status === "declined") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("maritalRequest.declined")}</p>;
+    if (status === "expired") return <p className="mt-2 text-xs-plus text-muted-foreground">{t("maritalRequest.expired")}</p>;
 
     return (
         <div className="mt-2.5 flex items-center gap-2">
-            <Button size="sm" className="h-7 shrink-0 px-3 text-xs" onClick={accept} disabled={acting}>
+            <Button size="xs" className="shrink-0 px-3" onClick={accept} disabled={acting}>
                 {t("maritalRequest.confirm")}
             </Button>
-            <button onClick={decline} disabled={acting} aria-label={t("maritalRequest.decline")}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <Button variant="secondary" size="icon-sm" onClick={decline} disabled={acting} aria-label={t("maritalRequest.decline")}
+                className="size-7 shrink-0">
                 <X size={14} />
-            </button>
+            </Button>
         </div>
     );
 }
@@ -348,13 +350,13 @@ function NotifAvatar({ avatarUrl, actorName, type, isUnread: _isUnread }: {
     const letter = actorName ? actorName[0].toUpperCase() : null;
     if (letter) {
         return (
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs-plus font-semibold text-muted-foreground">
                 {letter}
             </span>
         );
     }
     return (
-        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px]")}>
+        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm")}>
             {NOTIF_ICONS[type]}
         </span>
     );
@@ -382,13 +384,15 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
     const avatarUrl = isPersonaNotif ? notif.metadata?.icon_url ?? null : actorAvatarUrl;
 
     const archiveBtn = (
-        <button
+        <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={e => { e.preventDefault(); e.stopPropagation(); onArchive(notif.id); }}
             aria-label={t("archive")}
-            className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 hover:bg-muted hover:text-foreground"
+            className="absolute top-2 right-2 size-5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
         >
             <X size={11} />
-        </button>
+        </Button>
     );
 
     const content = (
@@ -398,14 +402,14 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
                 <NotifAvatar avatarUrl={avatarUrl} actorName={notif.actor_name} type={notif.type} isUnread={isUnread} />
                 <div className="flex-1 min-w-0 pr-4">
                     {showWorldHeader && (
-                        <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                        <SectionLabel as="div" className="mb-0.5 flex items-center gap-1.5">
                             <span className="truncate">{worldInfo.name}</span>
-                        </div>
+                        </SectionLabel>
                     )}
                     <p className={cn("text-sm leading-snug", isUnread ? "text-foreground" : "text-muted-foreground")}>
                         {notifText(notif, t)}
                     </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground/50">{compactTime(notif.updated_at ?? notif.created_at, t("text.dayAbbr"))}</p>
+                    <p className="mt-1 text-xs-plus text-muted-foreground">{compactTime(notif.updated_at ?? notif.created_at, t("text.dayAbbr"))}</p>
                 </div>
             </div>
             {isInvite && <WorldInviteCard notif={notif} onMarkRead={onRead} />}
@@ -437,14 +441,14 @@ function PushToggleRow() {
             : t("pushHint");
 
     return (
-        <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="flex items-center gap-3 text-sm">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <Bell size={13} />
                 </span>
                 <div className="flex flex-col">
                     <span>{t("push")}</span>
-                    <span className="text-[11px] text-muted-foreground">{hint}</span>
+                    <span className="text-xs-plus text-muted-foreground">{hint}</span>
                 </div>
             </div>
             <Switch
@@ -521,27 +525,25 @@ export function NotificationInlinePanelContent() {
             });
     }, [notifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors";
-
     return (
         <div className="flex h-full flex-col overflow-hidden py-1">
             {/* Header */}
             <div className="shrink-0 h-header-height flex items-center px-4 gap-2">
                 {view === "prefs" && (
-                    <button onClick={() => setView("list")} className={iconBtn} aria-label={t("back")}><ArrowLeft size={15} /></button>
+                    <Button variant="ghost" size="icon-sm" onClick={() => setView("list")} aria-label={t("back")}><ArrowLeft size={15} /></Button>
                 )}
                 <span className="flex-1 font-bold">
                     {view === "prefs" ? t("preferences") : t("title")}
                 </span>
                 {view === "list" && unreadNotifCount > 0 && (
-                    <button onClick={markAllNotifsRead} className={iconBtn} title={t("markAllRead")}>
+                    <Button variant="ghost" size="icon-sm" onClick={markAllNotifsRead} title={t("markAllRead")}>
                         <CheckCheck size={14} />
-                    </button>
+                    </Button>
                 )}
                 {view === "list" && (
-                    <button onClick={() => setView("prefs")} className={iconBtn} aria-label={t("preferences")}><Settings size={14} /></button>
+                    <Button variant="ghost" size="icon-sm" onClick={() => setView("prefs")} aria-label={t("preferences")}><Settings size={14} /></Button>
                 )}
-                <button onClick={closePanel} className={iconBtn} aria-label={t("title")}><X size={15} /></button>
+                <Button variant="ghost" size="icon-sm" onClick={closePanel} aria-label={t("title")}><X size={15} /></Button>
             </div>
 
             {/* Body */}
@@ -549,7 +551,7 @@ export function NotificationInlinePanelContent() {
                 <div className="flex flex-col">
                     <PushToggleRow />
                     {ALL_TYPES.map(type => (
-                        <div key={type} className="flex items-center justify-between border-b border-border-soft px-4 py-3">
+                        <div key={type} className="flex items-center justify-between border-b border-border px-4 py-3">
                             <div className="flex items-center gap-3 text-sm">
                                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
                                     {NOTIF_ICONS[type]}
@@ -589,7 +591,7 @@ export function NotificationInlinePanelContent() {
                         </div>
                     )}
                     {!hasMoreNotifs && notifications.length > 0 && (
-                        <p className="py-2 text-center text-[11px] text-muted-foreground">{t("allLoaded")}</p>
+                        <p className="py-2 text-center text-xs-plus text-muted-foreground">{t("allLoaded")}</p>
                     )}
                 </div>
             )}
@@ -606,22 +608,17 @@ export function NotificationBellButton() {
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <button
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={togglePanel}
                     aria-label={t("title")}
                     aria-pressed={panelOpen}
-                    className={cn(
-                        "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-                        panelOpen ? "text-accent bg-accent/10" : "text-mist-100 hover:bg-muted hover:text-mist-50",
-                    )}
+                    className="relative"
                 >
                     <Bell size={17} />
-                    {unreadNotifCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground px-0.5 shadow-[0_0_0_2px_hsl(var(--background))]">
-                            {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
-                        </span>
-                    )}
-                </button>
+                    <CountPip count={unreadNotifCount} className="absolute -right-0.5 -top-0.5" />
+                </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={8}>{t("title")}</TooltipContent>
         </Tooltip>
@@ -640,20 +637,11 @@ export function NotificationSidebarButton() {
             size="sm"
             onClick={togglePanel}
             aria-pressed={panelOpen}
-            className={cn(
-                "w-full justify-start rounded-full border transition-colors",
-                panelOpen
-                    ? "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]"
-                    : "border-transparent hover:border-[#333333] hover:bg-transparent",
-            )}
+            className="w-full justify-start"
         >
             <Bell className="h-4 w-4 opacity-80 mr-1" />
             <span className="flex-1 truncate text-left">{t("title")}</span>
-            {unreadNotifCount > 0 && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground px-1">
-                    {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
-                </span>
-            )}
+            <CountPip count={unreadNotifCount} className="ml-auto" />
         </Button>
     );
 }

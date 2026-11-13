@@ -208,7 +208,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(chiffre).toHaveTextContent("1");
     expect(chiffre.className.split(" ")).toEqual(expect.arrayContaining(["font-bold", "text-foreground"]));
     expect(chiffre.className).not.toMatch(/rounded|bg-/);
-    expect(within(titre).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
+    expect(within(titre).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-muted-foreground"]));
     expect(bandeau.innerHTML).not.toMatch(/accent|red/);
     // D'un bord à l'autre du conteneur, marges de la liste comprises.
     expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["-ml-5", "-mr-[var(--tl-right-pad,20px)]", "px-5"]));
@@ -224,9 +224,9 @@ describe("WorldTimeline — frise verticale", () => {
     // Où l'on en est se lit dans le bandeau de position, collé dans la tête.
     expect(bandeau.className.split(" ")).not.toContain("sticky");
     expect(bandeau).not.toHaveAttribute("data-stuck");
-    // Transparent et sous les lignes de suite (z-[2]) : elles le traversent.
-    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["relative", "z-[1]"]));
-    expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
+    // Transparent et sous les lignes de suite (z-2) : elles le traversent.
+    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["relative", "z-1"]));
+    expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-2");
     expect(bandeau.className).not.toMatch(/(^|\s)(lg:)?bg-/);
     // Le fil ne le traverse pas.
     expect(bandeau.querySelector(".w-px")).toBeNull();
@@ -433,7 +433,7 @@ describe("WorldTimeline — frise verticale", () => {
     const scrollTo = vi.fn();
     scroll.scrollTo = scrollTo as never;
     const aujourdhui = screen.getByRole("button", { name: "Aujourd’hui" });
-    // Arrondi comme les autres boutons de la tête.
+    // Bouton ghost : arrondi rounded-md, sans bordure.
     expect(aujourdhui.className.split(" ")).toContain("rounded-md");
     await user.click(aujourdhui);
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" }));
@@ -491,7 +491,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(noms.map((l) => l.textContent)).toEqual(["Mars"]);
     // Posé sur le filet (centré sur lui, fond qui le découpe), en capitales.
     expect(noms[0].className.split(" ")).toEqual(
-      expect.arrayContaining(["top-4", "-translate-y-1/2", "bg-body", "uppercase"]),
+      expect.arrayContaining(["top-4", "-translate-y-1/2", "bg-canvas", "uppercase"]),
     );
     // À gauche du fil, calé à droite sur le jour : le texte finit au même
     // retrait (2rem + px-2 = 2.5rem, celui du jour).
@@ -504,7 +504,7 @@ describe("WorldTimeline — frise verticale", () => {
   it("le jour et le mois de chaque salon, sans couleur d'accent", async () => {
     await frise([room("a", "Prologue", 1, 1, 19)]);
     const ligne = screen.getByRole("button", { name: /Prologue/ });
-    expect(ligne.innerHTML).not.toMatch(/accent|red-600/);
+    expect(ligne.innerHTML).not.toMatch(/accent/);
   });
 
   it("la date actuelle du monde se glisse parmi les salons, à son mois", async () => {
@@ -524,7 +524,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(within(trait).getByText("Date actuelle du monde : Février, An 1")).toHaveClass("sr-only");
     // Un trait rouge plein, du fil jusqu'au bord : pas sur la colonne des années.
     const barre = trait.querySelector(".h-0\\.5")!;
-    expect(barre.className).toContain("bg-red-600");
+    expect(barre.className).toContain("bg-accent");
     expect(barre.className.split(" ")).toContain("-left-7");
     expect(barre.className).not.toMatch(/rem\]/);
   });
@@ -576,7 +576,7 @@ describe("WorldTimeline — lignes de salon", () => {
     // Atténué au repos, plein au survol : `text-primary` était presque blanc
     // en thème sombre, comme le texte, et le survol ne se voyait pas.
     const titre = within(ligne).getByText("Prologue").className;
-    expect(titre).toContain("text-foreground/75");
+    expect(titre).toContain("text-muted-foreground");
     expect(titre).toContain("group-hover/room:text-foreground");
     expect(titre).not.toContain("text-primary");
 
@@ -633,7 +633,7 @@ describe("WorldTimeline — fond ambiant", () => {
   const ambiant = (el: Element) => {
     const classes = el.className.split(" ");
     expect(classes).toContain("lg:bg-background");
-    expect(classes.some((c) => c.startsWith("bg-body"))).toBe(true);
+    expect(classes.some((c) => c.startsWith("bg-canvas"))).toBe(true);
     expect(classes).not.toContain("bg-background");
   };
 
@@ -942,7 +942,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     expect(anneau("a").tagName.toLowerCase()).toBe("span");
     expect(anneau("b").tagName.toLowerCase()).toBe("svg");
     expect(anneau("b").getAttribute("class")).toContain("lucide-circle-pause");
-    expect(anneau("b").getAttribute("class")).toContain("bg-body");
+    expect(anneau("b").getAttribute("class")).toContain("bg-canvas");
     expect(anneau("c").className).toContain("bg-foreground/35");
     expect(anneau("d").className.split(" ")).toContain("border-dashed");
     // Le statut est lu, sauf « en cours ».

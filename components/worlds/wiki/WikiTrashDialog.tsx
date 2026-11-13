@@ -14,6 +14,7 @@ import {
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { formatDaysAgo } from "@/lib/utils";
 import type { WikiPage } from "./WorldWiki";
+import { Button } from "@/components/ui/button";
 
 /**
  * La corbeille du wiki : les pages supprimées, à restaurer ou à effacer.
@@ -82,24 +83,27 @@ export function WikiTrashDialog({
                       </p>
                     )}
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => onRestore(page)}
                     aria-label={`${t("restore")} — ${page.title}`}
                     title={t("restore")}
-                    className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
                   >
                     <RotateCcw className="h-3.5 w-3.5" /> {t("restore")}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="hover:text-destructive"
                     onClick={() => setConfirming(page)}
                     aria-label={`${t("deleteForever")} — ${page.title}`}
                     title={t("deleteForever")}
-                    className="flex shrink-0 items-center rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

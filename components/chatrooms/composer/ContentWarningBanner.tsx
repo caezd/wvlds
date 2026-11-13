@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export function ContentWarningBanner({ tags, className }: { tags: string[]; className?: string }) {
   if (!tags.length) return null;
   return (
-    <div className={cn("flex items-center flex-wrap text-xs text-amber-700 dark:text-amber-400 mb-2", className)}>
+    <div className={cn("flex items-center flex-wrap text-xs text-warning mb-2", className)}>
       <AlertTriangle className="h-4 w-4 shrink-0 mr-2" />
       {tags.map((tag, i) => (
         <span key={`${tag}-${i}`} className="px-0.5">

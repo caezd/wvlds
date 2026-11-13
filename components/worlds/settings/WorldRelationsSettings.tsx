@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FIELD, FeaturePage, SURFACE, SettingsSection } from "./FeatureLayout";
+import { FIELD, FeaturePage, SURFACE, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
 
 type RelationGroup = { id: string; name: string; color: string; sort_index: number };
@@ -36,7 +37,7 @@ type Reciprocity = "none" | "mutual" | RelationMaritalStatus;
 /** Une ligne d'une liste : bordée, sur le fond des cartes. */
 const ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
 /** Un champ sans cadre, dans une ligne. */
-const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0 dark:bg-transparent";
+const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0";
 /** La pastille de couleur, carrée comme sur la maquette. */
 const SWATCH = "size-6 rounded-md border-0 shadow-none";
 
@@ -55,23 +56,34 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
 
   const [groups, setGroups] = React.useState<RelationGroup[] | null>(null);
   const [relTypes, setRelTypes] = React.useState<RelationType[]>([]);
+  // La couleur des groupes teinte les personas (nom dans les salons, bordure
+  // de l'avatar sur la fiche) : option du monde, migration 201.
+  const [groupColorOn, setGroupColorOn] = React.useState(true);
 
   React.useEffect(() => {
     void (async () => {
-      const [{ data: gRows }, { data: rtRows }] = await Promise.all([
+      const [{ data: gRows }, { data: rtRows }, { data: worldRow }] = await Promise.all([
         supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),
         supabase.from("world_relation_types").select(RT_COLUMNS).eq("world_id", worldId).order("sort_index"),
+        supabase.from("worlds").select("persona_group_color").eq("id", worldId).maybeSingle(),
       ]);
       setGroups((gRows ?? []) as RelationGroup[]);
       setRelTypes((rtRows ?? []) as RelationType[]);
+      setGroupColorOn((worldRow as { persona_group_color?: boolean } | null)?.persona_group_color !== false);
     })();
   }, [supabase, worldId]);
 
+  async function toggleGroupColor(on: boolean) {
+    setGroupColorOn(on);
+    const { error } = await supabase.from("worlds").update({ persona_group_color: on }).eq("id", worldId);
+    if (error) { setGroupColorOn(!on); toast.error(error.message); }
+  }
+
   // Les nouveaux : un groupe, un type.
   const [gName, setGName] = React.useState("");
-  const [gColor, setGColor] = React.useState("#6366f1");
+  const [gColor, setGColor] = React.useState<string>(DEFAULT_PLAYER_COLOR);
   const [rtName, setRtName] = React.useState("");
-  const [rtColor, setRtColor] = React.useState("#22c55e");
+  const [rtColor, setRtColor] = React.useState<string>(DEFAULT_PLAYER_COLOR);
 
   // La couleur s'enregistre un instant après le dernier réglage.
   const colorTimers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -176,6 +188,14 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
         help={t("groupsHelp")}
         meta={t("groupsCount", { count: groups.length })}
       >
+        <ToggleList>
+          <ToggleItem
+            title={t("groupColor")}
+            help={t("groupColorHelp")}
+            checked={groupColorOn}
+            onCheckedChange={(on) => void toggleGroupColor(on)}
+          />
+        </ToggleList>
         {groups.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noGroupsDefined")}</p>}
         <ul className="space-y-2" aria-label={t("groups")}>
           {groups.map((g) => (
@@ -269,8 +289,8 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                     className={cn(
                       "h-8 w-auto gap-1.5 rounded-md px-2.5 text-xs shadow-none data-[size=default]:h-8 [&>svg:last-child]:hidden",
                       reciprocity === "none"
-                        ? "border-border-soft bg-transparent text-muted-foreground dark:bg-transparent"
-                        : "border-border bg-card text-foreground dark:bg-card",
+                        ? "border-border bg-transparent text-muted-foreground"
+                        : "border-border bg-card text-foreground",
                     )}
                     data-reciprocity={reciprocity}
                   >
@@ -349,13 +369,13 @@ function AddRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-12 flex-wrap items-center gap-3 rounded-md border border-dashed border-border-soft py-1.5 pl-3 pr-1.5">
+    <div className="flex min-h-12 flex-wrap items-center gap-3 rounded-md border border-dashed border-border py-1.5 pl-3 pr-1.5">
       {children}
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 shrink-0 gap-1 rounded-md border-border-soft bg-card font-normal dark:bg-card"
+        className="shrink-0"
         disabled={disabled}
         aria-label={addLabel}
         onClick={onAdd}

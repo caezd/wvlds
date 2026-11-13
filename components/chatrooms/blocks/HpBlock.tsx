@@ -122,7 +122,7 @@ export function HpDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
           <Button onClick={handleSend} disabled={!isValid}>
             {initialBlock ? "Enregistrer" : "Insérer"}
           </Button>
@@ -144,14 +144,14 @@ export function HpBlockView({
   onDelete?: () => void;
 }) {
   const pct = block.max > 0 ? Math.max(0, Math.min(100, (block.current / block.max) * 100)) : 0;
-  const barColor = pct > 60 ? "bg-emerald-500" : pct > 30 ? "bg-amber-500" : "bg-red-500";
-  const valueColor = pct <= 30 ? "text-red-500" : "text-foreground";
+  const barColor = pct > 60 ? "bg-success" : pct > 30 ? "bg-warning" : "bg-destructive";
+  const valueColor = pct <= 30 ? "text-destructive" : "text-foreground";
 
   return (
     <GameBlockSurface>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Heart className="h-3.5 w-3.5 text-red-500/70 shrink-0" />
+          <Heart className="h-3.5 w-3.5 text-destructive/70 shrink-0" />
           <span className="text-sm font-medium truncate">{block.name}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

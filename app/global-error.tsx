@@ -35,6 +35,20 @@ const MESSAGES = {
     },
 } as const;
 
+/**
+ * Les jetons de :root (app/globals.css), recopiés : la feuille globale n'est
+ * pas chargée ici, `var(--background)` ne vaudrait rien. À garder alignés.
+ */
+const TOKENS = {
+    background: "oklch(0.223 0.004 285)", // design-allow : --background, CSS globale absente
+    foreground: "oklch(0.93 0.012 285)", // design-allow : --foreground
+    mutedForeground: "oklch(0.705 0.015 286)", // design-allow : --muted-foreground
+    muted: "oklch(0.29 0.005 285)", // design-allow : --muted
+    border: "oklch(0.274 0.006 285)", // design-allow : --border
+    primary: "oklch(0.92 0.004 286.32)", // design-allow : --primary
+    primaryForeground: "oklch(0.21 0.006 285.885)", // design-allow : --primary-foreground
+} as const;
+
 function pickLocale(): keyof typeof MESSAGES {
     if (typeof navigator === "undefined") return "fr";
     const tag = (navigator.language || "fr").slice(0, 2).toLowerCase();
@@ -67,35 +81,39 @@ export default function GlobalError({
                     gap: "0.75rem",
                     padding: "1.5rem",
                     textAlign: "center",
-                    // Couleurs figées : les jetons de thème vivent dans la CSS
-                    // globale, qui n'est pas chargée ici.
-                    background: "#1B1B1D",
-                    color: "#E9E9EA",
+                    // Couleurs figées (TOKENS) : les jetons de thème vivent dans
+                    // la CSS globale, qui n'est pas chargée ici.
+                    background: TOKENS.background,
+                    color: TOKENS.foreground,
                     fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
                 }}
             >
                 <h1 style={{ fontSize: "1.125rem", fontWeight: 600, margin: 0 }}>{t.title}</h1>
-                <p style={{ fontSize: "0.875rem", color: "#9A9AA0", margin: 0, maxWidth: "28rem" }}>
+                <p style={{ fontSize: "0.875rem", color: TOKENS.mutedForeground, margin: 0, maxWidth: "28rem" }}>
                     {t.description}
                 </p>
                 {error.digest && (
-                    <p style={{ fontSize: "0.7rem", color: "#6B6B72", fontFamily: "monospace", margin: 0 }}>
+                    <p style={{ fontSize: "0.7rem", color: TOKENS.mutedForeground, fontFamily: "monospace", margin: 0 }}>
                         {error.digest}
                     </p>
                 )}
                 <button
                     type="button"
                     onClick={reset}
+                    // Le bouton principal (`Button` par défaut) recopié à la main :
+                    // pilule claire, comme « Réessayer » de app/(protected)/error.tsx.
                     style={{
                         marginTop: "0.25rem",
                         cursor: "pointer",
-                        borderRadius: "0.5rem",
-                        border: "1px solid #3A3A40",
-                        background: "#232326",
-                        color: "inherit",
-                        padding: "0.5rem 1rem",
+                        borderRadius: "9999px",
+                        border: "none",
+                        background: TOKENS.primary,
+                        color: TOKENS.primaryForeground,
+                        height: "2.25rem",
+                        padding: "0 1rem",
                         font: "inherit",
                         fontSize: "0.875rem",
+                        fontWeight: 500,
                     }}
                 >
                     {t.retry}

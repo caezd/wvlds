@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -20,9 +20,9 @@ const TYPES = [
   { id: "t4", world_id: "w1", name: "Marié·e", color: "#e11d48", dash: "8 4", sort_index: 3, mutual: true, marital_status: "married" },
 ];
 
-/** Les deux lectures du montage, puis les écritures dans l'ordre. */
-function monter(ecritures: { data?: unknown; error?: unknown }[] = []) {
-  const mock = createSupabaseMock({ results: [{ data: GROUPES }, { data: TYPES }, ...ecritures] });
+/** Les trois lectures du montage (groupes, types, option du monde), puis les écritures dans l'ordre. */
+function monter(ecritures: { data?: unknown; error?: unknown }[] = [], groupColor = true) {
+  const mock = createSupabaseMock({ results: [{ data: GROUPES }, { data: TYPES }, { data: { persona_group_color: groupColor } }, ...ecritures] });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   render(<WorldRelationsSettings worldId="w1" />);
   return mock;
@@ -66,7 +66,7 @@ describe("WorldRelationsSettings", () => {
   });
 
   it("ajouter un groupe : la ligne en pointillés, puis « Ajouter »", async () => {
-    const mock = monter([{ data: { id: "g3", name: "Les Sans-Nom", color: "#6366f1", sort_index: 2 } }]);
+    const mock = monter([{ data: { id: "g3", name: "Les Sans-Nom", color: "#818CF8", sort_index: 2 } }]);
     const user = userEvent.setup();
     const ajout = await screen.findByRole("button", { name: "Ajouter ce groupe" });
     expect(ajout).toBeDisabled();
@@ -74,7 +74,7 @@ describe("WorldRelationsSettings", () => {
     await user.type(screen.getByRole("textbox", { name: "Nom du groupe…" }), "Les Sans-Nom");
     await user.click(ajout);
     expect(mock.buildersFor("world_persona_groups").at(-1)!.insert).toHaveBeenCalledWith({
-      world_id: "w1", name: "Les Sans-Nom", color: "#6366f1", sort_index: 2,
+      world_id: "w1", name: "Les Sans-Nom", color: "#818CF8", sort_index: 2,
     });
     expect(await screen.findByDisplayValue("Les Sans-Nom")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Groupes" })).toHaveTextContent("3 groupes");
@@ -98,5 +98,17 @@ describe("WorldRelationsSettings", () => {
     await user.click(screen.getByRole("option", { name: "Réciproque" }));
     expect(mock.buildersFor("world_relation_types").at(-1)!.update).toHaveBeenCalledWith({ mutual: true, marital_status: null });
     expect(await screen.findByRole("combobox", { name: "Réciprocité de Ami·e" })).toHaveAttribute("data-reciprocity", "mutual");
+  });
+
+  it("« Couleur de groupe » : l'option du monde, lue au montage et enregistrée à la bascule", async () => {
+    const mock = monter([{ data: null }], false);
+    const user = userEvent.setup();
+    const bascule = await screen.findByRole("switch", { name: "Couleur de groupe" });
+    await waitFor(() => expect(bascule).toHaveAttribute("data-state", "unchecked"));
+    await user.click(bascule);
+    expect(bascule).toHaveAttribute("data-state", "checked");
+    const ecriture = mock.buildersFor("worlds").at(-1)!;
+    expect(ecriture.update).toHaveBeenCalledWith({ persona_group_color: true });
+    expect(ecriture.eq).toHaveBeenCalledWith("id", "w1");
   });
 });

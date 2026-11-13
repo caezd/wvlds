@@ -6,6 +6,7 @@ import { Check, X } from "lucide-react";
 import type { Point } from "./zoom";
 import { midpoint } from "./zoom";
 import { calibrateWidthUnits, distanceBetween, roundDistance, type MapScale } from "./scale";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Régler l'échelle d'une carte : on trace un segment sur une distance connue,
@@ -143,7 +144,7 @@ export function ScaleCalibrator({
                 value={valueDraft}
                 onChange={(e) => setValueDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-                className="w-20 rounded-md border border-border-soft bg-background px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-primary"
+                className="w-20 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-primary"
               />
               <input
                 aria-label={t("scaleUnit")}
@@ -152,13 +153,13 @@ export function ScaleCalibrator({
                 value={unitDraft}
                 onChange={(e) => setUnitDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-                className="w-12 rounded-md border border-border-soft bg-background px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-primary"
+                className="w-12 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-primary"
               />
               <button
                 type="button"
                 aria-label={tCommon("save")}
                 onClick={submit}
-                className="rounded p-0.5 text-primary hover:bg-primary/10"
+                className={buttonVariants({ size: "icon-sm" })}
               >
                 <Check className="h-3.5 w-3.5" />
               </button>
@@ -168,7 +169,7 @@ export function ScaleCalibrator({
             type="button"
             aria-label={t("clearSegment")}
             onClick={onClear}
-            className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
             <X className="h-3.5 w-3.5" />
           </button>

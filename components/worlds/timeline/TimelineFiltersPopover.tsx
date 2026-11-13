@@ -76,11 +76,11 @@ export function TimelineFiltersPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="h-8 shrink-0 gap-1.5">
+        <Button type="button" variant="outline" size="sm">
           <SlidersHorizontal className="h-3.5 w-3.5" />
           {t("filters")}
           {active > 0 && (
-            <span className="rounded-full bg-foreground px-1.5 text-[10px] font-semibold leading-4 text-background" data-testid="timeline-filters-count">
+            <span className="rounded-full bg-foreground px-1.5 text-2xs font-semibold leading-4 text-background" data-testid="timeline-filters-count">
               {active}
             </span>
           )}

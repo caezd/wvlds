@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { SectionLabel } from "@/components/ui/section-label";
 import fr from "@/messages/fr.json";
 import en from "@/messages/en.json";
 import es from "@/messages/es.json";
@@ -65,15 +66,15 @@ export default async function AdminTranslationsPage() {
           const pct = Math.round((keys.size / allKeys.size) * 100);
           const missing = allKeys.size - keys.size;
           return (
-            <div key={code} className="rounded-xl border border-border-soft p-4 space-y-2">
+            <div key={code} className="rounded-xl border border-border p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-sm">{label}</span>
                 <span
                   className={`text-xs font-mono font-semibold ${
                     pct === 100
-                      ? "text-green-500"
+                      ? "text-success"
                       : pct >= 80
-                        ? "text-yellow-500"
+                        ? "text-warning"
                         : "text-destructive"
                   }`}
                 >
@@ -83,7 +84,7 @@ export default async function AdminTranslationsPage() {
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${
-                    pct === 100 ? "bg-green-500" : pct >= 80 ? "bg-yellow-500" : "bg-destructive"
+                    pct === 100 ? "bg-success" : pct >= 80 ? "bg-warning" : "bg-destructive"
                   }`}
                   style={{ width: `${pct}%` }}
                 />
@@ -103,8 +104,8 @@ export default async function AdminTranslationsPage() {
 
       {/* Incomplete keys callout */}
       {incompleteKeys.length > 0 && (
-        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-2">
-          <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-2">
+          <p className="text-sm font-medium text-warning">
             {incompleteKeys.length} clé{incompleteKeys.length > 1 ? "s" : ""} incomplète
             {incompleteKeys.length > 1 ? "s" : ""}
           </p>
@@ -130,13 +131,13 @@ export default async function AdminTranslationsPage() {
       <div className="space-y-4">
         {[...byNamespace.entries()].map(([ns, keys]) => (
           <div key={ns}>
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1 mb-2">
+            <SectionLabel as="h2" className="px-1 mb-2">
               {ns}
-            </h2>
-            <div className="rounded-xl border border-border-soft overflow-hidden">
+            </SectionLabel>
+            <div className="rounded-xl border border-border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border-soft bg-muted/40">
+                  <tr className="border-b border-border bg-muted/40">
                     <th className="text-left px-4 py-2 font-medium text-muted-foreground text-xs">
                       Clé
                     </th>
@@ -150,18 +151,18 @@ export default async function AdminTranslationsPage() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border-soft">
+                <tbody className="divide-y divide-border">
                   {keys.map((key) => {
                     const incomplete = !localeKeys.every(({ keys: k }) => k.has(key));
                     return (
-                      <tr key={key} className={incomplete ? "bg-yellow-500/5" : undefined}>
+                      <tr key={key} className={incomplete ? "bg-warning/5" : undefined}>
                         <td className="px-4 py-2.5">
                           <code className="text-xs font-mono text-muted-foreground">{key}</code>
                         </td>
                         {localeKeys.map(({ code, keys: k }) => (
                           <td key={code} className="px-4 py-2.5 text-center">
                             {k.has(key) ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                              <CheckCircle2 className="h-4 w-4 text-success mx-auto" />
                             ) : (
                               <XCircle className="h-4 w-4 text-destructive mx-auto" />
                             )}

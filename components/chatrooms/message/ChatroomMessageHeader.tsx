@@ -113,6 +113,7 @@ export function ChatroomMessageHeader({
               presenceState={presenceState}
               size={56}
               frameUrl={frameUrl}
+              circle
             />
           </PersonaProfileSheetTrigger>
         </div>
@@ -120,7 +121,7 @@ export function ChatroomMessageHeader({
       <div className="text-sm flex flex-col w-full">
         {/* Ligne 1 : nom + boutons (réagir / éditer / supprimer) */}
         <div className="flex justify-between items-center gap-2 min-h-7">
-          <div className="flex items-center gap-1 text-mist-50">
+          <div className="flex items-center gap-1 text-foreground">
             <strong
               className="font-medium"
               style={personaGroupColor ? { color: personaGroupColor } : undefined}
@@ -130,7 +131,7 @@ export function ChatroomMessageHeader({
             <PersonaStatusBadge status={message.persona?.narrative_status} compact />
             <PersonaNpcBadge isNpc={message.persona?.is_npc} compact />
             <UserProfileSheetTrigger userId={userId} label={playerUsername}>
-              <span className="text-mist-200 text-xs hover:text-mist-50 hover:underline transition-colors">
+              <span className="text-muted-foreground text-xs hover:text-foreground hover:underline transition-colors">
                 {message.persona?.is_npc
                   ? tPersonaNpc("playedBy", { player: `@${(message.author?.username ?? playerUsername ?? "?").toLowerCase()}` })
                   : `(@${(message.author?.username ?? playerUsername ?? "?").toLowerCase()})`}
@@ -145,7 +146,7 @@ export function ChatroomMessageHeader({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-md opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity"
+                    className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity"
                     aria-label={t("addReaction")}
                     title={t("addReaction")}
                   >
@@ -187,7 +188,7 @@ export function ChatroomMessageHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-md"
+                  className="h-7 w-7"
                   onClick={cancelEdit}
                   disabled={saving}
                   aria-label={t("cancelEdit")}
@@ -199,7 +200,7 @@ export function ChatroomMessageHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-md"
+                  className="h-7 w-7"
                   onClick={() => void save()}
                   disabled={saving}
                   aria-label={t("saveEdit")}
@@ -214,12 +215,12 @@ export function ChatroomMessageHeader({
 
         {/* Ligne 2 : date + badge défi + réactions */}
         <div className="flex justify-between items-center gap-2 min-h-7">
-          <div className="flex items-center gap-2 text-zinc-400 text-xs">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs">
             <DateDisplay value={date} />
             {challengeWon && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex items-center gap-1 text-[0.65rem] text-amber-500 cursor-default select-none">
+                  <span className="inline-flex items-center gap-1 text-2xs text-success cursor-default select-none">
                     <Dices className="h-3 w-3 shrink-0" />
                     a remporté un défi
                   </span>
@@ -245,7 +246,7 @@ export function ChatroomMessageHeader({
                   type="button"
                   onClick={() => void toggleReaction(r.emoji)}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border border-border-soft px-2 py-1 text-xs",
+                    "inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs",
                     "bg-secondary hover:bg-muted",
                     r.me && "border-primary/30",
                   )}

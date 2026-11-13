@@ -5,6 +5,16 @@ import userEvent from "@testing-library/user-event";
 import { createClient } from "@/lib/supabase/client";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
+// jsdom fournit un localStorage partiel (pas de .clear()) — remplacé par une
+// implémentation complète, comme lib/__tests__/searchHistory.test.ts.
+const _store: Record<string, string> = {};
+vi.stubGlobal("localStorage", {
+  getItem: (key: string) => _store[key] ?? null,
+  setItem: (key: string, value: string) => { _store[key] = value; },
+  removeItem: (key: string) => { delete _store[key]; },
+  clear: () => { for (const k of Object.keys(_store)) delete _store[k]; },
+});
+
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("@/components/personas/PersonaCreateSheet", () => ({
   PersonaCreateSheet: ({ trigger }: { trigger: React.ReactNode }) => <>{trigger}</>,
@@ -36,6 +46,7 @@ import {
   sortPersonas,
   PERSONA_FILTER_ALL as ALL,
   PERSONA_FILTER_NO_GROUP as NO_GROUP,
+  PERSONA_FILTER_OFFSTAGE as OFFSTAGE,
 } from "@/components/personas/WorldPersonasPanel";
 
 const OTHERS = [
@@ -65,7 +76,7 @@ function setup(withNpc = false) {
   return mock;
 }
 
-beforeEach(() => { vi.clearAllMocks(); canReview.value = false; canManageNpc.value = false; review.active = true; });
+beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); canReview.value = false; canManageNpc.value = false; review.active = true; });
 
 /**
  * Choisit une valeur dans le menu « Filtres » : ouvre le menu, entre dans le
@@ -88,6 +99,8 @@ describe("applyPersonaFilters / sortPersonas", () => {
     expect(applyPersonaFilters(OTHERS, { ...base, group: "g1" }, groups).map((p) => p.id)).toEqual(["p2"]);
     expect(applyPersonaFilters(OTHERS, { ...base, group: NO_GROUP }, groups).map((p) => p.id)).toEqual(["p1", "p3"]);
     expect(applyPersonaFilters(OTHERS, { ...base, status: "dead" }, groups).map((p) => p.id)).toEqual(["p2"]);
+    const retired = { ...OTHERS[0], id: "p5", narrative_status: "retired" as const };
+    expect(applyPersonaFilters([...OTHERS, retired], { ...base, status: OFFSTAGE }, groups).map((p) => p.id)).toEqual(["p2", "p5"]);
   });
 
   it("filtre par état de fiche : en relecture, validée, incomplète", () => {
@@ -117,10 +130,13 @@ describe("applyPersonaFilters / sortPersonas", () => {
 });
 
 describe("WorldPersonasPanel — filtres et statut", () => {
-  it("regroupe par lettre, grise un décédé et pose son badge", async () => {
+  it("en liste, regroupe par lettre avec un index ; grise un décédé et pose son badge", async () => {
     setup();
+    const user = userEvent.setup();
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     await screen.findByRole("button", { name: "Zorg" });
+    await user.click(screen.getByRole("radio", { name: "Liste" }));
+    expect(within(screen.getByRole("navigation", { name: "Index alphabétique" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["A", "E", "Z"]);
 
     // Les lettres d'index (les initiales des avatars sont dans les tuiles, ailleurs).
     const letters = screen.getAllByText(/^[AEZ]$/).filter((el) => el.className.includes("tracking-wider"));
@@ -163,7 +179,7 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     expect(screen.queryByTestId("active-filter-count")).toBeNull();
   });
 
-  it("pose le badge de fiche et, pour un relecteur, le raccourci vers les fiches à relire", async () => {
+  it("pose le badge de fiche et, pour un relecteur, la carte « Fiches à relire » qui bascule le filtre", async () => {
     canReview.value = true;
     setup();
     const user = userEvent.setup();
@@ -174,10 +190,16 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     expect(elise.querySelector("[data-sheet-status='submitted']")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Aeris" }).querySelector("[data-sheet-status]")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "1 fiche à relire" }));
+    const card = screen.getByRole("button", { name: /Fiches à relire/ });
+    expect(card).toHaveTextContent("1");
+    await user.click(card);
+    expect(card).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Élise" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aeris" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "1 fiche à relire" })).toBeNull();
+    // Un second clic retire le filtre.
+    await user.click(card);
+    expect(card).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Aeris" })).toBeInTheDocument();
   });
 
   it("sans relecture dans le monde : ni badge de brouillon, ni raccourci, et le filtre « Fiche » ne connaît qu'« incomplète »", async () => {
@@ -203,7 +225,7 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     expect(screen.queryByRole("button", { name: /à relire/ })).toBeNull();
   });
 
-  it("les PNJ ont leur section, avec le badge et sans pseudo de joueur ; « Nouveau PNJ » pour qui les gère", async () => {
+  it("les PNJ ont leur étagère, avec le badge et sans pseudo de joueur ; « Nouveau PNJ » pour qui les gère", async () => {
     setup(true);
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     const npc = await screen.findByRole("button", { name: "Aubergiste" });
@@ -211,7 +233,7 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     expect(within(npc).queryByText("@bob")).toBeNull();
     expect(screen.getByRole("heading", { name: /^PNJ/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Nouveau PNJ" })).toBeNull();
-    // Le PNJ ne figure pas parmi les « autres personas » (Zorg, Aeris, Élise seulement).
+    // Le PNJ ne figure pas sur l'étagère de son joueur (Zorg seulement).
     expect(screen.getByRole("button", { name: "Zorg" }).querySelector("[data-npc]")).toBeNull();
   });
 
@@ -228,24 +250,46 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     setup(true);
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     await screen.findByRole("button", { name: "Zorg" });
-    // La tuile éditable porte « Éditer » (PersonaCard), pas le déclencheur de fiche mocké.
+    // La tuile éditable porte « Modifier » (PersonaCard), pas le déclencheur de fiche mocké.
     const tile = screen.getByText("Aubergiste").closest("button")!;
-    expect(within(tile).getByText("Éditer")).toBeInTheDocument();
+    expect(within(tile).getByText("Modifier")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Nouveau PNJ" })).toBeInTheDocument();
   });
 
-  it("le tri par date met les plus récents d'abord, sans lettres", async () => {
+  it("range par joueur par défaut, par groupe sur demande, et s'en souvient pour ce monde", async () => {
     setup();
     const user = userEvent.setup();
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     await screen.findByRole("button", { name: "Zorg" });
 
-    await user.click(screen.getByRole("button", { name: "Tri" }));
-    await user.click(await screen.findByRole("menuitemradio", { name: "Plus récents" }));
+    expect(screen.getByRole("heading", { name: "@alice" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "@bob" })).toBeInTheDocument();
+    // En tête de l'étagère : l'avatar du joueur et sa présence (hors ligne sans fournisseur de présence).
+    const aliceShelf = screen.getByRole("heading", { name: "@alice" }).closest("section")!;
+    expect(aliceShelf.querySelector("[data-presence='offline']")).not.toBeNull();
+    expect(within(aliceShelf).getAllByText("Hors ligne").length).toBeGreaterThan(0);
 
-    const names = ["Zorg", "Élise", "Aeris"].map((n) => screen.getByRole("button", { name: n }));
-    const positions = names.map((el) => Array.from(document.querySelectorAll("button")).indexOf(el as HTMLButtonElement));
-    expect(positions).toEqual([...positions].sort((a, b) => a - b));
-    expect(screen.queryAllByText(/^[AEZ]$/).filter((el) => el.className.includes("tracking-wider"))).toHaveLength(0);
+    await user.click(screen.getByRole("radio", { name: "Par groupe" }));
+    expect(screen.getByRole("radio", { name: "Par groupe" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("heading", { name: "Garde" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sans groupe" })).toBeInTheDocument();
+    // Le mur d'un groupe : ses chiffres sous le nom, sans défilement horizontal.
+    const garde = screen.getByRole("heading", { name: "Garde" }).closest("section")!;
+    expect(within(garde).getByText("0 en jeu · 1 hors jeu")).toBeInTheDocument();
+    expect(garde.querySelector(".overflow-x-auto")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "@alice" })).toBeNull();
+    expect(localStorage.getItem("personas.shelfMode.w1")).toBe("group");
+  });
+
+  it("la carte « Hors jeu » ne garde que les décédés et retirés", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
+    await screen.findByRole("button", { name: "Zorg" });
+
+    await user.click(screen.getByRole("button", { name: /Hors jeu/ }));
+    expect(screen.getByRole("button", { name: "Zorg" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aeris" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Retirer le filtre Statut : Hors jeu" })).toBeInTheDocument();
   });
 });

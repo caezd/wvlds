@@ -56,7 +56,7 @@ export function WikiAnnotationComposer({
         maxLength={DB_TEXT_LIMITS["world_wiki_page_annotations.body"]}
         minRows={2}
         maxRows={8}
-        className="w-full resize-none rounded-lg border border-border-soft bg-background px-2.5 py-2 text-sm outline-none focus:border-primary/50"
+        className="w-full resize-none rounded-lg border border-border bg-background px-2.5 py-2 text-sm outline-none focus:border-primary/50"
         onKeyDown={e => {
           // Entrée seule fait un retour à la ligne : une annotation tient
           // souvent en plusieurs phrases.
@@ -71,10 +71,10 @@ export function WikiAnnotationComposer({
         }}
       />
       <div className="flex items-center justify-end gap-2">
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onCancel}>
+        <Button variant="secondary" size="sm" className="text-xs" onClick={onCancel}>
           {tCommon("cancel")}
         </Button>
-        <Button size="sm" className="h-7 px-2.5 text-xs" onClick={submit} disabled={empty || pending}>
+        <Button size="sm" className="text-xs" onClick={submit} disabled={empty || pending}>
           {pending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
           {submitLabel}
         </Button>

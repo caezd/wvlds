@@ -40,9 +40,9 @@ export function WorldHolidaysWidget({
         <span className="min-w-0 flex-1 truncate">{t("title")}</span>
       </div>
       {!config || upcoming.length === 0 ? (
-        <p className="border-t border-border-soft px-4 py-3 text-xs text-muted-foreground">{t("none")}</p>
+        <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">{t("none")}</p>
       ) : (
-        <ul className="border-t border-border-soft py-1">
+        <ul className="border-t border-border py-1">
           {upcoming.map((h) => (
             <li key={`${h.month}:${h.day ?? ""}:${h.name}`} className="flex items-baseline gap-2.5 px-4 py-1.5 text-sm">
               <span className="min-w-0 flex-1 truncate">{h.name}</span>

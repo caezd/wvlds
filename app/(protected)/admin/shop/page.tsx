@@ -33,7 +33,7 @@ export default async function AdminShopPage() {
             {t("shopItems.count", { count: items?.length ?? 0 })}
           </p>
         </div>
-        <Button asChild>
+        <Button variant="outline" asChild>
           <Link href="/admin/shop/new">
             <Plus className="h-4 w-4 mr-1" />
             {t("shopItems.new")}
@@ -41,10 +41,10 @@ export default async function AdminShopPage() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border-soft overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border-soft bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
               <th className="px-4 py-3 text-left">{t("shopItems.preview")}</th>
               <th className="px-4 py-3 text-left">{t("shopItems.nameKey")}</th>
               <th className="px-4 py-3 text-left">{t("shopItems.type")}</th>
@@ -53,7 +53,7 @@ export default async function AdminShopPage() {
               <th className="px-4 py-3 text-right">{t("shopItems.actions")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-soft">
+          <tbody className="divide-y divide-border">
             {(items ?? []).map((item) => (
               <tr key={item.id} className="hover:bg-muted/20 transition-colors">
                 <td className="px-4 py-3">
@@ -81,20 +81,21 @@ export default async function AdminShopPage() {
                     "use server";
                     await toggleItem(item.id, !item.active);
                   }}>
-                    <button
+                    <Button
                       type="submit"
+                      variant="ghost"
+                      size="icon-sm"
                       title={item.active ? t("shopItems.hide") : t("shopItems.show")}
-                      className="inline-flex items-center justify-center rounded p-1 hover:bg-muted"
                     >
                       {item.active
-                        ? <Eye className="h-4 w-4 text-green-500" />
+                        ? <Eye className="h-4 w-4 text-success" />
                         : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-                    </button>
+                    </Button>
                   </form>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                    <Button variant="ghost" size="icon-sm" asChild>
                       <Link href={`/admin/shop/${item.id}`} aria-label={t("shopItemEdit")}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Link>
@@ -105,8 +106,8 @@ export default async function AdminShopPage() {
                     }}>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive"
                         type="submit"
                         aria-label={t("shopItemDelete")}
                       >

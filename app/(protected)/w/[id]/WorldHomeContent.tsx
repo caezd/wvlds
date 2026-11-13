@@ -96,12 +96,12 @@ export default async function WorldHomeContent({
       } | null;
     })(),
     (async (): Promise<AsidePersona[]> => {
-      // Consommées uniquement par l'onglet « Personas » (cf. WorldHome).
+      // Consommées uniquement par les onglets « Personas » et « Membres » (cf. WorldHome).
       // Sans ce garde, les trois requêtes ci-dessous (personas, puis sections,
       // puis champs) partaient aussi pour l'accueil, le wiki, la carte, les
       // membres… et leur résultat était jeté. Les `data` jsonb des champs
       // peuvent être volumineux.
-      if (!userId || view !== "personas") return [];
+      if (!userId || (view !== "personas" && view !== "members")) return [];
       const { data: personaRows } = await supabase
         .from("personas")
         .select(

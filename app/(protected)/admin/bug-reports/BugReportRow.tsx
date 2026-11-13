@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Select,
@@ -92,7 +93,7 @@ export function BugReportRow({
   }
 
   return (
-    <li className="rounded-xl border border-border-soft p-4">
+    <li className="rounded-xl border border-border p-4">
       <div className="flex items-start justify-between gap-4">
         {/* `whitespace-pre-line` : un signalement est souvent écrit en
             plusieurs paragraphes, et les écraser rendrait le récit illisible. */}
@@ -117,13 +118,15 @@ export function BugReportRow({
             description={t("deleteDescription")}
             onConfirm={() => void supprimer()}
             trigger={
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label={tCommon("delete")}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                className="hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
-              </button>
+              </Button>
             }
           />
         </div>
@@ -152,13 +155,13 @@ export function BugReportRow({
           <ul className="mt-2 space-y-2">
             {report.client_errors.map((e, i) => (
               <li key={`${e.at}-${i}`} className="rounded-md bg-muted/50 p-2 text-xs">
-                <p className="font-mono text-[0.65rem] text-muted-foreground">
+                <p className="font-mono text-2xs text-muted-foreground">
                   {new Date(e.at).toLocaleString()} · {e.kind}
                   {e.source ? ` · ${e.source}` : ""}
                 </p>
                 <p className="mt-0.5 break-words font-mono">{e.message}</p>
                 {e.stack && (
-                  <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-[0.65rem] text-muted-foreground">
+                  <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-2xs text-muted-foreground">
                     {e.stack}
                   </pre>
                 )}
@@ -178,7 +181,7 @@ export function BugReportRow({
           maxLength={BUG_REPORT_NOTE_MAX_LENGTH}
           minRows={1}
           maxRows={8}
-          className="w-full resize-none rounded-md border border-border-soft bg-transparent p-2 text-xs outline-none placeholder:text-muted-foreground/60 focus:border-border"
+          className="w-full resize-none rounded-md border border-border bg-transparent p-2 text-xs outline-none placeholder:text-muted-foreground/60 focus:border-border"
         />
       </div>
 

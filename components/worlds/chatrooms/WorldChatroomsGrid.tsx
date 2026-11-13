@@ -128,7 +128,7 @@ export function WorldChatroomsGrid({
 
   if (rooms.length === 0) {
     return (
-      <div className="rounded-lg border border-border-soft p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
         Aucune partie pour le moment — lance la première !
       </div>
     );
@@ -171,13 +171,13 @@ export function WorldChatroomsGrid({
                     }
                     : undefined
                 }
-                className="group flex items-center gap-3.5 rounded-md px-3 py-3 hover:bg-hoverCard transition-colors"
+                className="group flex items-center gap-3.5 rounded-md px-3 py-3 hover:bg-muted transition-colors"
               >
                 <span className="relative shrink-0 size-9">
                   <span
                     className={cn(
                       "absolute left-0 top-0 flex size-6 items-center justify-center overflow-hidden rounded-full ring-2 ring-background",
-                      !room.icon_url && "bg-card-400",
+                      !room.icon_url && "bg-muted",
                     )}
                   >
                     {room.icon_url ? (
@@ -204,12 +204,7 @@ export function WorldChatroomsGrid({
                 </span>
 
                 <span className="min-w-0 flex-1">
-                  <span
-                    className={cn(
-                      "block truncate text-sm font-semibold",
-                      unread > 0 ? "text-foreground" : "text-foreground/90",
-                    )}
-                  >
+                  <span className="block truncate text-sm font-semibold text-foreground">
                     {label}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">

@@ -8,6 +8,7 @@ import NotificationsProvider, {
     useNotificationsPanel,
 } from "@/components/providers/NotificationsProvider";
 import type { AppNotification, AppShellResult } from "@/types/db";
+import { getUnreadCounts } from "@/lib/unreadStore";
 
 // Le bootstrap charge tout via une seule RPC get_app_shell() (voir lib/appShell.ts) ;
 // on la mock pour renvoyer les notifications de test, et toute autre RPC
@@ -707,6 +708,123 @@ describe("Compteurs non-lus — lecture locale", () => {
 
         const rpcNames = mock.rpc.mock.calls.map(call => call[0] as string);
         expect(rpcNames).not.toContain("get_world_unreads");
+    });
+});
+
+// ── markWorldRead : tout un monde d'un coup ──────────────────────────────────
+
+function ConsumerWorldRead({ onResult }: { onResult?: (ok: boolean) => void }) {
+    const { roomUnread, worldUnread, notifications, markWorldRead } = useNotifications();
+    return (
+        <>
+            <span data-testid="room-c1">{roomUnread["c1"] ?? 0}</span>
+            <span data-testid="room-c3">{roomUnread["c3"] ?? 0}</span>
+            <span data-testid="world-w1">{worldUnread["w1"] ?? 0}</span>
+            <span data-testid="world-w2">{worldUnread["w2"] ?? 0}</span>
+            <ul>
+                {notifications.map((n) => (
+                    <li key={n.id} data-testid={`notif-${n.id}`}>{n.id}</li>
+                ))}
+            </ul>
+            <button data-testid="read-w1" onClick={() => void markWorldRead("w1").then(onResult)}>lire w1</button>
+        </>
+    );
+}
+
+// Deux mondes : w1 (2 messages dans c1 + c2 jamais ouverte), w2 (4 messages dans c3)
+const WORLD_READ_SHELL: Partial<AppShellResult> = {
+    world_ids: ["w1", "w2"],
+    room_unreads: [
+        { chat_id: "c1", world_id: "w1", unread_messages: 2, never_opened: false },
+        { chat_id: "c2", world_id: "w1", unread_messages: 0, never_opened: true },
+        { chat_id: "c3", world_id: "w2", unread_messages: 4, never_opened: false },
+    ],
+};
+
+const WORLD_NOTIFS: AppNotification[] = [
+    { ...BASE_NOTIF, id: "n1", world_id: "w1" },
+    { ...BASE_NOTIF, id: "n2", world_id: "w2" },
+];
+
+function setupWorldRead(markError: { message: string } | null = null, onResult?: (ok: boolean) => void) {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    mockAppShell(mock, WORLD_NOTIFS, WORLD_READ_SHELL);
+    const shellImpl = mock.client.rpc.getMockImplementation()!;
+    mock.client.rpc.mockImplementation((name: string, args?: unknown) =>
+        name === "mark_world_read"
+            ? Promise.resolve({ data: null, error: markError })
+            : shellImpl(name, args),
+    );
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(
+        <NotificationsProvider>
+            <ConsumerWorldRead onResult={onResult} />
+        </NotificationsProvider>,
+    );
+
+    return mock;
+}
+
+describe("NotificationsProvider — markWorldRead", () => {
+    it("vide aussitôt le badge du monde et ses notifications, sans toucher aux autres mondes", async () => {
+        const mock = setupWorldRead();
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+        expect(screen.getByTestId("world-w2").textContent).toBe("4");
+
+        await act(async () => {
+            screen.getByTestId("read-w1").click();
+        });
+
+        expect(screen.getByTestId("room-c1").textContent).toBe("0");
+        expect(screen.getByTestId("world-w1").textContent).toBe("0");
+        expect(screen.queryByTestId("notif-n1")).not.toBeInTheDocument();
+
+        expect(screen.getByTestId("room-c3").textContent).toBe("4");
+        expect(screen.getByTestId("world-w2").textContent).toBe("4");
+        expect(screen.getByTestId("notif-n2")).toBeInTheDocument();
+
+        // Le store par clé (rail, sélecteur) suit
+        await waitFor(() => expect(getUnreadCounts().worlds["w1"]).toBeUndefined());
+        expect(getUnreadCounts().worlds["w2"]).toBe(4);
+
+        // Une seule RPC, horloge du serveur (cf. migration 204)
+        const calls = mock.rpc.mock.calls.filter(c => c[0] === "mark_world_read");
+        expect(calls).toEqual([["mark_world_read", { p_world_id: "w1" }]]);
+        expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(0);
+    });
+
+    it("en cas d'échec, renvoie false et resynchronise les compteurs depuis la base", async () => {
+        const onResult = vi.fn();
+        const mock = setupWorldRead({ message: "boom" }, onResult);
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        try {
+            await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+
+            await act(async () => {
+                screen.getByTestId("read-w1").click();
+            });
+
+            await waitFor(() => expect(onResult).toHaveBeenCalledWith(false));
+            expect(mock.rpc.mock.calls.map(c => c[0])).toContain("get_all_chatroom_unreads");
+        } finally {
+            consoleError.mockRestore();
+        }
+    });
+
+    it("renvoie true quand la RPC réussit", async () => {
+        const onResult = vi.fn();
+        setupWorldRead(null, onResult);
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+
+        await act(async () => {
+            screen.getByTestId("read-w1").click();
+        });
+
+        await waitFor(() => expect(onResult).toHaveBeenCalledWith(true));
     });
 });
 

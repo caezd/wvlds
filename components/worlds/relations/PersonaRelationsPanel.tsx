@@ -6,9 +6,13 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Plus, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { CountPip } from "@/components/ui/count-pip";
+import { SectionLabel } from "@/components/ui/section-label";
+import { TAB_BAR_TRIGGER_CLASS } from "@/components/ui/tab-bar";
 import { getInitials } from "@/lib/textFormatting";
 import { RelationRow } from "./RelationRow";
 import type { CMember, CPersona, CRelType, CRelation } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 /** Type de relation de repli, quand une relation pointe un type disparu. */
 export const FALLBACK_TYPE: Omit<CRelType, "name"> = { id: "__fallback__", color: "#94a3b8", dash: "3 4", sort_index: 999, mutual: false, marital_status: null };
@@ -95,24 +99,24 @@ export function PersonaRelationsPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2.5 border-b border-border-soft px-3 py-2.5">
+      <div className="flex items-center gap-2.5 border-b border-border px-3 py-2.5">
         {closeIcon === "back" && (
-          <button type="button" onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label={closeLabel}>
+          <button type="button" onClick={onClose} className={buttonVariants({ variant: "ghost", size: "icon-sm" })} aria-label={closeLabel}>
             <ArrowLeft className="h-4 w-4" />
           </button>
         )}
         {persona.avatar_url
           ? <Image src={persona.avatar_url} alt={persona.name} width={32} height={32} className="h-8 w-8 shrink-0 rounded-full object-cover" />
-          : <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold">{getInitials(persona.name)}</div>}
+          : <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs-plus font-bold">{getInitials(persona.name)}</div>}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{persona.name}</p>
-          {owner?.username && <p className="text-[11px] text-muted-foreground">@{owner.username}</p>}
+          {owner?.username && <p className="text-xs-plus text-muted-foreground">@{owner.username}</p>}
         </div>
         {canEdit && onAdd && (
           <button
             type="button"
             onClick={onAdd}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             aria-label={t("addRelation")}
             title={t("addRelation")}
           >
@@ -120,30 +124,26 @@ export function PersonaRelationsPanel({
           </button>
         )}
         {closeIcon === "close" && (
-          <button type="button" onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label={closeLabel}>
+          <button type="button" onClick={onClose} className={buttonVariants({ variant: "ghost", size: "icon-sm" })} aria-label={closeLabel}>
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <div role="tablist" className="flex border-b border-border-soft">
+      <div role="tablist" className="flex border-b border-border">
         {(["out", "in"] as const).map((key) => (
           <button
             key={key}
             type="button"
             role="tab"
             aria-selected={tab === key}
+            data-state={tab === key ? "active" : "inactive"}
             onClick={() => setTab(key)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 py-2 text-[11px] font-medium transition-colors",
-              tab === key ? "shadow-[inset_0_-2px_0_0_var(--color-accent)] text-foreground" : "text-muted-foreground hover:text-foreground",
-            )}
+            className={cn(TAB_BAR_TRIGGER_CLASS, "flex flex-1 items-center justify-center gap-1.5 py-2 text-xs-plus")}
           >
             {key === "out" ? t("tabOut") : t("tabIn")}
             {key === "in" && pendingIn > 0 && (
-              <span className="rounded-full bg-primary px-1.5 text-[9px] font-semibold text-primary-foreground" title={t("pendingCount", { count: pendingIn })}>
-                {pendingIn}
-              </span>
+              <CountPip count={pendingIn} title={t("pendingCount", { count: pendingIn })} />
             )}
           </button>
         ))}
@@ -151,15 +151,15 @@ export function PersonaRelationsPanel({
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {items.length === 0 ? (
-          <p className="py-8 text-center text-[12px] text-muted-foreground">{t("noRelations")}</p>
+          <p className="py-8 text-center text-xs text-muted-foreground">{t("noRelations")}</p>
         ) : sortedTypes.map((tid) => {
           const meta = relTypeMap.get(tid) ?? fallback;
           return (
             <section key={tid} className="space-y-2">
-              <h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: meta.color }}>
+              <SectionLabel className="flex items-center gap-1.5" style={{ color: meta.color }}>
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta.color }} />
                 {meta.name}
-              </h3>
+              </SectionLabel>
               {grouped.get(tid)!.map(({ rel, direction, other, mutual }) => {
                 const rowEditable = canAdmin || (direction === "→" ? isMine : other.user_id === userId);
                 return (

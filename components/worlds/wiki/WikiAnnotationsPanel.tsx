@@ -153,8 +153,6 @@ export function WikiAnnotationsPanel({
             aria-pressed={showResolved}
             className={cn(
               WIKI_FOOTER_BUTTON,
-              "transition-colors",
-              showResolved && "bg-secondary font-medium text-foreground",
             )}
           >
             {t("showResolved")}

@@ -1,5 +1,7 @@
 "use client";
 
+import { Switch } from "@/components/ui/switch";
+
 export type SubGroupFlag = {
   key: string;
   label: string;
@@ -31,7 +33,7 @@ export function FeatureSubGroup({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">{flag.label}</span>
-            <code className="text-[0.65rem] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+            <code className="text-2xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
               {flag.key}
             </code>
             <svg
@@ -53,37 +55,25 @@ export function FeatureSubGroup({
               {flag.description}
             </p>
           )}
-          <p className="text-[0.65rem] text-muted-foreground mt-1">
+          <p className="text-2xs text-muted-foreground mt-1">
             Modifié le {date}
           </p>
         </div>
 
         <form action={onToggle}>
-          <button
+          <Switch
             type="submit"
+            checked={flag.enabled}
+            // Le clic ne doit pas replier le groupe (<summary>).
             onClick={(e) => e.stopPropagation()}
             aria-label={flag.enabled ? "Désactiver" : "Activer"}
-          >
-            <div
-              className={[
-                "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200",
-                flag.enabled ? "bg-primary" : "bg-muted",
-              ].join(" ")}
-            >
-              <span
-                className={[
-                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow-lg transform transition-transform duration-200",
-                  flag.enabled ? "translate-x-5" : "translate-x-0",
-                ].join(" ")}
-              />
-            </div>
-          </button>
+          />
         </form>
       </summary>
 
       <div
         className={[
-          "border-t border-border-soft/60 divide-y divide-border-soft/60",
+          "border-t border-border/60 divide-y divide-border/60",
           !flag.enabled ? "opacity-40 pointer-events-none" : "",
         ].join(" ")}
       >

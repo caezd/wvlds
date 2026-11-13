@@ -7,21 +7,24 @@ import { cn } from "@/lib/utils";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 /**
- * Pastille de couleur qui déplie un sélecteur HSV.
+ * Pastille de couleur qui déplie le sélecteur de couleur.
  *
  * Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
- * pointerdown sur le canvas HSV comme un clic hors du dialog.
+ * pointerdown sur la zone de saturation comme un clic hors du dialog.
  */
 export function ColorPickerButton({
   color,
   onChange,
   disabled,
+  alpha = true,
   className,
   children,
 }: {
   color: string;
   onChange: (c: string) => void;
   disabled?: boolean;
+  /** Curseur d'opacité ; à retirer quand la colonne n'admet que `#rrggbb`. */
+  alpha?: boolean;
   /** Classes du bouton — pour caler sa hauteur sur les champs voisins. */
   className?: string;
   /** Posé sur la pastille, centré : l'icône d'un rôle. */
@@ -53,8 +56,8 @@ export function ColorPickerButton({
         {children}
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
-          <HsvColorPicker color={color} onChange={onChange} presets={[]} />
+        <div className="absolute left-0 top-full z-popover mt-1 w-64">
+          <HsvColorPicker color={color} onChange={onChange} alpha={alpha} className="shadow-popover" />
         </div>
       )}
     </div>

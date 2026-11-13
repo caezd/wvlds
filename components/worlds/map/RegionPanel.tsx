@@ -5,11 +5,10 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BookOpenText, Check, Loader2, Pencil, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { BUBBLE_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { updateMapRegion, type MapRegion } from "@/app/actions/worldMap";
 import type { WikiPageOption } from "./types";
 import { ColorInput } from "./ColorInput";
@@ -84,7 +83,7 @@ export function RegionPanel({
       role="dialog"
       aria-label={t("region")}
       data-region-panel
-      className="absolute right-2 top-2 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-2 rounded-xl border border-border bg-background p-3 shadow-xl"
+      className="absolute right-2 top-2 z-floating flex w-72 max-w-[calc(100%-1rem)] flex-col gap-2 rounded-xl border border-border bg-background p-3 shadow-floating"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
@@ -95,7 +94,7 @@ export function RegionPanel({
             value={label}
             aria-label={t("regionName")}
             onChange={(e) => setLabel(e.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-border-soft bg-background px-2 py-0.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary"
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-0.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary"
           />
         ) : (
           <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{region.label}</h3>
@@ -104,7 +103,7 @@ export function RegionPanel({
           type="button"
           aria-label={tCommon("close")}
           onClick={onClose}
-          className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -112,13 +111,13 @@ export function RegionPanel({
 
       {editing && (
         <>
-          <ColorInput color={color} onChange={setColor} presets={BUBBLE_COLOR_PRESETS} />
-          <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <ColorInput color={color} onChange={setColor} />
+          <label className="flex flex-col gap-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t("wikiPage")}
             <select
               value={wikiPageId ?? ""}
               onChange={(e) => setWikiPageId(e.target.value || null)}
-              className="rounded-md border border-border-soft bg-background px-2 py-1 text-xs font-normal normal-case tracking-normal text-foreground outline-none focus:ring-2 focus:ring-primary"
+              className="rounded-md border border-border bg-background px-2 py-1 text-xs font-normal normal-case tracking-normal text-foreground outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">{t("noWikiPage")}</option>
               {wikiPages.map((p) => (
@@ -130,13 +129,15 @@ export function RegionPanel({
       )}
 
       {!editing && linkedPage && (
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit text-xs"
           onClick={() => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(linkedPage.slug)}`)}
-          className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <BookOpenText className="h-3.5 w-3.5" /> {t("openWikiPage")} : {linkedPage.title}
-        </button>
+        </Button>
       )}
 
       <div className="max-h-40 overflow-y-auto">
@@ -149,7 +150,7 @@ export function RegionPanel({
             wrapperClassName="max-h-32"
           />
         ) : region.description ? (
-          <div className="prose prose-sm dark:prose-invert max-w-none text-sm text-muted-foreground">
+          <div className="prose prose-sm prose-invert max-w-none text-sm text-muted-foreground">
             <MarkdownRenderer content={region.description} />
           </div>
         ) : (
@@ -160,25 +161,25 @@ export function RegionPanel({
       </div>
 
       {isEditMode && (
-        <div className="flex items-center gap-2 border-t border-border-soft pt-2">
+        <div className="flex items-center gap-2 border-t border-border pt-2">
           {editing ? (
             <>
               <Button size="sm" onClick={handleSave} disabled={saving || !label.trim()}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 {tCommon("save")}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+              <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
                 {tCommon("cancel")}
               </Button>
             </>
           ) : (
             <>
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
                 <Pencil className="h-3.5 w-3.5" />
                 {tCommon("edit")}
               </Button>
               <Button
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
                 aria-label={t("deleteRegion")}
                 className="ml-auto text-muted-foreground hover:text-destructive"

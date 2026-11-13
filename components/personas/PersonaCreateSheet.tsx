@@ -22,6 +22,7 @@ import { TABLE } from "@/lib/constants";
 import type { PersonaPatch } from "@/lib/personaDraft";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
+import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 
 export function PersonaCreateSheet({
   worldId,
@@ -69,7 +70,10 @@ export function PersonaCreateSheet({
       setError(null);
       setSections([]);
       setAsNpc(!!defaultNpc);
-      if (createdId) router.refresh();
+      if (createdId) {
+        notifyPersonasChanged();
+        router.refresh();
+      }
     }
   }
 
@@ -110,7 +114,7 @@ export function PersonaCreateSheet({
           {trigger}
         </span>
       ) : (
-        <Button onClick={() => setOpen(true)}>{t("newPersona")}</Button>
+        <Button variant="outline" onClick={() => setOpen(true)}>{t("newPersona")}</Button>
       )}
 
       <Drawer open={open} onOpenChange={handleOpen} swipeDirection="right">
@@ -144,7 +148,7 @@ export function PersonaCreateSheet({
               </div>
 
               {worldId && canManageNpc && (
-                <label className="flex items-start gap-3 rounded-lg border border-border-soft px-3 py-2.5 text-sm">
+                <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 text-sm">
                   <Checkbox checked={asNpc} onCheckedChange={(v) => setAsNpc(v === true)} className="mt-0.5" aria-label={tNpc("createLabel")} />
                   <span className="space-y-0.5">
                     <span className="block font-medium">{tNpc("createLabel")}</span>
@@ -156,7 +160,7 @@ export function PersonaCreateSheet({
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                   Annuler
                 </Button>
                 <Button type="submit" disabled={pending}>

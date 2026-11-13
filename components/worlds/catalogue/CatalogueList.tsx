@@ -70,6 +70,7 @@ import { CatalogueRowProvider, type CatalogueRowContextValue } from "./Catalogue
 import { CatalogTrashDialog } from "./CatalogTrashDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { buttonVariants } from "@/components/ui/button";
 
 // ── Catalogue list (main DnD logic) ──────────────────────────────────────────
 
@@ -681,7 +682,7 @@ export function CatalogueList({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -691,13 +692,13 @@ export function CatalogueList({
       {/* Barre d'outils : chercher, exporter, importer */}
       <div className="mb-2 flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={tCommon("search")}
             aria-label={tCommon("search")}
-            className="h-8 w-full rounded-lg border border-border-soft bg-background pl-8 pr-8 text-xs outline-none transition-colors focus:border-primary/40"
+            className="h-8 w-full rounded-lg border border-border bg-background pl-8 pr-8 text-xs outline-none transition-colors focus:border-primary/40"
           />
           {search && (
             <button
@@ -722,7 +723,7 @@ export function CatalogueList({
               disabled={items.length === 0}
               title={t("exportCatalog")}
               aria-label={t("exportCatalog")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              className={buttonVariants({ variant: "outline", size: "icon-sm" })}
             >
               <Download className="h-3.5 w-3.5" />
             </button>
@@ -743,7 +744,7 @@ export function CatalogueList({
               onClick={() => void openTrash()}
               title={t("trash")}
               aria-label={t("trash")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className={buttonVariants({ variant: "outline", size: "icon-sm" })}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -754,7 +755,7 @@ export function CatalogueList({
               disabled={importing}
               title={t("importCatalog")}
               aria-label={t("importCatalog")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              className={buttonVariants({ variant: "outline", size: "icon-sm" })}
             >
               {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
             </button>
@@ -774,7 +775,7 @@ export function CatalogueList({
             <button
               type="button"
               onClick={() => setSelectedIds(new Set(visibleItems.map(i => i.id)))}
-              className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs")}
             >
               <CheckSquare className="h-3.5 w-3.5" />
               {t("selectAllVisible")}
@@ -785,7 +786,7 @@ export function CatalogueList({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
               >
                 <FolderInput className="h-3.5 w-3.5" />
                 {t("moveTo")}
@@ -807,7 +808,7 @@ export function CatalogueList({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
               >
                 {t("rarity")}
               </button>
@@ -826,7 +827,7 @@ export function CatalogueList({
           <button
             type="button"
             onClick={() => void handleTrashSelected()}
-            className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "text-xs")}
           >
             <Trash2 className="h-3.5 w-3.5" />
             {tCommon("delete")}
@@ -836,7 +837,7 @@ export function CatalogueList({
             aria-label={t("clearSelection")}
             title={t("clearSelection")}
             onClick={() => setSelectedIds(new Set())}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -911,7 +912,7 @@ export function CatalogueList({
                       <button
                         type="button"
                         onClick={() => setAddingCategoryInCol(colIdx)}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                        className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
                       >
                         <FolderPlus className="h-3.5 w-3.5" />
                         {t("createCategory")}
@@ -945,7 +946,7 @@ export function CatalogueList({
 
         {/* Add first category (when no columns exist yet) */}
         {canEdit && !hasCategories && (
-          <div className="pt-3 border-t border-border-soft mt-3">
+          <div className="pt-3 border-t border-border mt-3">
             {addingCategoryInCol === 0 ? (
               <AddCategoryForm
                 onAdd={name => handleAddCategory(name, 0)}
@@ -955,7 +956,7 @@ export function CatalogueList({
               <button
                 type="button"
                 onClick={() => setAddingCategoryInCol(0)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
               >
                 <FolderPlus className="h-3.5 w-3.5" />
                 {t("createCategory")}

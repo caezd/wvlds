@@ -113,7 +113,7 @@ function ImageUploader({
         onDragOver={(e) => e.preventDefault()}
         onClick={() => !uploading && inputRef.current?.click()}
         className={cn(
-          "relative flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-soft transition-colors",
+          "relative flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border transition-colors",
           uploading
             ? "opacity-60 cursor-not-allowed"
             : "hover:border-primary/50 hover:bg-muted/40",
@@ -300,7 +300,7 @@ export function ShopItemForm({
             submitLabel
           )}
         </Button>
-        <Button variant="ghost" asChild>
+        <Button variant="secondary" asChild>
           <Link href="/admin/shop">{t("shopForm.cancel")}</Link>
         </Button>
       </div>

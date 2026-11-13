@@ -188,6 +188,10 @@ export function WorldHome({
             ownerId={world.owner_id}
             canManage={can("members.manage")}
             isShared={isShared}
+            myPersonas={initialPersonas}
+            restrictInventory={!!world.restrict_inventory}
+            restrictSkills={!!world.restrict_skills}
+            faceclaimsEnabled={world.enable_faceclaims !== false}
           />
         ) : showPersonas ? (
           <WorldPersonasPanel

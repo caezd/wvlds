@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Check, Loader2, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { SectionLabel } from "@/components/ui/section-label";
 import { getInitials } from "@/lib/textFormatting";
 import {
   Dialog,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { REL_W } from "./geometry";
 import type { CPersona, CRelType, CRelation } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Créer ou modifier une relation, dans un dialogue.
@@ -108,7 +110,7 @@ export function RelationDialog({
         <form onSubmit={submit} className="space-y-4">
           {/* Vers qui */}
           <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("pickTarget")}</p>
+            <SectionLabel as="p">{t("pickTarget")}</SectionLabel>
             {editing && existing ? (
               <PersonaLine persona={existing.to} />
             ) : target ? (
@@ -121,17 +123,17 @@ export function RelationDialog({
             ) : (
               <div className="space-y-1.5">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <input
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={t("searchPlaceholder")}
                     aria-label={t("searchPlaceholder")}
-                    className="h-8 w-full rounded-lg border border-border-soft bg-background pl-8 pr-2 text-xs outline-none focus:border-primary/40"
+                    className="h-8 w-full rounded-lg border border-border bg-background pl-8 pr-2 text-xs outline-none focus:border-primary/40"
                   />
                 </div>
-                <div role="listbox" aria-label={t("pickTarget")} className="max-h-48 overflow-y-auto rounded-lg border border-border-soft">
+                <div role="listbox" aria-label={t("pickTarget")} className="max-h-48 overflow-y-auto rounded-lg border border-border">
                   {candidates.length === 0 ? (
                     <p className="px-3 py-4 text-center text-xs text-muted-foreground">{t("noSearchResults")}</p>
                   ) : candidates.map((p) => (
@@ -141,7 +143,7 @@ export function RelationDialog({
                       role="option"
                       aria-selected={false}
                       onClick={() => setTargetId(p.id)}
-                      className="flex w-full items-center gap-2.5 border-b border-border-soft px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
+                      className="flex w-full items-center gap-2.5 border-b border-border px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
                     >
                       <PersonaLine persona={p} />
                     </button>
@@ -153,7 +155,7 @@ export function RelationDialog({
 
           {/* Quel type */}
           <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("relTypeLabel")}</p>
+            <SectionLabel as="p">{t("relTypeLabel")}</SectionLabel>
             {relTypes.length === 0 ? (
               <p className="text-xs text-muted-foreground">{t("noTypesHint")}</p>
             ) : (
@@ -170,8 +172,8 @@ export function RelationDialog({
                       onClick={() => setTypeId(tp.id)}
                       title={tp.mutual ? t("mutualHint") : undefined}
                       className={cn(
-                        "flex flex-col items-center gap-1 rounded-xl border px-2 py-2 text-[11px] font-medium transition-colors",
-                        active ? "border-current bg-muted/60" : "border-border-soft hover:bg-muted/40",
+                        "flex flex-col items-center gap-1 rounded-xl border px-2 py-2 text-xs-plus font-medium transition-colors",
+                        active ? "border-current bg-muted/60" : "border-border hover:bg-muted/40",
                         "disabled:cursor-not-allowed disabled:opacity-40",
                       )}
                       style={{ color: tp.color }}
@@ -179,15 +181,15 @@ export function RelationDialog({
                       <svg width="24" height="6" aria-hidden><line x1="0" y1="3" x2="24" y2="3" stroke={tp.color} strokeWidth={REL_W} strokeDasharray={tp.dash || undefined} /></svg>
                       <span className="flex items-center gap-1">
                         {tp.name}
-                        {tp.mutual && <span aria-hidden className="text-muted-foreground/70">⇄</span>}
+                        {tp.mutual && <span aria-hidden className="text-muted-foreground">⇄</span>}
                       </span>
                     </button>
                   );
                 })}
               </div>
             )}
-            {typeLocked && <p className="text-[11px] text-muted-foreground">{t("typeLockedHint")}</p>}
-            {willBeRequest && <p className="text-[11px] text-muted-foreground">{t("willBeRequest", { name: target!.name })}</p>}
+            {typeLocked && <p className="text-xs-plus text-muted-foreground">{t("typeLockedHint")}</p>}
+            {willBeRequest && <p className="text-xs-plus text-muted-foreground">{t("willBeRequest", { name: target!.name })}</p>}
           </div>
 
           {/* Description */}
@@ -198,17 +200,17 @@ export function RelationDialog({
             aria-label={t("descPlaceholder")}
             rows={3}
             maxLength={5000}
-            className="w-full resize-y rounded-lg border border-border-soft bg-background px-3 py-2 text-xs outline-none focus:border-primary/40"
+            className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary/40"
           />
 
           <DialogFooter>
-            <button type="button" onClick={() => onOpenChange(false)} className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <button type="button" onClick={() => onOpenChange(false)} className={buttonVariants({ variant: "secondary" })}>
               {tCommon("cancel")}
             </button>
             <button
               type="submit"
               disabled={saving || !typeId || (!editing && !target)}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
+              className={buttonVariants()}
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               {editing ? tCommon("save") : willBeRequest ? t("sendRequest") : tCommon("create")}
@@ -225,7 +227,7 @@ function PersonaLine({ persona }: { persona: CPersona }) {
     <span className="flex min-w-0 items-center gap-2">
       {persona.avatar_url
         ? <Image src={persona.avatar_url} alt="" width={24} height={24} className="h-6 w-6 shrink-0 rounded-full object-cover" />
-        : <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-bold">{getInitials(persona.name)}</span>}
+        : <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-2xs font-bold">{getInitials(persona.name)}</span>}
       <span className="truncate text-sm">{persona.name}</span>
     </span>
   );

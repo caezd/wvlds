@@ -94,6 +94,7 @@ import { buildSearchIndex, searchWiki, type SearchableNote } from "@/lib/wikiSea
 import { WIKI_BUCKET, wikiImagePrefix } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 const WIKI_NAV_MIN = 120;
 const WIKI_NAV_MAX = 360;
@@ -250,7 +251,7 @@ function SortableTreeNode({
             {...attributes}
             {...listeners}
             {...SANS_BALAYAGE}
-            className="flex shrink-0 cursor-grab items-center text-muted-foreground/30 transition-colors hover:text-muted-foreground/60 active:cursor-grabbing"
+            className="flex shrink-0 cursor-grab items-center text-muted-foreground transition-colors hover:text-muted-foreground active:cursor-grabbing"
             onClick={e => e.stopPropagation()}
           >
             <GripVertical className="h-3.5 w-3.5" />
@@ -266,7 +267,7 @@ function SortableTreeNode({
               <button
                 type="button"
                 onClick={e => e.stopPropagation()}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
                 title={t("changeIcon")}
               >
                 {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon) ? (
@@ -305,7 +306,7 @@ function SortableTreeNode({
             <button
               type="button"
               onClick={e => { e.stopPropagation(); onConfirmRename(); }}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
               aria-label={tCommon("confirm")}
             >
               <Check className="h-3.5 w-3.5" />
@@ -333,7 +334,7 @@ function SortableTreeNode({
             aria-current={isSelected && !page.is_folder ? "page" : undefined}
             className={cn(
               "flex-1 truncate text-left outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
-              page.is_folder && "font-medium text-foreground/80",
+              page.is_folder && "font-medium text-foreground",
             )}
           >
             {page.title}
@@ -341,7 +342,7 @@ function SortableTreeNode({
         )}
 
         {!isRenaming && page.is_restricted && (
-          <Lock className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+          <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
         )}
 
         {editMode && !isRenaming && (
@@ -350,7 +351,7 @@ function SortableTreeNode({
               <button
                 type="button"
                 onClick={e => e.stopPropagation()}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
                 aria-label={t("options")}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
@@ -1326,7 +1327,7 @@ export function WorldWiki({
             trigger={
               <button
                 type="button"
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-5")}
                 title={t("chooseIcon")}
               >
                 {createIcon && VALID_LUCIDE_ICONS.has(createIcon) ? (
@@ -1351,7 +1352,7 @@ export function WorldWiki({
               if (e.key === "Escape") setCreating(null);
             }}
             placeholder={isFolder ? t("folderNamePlaceholder") : t("pageTitlePlaceholder")}
-            className="flex-1 border-b border-border bg-transparent py-0 text-sm outline-none placeholder:text-muted-foreground/60"
+            className="flex-1 border-b border-border bg-transparent py-0 text-sm outline-none placeholder:text-muted-foreground"
           />
           <button
             type="button"
@@ -1473,8 +1474,7 @@ export function WorldWiki({
           title={recentOpen ? t("showTree") : t("recentPages")}
           aria-pressed={recentOpen}
           className={cn(
-            "shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
-            recentOpen && "bg-secondary text-foreground",
+            buttonVariants({ variant: "ghost", size: "icon-sm" }),
           )}
         >
           <History className="h-4 w-4" />
@@ -1484,7 +1484,7 @@ export function WorldWiki({
           onClick={() => replierNav(true)}
           aria-label={t("collapsePages")}
           title={t("collapsePages")}
-          className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:block"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "hidden lg:inline-flex")}
         >
           <PanelLeftClose className="h-4 w-4" />
         </button>
@@ -1521,7 +1521,7 @@ export function WorldWiki({
               <DragOverlay>
                 {pageGlissee && (
                   <div className="flex items-center gap-1.5 rounded-md border border-border bg-popover px-2 py-1 text-sm shadow-lg">
-                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     {pageGlissee.icon && VALID_LUCIDE_ICONS.has(pageGlissee.icon) ? (
                       <LazyLucideIcon name={pageGlissee.icon} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     ) : pageGlissee.is_folder ? (
@@ -1547,20 +1547,23 @@ export function WorldWiki({
           data-testid="wiki-nav-footer"
           className={WIKI_FOOTER}
         >
-          <button
+          <Button variant="outline"
             type="button"
+            size="sm"
+            className="text-xs"
             onClick={() => setCreating({ parentId: null, isFolder: false })}
-            className={WIKI_FOOTER_BUTTON}
           >
             <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs"
             onClick={() => setCreating({ parentId: null, isFolder: true })}
-            className={WIKI_FOOTER_BUTTON}
           >
             <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
-          </button>
+          </Button>
           <button
             type="button"
             onClick={() => setLexiconManagerOpen(true)}
@@ -1602,7 +1605,7 @@ export function WorldWiki({
                 type="button"
                 onClick={() => setTreeOpen(true)}
                 aria-label={t("openPages")}
-                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs")}
               >
                 <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
                 {compteurDesPages}
@@ -1613,7 +1616,7 @@ export function WorldWiki({
                 type="button"
                 onClick={() => replierNav(false)}
                 aria-label={t("expandPages")}
-                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs")}
               >
                 <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
                 {compteurDesPages}
@@ -1744,7 +1747,7 @@ export function WorldWiki({
               étant déjà partie. */}
           {colonneNav && !navCollapsed && (
             <div
-              className="flex shrink-0 flex-col border-r border-border-soft"
+              className="flex shrink-0 flex-col border-r border-border"
               style={{ width: navWidth }}
             >
               {arbreDesPages()}
@@ -1758,7 +1761,7 @@ export function WorldWiki({
               className="group relative hidden w-2 shrink-0 cursor-col-resize select-none lg:block"
               {...navHandleProps}
             >
-              <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
+              <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-border" />
             </div>
           )}
 

@@ -5,10 +5,11 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Bold, Italic, Strikethrough, Underline, List, Palette, Heading, Heading1, Heading2, Heading3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { wrapSelection, applyListPrefix, applyHeadingPrefix } from "@/lib/textFormatting";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
-import { BUBBLE_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 function buildHTML(v: string): string {
@@ -173,7 +174,7 @@ export function ParagraphBlockEditor({
   const [focused, setFocused] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
-  const [pendingColor, setPendingColor] = useState(BUBBLE_COLOR_PRESETS[4].value);
+  const [pendingColor, setPendingColor] = useState<string>(DEFAULT_PLAYER_COLOR);
   // Sélection sauvegardée avant l'ouverture du picker de couleur — la
   // sélection dans le contentEditable ne survit pas aux clics dans le popover
   // (portalé ailleurs dans le DOM), donc on la restaure au moment d'appliquer.
@@ -696,7 +697,7 @@ export function ParagraphBlockEditor({
     setColorPickerOpen(false);
   }
 
-  const toolbarButtonClass = "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+  const toolbarButtonClass = cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-7");
 
   // Barre flottante ancrée au-dessus (ou en dessous, si pas assez de place)
   // de la sélection — façon Discord/Notion. `position: fixed` : les
@@ -736,7 +737,7 @@ export function ParagraphBlockEditor({
       {formatting && selectionRect && createPortal(
         <div
           style={toolbarStyle}
-          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-border-soft bg-background p-1 shadow-lg"
+          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-border bg-background p-1 shadow-lg"
         >
           <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
             <DropdownMenuTrigger asChild>
@@ -827,16 +828,12 @@ export function ParagraphBlockEditor({
                 <Palette className="h-3.5 w-3.5" />
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-3" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
-              <div className="space-y-3">
-                <HsvColorPicker color={pendingColor} onChange={setPendingColor} />
-                <button
-                  type="button"
-                  onClick={() => applyColor(pendingColor)}
-                  className="w-full rounded-md bg-primary py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/85 transition-colors"
-                >
+            <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <HsvColorPicker color={pendingColor} onChange={setPendingColor} alpha framed={false} />
+              <div className="border-t border-border p-2.5">
+                <Button type="button" size="sm" className="w-full" onClick={() => applyColor(pendingColor)}>
                   {t("colorConfirm")}
-                </button>
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -844,7 +841,7 @@ export function ParagraphBlockEditor({
         document.body,
       )}
       {!value.trim() && placeholder && (
-        <span className="absolute top-[5px] left-[10px] pointer-events-none select-none text-muted-foreground/50 text-sm">
+        <span className="absolute top-[5px] left-[10px] pointer-events-none select-none text-muted-foreground text-sm">
           {placeholder}
         </span>
       )}

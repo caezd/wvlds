@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { MessagesSquare, PanelRightClose, StickyNote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { TAB_BAR_TRIGGER_CLASS } from "@/components/ui/tab-bar";
 import { WIKI_SUBHEADER } from "./wikiSubHeader";
+import { buttonVariants } from "@/components/ui/button";
 
 /** Les deux contenus que la colonne latérale d'une page sait afficher. */
 export type WikiSideTab = "comments" | "notes";
@@ -77,7 +79,7 @@ export function WikiSidePanel({
           className="group relative w-2 shrink-0 cursor-col-resize select-none"
           {...handleProps}
         >
-          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
+          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-border" />
         </div>
       )}
 
@@ -90,14 +92,14 @@ export function WikiSidePanel({
         // Le trait separe la colonne du texte de l'article. Dans le tiroir,
         // il n'y a rien a separer : il ne restait qu'une bordure posee le long
         // du bord, en double du sien.
-        !dansTiroir && "border-l border-border-soft",
+        !dansTiroir && "border-l border-border",
       )}
       style={{ width }}
     >
-      {/* Soulignement plutôt que pastille pleine, comme la barre d'onglets
-          partagée (components/ui/tab-bar.tsx) : même technique d'ombre `inset`,
-          qui reste DANS la boîte du bouton là où une bordure ou une marge
-          négative en gonfleraient la hauteur. */}
+      {/* Soulignement plutôt que pastille pleine : la classe de la barre
+          d'onglets partagée (TAB_BAR_TRIGGER_CLASS, components/ui/tab-bar.tsx),
+          dont l'ombre `inset` reste DANS la boîte du bouton là où une bordure
+          ou une marge négative en gonfleraient la hauteur. */}
       {/* Segment droit du bandeau : même hauteur et même trait que les deux
           autres, pour qu'ils se lisent comme une seule ligne. */}
       <div className={cn(WIKI_SUBHEADER, "px-3")}>
@@ -112,19 +114,14 @@ export function WikiSidePanel({
               type="button"
               role="tab"
               aria-selected={tab === o.id}
+              data-state={tab === o.id ? "active" : "inactive"}
               onClick={() => onTabChange(o.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-0.5 py-2 text-xs font-medium transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                tab === o.id
-                  ? "text-foreground shadow-[inset_0_-2px_0_0_var(--color-accent)]"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+              className={cn(TAB_BAR_TRIGGER_CLASS, "flex items-center gap-1.5 py-2 text-xs")}
             >
               {o.icon}
               {o.label}
               {o.count ? (
-                <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
+                <span className="rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground">
                   {o.count}
                 </span>
               ) : null}
@@ -137,7 +134,7 @@ export function WikiSidePanel({
             onClick={onCollapse}
             aria-label={tWiki("collapsePanel")}
             title={tWiki("collapsePanel")}
-            className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
             <PanelRightClose className="h-4 w-4" />
           </button>

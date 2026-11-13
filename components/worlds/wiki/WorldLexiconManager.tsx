@@ -4,13 +4,14 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
 import type { createClient } from "@/lib/supabase/client";
 import type { WorldLexiconTerm } from "@/types/worlds";
+import { cn } from "@/lib/utils";
 
 function TermForm({
   worldId,
@@ -57,7 +58,7 @@ function TermForm({
   return (
     <form
       onSubmit={e => void handleSubmit(e)}
-      className="space-y-2.5 rounded-xl border border-border-soft bg-muted/20 p-3"
+      className="space-y-2.5 rounded-xl border border-border bg-muted/20 p-3"
     >
       <Input
         autoFocus
@@ -73,7 +74,7 @@ function TermForm({
         rows={3}
       />
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           {tCommon("cancel")}
         </Button>
         <Button type="submit" size="sm" disabled={!term.trim() || !description.trim() || saving}>
@@ -130,7 +131,7 @@ function TermRow({
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-7")}
           aria-label={tCommon("edit")}
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -145,7 +146,7 @@ function TermRow({
             <button
               type="button"
               disabled={deleting}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-7 hover:text-destructive")}
               aria-label={tCommon("delete")}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -184,7 +185,7 @@ export function WorldLexiconManager({
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
       <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-        <DrawerHeader className="border-b border-border-soft">
+        <DrawerHeader className="border-b border-border">
           <DrawerTitle className="flex items-center gap-2">
             <Library className="h-4 w-4" /> {t("title")}
           </DrawerTitle>
@@ -207,7 +208,7 @@ export function WorldLexiconManager({
           ))}
 
           {terms.length === 0 && !creating && (
-            <p className="px-2 py-1 text-xs text-muted-foreground/60">{t("noTerms")}</p>
+            <p className="px-2 py-1 text-xs text-muted-foreground">{t("noTerms")}</p>
           )}
 
           {creating ? (
@@ -218,13 +219,9 @@ export function WorldLexiconManager({
               onSaved={() => setCreating(false)}
             />
           ) : (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
-            >
+            <Button variant="outline" type="button" size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-3.5 w-3.5" /> {t("addTerm")}
-            </button>
+            </Button>
           )}
         </div>
       </DrawerContent>

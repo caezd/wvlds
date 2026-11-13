@@ -9,6 +9,8 @@ import { Drawer, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import type { MapPin, WorldMapData } from "@/app/actions/worldMap";
+import { SectionLabel } from "@/components/ui/section-label";
+import { buttonVariants } from "@/components/ui/button";
 
 type PlacesProps = {
   maps: WorldMapData[];
@@ -46,7 +48,7 @@ function ContenuColonne({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {avecRetour && (
-        <div className="flex shrink-0 items-center gap-1 border-b border-border-soft px-2 py-1.5">
+        <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
           <BoutonRetour onClick={onCloseDetail} />
         </div>
       )}
@@ -65,8 +67,8 @@ function BoutonRetour({ onClick }: { onClick?: () => void }) {
       className={cn(
         // `w-fit self-start` : l'en-tête du tiroir est une colonne flex, et
         // ses enfants s'y étirent sur toute la largeur sans cela.
-        "relative flex w-fit self-start items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground",
-        "hover:bg-secondary hover:text-foreground",
+        buttonVariants({ variant: "ghost", size: "sm" }),
+        "relative w-fit self-start",
         // La zone sensible reste à la taille d'un doigt, sans agrandir le bouton.
         "touch:after:absolute touch:after:-inset-2 touch:after:content-['']",
       )}
@@ -106,7 +108,7 @@ export function MapPlacesPanel(props: PlacesProps) {
       onClick={(e) => e.stopPropagation()}
       // Plus large qu'une simple liste : c'est ici que se lit un lieu entier,
       // là où le panneau flottant tenait dans 340 px pris sur la carte.
-      className="flex w-80 shrink-0 flex-col border-r border-border-soft bg-background"
+      className="flex w-80 shrink-0 flex-col border-r border-border bg-background"
     >
       <ContenuColonne {...props} />
     </aside>
@@ -123,7 +125,7 @@ export function MapPlacesDrawer({ open, ...props }: PlacesProps & { open: boolea
       swipeDirection="right"
     >
       <SideSheetContent width="compact">
-        <DrawerHeader className="border-b border-border-soft px-4 py-3">
+        <DrawerHeader className="border-b border-border px-4 py-3">
           {props.detail ? (
             <>
               {/* Le retour tient lieu de titre : « Lieu » au-dessus d'un
@@ -183,7 +185,7 @@ function PlacesBody({
 
   return (
     <>
-      <div className="flex items-center gap-1 border-b border-border-soft px-2 py-1.5">
+      <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -199,7 +201,7 @@ function PlacesBody({
             type="button"
             aria-label={t("hidePlaces")}
             onClick={onClose}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -218,13 +220,13 @@ function PlacesBody({
         ))}
 
         {parCarte.length > 0 && (
-          <p className="px-2 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <SectionLabel as="p" className="px-2 pb-1 pt-3">
             {t("onOtherMaps")}
-          </p>
+          </SectionLabel>
         )}
         {parCarte.map(({ carte, lieux }) => (
           <div key={carte.id}>
-            <p className="px-2 py-1 text-[11px] text-muted-foreground">
+            <p className="px-2 py-1 text-xs-plus text-muted-foreground">
               {carte.label?.trim() || t("title")}
             </p>
             {lieux.map((pin) => (

@@ -100,6 +100,8 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  // MarkdownRenderer en tire la classe du bouton « Copier ».
+  buttonVariants: () => "",
 }));
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";

@@ -59,14 +59,18 @@ describe("httpUrl(message)", () => {
 });
 
 describe("hexColorSchema", () => {
-  it("accepte les deux formes des sélecteurs", () => {
+  it("accepte les formes des sélecteurs, opacité comprise", () => {
     expect(ok(hexColorSchema, "#1f2937")).toBe(true);
     expect(ok(hexColorSchema, "#ABC")).toBe(true);
+    expect(ok(hexColorSchema, "#7038F408")).toBe(true);
+    expect(ok(hexColorSchema, "#abc8")).toBe(true);
   });
 
   it("refuse tout ce qui pourrait être autre chose qu'une couleur", () => {
     expect(ok(hexColorSchema, "red")).toBe(false);
     expect(ok(hexColorSchema, "#12345")).toBe(false);
+    expect(ok(hexColorSchema, "#1234567")).toBe(false);
+    expect(ok(hexColorSchema, "#123456789")).toBe(false);
     expect(ok(hexColorSchema, "#1f2937; background: url(x)")).toBe(false);
     expect(ok(hexColorSchema, "")).toBe(false);
   });

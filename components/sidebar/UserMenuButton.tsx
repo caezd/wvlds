@@ -36,8 +36,8 @@ type UserMenuButtonProps = {
 };
 
 const STATUS_COLOR: Record<PresenceStatus, string> = {
-  online: "bg-green-500",
-  offline: "bg-red-500",
+  online: "bg-online",
+  offline: "bg-offline",
   invisible: "bg-muted-foreground/40 border border-muted-foreground",
 };
 

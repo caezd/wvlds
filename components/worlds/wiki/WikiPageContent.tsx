@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Eye, History, ImagePlus, Loader2, Lock, PanelLeft, PanelRight, Pencil, Trash2 } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
@@ -248,7 +248,7 @@ export function WikiPageContent({
             title={t("changeIcon")}
             // Encadrée : sans trait, une icône seule au-dessus du titre ne se
             // lit pas comme une commande, et rien ne dit qu'on peut la changer.
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "outline", size: "icon-lg" })}
           >
             {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon)
               ? <LazyLucideIcon name={renameIcon} className="h-6 w-6" />
@@ -870,7 +870,7 @@ export function WikiPageContent({
   // RLS garantit qu'un lecteur non-éditeur ne reçoit jamais de page
   // is_restricted — pas besoin de conditionner l'affichage sur `canEdit` ici.
   const restrictedBadge = page.is_restricted && (
-    <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-soft px-2 py-0.5 text-xs font-medium text-muted-foreground">
+    <span className="flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
       <Lock className="h-3 w-3" /> {t("restrictedBadge")}
     </span>
   );
@@ -894,7 +894,7 @@ export function WikiPageContent({
   const compteurDeLaColonne = sideTab === "notes"
     ? nombreDeNotes > 0 && <span className={WIKI_SUBHEADER_COUNT}>{nombreDeNotes}</span>
     : openAnnotationCount > 0 && (
-      <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
+      <span className="rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground">
         {openAnnotationCount}
       </span>
     );
@@ -908,7 +908,7 @@ export function WikiPageContent({
           type="button"
           onClick={onOpenTree}
           aria-label={t("openPages")}
-          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs")}
         >
           <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
           {compteurDesPages}
@@ -919,7 +919,7 @@ export function WikiPageContent({
           type="button"
           onClick={onExpandNav}
           aria-label={t("expandPages")}
-          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden text-xs lg:inline-flex")}
         >
           <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
           {compteurDesPages}
@@ -938,7 +938,7 @@ export function WikiPageContent({
         <button
           type="button"
           onClick={() => setSideDrawerOpen(true)}
-          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs")}
         >
           <PanelRight className="h-3.5 w-3.5" />
           {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
@@ -950,7 +950,7 @@ export function WikiPageContent({
           type="button"
           onClick={() => replierPanneau(false)}
           aria-label={t("openPanel")}
-          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs")}
         >
           <PanelRight className="h-3.5 w-3.5" />
           {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
@@ -1008,7 +1008,7 @@ export function WikiPageContent({
                   />
                   <div className="absolute right-2 top-2 flex gap-1">
                     <Button
-                      size="sm"
+                      size="icon-sm"
                       variant="secondary"
                       onClick={() => champBanniere.current?.click()}
                       disabled={bannerUploading}
@@ -1018,7 +1018,7 @@ export function WikiPageContent({
                         : <ImagePlus className="h-3.5 w-3.5" />}
                     </Button>
                     <Button
-                      size="sm"
+                      size="icon-sm"
                       variant="secondary"
                       aria-label={t("removeBanner")}
                       title={t("removeBanner")}
@@ -1039,7 +1039,7 @@ export function WikiPageContent({
                     size="sm"
                     onClick={() => champBanniere.current?.click()}
                     disabled={bannerUploading}
-                    className="-ml-2.5 text-muted-foreground"
+                    className="-ml-2.5"
                   >
                     {bannerUploading
                       ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
@@ -1173,7 +1173,7 @@ export function WikiPageContent({
                   layerClassName="px-4 focus-visible:ring-0 lg:px-6"
                 />
                 {imageEnEnvoi && (
-                  <div className="pointer-events-none absolute right-4 top-2 z-30 flex items-center gap-1.5 rounded-md border border-border-soft bg-popover px-2 py-1 text-xs text-muted-foreground shadow-sm lg:right-6">
+                  <div className="pointer-events-none absolute right-4 top-2 z-30 flex items-center gap-1.5 rounded-md border border-border bg-popover px-2 py-1 text-xs text-muted-foreground shadow-sm lg:right-6">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     {t("imageUploading")}
                   </div>
@@ -1198,11 +1198,10 @@ export function WikiPageContent({
                 « Publier » reste atteignable quelle que soit la longueur du
                 texte, et le filet dit où finit l'article.
 
-                Boutons ordinaires et non le composant `Button` : celui-ci fixe
-                sa propre hauteur, qui décalait ce pied de quatre pixels par
-                rapport à ceux de l'arbre des pages et du panneau de notes. Les
-                trois traits doivent tomber sur la même ligne. */}
-            <div className="shrink-0 border-t border-border-soft py-1.5">
+                Tous ses boutons font h-8, comme ceux des pieds de l'arbre des
+                pages et du panneau de notes (même `py-1`) : les trois traits
+                tombent sur la même ligne. */}
+            <div className="shrink-0 border-t border-border py-1">
               <div className="mx-auto flex w-full flex-wrap items-center gap-1 px-4 lg:px-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
                 {/* À gauche, ce qui accompagne l'écriture ; à droite, ce qui la
                     termine. Sur écran étroit, les deux gestes décisifs restent
@@ -1211,7 +1210,7 @@ export function WikiPageContent({
                   type="button"
                   onClick={() => setShowPreview(v => !v)}
                   aria-pressed={showPreview}
-                  className={cn(WIKI_FOOTER_BUTTON, showPreview && "bg-secondary text-foreground")}
+                  className={WIKI_FOOTER_BUTTON}
                 >
                   <Eye className="h-3.5 w-3.5" /> {t("preview")}
                 </button>
@@ -1224,29 +1223,27 @@ export function WikiPageContent({
                   })}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
                     onClick={quitterLaModification}
                     disabled={publishing}
-                    className={cn(WIKI_FOOTER_BUTTON, "disabled:opacity-50")}
                   >
                     {tCommon("cancel")}
-                  </button>
-                  {/* Le geste qui engage : mêmes mesures que ses voisins, mais
-                      il porte la couleur d'accent — c'est lui qu'on cherche. */}
-                  <button
+                  </Button>
+                  {/* Le geste qui engage : l'action principale, en pilule. */}
+                  <Button
                     type="button"
+                    size="sm"
+                    className="text-xs"
                     onClick={() => void publish()}
                     disabled={publishing || loadingDraft}
-                    className={cn(
-                      WIKI_FOOTER_BUTTON,
-                      "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
-                      "disabled:opacity-50",
-                    )}
                   >
                     {publishing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     {t("publish")}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

@@ -135,7 +135,7 @@ export function WorldHomeHeader({
                 type="button"
                 onClick={onToggleFavorite}
                 aria-label={favoriteLabel}
-                className={cn(BUTTON_CLASS, isFavorite && "text-yellow-400")}
+                className={cn(BUTTON_CLASS, isFavorite && "text-warning")}
               >
                 <Star size={16} className={isFavorite ? "fill-current" : ""} />
               </button>

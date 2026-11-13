@@ -7,6 +7,7 @@ import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
 import { cn, isSafeUrl } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
 import type { ChatMediaItem } from "@/types/db";
 
 export function ImageLightbox({
@@ -33,7 +34,7 @@ export function ImageLightbox({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex bg-black/40 backdrop-blur-sm pointer-events-auto"
+      className="fixed inset-0 z-lightbox flex bg-black/40 backdrop-blur-sm pointer-events-auto"
       onClick={(e) => { e.stopPropagation(); onClose(); }}
     >
       {/* Actions haut droite */}
@@ -43,17 +44,13 @@ export function ImageLightbox({
           download={item.name}
           aria-label={tCommon("download")}
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center size-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className={buttonVariants({ variant: "ghost", size: "icon" })}
         >
           <Download className="size-4" />
         </a>
-        <button
-          aria-label={tCommon("close")}
-          onClick={onClose}
-          className="flex items-center justify-center size-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-        >
+        <Button variant="ghost" size="icon" aria-label={tCommon("close")} onClick={onClose}>
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       {/* Image principale */}

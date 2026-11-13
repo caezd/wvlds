@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { Area, CropperProps } from "react-easy-crop";
 import { ZoomIn, ZoomOut, RotateCcw, Loader2, ImagePlus, Link as LinkIcon } from "lucide-react";
@@ -275,9 +275,9 @@ export function ImageSourceStep({
         <ImagePlus className="h-5 w-5 text-muted-foreground" />
         <p className="text-xs font-medium">
           Glissez-déposez ou collez (Ctrl+V) une image, ou{" "}
-          <span className="text-blue-400">{t("clickToPickFile")}</span>
+          <span className="text-info">{t("clickToPickFile")}</span>
         </p>
-        <p className="text-[11px] text-muted-foreground">Taille max 5 Mo</p>
+        <p className="text-xs-plus text-muted-foreground">Taille max 5 Mo</p>
       </div>
 
       <div className="flex gap-2">
@@ -292,7 +292,7 @@ export function ImageSourceStep({
             className="h-8 pl-8 text-sm"
           />
         </div>
-        <Button type="button" size="sm" variant="secondary" disabled={disabled || checking || !url.trim()} onClick={() => void selectUrl(url)}>
+        <Button type="button" variant="outline" size="sm" disabled={disabled || checking || !url.trim()} onClick={() => void selectUrl(url)}>
           {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Utiliser"}
         </Button>
       </div>
@@ -318,6 +318,8 @@ export function ImagePickerCropField({
   previewAlt = "",
   previewClassName,
   changeLabel = "Changer l'image",
+  placeholder,
+  badge,
 }: {
   aspect?: number;
   uploading?: boolean;
@@ -330,16 +332,21 @@ export function ImagePickerCropField({
   previewAlt?: string;
   previewClassName?: string;
   changeLabel?: string;
+  /** Sans image : ce qui s'affiche à sa place (initiales…), cliquable comme l'aperçu, plutôt que le champ de dépôt. */
+  placeholder?: ReactNode;
+  /** Posé sur l'aperçu (un badge « appareil photo ») ; remplace le libellé au survol. */
+  badge?: ReactNode;
 }) {
   const tCommon = useTranslations("common");
-  const [picking, setPicking] = useState(!previewSrc);
+  const [picking, setPicking] = useState(!previewSrc && !placeholder);
   const [src, setSrc] = useState<string | null>(null);
   const [cropError, setCropError] = useState<string | null>(null);
 
   // Si l'image affichée disparaît (suppression côté parent) alors qu'on est
   // en mode aperçu, on repasse automatiquement en sélection.
   useEffect(() => {
-    if (!previewSrc) setPicking(true);
+    if (!previewSrc && !placeholder) setPicking(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewSrc]);
 
   function resetSrc() {
@@ -396,7 +403,7 @@ export function ImagePickerCropField({
     return (
       <div className="space-y-2">
         <ImageSourceStep onSelect={setSrc} disabled={uploading} />
-        {previewSrc && (
+        {(previewSrc || placeholder) && (
           <button
             type="button"
             onClick={cancelPicking}
@@ -415,18 +422,30 @@ export function ImagePickerCropField({
       type="button"
       onClick={() => setPicking(true)}
       disabled={uploading}
+      title={badge ? changeLabel : undefined}
+      aria-label={badge ? changeLabel : undefined}
       className={cn("group relative block overflow-hidden focus-visible:outline-none", previewClassName)}
     >
-      {/* previewSrc peut être un blob:/data: URI (aperçu local avant upload) ou un lien externe
-          arbitraire (recadrage depuis une URL) — aucun des deux n'est compatible avec next/image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={previewSrc ?? undefined} alt={previewAlt} className="h-full w-full object-cover" draggable={false} />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100 focus-within:opacity-100">
-        {uploading
-          ? <Loader2 className="h-5 w-5 animate-spin text-white" />
-          : <span className="text-xs font-medium text-white">{changeLabel}</span>
-        }
-      </div>
+      {previewSrc ? (
+        <>
+          {/* previewSrc peut être un blob:/data: URI (aperçu local avant upload) ou un lien externe
+              arbitraire (recadrage depuis une URL) — aucun des deux n'est compatible avec next/image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewSrc} alt={previewAlt} className="h-full w-full object-cover" draggable={false} />
+        </>
+      ) : (
+        placeholder
+      )}
+      {badge && !uploading ? (
+        badge
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100 focus-within:opacity-100">
+          {uploading
+            ? <Loader2 className="h-5 w-5 animate-spin text-white" />
+            : <span className="text-xs font-medium text-white">{changeLabel}</span>
+          }
+        </div>
+      )}
     </button>
   );
 }

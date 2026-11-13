@@ -75,7 +75,7 @@ export function PatreonSection({
   if (isLifetime) {
     return (
       <div className="space-y-3">
-        <Badge className="gap-1">
+        <Badge tone="solid">
           <Crown className="size-3" />
           {t("lifetimeBadge")}
         </Badge>
@@ -97,7 +97,7 @@ export function PatreonSection({
               confirmLabel={t("disconnect")}
               onConfirm={handleDisconnect}
               trigger={
-                <Button variant="ghost" size="sm" disabled={isPending}>
+                <Button variant="destructive" size="sm" disabled={isPending}>
                   {t("disconnect")}
                 </Button>
               }
@@ -128,9 +128,9 @@ export function PatreonSection({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         {isActivePatron ? (
-          <Badge>{t("activeBadge")}</Badge>
+          <Badge tone="success">{t("activeBadge")}</Badge>
         ) : (
-          <Badge variant="secondary">{t("inactiveBadge")}</Badge>
+          <Badge>{t("inactiveBadge")}</Badge>
         )}
       </div>
 
@@ -155,7 +155,7 @@ export function PatreonSection({
           confirmLabel={t("disconnect")}
           onConfirm={handleDisconnect}
           trigger={
-            <Button variant="ghost" size="sm" disabled={isPending}>
+            <Button variant="destructive" size="sm" disabled={isPending}>
               {t("disconnect")}
             </Button>
           }

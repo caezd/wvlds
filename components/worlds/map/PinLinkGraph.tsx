@@ -74,7 +74,7 @@ export function PinLinkGraph({
   return (
     <div
       data-link-graph
-      className="relative h-40 w-full overflow-hidden rounded-md border border-border-soft bg-background/50"
+      className="relative h-40 w-full overflow-hidden rounded-md border border-border bg-background/50"
     >
       <svg
         aria-hidden
@@ -126,7 +126,7 @@ export function PinLinkGraph({
       {/* Le lieu ouvert, au centre. Il ne mène nulle part : on y est déjà. */}
       <span
         data-link-graph-center
-        className="absolute z-10 truncate rounded-sm bg-foreground px-1.5 py-0.5 text-[10px] font-semibold text-background"
+        className="absolute z-10 truncate rounded-sm bg-foreground px-1.5 py-0.5 text-2xs font-semibold text-background"
         style={{
           left: `${center.x}%`,
           top: `${center.y}%`,
@@ -154,9 +154,9 @@ export function PinLinkGraph({
             onBlur={() => setSurvole((prev) => (prev === n.id ? null : prev))}
             className={cn(
               "absolute z-10 flex rounded-sm border bg-background px-1.5 py-0.5 text-left",
-              "text-[10px] leading-tight transition-colors",
+              "text-2xs leading-tight transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              survole === n.id ? "border-foreground bg-secondary" : "border-border-soft",
+              survole === n.id ? "border-foreground bg-secondary" : "border-border",
             )}
             style={{
               left: `${n.x}%`,
@@ -176,7 +176,7 @@ export function PinLinkGraph({
       })}
 
       {hidden > 0 && (
-        <span className="absolute bottom-1 right-1 rounded bg-secondary px-1 text-[9px] text-muted-foreground">
+        <span className="absolute bottom-1 right-1 rounded bg-secondary px-1 text-2xs text-muted-foreground">
           +{hidden}
         </span>
       )}

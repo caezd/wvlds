@@ -201,7 +201,7 @@ export function TimelineEventDialog({
                 {t("eventDeleteConfirm")}
               </Button>
             ) : (
-              <Button type="button" variant="ghost" disabled={busy} onClick={() => setConfirmDelete(true)}>
+              <Button type="button" variant="ghost" className="text-destructive" disabled={busy} onClick={() => setConfirmDelete(true)}>
                 {t("eventDelete")}
               </Button>
             )

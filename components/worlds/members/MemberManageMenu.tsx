@@ -6,6 +6,7 @@ import { Clock, MoreHorizontal, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
 import { TABLE } from "@/lib/constants";
 import { canManageMember, canManageRole, rankOf, type WorldMembership, type WorldRoleRow } from "@/lib/worldPermissions";
 import {
@@ -100,13 +101,15 @@ export function MemberManageMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={t("manageMember", { name: label })}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="size-7"
           >
             <MoreHorizontal className="h-4 w-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="text-xs text-muted-foreground">{t("rolesLabel")}</DropdownMenuLabel>

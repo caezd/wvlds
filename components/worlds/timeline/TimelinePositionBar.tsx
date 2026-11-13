@@ -4,12 +4,14 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, CirclePause } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { TIMELINE_ROOM_STATUSES, type TimelineMonthStop, type TimelineRoomStatus } from "@/lib/worldTimelineItems";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import type { TimelineArc } from "@/components/worlds/timeline/useTimelineData";
+import { withOpacity } from "@/lib/colorOpacity";
 
 /** La légende d'une année (« Eon », le nom d'ère) : petites capitales. */
-export const YEAR_CAPTION = "text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground/60";
+export const YEAR_CAPTION = "text-xs-plus font-semibold uppercase tracking-[0.15em] text-muted-foreground";
 
 /**
  * Le bas de la tête de la frise, toujours collé : où l'on en est (l'année,
@@ -46,25 +48,27 @@ export function TimelinePositionBar({
       className="flex min-h-11 items-center gap-3 border-y border-border px-5 py-1.5"
       data-testid="timeline-position"
     >
-      <div className="-ml-1.5 flex shrink-0 items-center">
-        <button
+      <div className="-ml-2 flex shrink-0 items-center">
+        <Button
           type="button"
           aria-label={tv("previousMonth")}
           disabled={!onPrevious}
           onClick={onPrevious ?? undefined}
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+          variant="ghost"
+          size="icon-sm"
         >
           <ChevronUp className="size-4" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           aria-label={tv("nextMonth")}
           disabled={!onNext}
           onClick={onNext ?? undefined}
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+          variant="ghost"
+          size="icon-sm"
         >
           <ChevronDown className="size-4" />
-        </button>
+        </Button>
       </div>
       {stop && (
         <p className="flex min-w-0 items-baseline gap-2 leading-none" data-testid="timeline-position-label">
@@ -82,7 +86,7 @@ export function TimelinePositionBar({
         {hovered && (
           <span
             className="hidden min-w-0 items-center gap-2 rounded-md px-2 py-0.5 text-xs sm:inline-flex"
-            style={{ backgroundColor: `${hovered.arc.color}26` }}
+            style={{ backgroundColor: withOpacity(hovered.arc.color, 0.15) }}
             data-testid="timeline-hovered-arc"
           >
             <span className="truncate font-semibold" style={{ color: hovered.arc.color }}>{hovered.arc.name}</span>
@@ -134,7 +138,7 @@ export function TimelineLegend({ className }: { className?: string }) {
   return (
     <ul aria-label={tv("legend")} className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground", className)}>
       {TIMELINE_ROOM_STATUSES.map((status) => (
-        <li key={status} className="flex items-center gap-1.5 text-foreground/60">
+        <li key={status} className="flex items-center gap-1.5 text-muted-foreground">
           <StatusMark status={status} />
           <span className="text-muted-foreground">{tv(`roomStatus.${status}`)}</span>
         </li>

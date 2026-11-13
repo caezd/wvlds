@@ -107,10 +107,15 @@ export default async function ChatRoomContent({
     (async (): Promise<Record<string, string>> => {
       if (!chatroom.world_id) return {};
       type AssignRow = { persona_id: string; group: { color: string } | null };
-      const { data } = await supabase
-        .from("persona_group_assignments")
-        .select("persona_id, group:group_id(color)")
-        .eq("world_id", chatroom.world_id);
+      const [{ data: worldRow }, { data }] = await Promise.all([
+        // Le monde peut couper la couleur de groupe (migration 201).
+        supabase.from("worlds").select("persona_group_color").eq("id", chatroom.world_id).maybeSingle(),
+        supabase
+          .from("persona_group_assignments")
+          .select("persona_id, group:group_id(color)")
+          .eq("world_id", chatroom.world_id),
+      ]);
+      if ((worldRow as { persona_group_color?: boolean } | null)?.persona_group_color === false) return {};
       const out: Record<string, string> = {};
       for (const row of ((data ?? []) as unknown as AssignRow[])) {
         if (row.group?.color) out[row.persona_id] = row.group.color;

@@ -60,7 +60,7 @@ export function WorldMapWidget({
   }
 
   return (
-    <section aria-label={t("title")} className="overflow-hidden rounded-xl border border-border-soft bg-background">
+    <section aria-label={t("title")} className="overflow-hidden rounded-xl border border-border bg-background">
       <Link href={`${base}&map=${vedette.id}`} className="group relative block aspect-[2/1] w-full bg-secondary">
         {vignette && (
           // eslint-disable-next-line @next/next/no-img-element

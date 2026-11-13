@@ -74,7 +74,7 @@ export function WorldHomeGridSettings({
 
   return (
     <div className="space-y-6">
-      <div className="divide-y divide-border-soft rounded-lg border border-border-soft">
+      <div className="divide-y divide-border rounded-lg border border-border">
         <div className="flex items-start justify-between gap-4 p-3">
           <p className="flex items-center gap-1.5 text-sm font-medium">
               {t("home.showStats")}
@@ -106,7 +106,7 @@ export function WorldHomeGridSettings({
                   "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
                   gap === option
                     ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )}
               >
                 {t(`home.gridGapOptions.${option}`)}

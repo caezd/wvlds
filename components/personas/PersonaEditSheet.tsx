@@ -1,7 +1,7 @@
 // components/personas/PersonaEditSheet.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -47,8 +47,7 @@ import { useWorldFaceclaimRule } from "@/hooks/useWorldFaceclaimRule";
 import type { PersonaNarrativeStatus, PersonaReviewStatus, MaritalStatus } from "@/types/db";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
-import { PersonaProfileBody, formatPersonaPresenceLine } from "./PersonaProfileSheetTrigger";
-import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { PersonaProfileBody, usePersonaProfile } from "./PersonaProfileSheetTrigger";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { EMPTY_DRAFT, applyPatch, isDirty, noteOrphan, noteUpload, storagePathOf, type PersonaPatch } from "@/lib/personaDraft";
 import { applySectionOps, diffSections, hasOps } from "@/lib/personaSectionsDiff";
@@ -65,6 +64,7 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
+import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 
 // ---------------------------------------------------------------------------
 // Sélection + recadrage d'une image (fichier, presse-papiers ou lien externe),
@@ -181,10 +181,10 @@ function BannerSheet({
           />
         </div>
         {currentBannerUrl && (
-          <DrawerFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+          <DrawerFooter className="border-t border-border px-6 py-3 shrink-0 flex-row justify-start">
             <DeleteConfirmDialog
               trigger={
-                <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                <Button variant="destructive" size="sm">
                   <Trash2 className="h-4 w-4 mr-1.5" />
                   Supprimer la bannière
                 </Button>
@@ -438,6 +438,7 @@ export function MaritalStatusPicker({
       }
       setPendingRequest(null);
     }
+    notifyPersonasChanged();
     router.refresh();
   }
 
@@ -448,6 +449,7 @@ export function MaritalStatusPicker({
       // affiché, lui, n'a pas été changé par le joueur — on le rétablit.
       const { error } = await supabase.from("personas").update({ marital_status: status }).eq("id", personaId);
       if (error) toast.error(tPersonas("saveFailed"), { description: error.message });
+      notifyPersonasChanged();
       router.refresh();
       return;
     }
@@ -468,6 +470,7 @@ export function MaritalStatusPicker({
     } else {
       // Acceptée d'emblée (persona à soi, ou admin) : les fiches sont déjà écrites.
       setSpouseId(next);
+      notifyPersonasChanged();
       router.refresh();
     }
   }
@@ -498,7 +501,7 @@ export function MaritalStatusPicker({
 
       {showSpouse && worldId && (
         pendingRequest ? (
-          <div className="flex items-center gap-2 rounded-full border border-border-soft px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
             <span>{t("pendingRequest", { name: pendingRequest.targetName })}</span>
             <button type="button" onClick={() => void cancelRequest()} className="underline hover:text-foreground">
               {t("cancelRequest")}
@@ -658,45 +661,17 @@ export function PersonaEditorContent({
   const { userId } = useCurrentUser();
   const [previewMode, setPreviewMode] = useState(false);
   const [previewTab, setPreviewTab] = useState<string | null>(null);
-  const [dialogueColor, setDialogueColor] = useState<string | null>(null);
-  const [ownerPresence, setOwnerPresence] = useState<{
-    last_seen_at: string | null;
-    appear_offline: boolean;
-  } | null>(null);
-  const { getUserPresence } = useGlobalPresence();
   const avatarFallback = useMemo(() => initials(personaName), [personaName]);
 
-  // Charge à la demande (au premier passage en aperçu) ce que l'éditeur ne
-  // tient pas déjà localement — couleur de dialogue et présence du
-  // propriétaire — pour que PersonaProfileBody rende exactement la même
-  // chose que la fiche vue depuis une chatroom (PersonaProfileSheetTrigger).
-  const previewFetchedRef = useRef(false);
+  // L'aperçu est la fiche elle-même : même chargement, mêmes badges, mêmes
+  // onglets (relations, journal, relecture), même couleur de groupe — tout
+  // passe par `usePersonaProfile`, partagé avec PersonaProfileSheetTrigger.
+  // Seul ce que l'éditeur tient en local, pas encore enregistré, le remplace
+  // (nom, images, sections). Chargé au premier passage en aperçu.
+  const { load: loadProfile, bodyProps: profileProps } = usePersonaProfile({ personaId, label: personaName });
   useEffect(() => {
-    if (!previewMode || previewFetchedRef.current) return;
-    previewFetchedRef.current = true;
-    (async () => {
-      const { data: persona } = await supabase
-        .from("personas")
-        .select("dialogue_color")
-        .eq("id", personaId)
-        .maybeSingle();
-      setDialogueColor((persona as { dialogue_color?: string | null } | null)?.dialogue_color ?? null);
-
-      if (!userId) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("last_seen_at, appear_offline")
-        .eq("id", userId)
-        .maybeSingle();
-      if (profile) {
-        const row = profile as { last_seen_at?: string | null; appear_offline?: boolean | null };
-        setOwnerPresence({ last_seen_at: row.last_seen_at ?? null, appear_offline: !!row.appear_offline });
-      }
-    })();
-  }, [previewMode, personaId, userId, supabase]);
-
-  const previewUserPresence = userId ? getUserPresence(userId) : "offline";
-  const previewPresenceLine = formatPersonaPresenceLine(previewUserPresence, ownerPresence);
+    if (previewMode) loadProfile();
+  }, [previewMode, loadProfile]);
 
   // Bascule édition / aperçu — laisse la sheet d'édition et affiche
   // exactement le rendu de la fiche publique (PersonaProfileBody, le même
@@ -707,7 +682,7 @@ export function PersonaEditorContent({
     <button
       type="button"
       onClick={() => setPreviewMode((v) => !v)}
-      className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white"
+      className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-md bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white"
     >
       {previewMode ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       {previewMode ? "Éditer" : "Aperçu"}
@@ -718,17 +693,14 @@ export function PersonaEditorContent({
     <>
       {previewMode ? (
         <PersonaProfileBody
+          {...profileProps}
           name={personaName}
           label={personaName}
           avatarUrl={avatarUrl}
           bannerUrl={bannerUrl}
           frameUrl={frameUrl}
-          dialogueColor={dialogueColor}
-          presenceLine={previewPresenceLine}
-          userPresence={previewUserPresence}
+          // Sa propre fiche : pas de « Suivre ».
           isFollowing={null}
-          followBusy={false}
-          onToggleFollow={() => {}}
           sections={sections}
           activeTab={previewTab}
           onActiveTabChange={setPreviewTab}
@@ -811,7 +783,7 @@ export function PersonaEditorContent({
                   />
                   {faceclaimShown && (
                     <div className="flex items-baseline gap-1 shrink-0 max-w-[45%]">
-                      <span className="text-sm text-muted-foreground/70 shrink-0">ft.</span>
+                      <span className="text-sm text-muted-foreground shrink-0">ft.</span>
                       <input
                         defaultValue={initialFaceclaim ?? ""}
                         onChange={(e) => {
@@ -882,7 +854,7 @@ export function PersonaEditorContent({
 
           <div className="flex flex-col flex-1 overflow-hidden mt-4">
             {/* Menus alignés côte à côte (sous-menu) */}
-            <div className="px-6 pb-3 border-b border-border-soft shrink-0 flex items-center gap-3 flex-wrap">
+            <div className="px-6 pb-3 border-b border-border shrink-0 flex items-center gap-3 flex-wrap">
               <Tabs value={appearanceTab} onValueChange={(v) => setAppearanceTab(v as "avatar" | "cosmetics")}>
                 <TabsList>
                   <TabsTrigger value="avatar">Avatar</TabsTrigger>
@@ -959,10 +931,10 @@ export function PersonaEditorContent({
           </div>
 
           {(avatarUrl || avatarConfig) && (
-            <DrawerFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+            <DrawerFooter className="border-t border-border px-6 py-3 shrink-0 flex-row justify-start">
               <DeleteConfirmDialog
                 trigger={
-                  <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                  <Button variant="destructive" size="sm">
                     <Trash2 className="h-4 w-4 mr-1.5" />
                     Supprimer l&apos;avatar
                   </Button>
@@ -986,7 +958,7 @@ export function PersonaEditorContent({
           Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
       {bannerDialogOpen && typeof document !== "undefined" &&
         createPortal(
-          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[460px] z-[51] items-center justify-center p-10 pointer-events-none">
+          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[460px] z-modal-raised items-center justify-center p-10 pointer-events-none">
             <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
               <div className="relative aspect-[460/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
                 {bannerUrl ? (
@@ -1123,6 +1095,7 @@ export function PersonaEditSheet({
     setDraft(EMPTY_DRAFT);
     setSaving(false);
     toast.success(tPersonas("saved"));
+    notifyPersonasChanged();
     router.refresh();
     return true;
   }
@@ -1149,6 +1122,7 @@ export function PersonaEditSheet({
     }
     setOpen(false);
     toast.success(`${personaName} a été supprimé.`);
+    notifyPersonasChanged();
     router.refresh();
   }
 
@@ -1205,19 +1179,14 @@ export function PersonaEditSheet({
             faceclaim={faceclaim}
             initialReviewStatus={initialReviewStatus}
             onSectionsReload={setSections}
-            className="border-t border-border-soft bg-background px-6 py-3"
+            className="border-t border-border bg-background px-6 py-3"
           />
 
           {/* Footer fixe en bas */}
-          <DrawerFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">
+          <DrawerFooter className="border-t border-border px-6 py-3 flex-row justify-start bg-background">
             <DeleteConfirmDialog
               trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  disabled={deleting}
-                >
+                <Button variant="destructive" size="sm" disabled={deleting}>
                   {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Supprimer ce personnage
                 </Button>
@@ -1248,7 +1217,7 @@ export function PersonaEditSheet({
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <Button
-              variant="ghost"
+              variant="destructive"
               onClick={() => { setConfirmClose(false); void discard().then(() => setOpen(false)); }}
             >
               {tPersonas("unsavedDiscard")}

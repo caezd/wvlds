@@ -69,8 +69,10 @@ export function httpUrl(message: string) {
   return z.url({ protocol: /^https?$/, error: message }).max(INPUT_LIMITS.url, message);
 }
 
-/** Une couleur hexadécimale, à trois ou six chiffres — le format des sélecteurs. */
-export const hexColorSchema = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+/** Une couleur hexadécimale, à trois ou six chiffres, plus un ou deux pour
+ *  l'opacité (`#rgba`, `#rrggbbaa`) — le format des sélecteurs. Miroir de
+ *  `is_hex_color` (migration 203). */
+export const hexColorSchema = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
 
 /**
  * Un nom d'icône Lucide : des minuscules et des tirets, rien d'autre.

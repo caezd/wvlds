@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { PRESENCE_BG } from "@/components/avatars/PresenceDot";
 
 export function ChatroomAvatarWithPresence({
   url,
@@ -11,6 +12,7 @@ export function ChatroomAvatarWithPresence({
   presenceState = "offline",
   size = 24,
   rounded = true,
+  circle = false,
   className,
 }: {
   /** URL telle qu'enregistrée en base : `StoredImage` en dérive lui-même la
@@ -21,8 +23,18 @@ export function ChatroomAvatarWithPresence({
   presenceState?: "online" | "away" | "offline" | "invisible";
   size?: number;
   rounded?: boolean;
+  /** Avatar rond : la pastille se pose sur le cercle, pas dans le coin du carré. */
+  circle?: boolean;
   className?: string;
 }) {
+  // Sur un rond, le centre de la pastille (8 px) suit le bord à 45° ;
+  // sinon il reste dans le coin, comme ailleurs.
+  const inset = circle ? size * (1 - Math.SQRT1_2) / 2 - 4 : undefined;
+  const dot = cn(
+    "absolute z-10 h-2 w-2 rounded-full ring-2 ring-background",
+    !circle && "-bottom-0.5 -right-0.5",
+  );
+  const dotStyle = circle ? { right: inset, bottom: inset } : undefined;
   return (
     <div
       className="relative inline-block"
@@ -31,7 +43,7 @@ export function ChatroomAvatarWithPresence({
       <Avatar
         className={cn(
           "border",
-          rounded ? "rounded-md" : "rounded-none",
+          circle ? "rounded-full" : rounded ? "rounded-md" : "rounded-none",
           className,
         )}
         style={{ width: size, height: size }}
@@ -44,16 +56,8 @@ export function ChatroomAvatarWithPresence({
         <StoredImage url={url} width={avatarThumbWidth(size)} alt={alt ?? ""} className="object-cover" />
       </Avatar>
 
-      {presenceState === "online" && (
-        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-[#58F4A8]" />
-      )}
-      {presenceState === "away" && (
-        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-orange-400" />
-      )}
-      {presenceState === "offline" && (
-        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-red-500" />
-      )}
       {/* invisible → aucune pastille */}
+      {presenceState !== "invisible" && <span className={cn(dot, PRESENCE_BG[presenceState])} style={dotStyle} />}
     </div>
   );
 }

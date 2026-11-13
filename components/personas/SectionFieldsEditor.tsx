@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { deferredWriter } from "@/lib/deferredWriter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
@@ -552,7 +553,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
   return (
     <div className="space-y-1">
-      {errorMessage && <p className="text-xs text-red-500 mb-2">{errorMessage}</p>}
+      {errorMessage && <p className="text-xs text-destructive mb-2">{errorMessage}</p>}
 
       {fields.length === 0 ? (
         <div className="py-4">
@@ -573,13 +574,13 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                       obligatoire (à remplir) ou seulement verrouillé. */}
                   {!isTemplate && field.locked && (
                     <span
-                      className="absolute right-2.5 top-2 flex items-center gap-1 text-muted-foreground/50 opacity-0 transition-opacity z-10 sm:opacity-100 sm:group-hover:opacity-0"
+                      className="absolute right-2.5 top-2 flex items-center gap-1 text-muted-foreground opacity-0 transition-opacity z-10 sm:opacity-100 sm:group-hover:opacity-0"
                       title={field.required ? tPersonas("review.requiredBadge") : tPersonas("fieldRequiredByWorld")}
                     >
                       {field.required && (
-                        <span className="rounded-full bg-orange-500/15 px-1.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">
+                        <Badge tone="warning">
                           {tPersonas("review.requiredBadge")}
-                        </span>
+                        </Badge>
                       )}
                       <Lock className="h-3.5 w-3.5" />
                     </span>
@@ -587,10 +588,10 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
                   {/* Actions flottantes */}
                   <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity z-10">
-                    <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst} aria-label={tCommon("moveUp")}>
+                    <Button variant="ghost" size="icon-sm" type="button" className="size-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst} aria-label={tCommon("moveUp")}>
                       <ArrowUp className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "down")} disabled={isLast} aria-label={tCommon("moveDown")}>
+                    <Button variant="ghost" size="icon-sm" type="button" className="size-7" onClick={() => handleMoveField(field.id, "down")} disabled={isLast} aria-label={tCommon("moveDown")}>
                       <ArrowDown className="h-3.5 w-3.5" />
                     </Button>
                     {isTemplate && (
@@ -598,7 +599,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         variant="ghost"
                         size="icon-sm"
                         type="button"
-                        className={cn("h-7 w-7", field.locked ? "text-primary" : "text-muted-foreground")}
+                        className={cn("size-7", field.locked && "text-primary")}
                         title={field.locked
                           ? "Champ verrouillé (requis sur les fiches des joueurs) — cliquer pour déverrouiller"
                           : "Verrouiller ce champ : il sera requis sur les fiches des joueurs"}
@@ -613,7 +614,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         size="icon-sm"
                         type="button"
                         aria-pressed={!!field.required}
-                        className={cn("h-7 w-7", field.required ? "text-orange-600 dark:text-orange-300" : "text-muted-foreground")}
+                        className={cn("size-7", field.required && "text-warning")}
                         title={field.required ? tPersonas("review.requiredToggleOn") : tPersonas("review.requiredToggleOff")}
                         aria-label={field.required ? tPersonas("review.requiredToggleOn") : tPersonas("review.requiredToggleOff")}
                         onClick={() => void toggleFieldRequired(field)}
@@ -627,7 +628,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         size="icon-sm"
                         type="button"
                         disabled
-                        className="h-7 w-7 text-muted-foreground"
+                        className="size-7"
                         title={tPersonas("fieldRequiredLocked")}
                       >
                         <Lock className="h-3.5 w-3.5" />
@@ -635,7 +636,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     ) : field.type === "image-grid" ? (
                       <DeleteConfirmDialog
                         trigger={
-                          <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={tPersonas("deleteField")}>
+                          <Button variant="ghost" size="icon-sm" type="button" className="size-7 hover:text-destructive" aria-label={tPersonas("deleteField")}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         }
@@ -643,7 +644,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         onConfirm={() => handleDeleteField(field.id)}
                       />
                     ) : (
-                      <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteField(field.id)} aria-label={tPersonas("deleteField")}>
+                      <Button variant="ghost" size="icon-sm" type="button" className="size-7 hover:text-destructive" onClick={() => handleDeleteField(field.id)} aria-label={tPersonas("deleteField")}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}

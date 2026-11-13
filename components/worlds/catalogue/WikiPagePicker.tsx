@@ -58,7 +58,7 @@ export function WikiPageChip({
     </>
   );
   return (
-    <span className={cn("inline-flex max-w-full items-center gap-1 rounded-full border border-border-soft bg-muted/40 pl-2 text-xs", onRemove ? "pr-1" : "pr-2", className)}>
+    <span className={cn("inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-muted/40 pl-2 text-xs", onRemove ? "pr-1" : "pr-2", className)}>
       {onOpen ? (
         <button type="button" onClick={onOpen} className="inline-flex min-w-0 items-center gap-1 py-0.5 hover:underline">{inner}</button>
       ) : (
@@ -102,7 +102,7 @@ export function WikiPagePicker({
       ))}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="h-6 rounded-full px-2 text-xs" disabled={full || pages === null}>
+          <Button type="button" variant="outline" size="sm" className="h-6 px-2 text-xs has-[>svg]:px-2" disabled={full || pages === null}>
             <Plus className="mr-1 h-3 w-3" />
             {t("linkPage")}
           </Button>

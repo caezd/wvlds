@@ -8,6 +8,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { InteractiveCard } from "@/components/ui/interactive-card";
 
 type Category = {
   id: string;
@@ -133,16 +134,17 @@ export function WorldCategoryFolders({
         // du grand format) convient ici.
         const image = cat.banner_url;
         return (
-          <button
+          // Une bascule : la carte filtre les salons, un second clic retire le filtre.
+          <InteractiveCard
             key={cat.id}
-            type="button"
+            active={isActive}
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex w-36 shrink-0 flex-col items-stretch overflow-hidden rounded-xl border p-0 text-left transition-colors",
-              !fullWidth && "sm:w-auto sm:shrink sm:flex-row sm:items-center sm:gap-2 sm:overflow-visible sm:rounded-lg sm:p-1.5",
-              isActive
-                ? "border-primary ring-1 ring-primary"
-                : "border-border-soft hover:border-border",
+              "flex w-36 shrink-0 flex-col items-stretch p-0",
+              !fullWidth && "sm:w-auto sm:shrink sm:flex-row sm:items-center sm:gap-2 sm:p-1.5",
+              // Sélectionnée : contour et fond plus marqués, comme les cartes de chiffres
+              // en mode neutre — pas d'anneau, qui bavait autour de la bordure.
+              isActive && "border-muted-foreground bg-muted/60",
             )}
           >
             <span
@@ -179,8 +181,9 @@ export function WorldCategoryFolders({
             </span>
             <span
               className={cn(
-                "flex min-w-0 flex-1 flex-col gap-0.5 bg-card px-2.5 py-2",
-                !fullWidth && "sm:bg-transparent sm:px-0 sm:py-0",
+                // Sans fond propre : la lueur de la carte passe dessous.
+                "flex min-w-0 flex-1 flex-col gap-0.5 px-2.5 py-2",
+                !fullWidth && "sm:px-0 sm:py-0",
               )}
             >
               <span className="truncate text-sm font-semibold text-foreground">{cat.title}</span>
@@ -193,7 +196,7 @@ export function WorldCategoryFolders({
                 {cat.description || t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
               </span>
             </span>
-          </button>
+          </InteractiveCard>
         );
       })}
     </div>

@@ -9,6 +9,7 @@ export function AvatarWithFrame({
   presenceState,
   size = 48,
   frameUrl,
+  circle = false,
   className,
 }: {
   src?: string | null;
@@ -19,6 +20,8 @@ export function AvatarWithFrame({
   presenceState?: "online" | "away" | "offline" | "invisible";
   size?: number;
   frameUrl?: string | null;
+  /** Rond, sauf sous un cadre : les cadres épousent un carré. */
+  circle?: boolean;
   className?: string;
 }) {
   const resolved: "online" | "away" | "offline" | "invisible" =
@@ -37,6 +40,7 @@ export function AvatarWithFrame({
         presenceState={resolved}
         size={size}
         rounded={frameUrl ? false : true}
+        circle={circle && !frameUrl}
         className={className}
       />
       {frameUrl && (

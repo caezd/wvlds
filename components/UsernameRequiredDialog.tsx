@@ -82,7 +82,7 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
               {t("greeting")}
             </span>
             {editing ? (
-              <div className="flex items-center rounded-full border-2 border-dashed border-border-soft px-4 py-2.5">
+              <div className="flex items-center rounded-full border-2 border-dashed border-border px-4 py-2.5">
                 <label htmlFor="required-username" className="sr-only">
                   {t("placeholder")}
                 </label>
@@ -104,7 +104,7 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
               <button
                 type="button"
                 onClick={startEditing}
-                className="flex items-center gap-2 rounded-full border-2 border-dashed border-border-soft px-4 py-2.5 text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                className="flex items-center gap-2 rounded-full border-2 border-dashed border-border px-4 py-2.5 text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
               >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
                   <Plus className="h-4 w-4" />

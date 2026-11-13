@@ -62,15 +62,16 @@ describe("WorldsQuickAccess", () => {
     render(<WorldsQuickAccess worlds={[]} label="Mondes" />);
 
     const link = screen.getByLabelText("Mondes");
-    expect(link.parentElement).not.toHaveClass("bg-carbon-700");
-    expect(link).not.toHaveClass("text-mist-50");
+    expect(link.parentElement).not.toHaveClass("bg-muted");
+    // Actif ou non, le texte est `text-foreground` : seul le fond les distingue.
+    expect(link).not.toHaveClass("bg-muted");
   });
 
   it("avec des favoris, le bouton porte le fond permanent de la carte", () => {
     render(<WorldsQuickAccess worlds={WORLDS} label="Mondes" />);
 
     const link = screen.getByLabelText("Mondes");
-    expect(link.parentElement).toHaveClass("bg-carbon-700");
+    expect(link.parentElement).toHaveClass("bg-muted");
   });
 
   it("affiche la pastille active dans un monde (/w/...), même sans favoris", () => {
@@ -78,26 +79,26 @@ describe("WorldsQuickAccess", () => {
     render(<WorldsQuickAccess worlds={[]} label="Mondes" />);
 
     const link = screen.getByLabelText("Mondes");
-    expect(link.querySelector("span.bg-mist-50")).toBeTruthy();
-    expect(link).toHaveClass("text-mist-50");
+    expect(link.querySelector("span.bg-foreground")).toBeTruthy();
+    expect(link).toHaveClass("text-foreground");
     // Sans favoris, le conteneur n'a pas le fond de carte — la pastille ne
     // doit pas se retrouver seule, sans boîte : le bouton porte lui-même le
     // fond actif dans ce cas.
-    expect(link).toHaveClass("bg-carbon-700");
+    expect(link).toHaveClass("bg-muted");
   });
 
   it("affiche la pastille active dans une chatroom (/c/...)", () => {
     pathnameMock.value = "/c/chat-1";
     render(<WorldsQuickAccess worlds={[]} label="Mondes" />);
 
-    expect(screen.getByLabelText("Mondes").querySelector("span.bg-mist-50")).toBeTruthy();
+    expect(screen.getByLabelText("Mondes").querySelector("span.bg-foreground")).toBeTruthy();
   });
 
   it("masque la pastille active hors des pages monde/chatroom", () => {
     pathnameMock.value = "/personas";
     render(<WorldsQuickAccess worlds={WORLDS} label="Mondes" />);
 
-    expect(screen.getByLabelText("Mondes").querySelector("span.bg-mist-50")).toBeFalsy();
+    expect(screen.getByLabelText("Mondes").querySelector("span.bg-foreground")).toBeFalsy();
   });
 
   it("désactive le favori déjà actif (/w/<id> courant) et ajoute un contour accent sur son icône, au lieu d'un lien", () => {

@@ -6,7 +6,7 @@ import { HelpHint } from "@/components/ui/help-hint";
 
 describe("HelpHint", () => {
   it("un bouton « Aide : … », dont l'explication est la description, sans ouvrir la carte", () => {
-    render(<HelpHint title="Saisons">Des âges nommés qui découpent l'histoire du monde.</HelpHint>);
+    render(<HelpHint title="Saisons">{"Des âges nommés qui découpent l'histoire du monde."}</HelpHint>);
     const bouton = screen.getByRole("button", { name: "Aide : Saisons" });
     expect(bouton).toHaveAccessibleDescription("Des âges nommés qui découpent l'histoire du monde.");
     expect(bouton).toHaveAttribute("aria-expanded", "false");

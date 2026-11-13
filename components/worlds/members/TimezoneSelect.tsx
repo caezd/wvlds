@@ -3,9 +3,10 @@
 import { memo } from "react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CARD_NONE } from "@/lib/worldMemberCard";
 
 /** La valeur « aucun fuseau » — un `Select` Radix refuse la chaîne vide. */
-export const TIMEZONE_NONE = "__none__";
+export const TIMEZONE_NONE = CARD_NONE;
 
 /**
  * Le choix du fuseau, à part et mémoïsé.
@@ -30,7 +31,7 @@ export const TimezoneSelect = memo(function TimezoneSelect({
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className="min-w-0 flex-1">
+      <SelectTrigger aria-label={label} className="w-full min-w-0 flex-1">
         <SelectValue />
       </SelectTrigger>
       <SelectContent className="max-h-72">

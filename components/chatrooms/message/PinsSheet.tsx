@@ -29,7 +29,7 @@ export function PinsSheet({
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
       <SideSheetContent width="chat">
-        <DrawerHeader className="border-b border-border-soft px-6 py-4">
+        <DrawerHeader className="border-b border-border px-6 py-4">
           <DrawerTitle>{t("pinsTitle")}</DrawerTitle>
         </DrawerHeader>
 

@@ -1,25 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { toWebP } from "@/lib/imageUtils";
-import {
-  Drawer,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { SideSheetContent } from "@/components/ui/side-sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { KeyRound, Loader2 } from "lucide-react";
-import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ProfileBioPronounsForm } from "@/components/profile/ProfileBioPronounsForm";
+import { toast } from "sonner";
 
+import { createClient } from "@/lib/supabase/client";
+import { TABLE } from "@/lib/constants";
+import { toWebP } from "@/lib/imageUtils";
+import { isPronounOption } from "@/lib/pronouns";
+import { Drawer, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ProfileIdentity } from "@/components/profile/sheet/ProfileIdentity";
+import { ProfileTab } from "@/components/profile/sheet/ProfileTab";
+import { WorldCardTab } from "@/components/profile/sheet/WorldCardTab";
+import { AccountTab } from "@/components/profile/sheet/AccountTab";
+import { ProfileSaveBar } from "@/components/profile/sheet/ProfileSaveBar";
+import { pronounsOf, useProfileDraft } from "@/components/profile/sheet/useProfileDraft";
+
+type Tab = "profile" | "card" | "account";
+
+/** Un point d'avertissement sur l'onglet qui garde des modifications non enregistrées. */
+function DirtyDot({ show }: { show: boolean }) {
+  return show ? <span aria-hidden className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-warning align-middle" /> : null;
+}
+
+/**
+ * « Mon profil », ouvert depuis le menu principal : l'identité en tête
+ * (avatar, pseudo, pronoms), puis trois onglets — le profil que tout le monde
+ * voit, ma carte dans le monde courant, le compte. Une seule barre
+ * d'enregistrement pour tout, sauf l'avatar qui part tout de suite.
+ */
 export function UserProfileSheet({
   open,
   onOpenChange,
@@ -36,59 +59,59 @@ export function UserProfileSheet({
   email: string;
 }) {
   const t = useTranslations("userProfile");
+  const tNav = useTranslations("nav");
+  const tSave = useTranslations("userProfile.save");
+  const tPronouns = useTranslations("pronouns");
   const tCommon = useTranslations("common");
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-  // Ma carte dans le monde où l'on se trouve (migration 177) : la section
-  // n'apparaît que dans un monde dont on est membre.
+  const draft = useProfileDraft({ open, userId, initialUsername });
+  // L'onglet « Ma carte » n'apparaît que dans un monde dont on est membre
+  // (ou tant qu'une carte d'un autre monde garde des modifications).
+  const { cardTarget } = draft;
 
-  const [username, setUsername] = useState(initialUsername ?? "");
+  const [tab, setTab] = useState<Tab>("profile");
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
-  const [savingUsername, setSavingUsername] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  // Présentation et pronoms : lus à l'ouverture, gardés une fois enregistrés.
-  const [profileText, setProfileText] = useState<{ bio: string; pronouns: string[] } | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
-  useEffect(() => {
+  // Chaque ouverture repart de l'onglet « Profil » et de l'avatar enregistré.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
-      setUsername(initialUsername ?? "");
+      setTab("profile");
       setAvatarUrl(initialAvatarUrl);
     }
-  }, [open, initialUsername, initialAvatarUrl]);
-
-  useEffect(() => {
-    if (!open || profileText) return;
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.from("profiles").select("bio, pronouns").eq("id", userId).maybeSingle();
-      if (cancelled) return;
-      const row = data as { bio: string | null; pronouns: string[] | null } | null;
-      setProfileText({ bio: row?.bio ?? "", pronouns: row?.pronouns ?? [] });
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, userId]);
-
-  async function handleUsernameSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = username.trim();
-    if (!trimmed || trimmed === (initialUsername ?? "")) return;
-    setSavingUsername(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ username: trimmed })
-      .eq("id", userId);
-    setSavingUsername(false);
-    if (error) {
-      const msg = error.message.toLowerCase().includes("unique")
-        ? "Ce pseudo est déjà pris."
-        : error.message;
-      toast.error(msg);
-    } else {
-      toast.success(t("usernameUpdated"));
-      router.refresh();
-    }
   }
+  const currentTab: Tab = tab === "card" && !cardTarget ? "profile" : tab;
+
+  // Fermer avec des modifications en cours demande confirmation.
+  function requestOpenChange(next: boolean) {
+    if (!next && draft.dirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    onOpenChange(next);
+  }
+
+  // Ctrl/⌘ + S enregistre, tant que la fiche est ouverte. L'écouteur ne se
+  // rattache qu'à l'ouverture : il appelle toujours le dernier `save`.
+  const saveRef = useRef(draft.save);
+  useEffect(() => {
+    saveRef.current = draft.save;
+  });
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        void saveRef.current();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   const handleAvatarConfirm = useCallback(
     async (blob: Blob) => {
@@ -104,7 +127,7 @@ export function UserProfileSheet({
         const { data } = supabase.storage.from("personas").getPublicUrl(path);
         const displayUrl = `${data.publicUrl}?t=${Date.now()}`;
         const { error: dbErr } = await supabase
-          .from("profiles")
+          .from(TABLE.PROFILES)
           .update({ avatar_url: displayUrl })
           .eq("id", userId);
         if (dbErr) throw dbErr;
@@ -122,96 +145,109 @@ export function UserProfileSheet({
     [userId, supabase, router, t, tCommon],
   );
 
-  const usernameChanged = username.trim() !== (initialUsername ?? "");
+  const shownPronouns = pronounsOf(draft.pronouns).map((p) => (isPronounOption(p) ? tPronouns(p) : p));
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <SideSheetContent width="profile">
-        <DrawerHeader className="px-6 py-5 border-b border-border-soft shrink-0">
-          <DrawerTitle>Mon profil</DrawerTitle>
-        </DrawerHeader>
+    <>
+      <Drawer open={open} onOpenChange={requestOpenChange} swipeDirection="right">
+        <SideSheetContent width="profile">
+          <DrawerHeader className="h-14 shrink-0 flex-row items-center px-6 py-0">
+            <DrawerTitle className="text-sm">{tNav("profile")}</DrawerTitle>
+          </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-8 p-6">
-              {/* Avatar */}
-              <div className="flex flex-col items-center gap-3">
-                {avatarUrl ? (
-                  <ImagePickerCropField
-                    aspect={1}
-                    uploading={uploadingAvatar}
-                    previewSrc={avatarUrl}
-                    previewAlt={initialUsername ?? email}
-                    previewClassName="h-24 w-24 rounded-full"
-                    changeLabel="Changer"
-                    onConfirm={handleAvatarConfirm}
+          <ProfileIdentity
+            avatarUrl={avatarUrl}
+            uploadingAvatar={uploadingAvatar}
+            onAvatarConfirm={handleAvatarConfirm}
+            username={draft.username}
+            onUsernameChange={draft.setUsername}
+            pronounsLine={shownPronouns.length > 0 ? shownPronouns.join(" · ") : null}
+          />
+
+          <Tabs value={currentTab} onValueChange={(v) => setTab(v as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
+            <TabBar listClassName="gap-5">
+              <TabBarTrigger value="profile">
+                {t("tabs.profile")}
+                <DirtyDot show={draft.dirtyProfile} />
+              </TabBarTrigger>
+              {cardTarget && (
+                <TabBarTrigger value="card">
+                  {t("tabs.card")}
+                  {cardTarget.worldName && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{cardTarget.worldName}</span>}
+                  <DirtyDot show={draft.dirtyCard} />
+                </TabBarTrigger>
+              )}
+              <TabBarTrigger value="account">
+                {t("tabs.account")}
+              </TabBarTrigger>
+            </TabBar>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <TabsContent value="profile" className="p-6">
+                {draft.profileLoaded ? (
+                  <ProfileTab
+                    bio={draft.bio}
+                    onBioChange={draft.setBio}
+                    pronouns={draft.pronouns}
+                    onPronounsChange={draft.setPronouns}
                   />
                 ) : (
-                  <div className="w-full max-w-xs">
-                    <ImagePickerCropField
-                      aspect={1}
-                      uploading={uploadingAvatar}
-                      onConfirm={handleAvatarConfirm}
-                    />
+                  <div className="space-y-2" aria-hidden>
+                    <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                    <div className="h-24 w-full animate-pulse rounded-lg bg-muted" />
                   </div>
                 )}
-                {avatarUrl && (
-                  <p className="text-xs text-muted-foreground">{t("clickToEditAvatar")}</p>
-                )}
-              </div>
-
-              {/* Pseudo */}
-              <form onSubmit={handleUsernameSubmit} className="space-y-2">
-                <Label htmlFor="profile-username">Pseudo</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="profile-username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Ton pseudo…"
-                    maxLength={32}
-                    className="flex-1"
+              </TabsContent>
+              {cardTarget && draft.card && (
+                <TabsContent value="card" className="p-6" data-testid="my-world-card">
+                  <WorldCardTab
+                    worldId={cardTarget.worldId}
+                    worldName={cardTarget.worldName}
+                    userId={userId}
+                    initial={cardTarget.initial}
+                    value={draft.card}
+                    onChange={draft.setCard}
                   />
-                  <Button
-                    type="submit"
-                    disabled={savingUsername || !username.trim() || !usernameChanged}
-                  >
-                    {savingUsername
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : "Enregistrer"
-                    }
-                  </Button>
-                </div>
-              </form>
-
-              {/* Présentation et pronoms, ce que tout le monde voit. */}
-              {profileText ? (
-                <ProfileBioPronounsForm
-                  key={`${profileText.bio}|${profileText.pronouns.join(",")}`}
-                  initialBio={profileText.bio}
-                  initialPronouns={profileText.pronouns}
-                  onSaved={(bio, pronouns) => setProfileText({ bio, pronouns })}
-                />
-              ) : (
-                <div className="space-y-2" aria-hidden>
-                  <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                  <div className="h-24 w-full animate-pulse rounded-lg bg-muted" />
-                </div>
+                </TabsContent>
               )}
+              <TabsContent value="account" className="p-6">
+                <AccountTab email={email} />
+              </TabsContent>
+            </div>
+          </Tabs>
 
-          </div>
-        </div>
+          <ProfileSaveBar
+            dirty={draft.dirty}
+            justSaved={draft.justSaved}
+            saving={draft.saving}
+            invalid={draft.invalid}
+            onSave={() => void draft.save()}
+            onReset={draft.reset}
+          />
+        </SideSheetContent>
+      </Drawer>
 
-        <DrawerFooter className="shrink-0 border-t border-border-soft px-6 py-4 flex-row justify-start">
-          <Button
-            variant="ghost"
-            className="text-muted-foreground"
-            onClick={() => router.push("/auth/update-password")}
-          >
-            <KeyRound className="mr-2 h-4 w-4" />
-            Changer le mot de passe
-          </Button>
-        </DrawerFooter>
-      </SideSheetContent>
-    </Drawer>
+      <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tSave("leaveTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{tSave("leaveBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tSave("stay")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                draft.reset();
+                setConfirmLeave(false);
+                onOpenChange(false);
+              }}
+            >
+              {tSave("leave")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

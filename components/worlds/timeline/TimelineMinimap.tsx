@@ -79,7 +79,7 @@ export function TimelineMinimap({
   return (
     <nav
       aria-label={tv("minimapLabel")}
-      className={cn("w-[52px] shrink-0 flex-col border-l border-t border-l-border-soft border-t-border", className)}
+      className={cn("w-[52px] shrink-0 flex-col border-l border-t border-l-border border-t-border", className)}
       data-testid="timeline-minimap"
     >
       <div
@@ -98,7 +98,7 @@ export function TimelineMinimap({
               onClick={() => onYear(year)}
               aria-label={yearName(year)}
               className={cn(
-                "mb-0.5 shrink-0 text-right text-[10px] font-semibold leading-none tabular-nums transition-colors hover:text-foreground",
+                "mb-0.5 shrink-0 text-right text-2xs font-semibold leading-none tabular-nums transition-colors hover:text-foreground",
                 isCurrentYear ? "text-foreground" : "text-muted-foreground",
               )}
             >
@@ -127,15 +127,15 @@ export function TimelineMinimap({
                     aria-disabled={m.items === 0 || undefined}
                     title={isToday ? `${label} · ${tv("today")}` : label}
                     className={cn(
-                      "relative flex h-2.5 shrink-0 items-center justify-end rounded-[2px] hover:bg-muted",
+                      "relative flex h-2.5 shrink-0 items-center justify-end rounded-xs hover:bg-muted",
                       m.items > 0 ? "cursor-pointer" : "cursor-default",
                     )}
                     data-minimap-month={month}
                   >
                     <span
                       className={cn(
-                        "h-[60%] rounded-[1px]",
-                        !arcColor && (m.hasEvent ? "bg-zinc-500 dark:bg-zinc-400" : "bg-zinc-300 dark:bg-zinc-600"),
+                        "h-[60%] rounded-xs",
+                        !arcColor && (m.hasEvent ? "bg-muted-foreground" : "bg-muted-foreground/40"),
                       )}
                       style={{ width: `${width}%`, ...(arcColor ? { backgroundColor: arcColor } : {}) }}
                       data-testid="timeline-minimap-bar"

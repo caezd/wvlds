@@ -10,6 +10,7 @@ import { MEMBER_CARD_COLUMNS, effectiveStatus, type WorldMemberCardFields } from
 import { formatBirthday, localTimeIn } from "@/lib/relativeTime";
 import { useCurrentWorldId } from "@/hooks/useCurrentWorldId";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { SectionLabel } from "@/components/ui/section-label";
 import { MemberStatusBadge } from "./WorldMemberCard";
 
 /**
@@ -48,11 +49,11 @@ export function MemberWorldCardSection({ userId, className }: { userId: string; 
 
   return (
     <section className={className} data-testid="member-world-card">
-      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <SectionLabel as="h3" className="mb-2 flex items-center gap-1.5">
         <Globe2 className="h-3.5 w-3.5" aria-hidden />
         {state.worldName ? t("inWorld", { world: state.worldName }) : t("inThisWorld")}
-      </h3>
-      <div className="space-y-2 rounded-lg border border-border-soft bg-muted/30 p-3 text-left">
+      </SectionLabel>
+      <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 text-left">
         {status !== "active" && <MemberStatusBadge status={status} until={card.status_until} note={card.status_note} />}
         {card.bio && <MarkdownRenderer content={card.bio} className="text-sm prose-sm" />}
         {(card.availability || localTime || hasBirthday) && (

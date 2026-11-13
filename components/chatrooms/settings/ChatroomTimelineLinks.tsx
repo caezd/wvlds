@@ -7,6 +7,8 @@ import { X } from "lucide-react";
 
 import type { createClient } from "@/lib/supabase/client";
 import { RPC, TABLE } from "@/lib/constants";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
@@ -196,19 +198,21 @@ export function ChatroomTimelineLinks({
                 <li key={s.id} className="flex items-center gap-2 rounded-lg border border-border px-2 py-1 text-sm">
                   <span className="min-w-0 flex-1 truncate">{room ? label(room) : t("settingsSuiteUnknown")}</span>
                   {s.status === "pending" && (
-                    <span className="shrink-0 rounded-full border border-dashed border-border px-1.5 text-[10px] text-muted-foreground">
+                    <Badge tone="outline">
                       {t("settingsSuitePending")}
-                    </span>
+                    </Badge>
                   )}
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-6"
                     disabled={disabled || saving}
                     onClick={() => void removePrevious(s.id)}
                     aria-label={t("settingsSuiteRemove", { title: room?.title ?? "" })}
-                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </li>
               );
             })}

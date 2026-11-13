@@ -48,7 +48,7 @@ describe("TimelineArcsDialog", () => {
     await user.click(screen.getByRole("button", { name: "Ajouter" }));
     expect(writes).toContainEqual(expect.objectContaining({
       table: "world_timeline_arcs", op: "insert",
-      payload: { world_id: "w1", name: "La crue", color: "#94a3b8", position: 1 },
+      payload: { world_id: "w1", name: "La crue", color: "#818CF8", position: 1 },
     }));
     expect(onChanged).toHaveBeenCalled();
     expect(screen.getByRole("textbox", { name: "Nouvel arc" })).toHaveValue("");

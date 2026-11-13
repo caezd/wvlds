@@ -80,7 +80,7 @@ import type { WorldTimelineAge, WorldTimelineConfig } from "@/types/worlds";
  * AppShell.tsx). Un `bg-background` seul faisait des pavés visibles sur
  * mobile.
  */
-const AMBIENT_BG = "bg-body lg:bg-background";
+const AMBIENT_BG = "bg-canvas lg:bg-background";
 
 /** Le style des lignes de suite, choisi par chacun et gardé dans son
  *  navigateur (une préférence de lecture, pas un réglage du monde). */
@@ -104,9 +104,8 @@ function readSuiteStyle(): SuiteStyle {
   }
 }
 
-// Le rouge de repère : l'accent du thème sombre ; en clair, où l'accent est
-// presque blanc, un rouge franc.
-const RED_BG = "bg-red-600 dark:bg-accent";
+// Le rouge de repère : l'accent, marque de l'application.
+const RED_BG = "bg-accent";
 
 /**
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
@@ -703,7 +702,7 @@ export function WorldTimeline({
               hoverOnly={hoverOnly}
               onHoverOnly={setHoverOnly}
             />
-            <Button type="button" size="sm" variant="ghost" className="h-8 gap-1.5 rounded-md" onClick={scrollToNow}>
+            <Button type="button" size="sm" variant="ghost" onClick={scrollToNow}>
               <LocateFixed className="h-3.5 w-3.5" />
               {tv("today")}
             </Button>
@@ -732,15 +731,13 @@ export function WorldTimeline({
             <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reload()} />
             {canManage && (
               <div className="ml-auto flex items-center gap-2">
-                <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setArcsOpen(true)}>
+                <Button type="button" size="sm" variant="outline" onClick={() => setArcsOpen(true)}>
                   <Spline className="h-3.5 w-3.5" />
                   {tv("arcs")}
                 </Button>
-                <Button
+                <Button variant="outline"
                   type="button"
                   size="sm"
-                  variant="outline"
-                  className="h-8 gap-1.5"
                   onClick={() => setEventDialog({ open: true, event: null })}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -772,7 +769,7 @@ export function WorldTimeline({
                       {p.age && <Sunrise className="size-3.5 shrink-0" aria-hidden />}
                       {p.label}
                       {current && (periodRooms.get(p.key) ?? 0) > 0 && (
-                        <span className="text-[10px] font-normal opacity-60" data-testid="timeline-period-count" aria-hidden>
+                        <span className="text-2xs font-normal opacity-60" data-testid="timeline-period-count" aria-hidden>
                           {periodRooms.get(p.key)}
                         </span>
                       )}
@@ -804,7 +801,7 @@ export function WorldTimeline({
           onScroll={() => updatePosition(true)}
           // Une barre de défilement fine et sombre : pas de bande claire entre
           // la frise et la mini-carte.
-          className="relative min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-muted)_transparent] [scrollbar-width:thin] dark:[color-scheme:dark]"
+          className="relative min-w-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-muted)_transparent] [scrollbar-width:thin] [color-scheme:dark]"
           data-testid="timeline-scroll"
         >
           {data.loading ? (
@@ -1050,7 +1047,7 @@ function SectionWithAge({
         data-testid="timeline-age"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{age.name}</p>
-        <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">{bounds}</p>
+        <p className="mt-0.5 text-xs-plus tabular-nums text-muted-foreground">{bounds}</p>
       </li>
       {children}
     </>
@@ -1134,12 +1131,12 @@ function YearBlock({
       {/* L'année, un bandeau sur toute la largeur du conteneur (marges de la
           liste comprises) qui sépare deux années ; où l'on en est se lit dans
           le bandeau de position, collé dans la tête. Sous les lignes de suite
-          (z-[1] ; z-[2] pour les lignes, voir SuiteLinks) : elles le
+          (z-1 ; z-2 pour les lignes, voir SuiteLinks) : elles le
           traversent, ses traits compris. Le fil s'y interrompt ; un trait
           dessus et dessous (aucun au-dessus de la toute première année).
           Le titre à gauche, le chiffre en gras. */}
       <div
-        className="relative z-[1] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5"
+        className="relative z-1 -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5"
         data-testid="timeline-year-band"
       >
         <h3 className="flex min-w-0 items-baseline gap-1.5 leading-none">
@@ -1169,7 +1166,7 @@ function YearBlock({
             se posent sur leur filet. */}
         {firstMonthName && (
           <span
-            className="absolute right-[calc(100%+0.25rem)] top-3 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
+            className="absolute right-[calc(100%+0.25rem)] top-3 whitespace-nowrap px-2 text-right text-2xs font-medium uppercase leading-none tracking-wider text-muted-foreground"
             data-testid="timeline-first-month"
             aria-hidden
           >
@@ -1247,7 +1244,7 @@ function DateGroupBlock({
           />
           {monthName && (
             <span
-              className={cn("absolute right-[calc(100%+2rem)] top-4 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+              className={cn("absolute right-[calc(100%+2rem)] top-4 -translate-y-1/2 whitespace-nowrap px-2 text-right text-2xs font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
               data-testid="timeline-month-label"
               aria-hidden
             >
@@ -1355,7 +1352,7 @@ function RoomRow({
           className={cn(
             "absolute -left-[34.5px] top-[3px] size-3.5 rounded-full transition-colors",
             AMBIENT_BG,
-            !arc && "text-foreground/35 group-hover/room:text-foreground",
+            !arc && "text-muted-foreground group-hover/room:text-foreground",
           )}
           style={arc ? { color: arc.color } : undefined}
           strokeWidth={3.4}
@@ -1366,7 +1363,7 @@ function RoomRow({
         <span
           className={cn(
             "absolute -left-[33.5px] top-1 size-3 rounded-full border-2 transition-colors",
-            !arc && "border-foreground/35 text-foreground/35 group-hover/room:border-foreground group-hover/room:text-foreground",
+            !arc && "border-foreground/35 text-muted-foreground group-hover/room:border-foreground group-hover/room:text-foreground",
             status === "abandoned" && "border-dashed",
             status === "completed" && !arc ? "bg-foreground/35 group-hover/room:bg-foreground" : status !== "completed" && AMBIENT_BG,
           )}
@@ -1414,7 +1411,7 @@ function RoomRow({
             <span
               className={cn(
                 "text-sm font-medium transition-colors group-hover/room:text-foreground",
-                status === "abandoned" ? "text-foreground/40" : "text-foreground/75",
+                status === "abandoned" ? "text-muted-foreground opacity-50 group-hover/room:opacity-100" : "text-muted-foreground",
               )}
             >
               {item.title}
@@ -1428,7 +1425,7 @@ function RoomRow({
                   name: opener.persona ?? `@${opener.name}`,
                   author: (chunks) => (
                     <span
-                      className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
+                      className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-muted-foreground")}
                       style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
                     >
                       {chunks}
@@ -1440,7 +1437,7 @@ function RoomRow({
             )}
             {arc && (
               <span
-                className="ml-2 text-[10px] font-semibold uppercase tracking-wider"
+                className="ml-2 text-2xs font-semibold uppercase tracking-wider"
                 style={{ color: arc.color }}
                 data-testid="timeline-arc"
                 aria-hidden
@@ -1495,7 +1492,7 @@ function EventRow({
         aria-hidden
       />
       <div
-        className="ml-[var(--tl-graph-pad,0px)] rounded-md border border-border-soft bg-muted/40 px-3 py-2"
+        className="ml-[var(--tl-graph-pad,0px)] rounded-md border border-border bg-muted/40 px-3 py-2"
         data-title-start
         data-testid="timeline-event-card"
       >
@@ -1505,7 +1502,7 @@ function EventRow({
             <span className="min-w-0 break-words">{item.title}</span>
             {until && (
               <span
-                className="inline-flex items-center gap-1 rounded-md border border-border-soft bg-background/60 px-1.5 text-[11px] font-normal leading-[18px] text-muted-foreground"
+                className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-1.5 text-xs-plus font-normal leading-[18px] text-muted-foreground"
                 data-testid="timeline-event-until"
               >
                 <ArrowDown className="size-3 shrink-0" aria-hidden />
@@ -1597,7 +1594,7 @@ function JournalRow({ item, day, dimmed }: { item: TimelineJournalItem; day: num
           <BookText className="h-3 w-3" aria-hidden />
           {tv("journalOf", { name: item.personaName })}
         </span>
-        <span className={cn("block whitespace-pre-line text-xs italic text-foreground/70", !expanded && "line-clamp-2")}>
+        <span className={cn("block whitespace-pre-line text-xs italic text-muted-foreground", !expanded && "line-clamp-2")}>
           {item.body}
         </span>
       </button>

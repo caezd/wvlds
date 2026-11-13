@@ -22,6 +22,8 @@ import type { WorldCatalogCategory } from "@/types/worlds";
 import { UNCAT, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
 import { DragHandle, SortableItemRow } from "./CataloguePieces";
+import { SectionLabel } from "@/components/ui/section-label";
+import { buttonVariants } from "@/components/ui/button";
 
 // Conteneurs : une catégorie, la zone des non classés, une colonne.
 
@@ -102,10 +104,10 @@ export function SortableCategoryContainer({
           <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-90")} />
         </button>
         <>
-            <span className="flex-1 text-sm font-semibold text-foreground/70 truncate">{category.name}</span>
+            <span className="flex-1 text-sm font-semibold text-muted-foreground truncate">{category.name}</span>
             <span
               title={t("itemCount", { count: items.length })}
-              className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+              className="shrink-0 rounded-full bg-muted px-1.5 text-2xs font-medium tabular-nums text-muted-foreground"
             >
               {items.length}
             </span>
@@ -115,7 +117,7 @@ export function SortableCategoryContainer({
                   aria-label={t("editCategory", { name: category.name })}
                   type="button"
                   onClick={() => onEditCategory(category)}
-                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6")}
                 >
                   <Pencil className="h-3 w-3" />
                 </button>
@@ -123,7 +125,7 @@ export function SortableCategoryContainer({
                   aria-label={tCommon("delete")}
                   type="button"
                   onClick={() => onDeleteCategory(category.id)}
-                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-destructive transition-colors"
+                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6 hover:text-destructive")}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -168,7 +170,7 @@ export function SortableCategoryContainer({
               <button
                 type="button"
                 onClick={() => onAddIn(category.id)}
-                className="flex flex-1 items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                className="flex flex-1 items-center gap-2 rounded-lg border border-dashed border-border px-3 text-muted-foreground transition-colors hover:border-ring hover:text-foreground py-1.5 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {type === "inventory" ? t("addItemBtn") : t("addSkillBtn")}
@@ -178,7 +180,7 @@ export function SortableCategoryContainer({
                   type="button"
                   onClick={() => onSortAlpha(category.id)}
                   title={t("sortAlpha")}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
+                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "ml-auto size-7")}
                 >
                   <ArrowUpAZ className="h-3.5 w-3.5" />
                 </button>
@@ -227,9 +229,9 @@ export function UncategorizedSection({
     <div className="space-y-0.5">
       {showHeader && (
         <div className="px-4 pb-1 pt-3">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+          <SectionLabel as="span">
             {t("uncategorized")}
-          </span>
+          </SectionLabel>
         </div>
       )}
       <div
@@ -266,7 +268,7 @@ export function UncategorizedSection({
             <button
               type="button"
               onClick={() => onAddIn(null)}
-              className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+              className="flex flex-1 items-center gap-2 rounded-lg border border-dashed border-border px-3 text-muted-foreground transition-colors hover:border-ring hover:text-foreground py-2 text-sm"
             >
               <Plus className="h-4 w-4" />
               {showHeader
@@ -279,7 +281,7 @@ export function UncategorizedSection({
                 type="button"
                 onClick={() => onSortAlpha(null)}
                 title={t("sortAlpha")}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "ml-auto")}
               >
                 <ArrowUpAZ className="h-4 w-4" />
               </button>
@@ -311,19 +313,19 @@ export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => 
       }}
       className="flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2"
     >
-      <FolderPlus className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+      <FolderPlus className="h-4 w-4 shrink-0 text-muted-foreground" />
       <input
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder={t("categoryNamePlaceholder")}
-        className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground/40"
+        className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground"
         maxLength={60}
       />
       <button
         type="submit"
         disabled={!name.trim() || saving}
-        className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-40"
+        className={cn(buttonVariants({ size: "icon-sm" }), "size-6")}
       >
         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
       </button>
@@ -331,7 +333,7 @@ export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => 
         aria-label={tCommon("cancel")}
         type="button"
         onClick={onCancel}
-        className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6")}
       >
         <X className="h-3 w-3" />
       </button>
@@ -368,7 +370,7 @@ export function DroppableColumn({
       <div
         className={cn(
           "pointer-events-none absolute top-2 bottom-2 w-0.5 rounded-full transition-all duration-150 z-10",
-          showSplitIndicator ? "bg-primary opacity-100 shadow-[0_0_6px_2px_hsl(var(--primary)/0.4)]" : "opacity-0",
+          showSplitIndicator ? "bg-primary opacity-100 shadow-[0_0_6px_2px_color-mix(in_oklab,var(--primary)_40%,transparent)]" : "opacity-0",
         )}
         style={{ left: `${splitPosition * 100}%`, transform: "translateX(-50%)" }}
       />

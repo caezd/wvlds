@@ -225,7 +225,7 @@ describe("TimelineSettings — couleurs", () => {
       screen.getByTestId("timeline-preview").parentElement as HTMLElement,
       screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }).closest(".divide-y") as HTMLElement,
     ];
-    for (const c of cartes) expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-card", "border-border-soft"]));
+    for (const c of cartes) expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-card", "border-border"]));
     const champs = [
       screen.getByLabelText("Libellé d'année"),
       screen.getByLabelText("Mois actuel"),
@@ -233,7 +233,7 @@ describe("TimelineSettings — couleurs", () => {
       screen.getByRole("spinbutton", { name: "Jours du mois Givre" }).parentElement as HTMLElement,
     ];
     for (const c of champs) {
-      expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-background", "border-border-soft", "dark:bg-background"]));
+      expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-background", "border-border", "hover:bg-background"]));
     }
   });
 });

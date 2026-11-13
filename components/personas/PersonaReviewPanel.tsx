@@ -17,10 +17,13 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
-import { PersonaSheetBadge } from "./PersonaSheetBadge";
+import { PersonaSheetBadge, PersonaSheetStatusBanner } from "./PersonaSheetBadge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/textFormatting";
 import { useWorldFaceclaimRule } from "@/hooks/useWorldFaceclaimRule";
 import type { PersonaReviewStatus } from "@/types/db";
 import type { PersonaSectionWithFields } from "@/types/personas";
+import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 
 /** Le libellé d'un type de champ (clé i18n `personas.fieldTypes`). */
 function fieldTypeKey(type: string): string {
@@ -70,8 +73,8 @@ function MissingFieldsList({
   if (missing.length === 0 && !faceclaimMissing) return null;
   const absent = missing.some((m) => m.fieldId === null);
   return (
-    <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs" data-testid="missing-fields">
-      <p className="flex items-center gap-1.5 font-medium text-orange-700 dark:text-orange-300">
+    <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs" data-testid="missing-fields">
+      <p className="flex items-center gap-1.5 font-medium text-warning">
         <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
         {t("missingTitle")}
       </p>
@@ -169,6 +172,7 @@ export function PersonaSubmitBar({
     if (error) { toast.error(error.message); return; }
     setStatus("submitted");
     toast.success(t("submitted"));
+    notifyPersonasChanged();
     router.refresh();
   }
 
@@ -180,6 +184,7 @@ export function PersonaSubmitBar({
     setBusy(null);
     onSectionsReload?.(next);
     toast.success(t("syncDone", { count: Number(data ?? 0) }));
+    notifyPersonasChanged();
     router.refresh();
   }
 
@@ -190,7 +195,7 @@ export function PersonaSubmitBar({
   return (
     <div className={cn("space-y-2", className)} data-review-status={reviewActive ? status : "inactive"}>
       {lastSentBack && status === "draft" && (
-        <div className="rounded-lg border border-border-soft bg-muted/40 px-3 py-2 text-xs">
+        <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
           <p className="font-medium">{t("sentBack")}</p>
           {lastSentBack.body && (
             <p className="mt-0.5 text-muted-foreground">
@@ -225,7 +230,7 @@ type ReviewComment = {
   body: string;
   decision: PersonaReviewStatus | null;
   created_at: string;
-  author: { username: string | null } | null;
+  author: { username: string | null; avatar_url: string | null } | null;
 };
 
 export function PersonaReviewSection({
@@ -258,7 +263,7 @@ export function PersonaReviewSection({
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from(TABLE.PERSONA_REVIEW_COMMENTS)
-      .select("id, author_id, body, decision, created_at, author:author_id(username)")
+      .select("id, author_id, body, decision, created_at, author:author_id(username, avatar_url)")
       .eq("persona_id", personaId)
       .order("created_at", { ascending: true });
     if (error) { toast.error(error.message); return; }
@@ -293,6 +298,7 @@ export function PersonaReviewSection({
     toast.success(t("decided"));
     onStatusChange?.(decision);
     await load();
+    notifyPersonasChanged();
     router.refresh();
   }
 
@@ -306,66 +312,81 @@ export function PersonaReviewSection({
   const canWrite = !!userId && (isOwner || canReview);
 
   return (
-    <div className="space-y-4" data-testid="persona-review-section">
-      <div className="flex flex-wrap items-center gap-2">
-        <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} showApproved />
-        {canReview && reviewStatus !== "approved" && (
-          <Button type="button" size="sm" onClick={() => decide("approved")} disabled={busy !== null}>
-            {busy === "approved" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-            {t("approve")}
-          </Button>
+    <div className="space-y-5" data-testid="persona-review-section">
+      <PersonaSheetStatusBanner
+        persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }}
+        actions={canReview && (
+          <>
+            {reviewStatus !== "draft" && (
+              <Button type="button" size="sm" variant="secondary" onClick={() => decide("draft")} disabled={busy !== null} title={t("sendBack")}>
+                {busy === "draft" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+                {t("sendBackShort")}
+              </Button>
+            )}
+            {reviewStatus !== "approved" && (
+              <Button type="button" size="sm" onClick={() => decide("approved")} disabled={busy !== null}>
+                {busy === "approved" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                {t("approve")}
+              </Button>
+            )}
+          </>
         )}
-        {canReview && reviewStatus !== "draft" && (
-          <Button type="button" size="sm" variant="outline" onClick={() => decide("draft")} disabled={busy !== null} title={t("sendBack")}>
-            {busy === "draft" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Undo2 className="mr-1.5 h-3.5 w-3.5" />}
-            {t("sendBackShort")}
-          </Button>
-        )}
-      </div>
+      />
 
-      <section>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("comments")}</h4>
+      <section aria-label={t("comments")}>
         {comments === null ? (
-          <div className="space-y-2">{[1, 2].map((i) => <div key={i} className="h-4 animate-pulse rounded bg-muted" />)}</div>
+          <div className="space-y-4">{[1, 2].map((i) => <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />)}</div>
         ) : comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noComments")}</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{t("noComments")}</p>
         ) : (
-          <ul className="space-y-3">
-            {comments.map((c) => (
-              <li key={c.id} className="group/comment rounded-lg border border-border-soft px-3 py-2 text-sm">
-                <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
-                  <span className="truncate">
-                    <span className="font-medium text-foreground">{c.author?.username ? `@${c.author.username}` : "—"}</span>
+          <ul className="space-y-4">
+            {comments.map((c) => {
+              const name = c.author?.username ?? "—";
+              return (
+                <li key={c.id} className="group/comment flex gap-3">
+                  <Avatar className="mt-0.5 size-8 shrink-0 rounded-full">
+                    <AvatarImage src={c.author?.avatar_url ?? undefined} alt="" className="object-cover" />
+                    <AvatarFallback className="rounded-full bg-muted text-2xs font-semibold">{getInitials(name)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="truncate text-sm font-semibold text-foreground">{c.author?.username ? `@${c.author.username}` : "—"}</span>
+                      {/* Le relecteur, par contraste avec le joueur de la fiche. */}
+                      {c.author_id !== ownerId && <span className="shrink-0">({t("reviewerTag")})</span>}
+                      <span aria-hidden>·</span>
+                      <time dateTime={c.created_at} className="shrink-0">{relativeTime(c.created_at, locale, tCard("justNow"))}</time>
+                      {c.author_id === userId && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => void removeComment(c.id)}
+                          aria-label={t("deleteComment")}
+                          title={t("deleteComment")}
+                          className="ml-auto size-6 opacity-0 hover:text-destructive group-hover/comment:opacity-100 focus-visible:opacity-100"
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      )}
+                    </div>
                     {c.decision && (
-                      <span className={cn("ml-1.5", c.decision === "approved" ? "text-emerald-700 dark:text-emerald-300" : "text-orange-700 dark:text-orange-300")}>
+                      <p className={cn("mt-0.5 flex items-center gap-1 text-xs font-medium", c.decision === "approved" ? "text-success" : "text-warning")}>
+                        {c.decision === "approved" ? <CheckCircle2 className="size-3" aria-hidden /> : <Undo2 className="size-3" aria-hidden />}
                         {c.decision === "approved" ? t("decisionApproved") : t("decisionDraft")}
-                      </span>
+                      </p>
                     )}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1">
-                    <time dateTime={c.created_at}>{relativeTime(c.created_at, locale, tCard("justNow"))}</time>
-                    {c.author_id === userId && (
-                      <button
-                        type="button"
-                        onClick={() => void removeComment(c.id)}
-                        aria-label={t("deleteComment")}
-                        title={t("deleteComment")}
-                        className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/comment:opacity-100 focus-visible:opacity-100"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
-                  </span>
-                </div>
-                {c.body && <p className="mt-1 whitespace-pre-wrap break-words">{c.body}</p>}
-              </li>
-            ))}
+                    {c.body && <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground">{c.body}</p>}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       {canWrite && (
-        <div className="space-y-2">
+        // Un seul cadre pour la saisie et l'envoi, comme le composer d'un salon.
+        <div className="rounded-lg border border-border bg-card focus-within:border-ring">
           <AutoResizeTextarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -373,11 +394,11 @@ export function PersonaReviewSection({
             aria-label={t("commentPlaceholder")}
             maxLength={2000}
             minRows={2}
-            className="text-sm"
+            className="block w-full resize-none bg-transparent px-3 pt-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
-          <div className="flex justify-end">
-            <Button type="button" size="sm" variant="secondary" onClick={postComment} disabled={!draft.trim() || busy !== null}>
-              {busy === "comment" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}
+          <div className="flex justify-end px-2 pb-2">
+            <Button type="button" size="sm" onClick={postComment} disabled={!draft.trim() || busy !== null}>
+              {busy === "comment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               {t("send")}
             </Button>
           </div>

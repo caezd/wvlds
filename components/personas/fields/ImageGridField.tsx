@@ -263,7 +263,7 @@ export function ImageGridField({
                   key={i}
                   aria-hidden
                   style={{ gridColumn: i + 2, gridRow: `1 / ${rowCount + 1}`, marginLeft: -IMAGE_GRID_GAP / 2 }}
-                  className="pointer-events-none z-0 justify-self-start self-stretch border-l border-dashed border-border-soft"
+                  className="pointer-events-none z-0 justify-self-start self-stretch border-l border-dashed border-border"
                 />
               ))}
 
@@ -366,7 +366,7 @@ export function ImageGridField({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading || !userId}
-        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border-soft text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground disabled:opacity-50"
+        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground disabled:opacity-50"
         aria-label={tPersonas("addImages")}
       >
         {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}

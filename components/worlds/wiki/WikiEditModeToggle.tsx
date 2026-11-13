@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Bascule du mode modification du wiki.
@@ -29,11 +30,10 @@ export function WikiEditModeToggle({
       type="button"
       onClick={onToggle}
       aria-pressed={editMode}
+      // Une bascule d'affichage : `outline`, enfoncée (aria-pressed) quand l'édition est active.
       className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-        editMode
-          ? "border-primary/40 bg-primary/10 text-primary"
-          : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
+        buttonVariants({ variant: "outline", size: "sm" }),
+        "text-xs",
       )}
     >
       <Pencil className="h-3 w-3" />

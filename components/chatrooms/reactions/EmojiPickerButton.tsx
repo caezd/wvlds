@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { EmojiPickerFrame } from "./EmojiPickerFrame";
 import { ReactionEmoji } from "./ReactionEmoji";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const EmojiNativePickerInner = dynamic(
   () => import("./EmojiNativePickerInner"),
@@ -36,12 +37,10 @@ export function EmojiPickerButton({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
-          className={cn(
-            "flex h-9 w-full items-center justify-center rounded-md border border-input bg-transparent text-base shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-            className,
-          )}
+          variant="outline"
+          className={cn("w-full text-base", className)}
           aria-label={tCommon("pickEmoji")}
         >
           {value ? (
@@ -53,9 +52,9 @@ export function EmojiPickerButton({
           ) : (
             <Smile className="h-4 w-4 text-muted-foreground" />
           )}
-        </button>
+        </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 border-0 bg-transparent shadow-none z-[200]" align="start">
+      <PopoverContent className="w-auto p-0 border-0 bg-transparent shadow-none z-popover" align="start">
         <EmojiPickerFrame>
           <EmojiNativePickerInner
             emojiStyle={emojiStyle}

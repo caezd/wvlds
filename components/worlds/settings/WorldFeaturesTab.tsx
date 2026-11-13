@@ -45,6 +45,7 @@ import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SectionLabel } from "@/components/ui/section-label";
 import { FIELD, FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
@@ -413,11 +414,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                             <div className="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:gap-10">
                                 <nav
                                     aria-label={tSettings("featuresNav")}
-                                    className="shrink-0 md:w-52 md:border-r md:border-border-soft md:pr-4"
+                                    className="shrink-0 md:w-52 md:border-r md:border-border md:pr-4"
                                 >
-                                    <p className="px-2.5 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground" aria-hidden>
+                                    <SectionLabel as="p" className="px-2.5 pb-2" aria-hidden>
                                         {tSettings("featuresTitle")}
-                                    </p>
+                                    </SectionLabel>
                                     <ul className="space-y-0.5">
                                         {sections.map((section) => {
                                             const selected = section.id === sectionId;

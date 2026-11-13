@@ -46,6 +46,7 @@ export const RPC = {
   GET_WORLD_TIMELINE: "get_world_timeline",
   GET_LINKABLE_CHATROOMS: "get_linkable_chatrooms",
   MARK_CHATROOM_READ: "mark_chatroom_read",
+  MARK_WORLD_READ: "mark_world_read",
   AWARD_EVENT: "award_event",
   GET_BALANCE_SUMMARY: "get_balance_summary",
   ACCEPT_WORLD_INVITATION: "accept_world_invitation",
@@ -61,7 +62,6 @@ export const RPC = {
   GET_ACTIVE_DAILY_CHALLENGES: "get_active_daily_challenges",
   CLAIM_CHALLENGE_ATTEMPT: "claim_challenge_attempt",
   GET_DAILY_CHALLENGE_JOURNAL: "get_daily_challenge_journal",
-  GET_WORLD_MEMBER_PERSONAS: "get_world_member_personas",
   HAS_WORLD_PERMISSION: "has_world_permission",
   WORLD_RANK: "world_rank",
   GET_WORLD_MEMBER_ACTIVITY: "get_world_member_activity",
@@ -71,6 +71,7 @@ export const RPC = {
   SYNC_PERSONA_TEMPLATE_FIELDS: "sync_persona_template_fields",
   PERSONA_REQUIRED_FIELDS: "persona_required_fields",
   WORLD_PERSONA_REVIEW_ACTIVE: "world_persona_review_active",
+  GET_WORLD_PERSONA_ACTIVITY: "get_world_persona_activity",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

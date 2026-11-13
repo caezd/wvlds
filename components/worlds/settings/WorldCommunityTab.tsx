@@ -294,10 +294,10 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 {tSettings("tags")}
                                                 <HelpHint title={tSettings("tags")}>{tSettings("tagsHelp")}</HelpHint>
                                             </p>
-                                            <p className="text-[11px] tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
+                                            <p className="text-xs-plus tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
                                         </div>
 
-                                        <div className="space-y-2 rounded-lg border border-border-soft p-2">
+                                        <div className="space-y-2 rounded-lg border border-border p-2">
                                             {tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {tags.map((tag) => (
@@ -337,8 +337,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 shrink-0 p-0"
+                                                        size="icon-sm"
                                                         disabled={!newTag.trim() || savingTag}
                                                         aria-label={t("addTag")}
                                                         onClick={() => void handleAddTag()}
@@ -347,7 +346,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <p className="px-1.5 py-1 text-[11px] text-muted-foreground">
+                                                <p className="px-1.5 py-1 text-xs-plus text-muted-foreground">
                                                     {tSettings("maxTags", { count: MAX_TAGS })}
                                                 </p>
                                             )}
@@ -358,14 +357,14 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                             deux cas, sous le même libellé. */}
                                         {suggestions.length > 0 && (
                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                                                <span className="text-[11px] text-muted-foreground">{tSettings("popularTags")}</span>
+                                                <span className="text-xs-plus text-muted-foreground">{tSettings("popularTags")}</span>
                                                 {suggestions.map((tag) => (
                                                     <button
                                                         key={tag}
                                                         type="button"
                                                         disabled={savingTag}
                                                         onClick={() => void handleAddTag(tag)}
-                                                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                                                     >
                                                         <Plus className="h-3 w-3" />
                                                         {tag}

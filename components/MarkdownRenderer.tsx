@@ -19,10 +19,12 @@ import { extractHeadings } from "@/lib/wikiToc";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { StoredImage } from "@/components/ui/stored-image";
+import { buttonVariants } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import type { LinkPreview } from "@/lib/wikiLinkPreview";
 import type { WorldLexiconTerm } from "@/types/worlds";
+import { withOpacity } from "@/lib/colorOpacity";
 
 type Props = {
   content: string;
@@ -91,7 +93,11 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
       <button
         type="button"
         onClick={doCopy}
-        className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          // Posé sur le bloc de code : un fond pour rester lisible.
+          "absolute right-2 top-2 h-7 bg-background/80 px-2 text-xs opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+        )}
         aria-label={tCommon("copyCode")}
         // Le libellé bascule « Copier » → « Copié » au clic. Sans cette
         // marque, il compterait dans le texte de la page et décalerait d'un
@@ -439,7 +445,9 @@ export function MarkdownContent({
       }
       if (hrefStr.startsWith("mention:")) {
         // Une mention (lib/mentions.ts) : une puce dans la couleur du rôle,
-        // ambre pour @tous / @ici, la couleur d'accent pour un pseudo.
+        // la teinte d'avertissement pour @tous / @ici, l'accent pour un pseudo.
+        // Pas de <Badge> : la mention court dans le texte (alignée sur la
+        // ligne de base, coupable), un badge a sa propre hauteur.
         const target = hrefStr.slice("mention:".length);
         const base = "inline-flex max-w-full items-baseline rounded px-1 font-medium no-underline";
         if (target.startsWith("role:")) {
@@ -447,20 +455,20 @@ export function MarkdownContent({
           // Rôle supprimé depuis : le texte reste du texte.
           if (!role) return <>{children}</>;
           return (
-            <span data-mention="role" className={base} style={{ color: role.color, backgroundColor: `${role.color}26` }}>
+            <span data-mention="role" className={base} style={{ color: role.color, backgroundColor: withOpacity(role.color, 0.15) }}>
               {children}
             </span>
           );
         }
         if (target === "all" || target === "here") {
           return (
-            <span data-mention={target} className={cn(base, "bg-amber-500/15 text-amber-700 dark:text-amber-300")}>
+            <span data-mention={target} className={cn(base, "bg-warning-soft text-warning")}>
               {children}
             </span>
           );
         }
         return (
-          <span data-mention="user" className={cn(base, "bg-accent/15 text-accent")}>
+          <span data-mention="user" className={cn(base, "bg-accent-soft text-accent")}>
             {children}
           </span>
         );
@@ -618,7 +626,7 @@ export function proseClassName(
   className?: string,
 ) {
   return cn(
-    "prose dark:prose-invert max-w-none",
+    "prose prose-invert max-w-none",
     proseSize === "sm" && "prose-sm",
     proseSize === "lg" && "prose-lg",
     proseSize === "xl" && "prose-xl",

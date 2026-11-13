@@ -42,7 +42,101 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ── 2026-11 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-11-09",
+    category: "Fonctionnalité",
+    area: "Notifications",
+    text: "« Marquer comme lu » au clic droit d’un monde (sélecteur de mondes, barre des mondes) : vide d’un coup ses salons non lus et ses notifications.",
+  },
+  {
+    date: "2026-11-09",
+    category: "Interface",
+    text: "Nouveau sélecteur de couleur dans toute l’application :\n- pastilles de la palette, zone saturation et luminosité, teinte, code hexadécimal\n- opacité réglable (texte, bulles, encadrés, jauges, carte, groupes et types de relations)",
+  },
+  // ── 2026-10 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-10-04",
+    category: "Interface",
+    area: "Relations",
+    text: "Page Relations redessinée (grand écran) :\n- vue « Cercle » : tous les personas sur un cercle, groupés par joueur sous un arc, relations en cordes\n- vue « Centré » : un persona au centre, ses relations puis celles de second degré en deux anneaux\n- panneau à droite : vue d’ensemble (types à masquer, joueurs), un joueur et ses personas, la fiche d’un persona et ses relations\n- survol d’un persona, d’un joueur ou d’un lien pour isoler ses liens ; double-clic pour centrer\n- zoom net à la molette et aux boutons, déplacement au glisser",
+  },
   // ── 2026-09 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-09-28",
+    category: "Fonctionnalité",
+    area: "Personas",
+    text: "Option « Couleur de groupe » (réglages du monde, Relations) :\n- teinte le nom d’un persona dans les salons, comme avant\n- sur sa fiche, un anneau et un halo à la couleur de son groupe autour de l’avatar sans cadre\n- activée par défaut",
+  },
+  {
+    date: "2026-09-28",
+    category: "Interface",
+    area: "Personas",
+    text: "L’aperçu de l’éditeur de fiche montre exactement la fiche : badges, onglets Relations, Journal et Relecture, couleur de groupe ; « Suivre » en bouton bordé, aligné sur le nom.",
+  },
+  {
+    date: "2026-09-28",
+    category: "Correctif",
+    text: "« Vu il y a… » : la dernière connexion des joueurs n’était jamais enregistrée ; tout le monde apparaissait « Hors ligne ».",
+  },
+  {
+    date: "2026-09-28",
+    category: "Interface",
+    area: "Personas",
+    text: "Onglets Relations, Journal et Validation d’un persona en icônes, après les sections de sa fiche :\n- Relations : une carte par persona, avec son joueur, et le type à sa couleur ; « Voir dans Relations »\n- Relecture : état de la fiche en bandeau, avec Valider et Renvoyer ; commentaires avec avatar ; un point sur l’onglet tant que la fiche n’est pas validée",
+  },
+  {
+    date: "2026-09-28",
+    category: "Correctif",
+    area: "Membres",
+    text: "Un persona supprimé, créé ou modifié depuis son tiroir apparaît aussitôt dans les pages Membres et Personas, sans recharger.",
+  },
+  {
+    date: "2026-09-28",
+    category: "Correctif",
+    text: "Listes avec recherche (tags de l’explorateur…) et menus contextuels : l’élément survolé n’est plus surligné en rouge ; cases à cocher moins arrondies.",
+  },
+  {
+    date: "2026-09-28",
+    category: "Correctif",
+    area: "Salons",
+    text: "La bordure « complète » des encadrés s’affiche de nouveau.",
+  },
+  {
+    date: "2026-09-28",
+    category: "Interface",
+    text: "Couleurs et styles harmonisés dans toute l’application :\n- palette sombre à légère teinte froide, coins un peu moins arrondis\n- une couleur par sens : succès, avertissement, erreur, info, PNJ\n- présence identique partout : vert en ligne, orange absent, rouge hors ligne\n- badges et compteurs non lus au même format ; tailles de texte et intitulés de section unifiés\n- les mêmes douze couleurs proposées dans tous les sélecteurs (rôles, groupes, arcs, régions, épingles, jauges, encadrés, bulles), indigo par défaut\n- boutons harmonisés : ce qui enregistre ou envoie en pilule, « Annuler » à côté ; ce qui ouvre un panneau ou un formulaire, les filtres, outils et fermetures en coins arrondis, bordé ou nu\n- menus et sélecteurs toujours au-dessus des fenêtres qui les ouvrent\n- cartes cliquables (chiffres des pages Membres et Personas, catégories de salons) : une lueur discrète suit la souris au survol\n- tuiles de persona : léger zoom du portrait et ombre au survol\n- apparence d’une épingle de carte : couleurs choisies comme dans l’encadré (palette, « Aucun »), bordure en bascule",
+  },
+  {
+    date: "2026-09-28",
+    category: "Interface",
+    area: "Salons",
+    text: "Avatars des personas ronds dans les salons : messages, SMS, messages épinglés, persona du compositeur ; carrés sous un cadre.",
+  },
+  {
+    date: "2026-09-28",
+    category: "Interface",
+    area: "Compte",
+    text: "« Mon profil » redessiné :\n- avatar carré, pseudo modifiable sur place et pronoms en tête\n- trois onglets : Profil (bio, pronoms), Ma carte (dans le monde où vous êtes), Compte (e-mail, mot de passe)\n- un seul bouton « Enregistrer » pour tout, qui n’envoie que ce qui a changé ; Ctrl/⌘ + S ; confirmation avant de fermer sans enregistrer\n- bio et pronoms relus à chaque ouverture ; une carte modifiée reste celle de son monde jusqu’à l’enregistrement\n- pronoms en puces carrées, « Autre » compris, avec leur compteur\n- statut de la carte en sélecteur segmenté ; « Utiliser le mien » à côté du fuseau, avec l’heure qu’il est chez vous",
+  },
+  {
+    date: "2026-09-27",
+    category: "Interface",
+    area: "Membres",
+    text: "Page des membres redessinée en « Joueurs & personas » :\n- une étagère par joueur : avatar et présence, statut, puis une ligne (rôles, dernière activité, heure locale, anniversaire), et tous ses personas en grille, nom et groupe sur l’image\n- actions : « Profil » et « Écrire » (message privé) ; une tuile « Nouveau persona » sur la vôtre\n- « Ma carte dans ce monde » se règle désormais dans « Mon profil » (menu principal)\n- étagère des PNJ du monde en dernier\n- vues « Groupes » et « Liste »\n- cartes de tête : joueurs en ligne, mes personas, fiches à relire, hors jeu ; un clic filtre\n- recherche sur le joueur, ses rôles et ses personas ; un persona trouvé n’affiche que lui, « Voir tous ses personas » rend les autres\n- palette sobre : portraits sans image en gris, couleurs des rôles et groupes en pastilles",
+  },
+  {
+    date: "2026-09-27",
+    category: "Interface",
+    area: "Personas",
+    text: "Liste des personas d’un monde redessinée en étagères :\n- rangement par joueur (le vôtre d’abord, les PNJ à la fin), par groupe, ou en liste unique avec index A–Z ; le choix est retenu par monde\n- par joueur et par groupe : en-tête (avatar ou groupe, chiffres) au-dessus des personas, sur plusieurs lignes ; dès cinq, le plus actif des 30 derniers jours en grand\n- cartes de tête : mes personas, fiches à relire, PNJ, hors jeu ; un clic filtre, un second retire le filtre\n- nouveau filtre de statut « Hors jeu » (décédés et retirés)\n- tuiles avec le nom et le groupe ou le joueur posés en bas du portrait, fond teinté de la couleur du groupe sans avatar ; un persona hors jeu est grisé en entier\n- en tête de chaque joueur : son avatar et sa présence (en ligne, absent, hors ligne) ; pause ou absence déclarée signalée",
+  },
+  {
+    date: "2026-09-27",
+    category: "Interface",
+    area: "Relations",
+    text: "Toile des relations redessinée :\n- avatars ronds cerclés de la couleur du groupe, dans une zone par joueur placée automatiquement\n- liens en courbes fines, un point indique le sens ; survoler un persona ou un lien met ses relations en avant\n- vue « Centré » : un persona au milieu, ses relations autour, puis les relations de celles-ci\n- joueurs de plus de dix personas repliés en une bulle, dépliable (jamais les vôtres) ; repli à la main dès cinq\n- panneau flottant : demandes reçues en tête, ajout d’une relation et changement de groupe sur place\n- double-clic sur un persona : vue « Centré » sur lui ; au survol, son joueur et son nombre de relations\n- noms lisibles à tous les niveaux de zoom ; liens discrets au repos\n- recherche toujours visible, avec suggestions ; légende en une barre, avec le nombre de relations par type ; recentrage automatique sur les personas affichés\n- raccourcis : Échap, F (recentrer), + et - (zoom) ; une aide au premier passage",
+  },
   {
     date: "2026-09-26",
     category: "Interface",

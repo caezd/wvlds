@@ -100,6 +100,8 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  // MarkdownRenderer en tire la classe du bouton « Copier ».
+  buttonVariants: () => "",
 }));
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,

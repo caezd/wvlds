@@ -7,13 +7,12 @@ import { toast } from "sonner";
 import { Loader2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { ColorSwatchRow } from "@/components/ui/color-swatch-row";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
-import { BUBBLE_COLOR_PRESETS, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { updateMapPin, type MapPin as MapPinType } from "@/app/actions/worldMap";
-
-import { ColorInput } from "./ColorInput";
 
 // ── Dialog de personnalisation visuelle d'un pin ──────────────────
 
@@ -41,7 +40,7 @@ export function PinVisualDialog({
   const borderStyles = getBorderStyles(t);
   const isTransparent = (c: string) => !c || c === "transparent";
 
-  const [bgColor, setBgColor] = React.useState(isTransparent(pin.color) ? "#6366f1" : pin.color);
+  const [bgColor, setBgColor] = React.useState(isTransparent(pin.color) ? DEFAULT_PLAYER_COLOR : pin.color);
   const [noBg, setNoBg] = React.useState(isTransparent(pin.color));
   const [iconName, setIconName] = React.useState(pin.icon);
   const [iconColor, setIconColor] = React.useState(pin.icon_color || "#ffffff");
@@ -56,7 +55,7 @@ export function PinVisualDialog({
   React.useEffect(() => {
     if (!open) return;
     const transp = isTransparent(pin.color);
-    setBgColor(transp ? "#6366f1" : pin.color);
+    setBgColor(transp ? DEFAULT_PLAYER_COLOR : pin.color);
     setNoBg(transp);
     setIconName(pin.icon);
     setIconColor(pin.icon_color || "#ffffff");
@@ -108,24 +107,24 @@ export function PinVisualDialog({
     <>
       {/* Fond semi-transparent — clic ferme le panel */}
       <div
-        className="fixed inset-0 z-50 bg-black/40"
+        className="fixed inset-0 z-modal bg-black/40"
         onClick={() => onOpenChange(false)}
       />
 
       {/* Panel centré */}
       <div
-        className="fixed left-1/2 top-1/2 z-[55] w-[360px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-background shadow-2xl"
+        className="fixed left-1/2 top-1/2 z-modal-raised w-[360px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-background shadow-modal"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
         {/* En-tête */}
-        <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">{t("pinVisual")}</h2>
           <button
             type="button"
             aria-label={tCommon("close")}
             onClick={() => onOpenChange(false)}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
             <X className="h-4 w-4" />
           </button>
@@ -139,7 +138,7 @@ export function PinVisualDialog({
               className="flex h-12 w-12 items-center justify-center rounded-full shadow-lg"
               style={{
                 backgroundColor: effectiveBg,
-                border: previewBorder || (previewEmpty ? "2px dashed #aaa" : "none"),
+                border: previewBorder || (previewEmpty ? "2px dashed var(--muted-foreground)" : "none"),
               }}
             >
               {iconName && (
@@ -169,65 +168,43 @@ export function PinVisualDialog({
             <LucideIconPicker value={iconName} onChange={setIconName} accent={iconColor} />
           </div>
 
-          {/* Fond */}
+          {/* Fond : une couleur, ou « Aucun » (transparent) — comme l'encadré du composer. */}
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">{t("background")}</span>
-              <label className="flex cursor-pointer items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">{t("transparent")}</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={noBg}
-                  aria-label={t("toggleTransparent")}
-                  onClick={() => setNoBg((v) => !v)}
-                  className={cn(
-                    "relative inline-flex h-4 w-7 items-center rounded-full transition-colors",
-                    noBg ? "bg-primary" : "bg-muted",
-                  )}
-                >
-                  <span className={cn(
-                    "inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow transition-transform",
-                    noBg && "translate-x-3.5",
-                  )} />
-                </button>
-              </label>
-            </div>
-            {!noBg && (
-              <ColorInput color={bgColor} onChange={setBgColor} presets={BUBBLE_COLOR_PRESETS} />
-            )}
+            <span className="text-xs font-medium text-muted-foreground">{t("background")}</span>
+            <ColorSwatchRow
+              value={noBg ? "" : bgColor}
+              onChange={(c) => {
+                setNoBg(c === "");
+                if (c) setBgColor(c);
+              }}
+              chooseLabel={tCommon("chooseColor")}
+              noneLabel={t("backgroundNone")}
+            />
           </div>
 
           {/* Couleur de l'icône */}
           {iconName && (
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">{t("iconColor")}</span>
-              <ColorInput color={iconColor} onChange={setIconColor} presets={ACCENT_COLOR_PRESETS} />
+              <ColorSwatchRow value={iconColor} onChange={setIconColor} chooseLabel={tCommon("chooseColor")} />
             </div>
           )}
 
           {/* Bordure */}
           <div className="flex flex-col gap-2">
+            {/* Une bascule, comme « Arrondi » dans l'encadré ; ses réglages suivent. */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">{t("border")}</span>
-              <button
+              <Button
                 type="button"
-                role="switch"
-                aria-checked={hasBorder}
-                aria-label={t("toggleBorder")}
+                variant="outline"
+                size="sm"
+                aria-pressed={hasBorder}
+                className="h-6 px-2 text-xs"
                 onClick={() => setHasBorder((v) => !v)}
-                className={cn(
-                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-                  hasBorder ? "bg-primary" : "bg-muted",
-                )}
               >
-                <span
-                  className={cn(
-                    "inline-block h-3.5 w-3.5 translate-x-0.5 rounded-full bg-white shadow transition-transform",
-                    hasBorder && "translate-x-4",
-                  )}
-                />
-              </button>
+                {t("toggleBorder")}
+              </Button>
             </div>
 
             {hasBorder && (
@@ -249,15 +226,15 @@ export function PinVisualDialog({
                     </button>
                   ))}
                 </div>
-                <ColorInput color={borderColor} onChange={setBorderColor} presets={BUBBLE_COLOR_PRESETS} />
+                <ColorSwatchRow value={borderColor} onChange={setBorderColor} chooseLabel={tCommon("chooseColor")} />
               </div>
             )}
           </div>
         </div>
 
         {/* Pied */}
-        <div className="flex justify-end gap-2 border-t border-border-soft px-4 py-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving}>

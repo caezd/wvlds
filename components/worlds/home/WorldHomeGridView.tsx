@@ -175,7 +175,7 @@ function renderBlock(
     // réglage : pas de conteneur ajouté hors carte, pas d'`overflow`.
     if (!item.h) {
       return item.card ? (
-        <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
+        <div className="rounded-lg border border-border bg-card/40 p-4">{content}</div>
       ) : (
         content
       );
@@ -183,7 +183,7 @@ function renderBlock(
     return (
       <div
         style={{ height: item.h }}
-        className={cn("overflow-y-auto", item.card && "rounded-lg border border-border-soft bg-card/40 p-4")}
+        className={cn("overflow-y-auto", item.card && "rounded-lg border border-border bg-card/40 p-4")}
       >
         {content}
       </div>

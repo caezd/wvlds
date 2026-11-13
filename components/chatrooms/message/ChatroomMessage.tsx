@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
@@ -357,7 +358,7 @@ function ChatroomMessage({
                         block du sticky au lieu du scroll area des messages) —
                         on arrondit donc la barre elle-même à la place. */}
                     {isMobile && (
-                      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 rounded-t-2xl bg-body border-b px-2 py-1.5">
+                      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 rounded-t-2xl bg-canvas border-b px-2 py-1.5">
                         <Button
                           type="button"
                           variant="ghost"
@@ -400,24 +401,24 @@ function ChatroomMessage({
                         <div className="mt-1 text-xs text-destructive">{err}</div>
                       )}
                       <div className="flex flex-wrap items-center gap-2 p-2">
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-pressed={editBubbles}
+                          className="h-7 gap-1.5 px-2.5 text-xs"
                           onClick={() => setEditBubbles((v) => !v)}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                            editBubbles
-                              ? "border-primary/40 bg-primary/10 text-primary"
-                              : "border-border-soft text-muted-foreground hover:text-foreground",
-                          )}
                         >
                           <MessageCircle className="h-3 w-3" />
                           Dialogues en bulles
-                        </button>
+                        </Button>
                         {editBubbles && (
-                          <button
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 px-2.5 text-xs"
                             onClick={() => setEditColorPickerOpen(true)}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                           >
                             <span
                               className="size-3 shrink-0 rounded-full border border-border/60"
@@ -426,34 +427,31 @@ function ChatroomMessage({
                               {!editBubbleColor && <Pipette className="m-auto size-2.5 text-muted-foreground" />}
                             </span>
                             {t("colorChoose")}
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-pressed={editSms}
+                          className="h-7 gap-1.5 px-2.5 text-xs"
                           onClick={() => setEditSms((v) => !v)}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                            editSms
-                              ? "border-primary/40 bg-primary/10 text-primary"
-                              : "border-border-soft text-muted-foreground hover:text-foreground",
-                          )}
                         >
                           <MessageSquareText className="h-3 w-3" />
                           {t("smsMode")}
-                        </button>
-                        <button
+                        </Button>
+                        {/* Activé, il garde la teinte d'avertissement plutôt que le fond neutre des autres bascules. */}
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-pressed={contentWarningsChips.tags !== null}
+                          className="h-7 gap-1.5 px-2.5 text-xs aria-pressed:border-warning/40 aria-pressed:bg-warning-soft aria-pressed:text-warning"
                           onClick={contentWarningsChips.toggle}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                            contentWarningsChips.tags !== null
-                              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                              : "border-border-soft text-muted-foreground hover:text-foreground",
-                          )}
                         >
                           <AlertTriangle className="h-3 w-3" />
                           {t("contentWarning")}
-                        </button>
+                        </Button>
                       </div>
                       {contentWarningsChips.tags !== null && (
                         <ContentWarningChipInput
@@ -507,18 +505,15 @@ function ChatroomMessage({
             <DialogTitle className="text-sm">{t("dialogColorTitle")}</DialogTitle>
           </DialogHeader>
           <HsvColorPicker
-            color={editBubbleColor ?? "#1d4ed8"}
+            color={editBubbleColor ?? DEFAULT_PLAYER_COLOR}
             onChange={setEditBubbleColor}
+            alpha
           />
           <DialogFooter className="flex-row justify-between sm:justify-between">
-            <button
-              type="button"
-              onClick={() => setEditBubbleColor(null)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditBubbleColor(null)}>
               {t("colorReset")}
-            </button>
-            <Button size="sm" onClick={() => setEditColorPickerOpen(false)}>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditColorPickerOpen(false)}>
               {t("colorConfirm")}
             </Button>
           </DialogFooter>

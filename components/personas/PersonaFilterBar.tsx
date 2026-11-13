@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArrowUpDown, Check, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { Check, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { NARRATIVE_STATUSES } from "@/lib/personaStatus";
@@ -22,42 +23,45 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PERSONA_FILTER_ALL as ALL, PERSONA_FILTER_NO_GROUP as NO_GROUP, SHEET_FILTERS, type PersonaFilters, type PersonaSortKey } from "./personaFilters";
+import { PERSONA_FILTER_ALL as ALL, PERSONA_FILTER_NO_GROUP as NO_GROUP, PERSONA_FILTER_OFFSTAGE as OFFSTAGE, SHEET_FILTERS, type PersonaFilters } from "./personaFilters";
 
 type Option = { value: string; label: string; color?: string };
-
-/** Les deux boutons (variante `outline`, la forme des champs) sur la hauteur du champ de recherche. */
-const TRIGGER_CLASS = "h-9 shrink-0 gap-1.5 px-3";
 
 /** Une dimension du filtre : son nom, ses valeurs, celle qui est active. */
 type Dimension = { key: keyof Omit<PersonaFilters, "query" | "reviewActive">; label: string; allLabel: string; options: Option[] };
 
 /**
- * La barre de la liste des personas : la recherche, un seul menu « Filtres »
- * (une entrée par dimension, la valeur courante en regard, les choix dans un
- * sous-menu) et le tri. Les filtres actifs se lisent en pastilles, chacune
- * retirable — le menu, lui, reste court.
+ * La barre de la liste des personas : ce qui la précède (`leading`, le choix de
+ * vue), un seul menu « Filtres » (une entrée par dimension, la valeur courante
+ * en regard, les choix dans un sous-menu), puis `actions` et, tout à droite, la
+ * recherche. Les filtres actifs se lisent en pastilles, chacune retirable — le
+ * menu, lui, reste court.
  */
 export function PersonaFilterBar({
   filters,
   onFiltersChange,
-  sort,
-  onSortChange,
   players,
   groups,
   showKind,
   reviewActive,
+  leading,
+  actions,
+  searchPlaceholder,
 }: {
   filters: PersonaFilters;
   onFiltersChange: (next: PersonaFilters) => void;
-  sort: PersonaSortKey;
-  onSortChange: (next: PersonaSortKey) => void;
   players: { id: string; label: string }[];
   groups: { id: string; name: string; color: string }[];
   /** Le monde a des PNJ (ou l'utilisateur en gère) : le type se filtre. */
   showKind: boolean;
   /** Le monde relit ses fiches : les états de relecture se filtrent. */
   reviewActive: boolean;
+  /** Avant le bouton « Filtres » (le choix de vue). */
+  leading?: ReactNode;
+  /** Après le bouton « Filtres » (création d'un PNJ). */
+  actions?: ReactNode;
+  /** Le texte du champ de recherche, quand il cherche autre chose que des personas. */
+  searchPlaceholder?: string;
 }) {
   const t = useTranslations("personas.list");
   const tStatus = useTranslations("personas.narrativeStatus");
@@ -74,7 +78,7 @@ export function PersonaFilterBar({
           options: [...groups.map((g) => ({ value: g.id, label: g.name, color: g.color })), { value: NO_GROUP, label: t("noGroup") }],
         }]
       : []),
-    { key: "status" as const, label: t("filterStatus"), allLabel: t("allStatuses"), options: NARRATIVE_STATUSES.map((s) => ({ value: s, label: tStatus(s) })) },
+    { key: "status" as const, label: t("filterStatus"), allLabel: t("allStatuses"), options: [...NARRATIVE_STATUSES.map((s) => ({ value: s, label: tStatus(s) })), { value: OFFSTAGE, label: t("shelves.stats.offstage") }] },
     ...(showKind
       ? [{ key: "kind" as const, label: tNpc("filterKind"), allLabel: tNpc("allKinds"), options: [{ value: "player", label: tNpc("kindPlayers") }, { value: "npc", label: tNpc("kindNpcs") }] }]
       : []),
@@ -88,36 +92,26 @@ export function PersonaFilterBar({
   const labelOf = (d: Dimension) => d.options.find((o) => o.value === filters[d.key])?.label ?? d.allLabel;
   const set = (key: Dimension["key"], value: string) => onFiltersChange({ ...filters, [key]: value });
   const reset = () => onFiltersChange({ ...filters, player: ALL, group: ALL, status: ALL, kind: ALL, sheet: ALL });
-  const sortLabel: Record<PersonaSortKey, string> = { name: t("sortName"), newest: t("sortNewest"), oldest: t("sortOldest") };
 
   return (
     <div className="space-y-2" role="search">
-      <div className="flex items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={filters.query}
-            onChange={(e) => onFiltersChange({ ...filters, query: e.target.value })}
-            placeholder={t("searchPlaceholder")}
-            aria-label={t("searchPlaceholder")}
-            className="pl-9"
-          />
-        </div>
-
+      <div className="flex flex-wrap items-center gap-2">
+        {leading}
         <DropdownMenu>
+          {/* Variante `outline` telle quelle, à la hauteur du champ de recherche ;
+              le compteur signale les filtres actifs. */}
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" className={cn(TRIGGER_CLASS, active.length > 0 && "border-primary/50 text-foreground")} aria-label={t("filters")}>
+            <Button type="button" variant="outline" className="shrink-0" aria-label={t("filters")}>
               <SlidersHorizontal className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t("filters")}</span>
               {active.length > 0 && (
-                <span className="grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground tabular-nums" data-testid="active-filter-count">
+                <span className="grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-2xs font-semibold text-primary-foreground tabular-nums" data-testid="active-filter-count">
                   {active.length}
                 </span>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-56">
+          <DropdownMenuContent align="start" className="min-w-56">
             <DropdownMenuLabel className="text-xs text-muted-foreground">{t("filters")}</DropdownMenuLabel>
             {dimensions.map((d) => (
               <DropdownMenuSub key={d.key}>
@@ -153,21 +147,19 @@ export function PersonaFilterBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" className={TRIGGER_CLASS} aria-label={t("sort")} title={sortLabel[sort]}>
-              <ArrowUpDown className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">{sortLabel[sort]}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuRadioGroup value={sort} onValueChange={(v) => onSortChange(v as PersonaSortKey)}>
-              {(["name", "newest", "oldest"] as PersonaSortKey[]).map((k) => (
-                <DropdownMenuRadioItem key={k} value={k}>{sortLabel[k]}</DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {actions}
+
+        <div className="relative w-full sm:ml-auto sm:w-64">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={filters.query}
+            onChange={(e) => onFiltersChange({ ...filters, query: e.target.value })}
+            placeholder={searchPlaceholder ?? t("searchPlaceholder")}
+            aria-label={searchPlaceholder ?? t("searchPlaceholder")}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       {active.length > 0 && (

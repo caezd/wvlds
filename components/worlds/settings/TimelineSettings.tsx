@@ -23,10 +23,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FIELD, SURFACE, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
-/** Le rouge de la date actuelle, comme sur la frise : l'accent en sombre, un rouge franc en clair. */
-const NOW_RED_BG = "bg-red-600 dark:bg-accent";
-const NOW_RED_TEXT = "text-red-600 dark:text-accent";
-const NOW_RED_BORDER = "border-red-600/40 dark:border-accent/40";
+/** Le rouge de la date actuelle, comme sur la frise : l'accent. */
+const NOW_RED_BG = "bg-accent";
+const NOW_RED_TEXT = "text-accent";
+const NOW_RED_BORDER = "border-accent/40";
 
 /** Un champ sans cadre, dans une ligne bordée. */
 const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0";
@@ -169,7 +169,7 @@ export function TimelineSettings({
 
         <section
           aria-label={tSettings("timelineNow")}
-          className="space-y-4 border-t border-border-soft p-5 @2xl:border-l @2xl:border-t-0"
+          className="space-y-4 border-t border-border p-5 @2xl:border-l @2xl:border-t-0"
         >
           <p className="flex items-center gap-1.5 text-sm font-semibold">
             {tSettings("timelineNow")}
@@ -248,7 +248,7 @@ export function TimelineSettings({
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-era" className="text-xs font-normal text-muted-foreground">
               {t("eraSuffix")}
-              <span className="text-muted-foreground/70"> · {tSettings("optional")}</span>
+              <span className="text-muted-foreground"> · {tSettings("optional")}</span>
             </Label>
             <Input
               id="timeline-era"
@@ -301,10 +301,10 @@ export function TimelineSettings({
         aside={
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPersist({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-            className="mt-3 h-8 gap-1.5 rounded-md border-border-soft bg-card text-xs font-normal dark:bg-card"
+            className="mt-3 text-xs"
           >
             <RotateCcw className="size-3.5" aria-hidden />
             {tSettings("useRealMonths")}
@@ -318,7 +318,7 @@ export function TimelineSettings({
                 key={i}
                 className={cn(
                   "flex h-11 items-center gap-2 rounded-md border bg-card pl-3 pr-1.5",
-                  i === moisCourant ? NOW_RED_BORDER : "border-border-soft",
+                  i === moisCourant ? NOW_RED_BORDER : "border-border",
                 )}
                 data-current={i === moisCourant || undefined}
               >
@@ -379,7 +379,7 @@ export function TimelineSettings({
         <button
           type="button"
           onClick={ajouterMois}
-          className="flex h-10 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border-soft text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+          className="flex h-10 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
         >
           <Plus className="size-4" aria-hidden />
           {tSettings("addMonth")}
@@ -484,14 +484,16 @@ export function TimelineSettings({
                 {/* Sa date en pastille ; un appui ouvre le jour et le mois. */}
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       aria-label={tSettings("holidayDate", { name: fete.name })}
-                      className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-medium tabular-nums transition-colors hover:bg-muted/70"
+                      className="h-7 px-2 text-xs tabular-nums"
                       data-testid="holiday-date"
                     >
                       {fete.day !== null ? `${fete.day} ${config.month_names[fete.month] ?? ""}` : config.month_names[fete.month]}
-                    </button>
+                    </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="flex w-auto items-center gap-2 p-2">
                     <Input
@@ -635,13 +637,13 @@ function AddRow({
 }) {
   return (
     // Sur une page étroite, ses champs passent à la ligne plutôt que de déborder.
-    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-md border border-dashed border-border-soft py-1.5 pl-2 pr-1.5">
+    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-md border border-dashed border-border py-1.5 pl-2 pr-1.5">
       {children}
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 shrink-0 gap-1 rounded-md border-border-soft bg-card font-normal dark:bg-card"
+        className="shrink-0"
         disabled={disabled}
         aria-label={addLabel}
         onClick={onAdd}

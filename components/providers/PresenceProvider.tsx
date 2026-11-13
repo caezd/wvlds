@@ -188,10 +188,15 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             // ponctuel se rattrape de lui-même au suivant, et journaliser
             // chaque tentative ratée noierait la console pendant une coupure
             // réseau. Le "vu il y a X" est au demeurant purement indicatif.
+            //
+            // Le `.then()` n'est pas décoratif : une requête supabase-js ne
+            // part qu'une fois attendue. Un simple `void` sur le constructeur
+            // ne l'envoyait jamais — aucun profil n'avait de `last_seen_at`.
             void supabase
                 .from(TABLE.PROFILES)
                 .update({ last_seen_at: iso })
-                .eq("id", userId);
+                .eq("id", userId)
+                .then(() => undefined);
         };
         trackRef.current = track;
 

@@ -39,7 +39,7 @@ export function StatsField({
       {items.map((stat) => (
         <div
           key={stat.id}
-          className="group/stat relative flex flex-col gap-1 rounded-lg border border-border-soft bg-muted/30 px-3 py-2"
+          className="group/stat relative flex flex-col gap-1 rounded-lg border border-border bg-muted/30 px-3 py-2"
         >
           <button
             type="button"
@@ -53,7 +53,7 @@ export function StatsField({
             value={stat.label}
             onChange={(e) => patch(stat.id, "label", e.target.value)}
             placeholder="AGI"
-            className="w-full bg-transparent text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+            className="w-full bg-transparent text-2xs font-semibold uppercase tracking-wider text-muted-foreground outline-none placeholder:text-muted-foreground/40"
           />
           <div className="flex items-baseline gap-1">
             <input
@@ -75,7 +75,7 @@ export function StatsField({
       <button
         type="button"
         onClick={addStat}
-        className="flex min-h-[3.75rem] items-center justify-center gap-1 rounded-lg border border-dashed border-border-soft text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+        className="flex min-h-[3.75rem] items-center justify-center gap-1 rounded-lg border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground"
       >
         <Plus className="h-3.5 w-3.5" /> Stat
       </button>

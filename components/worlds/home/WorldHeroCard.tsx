@@ -65,7 +65,7 @@ export function WorldHeroCard({
           />
         </div>
       ) : !world.color ? (
-        <div className="absolute inset-0 bg-gradient-to-br from-card-400 to-card" />
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-card" />
       ) : null}
     </div>
   );

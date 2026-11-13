@@ -15,9 +15,11 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SectionLabel } from "@/components/ui/section-label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HsvColorPicker, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { HsvColorPicker, PLAYER_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { cn } from "@/lib/utils";
 import {
   MAX_HOME_BANNER_TEXT_LENGTH,
@@ -25,8 +27,6 @@ import {
   type WorldHomeBannerAlign,
   type WorldHomeBannerContent,
 } from "../worldHomeGrid";
-
-const DEFAULT_ACCENT = "#9aa0a6";
 
 /**
  * Rendu du bloc bannière — partagé par la page d'accueil (WorldHomeGridView)
@@ -51,7 +51,7 @@ export function WorldHomeBannerView({ banner }: { banner: WorldHomeBannerContent
         // `rounded-lg` : même rayon que les autres cartes de la grille (bloc
         // html/markdown en carte, salons, catégories…), pour rester cohérent.
         "relative flex h-full min-h-[180px] w-full flex-col justify-center overflow-hidden rounded-lg p-6",
-        !hasImage && "border border-border-soft bg-muted/30",
+        !hasImage && "border border-border bg-muted/30",
         align === "center" ? "items-center text-center" : "items-start text-left",
       )}
       style={
@@ -172,12 +172,12 @@ export function WorldHomeBannerDialog({
           <DialogTitle>{t("home.grid.bannerDialogTitle")}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] border-t border-border-soft">
+        <div className="grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] border-t border-border">
           {/* Aperçu live — fixe à gauche */}
-          <div className="flex flex-col gap-2 border-b border-border-soft bg-background/40 p-5 sm:border-b-0 sm:border-r">
-            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          <div className="flex flex-col gap-2 border-b border-border bg-background/40 p-5 sm:border-b-0 sm:border-r">
+            <SectionLabel as="p">
               {t("home.announcement.previewLabel")}
-            </Label>
+            </SectionLabel>
             <div className="flex flex-1 items-center">
               <WorldHomeBannerView banner={previewBanner} />
             </div>
@@ -280,15 +280,15 @@ export function WorldHomeBannerDialog({
                       <Palette className="h-3.5 w-3.5 text-muted-foreground" />
                       <span
                         className="h-3 w-3 rounded-full border border-border/40"
-                        style={{ backgroundColor: accent || DEFAULT_ACCENT }}
+                        style={{ backgroundColor: accent || DEFAULT_PLAYER_COLOR }}
                       />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[220px] p-3 z-[200]" align="start">
-                    <HsvColorPicker color={accent || DEFAULT_ACCENT} onChange={setAccent} presets={[]} />
+                  <PopoverContent className="w-64 overflow-hidden rounded-2xl p-0" align="start">
+                    <HsvColorPicker color={accent || DEFAULT_PLAYER_COLOR} onChange={setAccent} presets={[]} alpha framed={false} />
                   </PopoverContent>
                 </Popover>
-                {ACCENT_COLOR_PRESETS.map((c) => (
+                {PLAYER_COLOR_PRESETS.map((c) => (
                   <button
                     key={c.value}
                     type="button"
@@ -369,8 +369,8 @@ export function WorldHomeBannerDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t border-border-soft px-6 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{tCommon("cancel")}</Button>
+        <DialogFooter className="border-t border-border px-6 py-4">
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>{tCommon("cancel")}</Button>
           <Button onClick={handleSave} disabled={!isValid}>
             {initialBanner ? tCommon("save") : tCommon("create")}
           </Button>

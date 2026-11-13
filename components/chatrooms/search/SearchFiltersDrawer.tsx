@@ -98,7 +98,7 @@ export function SearchFiltersDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
       <SideSheetContent width="filters">
-        <DrawerHeader className="border-b border-border-soft px-6 py-4">
+        <DrawerHeader className="border-b border-border px-6 py-4">
           <DrawerTitle>{t("search.filtersTitle")}</DrawerTitle>
         </DrawerHeader>
 
@@ -209,11 +209,11 @@ export function SearchFiltersDrawer({
           </div>
         </ScrollArea>
 
-        <DrawerFooter className="flex-row justify-between border-t border-border-soft px-6 py-4">
-          <Button type="button" variant="ghost" onClick={clearFilters}>
+        <DrawerFooter className="flex-row justify-between border-t border-border px-6 py-4">
+          <Button type="button" variant="outline" onClick={clearFilters}>
             {t("search.clearFilters")}
           </Button>
-          <Button type="button" onClick={applyFilters}>
+          <Button variant="outline" type="button" onClick={applyFilters}>
             {t("search.applyFilters")}
           </Button>
         </DrawerFooter>

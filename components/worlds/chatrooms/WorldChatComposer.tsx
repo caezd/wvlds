@@ -261,7 +261,7 @@ export function WorldChatComposer({
   // « Suite de… » : sous le titre, dès qu'il y a un salon daté à suivre.
   const sequelRow = timelineConfig && sequelChoices.length > 0 ? (
     <label
-      className="flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5"
+      className="flex h-9 items-center gap-2 rounded-lg border border-border px-2.5"
       title={t("composer.sequelOf")}
     >
       <Spline className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -297,7 +297,7 @@ export function WorldChatComposer({
       aria-label={t("composer.dateSection")}
       title={t("composer.dateSection")}
       className={cn(
-        "flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5",
+        "flex h-9 items-center gap-2 rounded-lg border border-border px-2.5",
         !isMobile && "shrink-0",
       )}
     >
@@ -321,24 +321,28 @@ export function WorldChatComposer({
         {/* Effacer, puis tirer un titre au hasard : tous deux dans le champ. */}
         <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center">
           {title && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setTitle("")}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
+              className="size-7"
               aria-label={t("composer.titleClear")}
             >
               <X className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setTitle(randomTitle())}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="size-7"
             aria-label={t("composer.titleRandomize")}
             title={t("composer.titleRandomize")}
           >
             <Shuffle className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
       {!isMobile && dateRow}
@@ -362,7 +366,7 @@ export function WorldChatComposer({
                   title={cat.title}
                   bannerUrl={cat.banner_url}
                   iconUrl={cat.icon_url}
-                  letterClassName="text-[8px]"
+                  letterClassName="text-2xs"
                   className="mr-2 h-4 w-4 rounded-sm"
                 />
                 {cat.title}
@@ -429,7 +433,7 @@ export function WorldChatComposer({
             <div className="flex h-full min-h-0 flex-col gap-2">
               {/* Même coin que la carte du message dessous (rounded-lg en superellipse). */}
               <div
-                className="shrink-0 space-y-2 rounded-lg border border-border-soft bg-background p-2.5"
+                className="shrink-0 space-y-2 rounded-lg border border-border bg-background p-2.5"
                 style={{ cornerShape: "superellipse(1.1)" } as CSSProperties}
               >
                 {titleRow}
@@ -466,7 +470,7 @@ export function WorldChatComposer({
               <DrawerDescription>{t("composer.discardDescription")}</DrawerDescription>
             </DrawerHeader>
             <DrawerFooter className="flex-row gap-2">
-              <DrawerClose render={<Button variant="outline" className="flex-1" />}>
+              <DrawerClose render={<Button variant="secondary" className="flex-1" />}>
                 {t("composer.discardCancel")}
               </DrawerClose>
               <Button className="flex-1" onClick={forceClose}>

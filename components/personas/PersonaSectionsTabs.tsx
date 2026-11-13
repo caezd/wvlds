@@ -171,8 +171,8 @@ export function PersonaSectionsTabs({
         // Même forme que les autres états vides de l'application (bordure
         // douce, centré, généreusement espacé) — celui-ci était le seul à
         // s'aligner à gauche dans une boîte à bordure dure.
-        <div className="mx-4 mb-4 rounded-lg border border-border-soft p-8 text-center">
-          <Layers className="mx-auto h-8 w-8 text-muted-foreground/60" aria-hidden />
+        <div className="mx-4 mb-4 rounded-lg border border-border p-8 text-center">
+          <Layers className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
           <p className="mt-3 text-sm font-medium text-foreground">{t("empty")}</p>
 
           {/* Créer en un clic depuis une suggestion : devant une fiche vierge,
@@ -182,7 +182,7 @@ export function PersonaSectionsTabs({
             {TAB_SUGGESTIONS.map((clé) => (
               <Button
                 key={clé}
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 disabled={saving}
                 onClick={() => void createSection(t(`suggestions.${clé}`))}
@@ -207,7 +207,7 @@ export function PersonaSectionsTabs({
           className="space-y-4"
         >
           <TabBar action={
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setName(""); setAddDialogOpen(true); }}>
+            <Button type="button" variant="ghost" size="xs" onClick={() => { setName(""); setAddDialogOpen(true); }}>
               + {t("add")}
             </Button>
           }>
@@ -219,7 +219,7 @@ export function PersonaSectionsTabs({
                 {value === section.id && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={t("options")}>
+                      <Button type="button" variant="ghost" size="icon-sm" className="size-6 shrink-0" aria-label={t("options")}>
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -300,7 +300,7 @@ export function PersonaSectionsTabs({
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
+              <Button type="button" variant="secondary" onClick={() => setAddDialogOpen(false)}>
                 {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={!name.trim() || saving}>
@@ -329,7 +329,7 @@ export function PersonaSectionsTabs({
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              <Button type="button" variant="secondary" onClick={() => setRenameDialogOpen(false)}>
                 {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={!name.trim() || saving}>

@@ -5,19 +5,16 @@ import { ImageIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
- * Bouton de choix d'une source de visuel — souligné quand c'est elle qui sert.
+ * Bouton de choix d'une source de visuel — un `outline`, enfoncé
+ * (`aria-pressed`) quand c'est elle qui sert.
  * Partagé par le dialogue et la saisie rapide, pour que les deux se lisent
  * pareil.
  */
-export function visualSourceButtonClass(active: boolean) {
-  return cn(
-    "flex h-7 w-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
-    active
-      ? "border-primary/40 bg-primary/10 text-primary"
-      : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-  );
+export function visualSourceButtonClass() {
+  return cn(buttonVariants({ variant: "outline", size: "icon-sm" }), "size-7");
 }
 
 /**
@@ -62,14 +59,14 @@ export function CatalogVisual({
   const glyph = framed ? Math.round(size * 0.6) : size;
   const box: React.CSSProperties = { width: size, height: size };
   const frameClass = framed
-    ? "flex items-center justify-center rounded-lg border border-border-soft bg-muted/40"
+    ? "flex items-center justify-center rounded-lg border border-border bg-muted/40"
     : "";
 
   if (imageUrl) {
     return (
       <span
         style={box}
-        className={cn("relative shrink-0 overflow-hidden rounded-lg", framed && "border border-border-soft", className)}
+        className={cn("relative shrink-0 overflow-hidden rounded-lg", framed && "border border-border", className)}
       >
         <Image src={imageUrl} alt="" fill unoptimized className="object-cover" />
       </span>
@@ -84,8 +81,8 @@ export function CatalogVisual({
           width={glyph}
           height={glyph}
           // `currentColor` : l'icône Lucide est un trait, elle suit la couleur
-          // du texte et n'a pas besoin du `dark:invert` des `rpg_icons`.
-          className="text-foreground/80"
+          // du texte et n'a pas besoin de l'`invert` des `rpg_icons`.
+          className="text-foreground"
         />
       </span>
     );
@@ -95,14 +92,14 @@ export function CatalogVisual({
     return (
       <span style={box} className={cn("shrink-0", frameClass, className)}>
         {/* Les `rpg_icons` sont des traits noirs sur fond transparent : elles
-            s'inversent en thème sombre, contrairement à une vraie image. */}
+            s'inversent sur le fond sombre, contrairement à une vraie image. */}
         <Image
           src={`/rpg_icons/${icon}`}
           alt=""
           unoptimized
           width={glyph}
           height={glyph}
-          className="object-contain dark:invert"
+          className="object-contain invert"
           style={{ width: glyph, height: glyph }}
         />
       </span>
@@ -114,7 +111,7 @@ export function CatalogVisual({
   if (!framed) return null;
   return (
     <span style={box} className={cn("shrink-0", frameClass, className)}>
-      <ImageIcon className="text-muted-foreground/30" style={{ width: glyph * 0.7, height: glyph * 0.7 }} />
+      <ImageIcon className="text-muted-foreground" style={{ width: glyph * 0.7, height: glyph * 0.7 }} />
     </span>
   );
 }

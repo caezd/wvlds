@@ -6,8 +6,10 @@ import { useTranslations } from "next-intl";
 import { Check, Pencil, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { getInitials } from "@/lib/textFormatting";
 import type { CPersona, CRelation } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Une relation, dans le panneau d'un persona.
@@ -54,16 +56,14 @@ export function RelationRow({
       onMouseLeave={() => onHoverChange?.(null)}
     >
       <div className="flex items-center gap-2">
-        <span className="shrink-0 text-[11px] text-muted-foreground font-mono">{direction}</span>
+        <span className="shrink-0 text-xs-plus text-muted-foreground font-mono">{direction}</span>
         {other.avatar_url
           ? <Image src={other.avatar_url} alt={other.name} width={20} height={20} className="h-5 w-5 rounded-full object-cover shrink-0" />
-          : <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">{getInitials(other.name)}</div>
+          : <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-2xs font-bold shrink-0">{getInitials(other.name)}</div>
         }
-        <span className="truncate text-[12px] font-medium flex-1">{other.name}</span>
+        <span className="truncate text-xs font-medium flex-1">{other.name}</span>
         {pending && (
-          <span className="shrink-0 rounded-full border border-dashed border-border px-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-            {t("pending")}
-          </span>
+          <Badge tone="outline">{t("pending")}</Badge>
         )}
         {onEdit && (
           <button onClick={onEdit} className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-foreground transition-opacity" aria-label={t("editRelation")}>
@@ -81,7 +81,7 @@ export function RelationRow({
           <button
             type="button"
             onClick={() => onAccept?.(rel.id)}
-            className="flex h-6 flex-1 items-center justify-center gap-1 rounded-lg bg-primary px-2 text-[11px] font-medium text-primary-foreground"
+            className={cn(buttonVariants({ size: "sm" }), "flex-1 text-xs-plus")}
           >
             <Check className="h-3 w-3" /> {t("accept")}
           </button>
@@ -89,7 +89,7 @@ export function RelationRow({
             type="button"
             onClick={() => onDelete(rel.id)}
             aria-label={t("decline")}
-            className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "hover:text-destructive")}
           >
             <X className="h-3 w-3" />
           </button>
@@ -103,7 +103,7 @@ export function RelationRow({
           onBlur={save}
           onKeyDown={(e) => { if (e.key === "Escape") { setDraft(rel.description ?? ""); setEditing(false); } }}
           placeholder="Description (markdown)…"
-          className="w-full resize-none rounded-lg border border-border bg-background px-2 py-1.5 text-[11px] outline-none focus:ring-1 focus:ring-ring"
+          className="w-full resize-none rounded-lg border border-border bg-background px-2 py-1.5 text-xs-plus outline-none focus:ring-1 focus:ring-ring"
           rows={3}
         />
       ) : (
@@ -117,7 +117,7 @@ export function RelationRow({
             type="button"
             onClick={() => setEditing(true)}
             className={cn(
-              "w-full text-left text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
+              "w-full text-left text-xs-plus text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
               "cursor-text hover:text-foreground transition-colors",
               "rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring",
               !rel.description && "italic opacity-50",
@@ -128,7 +128,7 @@ export function RelationRow({
         ) : (
           <div
             className={cn(
-              "text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
+              "text-xs-plus text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
               !rel.description && "italic opacity-50",
             )}
           >

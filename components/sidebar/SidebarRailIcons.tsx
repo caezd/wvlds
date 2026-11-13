@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CountPip } from "@/components/ui/count-pip";
 import { cn } from "@/lib/utils";
 
 export function RailIcon({
@@ -38,24 +39,20 @@ export function RailIcon({
           href={href}
           aria-current={isActive ? "page" : undefined}
           className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:text-mist-50 relative",
+            "flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:text-foreground relative",
             isActive
-              ? "bg-carbon-700 text-mist-50"
-              : "text-mist-100",
+              ? "bg-muted text-foreground"
+              : "text-foreground",
           )}
           aria-label={nomComplet}
         >
           {isActive && (
-            <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[6px] rounded-full" />
+            <span className="absolute w-[8px] h-[20px] bg-foreground -left-2 -translate-x-[6px] rounded-full" />
           )}
           {children}
-          {badge > 0 && (
-            // Même pastille que la cloche des notifications : deux compteurs
-            // voisins sur le même rail, qui se liraient mal s'ils différaient.
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[10px] font-bold text-accent-foreground shadow-[0_0_0_2px_hsl(var(--background))]">
-              {badge > 99 ? "99+" : badge}
-            </span>
-          )}
+          {/* Même pastille que la cloche des notifications : deux compteurs
+              voisins sur le même rail, qui se liraient mal s'ils différaient. */}
+          <CountPip count={badge} className="absolute -right-0.5 -top-0.5" />
         </Link>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>

@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
@@ -40,6 +41,7 @@ import { setWorldCatalogItemPages, setWorldCatalogItemRelations } from "@/app/ac
 import { relationsFrom } from "@/lib/catalogRelations";
 import { RelationsEditor, useCatalogRelations, type RelationDraft } from "./CatalogRelations";
 import type { WorldCatalogItem } from "@/types/worlds";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 // L'objet du catalogue, en grand.
 //
@@ -72,17 +74,14 @@ export function RarityDot({ rarity, className }: { rarity: WorldCatalogRarity; c
   );
 }
 
-/** La rareté, nommée et colorée. */
+/** La rareté, nommée, avec sa pastille de couleur. */
 export function RarityBadge({ rarity }: { rarity: WorldCatalogRarity }) {
   const t = useTranslations("catalogue");
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-      style={{ borderColor: `${RARITY_COLORS[rarity]}66`, color: RARITY_COLORS[rarity] }}
-    >
+    <Badge>
       <RarityDot rarity={rarity} />
       {t(rarityKey(rarity))}
-    </span>
+    </Badge>
   );
 }
 
@@ -298,7 +297,8 @@ export function CatalogItemDialog({
                       type="button"
                       title={t("chooseIcon")}
                       aria-label={t("chooseIcon")}
-                      className={visualSourceButtonClass(!!icon)}
+                      aria-pressed={!!icon}
+                      className={visualSourceButtonClass()}
                     >
                       <Swords className="h-3.5 w-3.5" />
                     </button>
@@ -312,7 +312,8 @@ export function CatalogItemDialog({
                       type="button"
                       title={t("chooseLucideIcon")}
                       aria-label={t("chooseLucideIcon")}
-                      className={visualSourceButtonClass(!!lucideIcon)}
+                      aria-pressed={!!lucideIcon}
+                      className={visualSourceButtonClass()}
                     >
                       <Shapes className="h-3.5 w-3.5" />
                     </button>
@@ -324,7 +325,8 @@ export function CatalogItemDialog({
                   onClick={() => fileInputRef.current?.click()}
                   title={t("useImage")}
                   aria-label={t("useImage")}
-                  className={visualSourceButtonClass(!!imageUrl)}
+                  aria-pressed={!!imageUrl}
+                  className={visualSourceButtonClass()}
                 >
                   {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
                 </button>
@@ -346,7 +348,7 @@ export function CatalogItemDialog({
                 <button
                   type="button"
                   onClick={() => { setIcon(null); setLucideIcon(null); void clearImage(); }}
-                  className="text-[11px] text-muted-foreground transition-colors hover:text-destructive"
+                  className="text-xs-plus text-muted-foreground transition-colors hover:text-destructive"
                 >
                   {tCommon("remove")}
                 </button>
@@ -359,7 +361,7 @@ export function CatalogItemDialog({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={type === "inventory" ? t("itemNamePlaceholder") : t("skillNamePlaceholder")}
-                className="w-full rounded-lg border border-border-soft bg-background px-3 py-2 text-sm font-medium outline-none focus:border-primary/40"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium outline-none focus:border-primary/40"
                 maxLength={200}
               />
               <textarea
@@ -367,7 +369,7 @@ export function CatalogItemDialog({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t("descMarkdownPlaceholder")}
                 rows={3}
-                className="w-full resize-y rounded-lg border border-border-soft bg-background px-3 py-2 text-xs outline-none focus:border-primary/40"
+                className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary/40"
                 maxLength={5000}
               />
             </div>
@@ -430,17 +432,17 @@ export function CatalogItemDialog({
                   disabled={!stackable}
                   onChange={(e) => setMaxQuantity(e.target.value)}
                   placeholder={t("noLimit")}
-                  className="h-9 w-full rounded-lg border border-border-soft bg-background px-3 text-sm tabular-nums outline-none focus:border-primary/40 disabled:opacity-40"
+                  className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm tabular-nums outline-none focus:border-primary/40 disabled:opacity-40"
                 />
               </div>
             )}
           </div>
 
           {type === "inventory" && (
-            <div className="flex items-center justify-between rounded-lg border border-border-soft px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
               <div className="min-w-0">
                 <Label className="text-xs" htmlFor={`stack-${item.id}`}>{t("stackable")}</Label>
-                <p className="text-[11px] text-muted-foreground">{t("stackableHint")}</p>
+                <p className="text-xs-plus text-muted-foreground">{t("stackableHint")}</p>
               </div>
               <Switch id={`stack-${item.id}`} checked={stackable} onCheckedChange={setStackable} />
             </div>
@@ -460,7 +462,7 @@ export function CatalogItemDialog({
                       )
                     }
                     placeholder={t("propertyLabel")}
-                    className="w-1/3 rounded-lg border border-border-soft bg-background px-2 py-1.5 text-xs outline-none focus:border-primary/40"
+                    className="w-1/3 rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary/40"
                     maxLength={60}
                   />
                   <input
@@ -471,57 +473,51 @@ export function CatalogItemDialog({
                       )
                     }
                     placeholder={t("propertyValue")}
-                    className="min-w-0 flex-1 rounded-lg border border-border-soft bg-background px-2 py-1.5 text-xs outline-none focus:border-primary/40"
+                    className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary/40"
                     maxLength={200}
                   />
                   <button
                     type="button"
                     aria-label={tCommon("remove")}
                     onClick={() => setProperties((prev) => prev.filter((_, i) => i !== index))}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-destructive"
+                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-7 hover:text-destructive")}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
               {canAddProperty && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="self-start text-xs"
                   onClick={() => setProperties((prev) => [...prev, { label: "", value: "" }])}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <Plus className="h-3.5 w-3.5" /> {t("addProperty")}
-                </button>
+                </Button>
               )}
             </div>
           </div>
 
           <DialogFooter>
-            <button
-              type="button"
-              onClick={() => handleOpenChange(false)}
-              className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <Button type="button" variant="secondary" onClick={() => handleOpenChange(false)}>
               {tCommon("cancel")}
-            </button>
+            </Button>
             {creating && onSaveAndContinue && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 disabled={!name.trim() || saving}
                 onClick={() => void handleSaveAndContinue()}
-                className="rounded-lg border border-border-soft px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
               >
                 {t("createAndContinue")}
-              </button>
+              </Button>
             )}
-            <button
-              type="submit"
-              disabled={!name.trim() || saving}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
-            >
+            <Button type="submit" disabled={!name.trim() || saving}>
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {creating ? tCommon("create") : tCommon("save")}
-            </button>
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

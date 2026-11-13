@@ -93,11 +93,9 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
+  // La barre de mise en forme de ParagraphBlockEditor en tire ses classes.
+  buttonVariants: () => "",
 }));
-vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/ui/hsv-color-picker")>();
-  return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
-});
 
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 

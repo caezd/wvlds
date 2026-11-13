@@ -33,8 +33,8 @@ const TYPES = [
 /**
  * Résultats consommés dans l'ordre des appels `.from()` de `load()` :
  * personas, world_members, worlds(single), world_persona_groups,
- * persona_group_assignments, persona_relations, user_canvas_positions,
- * world_relation_types, puis profiles (hors Promise.all).
+ * persona_group_assignments, persona_relations, world_relation_types, puis
+ * profiles (hors Promise.all).
  */
 function mockSetup(relations: object[] = [
   { id: "r1", from_persona_id: "p1", to_persona_id: "p2", type: "t1", label: null, description: "Amis d'enfance", status: "accepted" },
@@ -50,7 +50,6 @@ function mockSetup(relations: object[] = [
       { data: [{ id: "g1", name: "Garde", color: "#3b82f6", sort_index: 0 }] },
       { data: [{ persona_id: "p2", group_id: "g1" }] },
       { data: relations },
-      { data: [] }, // user_canvas_positions
       { data: TYPES },
       { data: [
         { id: "u1", username: "alice", avatar_url: null },
@@ -179,8 +178,8 @@ describe("RelationsCanvas — vue mobile (liste + détail)", () => {
     const user = userEvent.setup();
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
 
-    // Badge dans l'en-tête et sur la ligne d'Adhi.
-    expect(await screen.findByText(/^1 /, { selector: "span.rounded-full" })).toBeInTheDocument();
+    // Pastille dans l'en-tête et sur la carte d'Adhi.
+    expect(await screen.findByRole("button", { name: /^1 / })).toBeInTheDocument();
     await user.click(mobile().getByText("Adhi"));
     await user.click(mobile().getByRole("tab", { name: /← De/ }));
     await user.click(mobile().getByRole("button", { name: "Accepter" }));
@@ -205,47 +204,34 @@ describe("RelationsCanvas — légende filtrante", () => {
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    // Une flèche par relation visible, dans le SVG desktop (monté, caché en CSS).
-    const arrows = () => document.querySelectorAll('svg path[marker-end]');
+    // Une corde par relation visible, dans le SVG desktop (monté, caché en CSS).
+    // La légende est celle de la liste mobile : le panneau desktop a ses propres boutons.
+    const arrows = () => document.querySelectorAll("[data-relation-edge]");
     expect(arrows()).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "Masquer les relations « Allié »" }));
+    await user.click(mobile().getByRole("button", { name: "Masquer les relations « Allié »" }));
     expect(arrows()).toHaveLength(0);
-    expect(screen.getByRole("button", { name: "Afficher les relations « Allié »" })).toHaveAttribute("aria-pressed", "false");
+    expect(mobile().getByRole("button", { name: "Afficher les relations « Allié »" })).toHaveAttribute("aria-pressed", "false");
 
-    await user.click(screen.getByRole("button", { name: "Tout afficher" }));
+    await user.click(mobile().getByRole("button", { name: "Tout afficher" }));
     expect(arrows()).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "Masquer le groupe « Garde »" }));
+    await user.click(mobile().getByRole("button", { name: "Masquer le groupe « Garde »" }));
     expect(arrows()).toHaveLength(0); // Astérion, du groupe Garde, est masqué : la relation aussi.
     expect(mobile().getByRole("button", { name: "Astérion" })).toHaveClass("opacity-20");
   });
 });
 
 describe("RelationsCanvas — recherche (header)", () => {
-  /** L'icône loupe doit être ouverte (transformée en champ) avant de taper. */
-  async function openSearch(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByLabelText("Rechercher…"));
-    return screen.getByPlaceholderText("Rechercher…");
-  }
+  const field = () => screen.getByPlaceholderText("Persona ou joueur…");
 
-  it("l'icône loupe seule n'affiche pas de champ de saisie", async () => {
+  it("le champ est toujours visible", async () => {
     mockSetup();
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    expect(screen.getByLabelText("Rechercher…")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Rechercher…")).not.toBeInTheDocument();
-  });
-
-  it("cliquer la loupe transforme l'icône en champ de saisie, focus inclus", async () => {
-    mockSetup();
-    const user = userEvent.setup();
-    render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
-    await mobile().findByText("Adhi");
-
-    const input = await openSearch(user);
-    expect(input).toHaveFocus();
+    expect(field()).toBeInTheDocument();
+    expect(screen.queryByLabelText("Effacer la recherche")).not.toBeInTheDocument();
   });
 
   it("filtre la liste mobile par nom de persona", async () => {
@@ -254,7 +240,7 @@ describe("RelationsCanvas — recherche (header)", () => {
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    await user.type(await openSearch(user), "adh");
+    await user.type(field(), "adh");
     expect(mobile().getByText("Adhi")).toBeInTheDocument();
     expect(mobile().queryByText("Astérion")).not.toBeInTheDocument();
     expect(mobile().queryByText("@bob")).not.toBeInTheDocument();
@@ -266,7 +252,7 @@ describe("RelationsCanvas — recherche (header)", () => {
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    await user.type(await openSearch(user), "bob");
+    await user.type(field(), "bob");
     expect(mobile().getByText("Astérion")).toBeInTheDocument();
     expect(mobile().queryByText("Adhi")).not.toBeInTheDocument();
   });
@@ -277,34 +263,48 @@ describe("RelationsCanvas — recherche (header)", () => {
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    await user.type(await openSearch(user), "zzz");
+    await user.type(field(), "zzz");
     expect(mobile().getByText("Aucun résultat.")).toBeInTheDocument();
   });
 
-  it("le bouton d'effacement vide la recherche, restaure la liste complète et referme le champ", async () => {
+  it("le bouton d'effacement vide la recherche et restaure la liste complète", async () => {
     mockSetup();
     const user = userEvent.setup();
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    await user.type(await openSearch(user), "adh");
+    await user.type(field(), "adh");
     expect(mobile().queryByText("Astérion")).not.toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Effacer la recherche"));
     expect(mobile().getByText("Astérion")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Rechercher…")).not.toBeInTheDocument();
+    expect(field()).toHaveValue("");
   });
 
-  it("la touche Échap referme le champ et restaure la liste complète", async () => {
+  it("la touche Échap vide le champ et restaure la liste complète", async () => {
     mockSetup();
     const user = userEvent.setup();
     render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
     await mobile().findByText("Adhi");
 
-    const input = await openSearch(user);
-    await user.type(input, "adh");
+    await user.type(field(), "adh");
     await user.keyboard("{Escape}");
     expect(mobile().getByText("Astérion")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Rechercher…")).not.toBeInTheDocument();
+    expect(field()).toHaveValue("");
+  });
+
+  it("propose les personas qui correspondent ; Entrée ouvre le premier", async () => {
+    mockSetup();
+    const user = userEvent.setup();
+    render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
+    await mobile().findByText("Adhi");
+
+    await user.type(field(), "astér");
+    expect(screen.getByRole("option", { name: /Astérion/ })).toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(field()).toHaveValue("");
+    // Le détail d'Astérion s'ouvre (la page mobile comme le panneau du canevas).
+    expect(await mobile().findByLabelText("Retour")).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Astérion" })).toBeInTheDocument();
   });
 });

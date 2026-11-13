@@ -14,6 +14,8 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerTitle } f
 import { loadRoomPreview, type RoomPreviewData } from "@/components/worlds/timeline/TimelineRoomPreview";
 import type { TimelineArc, TimelinePersona } from "@/components/worlds/timeline/useTimelineData";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import { SectionLabel } from "@/components/ui/section-label";
+import { withOpacity } from "@/lib/colorOpacity";
 
 export type DrawerRoom = { id: string; title: string; date: WorldTimelineDate; status: TimelineRoomStatus };
 export type DrawerEpisode = DrawerRoom & { rank: number };
@@ -109,7 +111,7 @@ export function TimelineRoomDrawer({
               {arc && (
                 <span
                   className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold"
-                  style={{ backgroundColor: `${arc.color}26`, color: arc.color }}
+                  style={{ backgroundColor: withOpacity(arc.color, 0.15), color: arc.color }}
                   data-testid="timeline-drawer-arc"
                 >
                   <span className="size-1.5 rounded-full" style={{ backgroundColor: arc.color }} aria-hidden />
@@ -130,7 +132,7 @@ export function TimelineRoomDrawer({
                   {participants.map((p) => (
                     <li key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pl-0.5 pr-2.5 text-sm">
                       <span
-                        className="flex size-6 items-center justify-center rounded-full border-2 bg-background text-[10px] font-semibold"
+                        className="flex size-6 items-center justify-center rounded-full border-2 bg-background text-2xs font-semibold"
                         style={{ borderColor: p.color ?? "var(--color-border)" }}
                         aria-hidden
                       >
@@ -158,7 +160,7 @@ export function TimelineRoomDrawer({
                       ].filter(Boolean).join(" · ")}
                     </p>
                     {data.excerpt ? (
-                      <p className="italic text-foreground/90">{tv("previewQuote", { text: data.excerpt })}</p>
+                      <p className="italic text-foreground">{tv("previewQuote", { text: data.excerpt })}</p>
                     ) : (
                       <p className="text-sm text-muted-foreground">{tv("previewEmpty")}</p>
                     )}
@@ -168,7 +170,7 @@ export function TimelineRoomDrawer({
 
               {arc && episodes.length > 0 && (
                 <section aria-label={tv("drawerEpisodes")} className="space-y-1">
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{tv("drawerEpisodes")}</h3>
+                  <SectionLabel>{tv("drawerEpisodes")}</SectionLabel>
                   <ul className="-mx-2">
                     {episodes.map((ep) => {
                       const current = ep.id === room.id;
@@ -203,7 +205,6 @@ export function TimelineRoomDrawer({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="shrink-0 rounded-md"
                 aria-label={tv("drawerPrevious")}
                 disabled={!previousId}
                 onClick={() => previousId && onSelect(previousId)}
@@ -214,14 +215,13 @@ export function TimelineRoomDrawer({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="shrink-0 rounded-md"
                 aria-label={tv("drawerNext")}
                 disabled={!nextId}
                 onClick={() => nextId && onSelect(nextId)}
               >
                 <ChevronRight className="size-4" />
               </Button>
-              <Button type="button" className="h-10 flex-1 gap-2 rounded-md" onClick={() => onOpenRoom(room.id)}>
+              <Button type="button" size="lg" className="flex-1" onClick={() => onOpenRoom(room.id)}>
                 {tv("drawerOpen")}
                 <ArrowRight className="size-4" />
               </Button>

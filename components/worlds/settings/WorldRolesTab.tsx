@@ -26,12 +26,15 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 import { RoleChip } from "../members/RoleChip";
 import { HelpHint } from "@/components/ui/help-hint";
+import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/ui/section-label";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 
 const ROLE_SELECT = "id, world_id, name, color, lucide_icon, position, permissions, is_default, mentionable, hoist";
-const NEW_ROLE_COLOR = "#94a3b8";
+const NEW_ROLE_COLOR = DEFAULT_PLAYER_COLOR;
 
 /**
  * Les rôles du monde : leur ordre, leur apparence, leurs permissions.
@@ -181,21 +184,21 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:gap-10">
       {/* ── Liste ──────────────────────────────────────────── */}
-      <aside className={cn("w-full shrink-0", deuxColonnes && "md:w-56 md:border-r md:border-border-soft md:pr-4")}>
+      <aside className={cn("w-full shrink-0", deuxColonnes && "md:w-56 md:border-r md:border-border md:pr-4")}>
         <div className="flex items-center justify-between gap-2 pb-2 pl-2.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <SectionLabel as="p" className="flex items-center gap-1.5">
             <span>
               {t("title")} · <span className="tabular-nums">{sorted.length}</span>
             </span>
             <HelpHint title={t("title")}>{t("hierarchyHelp")}</HelpHint>
-          </p>
+          </SectionLabel>
           <Button
-            size="icon-sm"
             variant="outline"
+            size="icon-sm"
             aria-label={t("newRole")}
             title={t("newRole")}
             onClick={() => void createRole()}
-            className={cn("size-7 rounded-md", FIELD)}
+            className="size-7"
           >
             <Plus className="size-3.5" />
           </Button>
@@ -226,7 +229,7 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
                     <RoleChip role={role} plain size="md" className="text-sm" />
                     <span
                       className={cn(
-                        "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground",
+                        "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums text-muted-foreground",
                         active ? "bg-background" : "bg-muted",
                       )}
                     >
@@ -352,6 +355,8 @@ function RoleDetails({
           color={role.color}
           disabled={!editable}
           onChange={(color) => onPersist({ color })}
+          // world_roles_color_hex n'admet que #rrggbb.
+          alpha={false}
           className="size-12 rounded-md border-0 text-white shadow-none"
         >
           {role.lucide_icon ? (
@@ -370,7 +375,7 @@ function RoleDetails({
             accent={role.color}
             onChange={(name) => onPersist({ lucide_icon: name || null })}
             trigger={
-              <Button type="button" variant="outline" size="sm" disabled={!editable} className={cn("rounded-md", FIELD)}>
+              <Button type="button" variant="outline" size="sm" disabled={!editable}>
                 <Shapes className="size-4" />
                 {t("icon")}
               </Button>
@@ -389,9 +394,8 @@ function RoleDetails({
           {editable && (
             <>
               <Button
-                variant="ghost"
+                variant="destructive"
                 size="sm"
-                className="text-destructive hover:text-destructive"
                 onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="size-4" />
@@ -413,7 +417,7 @@ function RoleDetails({
       </header>
 
       {!editable && (
-        <p className="flex items-center gap-2 rounded-md border border-border-soft bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        <p className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           <Lock className="size-3.5 shrink-0" />
           {t("lockedHelp")}
         </p>
@@ -460,11 +464,11 @@ function RoleDetails({
             aside={
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 disabled={targets.length === 0}
                 onClick={() => onSetPermissions(targets, !allOn)}
-                className={cn("mt-2 h-7 rounded-md px-2.5 text-xs", FIELD)}
+                className="mt-2 h-7 px-2.5 text-xs"
               >
                 {allOn ? t("disableAll") : t("enableAll")}
               </Button>
@@ -478,12 +482,12 @@ function RoleDetails({
                   <ToggleItem
                     key={perm}
                     title={label}
-                    icon={perm === "administrator" ? <Crown className="size-4 shrink-0 text-red-600 dark:text-red-400" aria-hidden /> : undefined}
+                    icon={perm === "administrator" ? <Crown className="size-4 shrink-0 text-destructive" aria-hidden /> : undefined}
                     badge={
                       implied ? (
-                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <Badge className="text-muted-foreground">
                           {t("included")}
-                        </span>
+                        </Badge>
                       ) : undefined
                     }
                     description={
@@ -543,7 +547,7 @@ function RoleNameInput({
         }
       }}
       // Un titre qu'on modifie sur place : sa bordure ne paraît qu'au survol.
-      className="h-9 rounded-md border-transparent bg-transparent px-2 text-xl font-semibold tracking-tight shadow-none hover:border-border-soft focus-visible:border-border-soft disabled:opacity-100 md:text-xl dark:bg-transparent"
+      className="h-9 rounded-md border-transparent bg-transparent px-2 text-xl font-semibold tracking-tight shadow-none hover:border-border focus-visible:border-border disabled:opacity-100 md:text-xl"
     />
   );
 }

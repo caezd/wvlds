@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
@@ -40,6 +41,8 @@ type PersonaCardProps = {
   restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
+  /** Remplace la tuile par défaut (étagères de la liste du monde) ; l'éditeur reste le même. */
+  trigger?: ReactNode;
 };
 
 export function PersonaCard({
@@ -64,6 +67,7 @@ export function PersonaCard({
   restrictInventory,
   restrictSkills,
   faceclaimsEnabled,
+  trigger,
 }: PersonaCardProps) {
   return (
     <PersonaEditSheet
@@ -85,7 +89,7 @@ export function PersonaCard({
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
       faceclaimsEnabled={faceclaimsEnabled}
-      trigger={
+      trigger={trigger ?? (
         <button
           data-narrative-status={narrativeStatus ?? "alive"}
           className="group relative w-full aspect-square rounded-lg overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -109,9 +113,9 @@ export function PersonaCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
           <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
-            <PersonaNpcBadge isNpc={isNpc} className="bg-black/60 text-white dark:text-white" />
+            <PersonaNpcBadge isNpc={isNpc} className="bg-black/60 text-white" />
             <PersonaStatusBadge status={narrativeStatus} />
-            <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} className="bg-black/60 text-white dark:text-white" />
+            <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} className="bg-black/60 text-white" />
           </div>
 
           {/* Bouton éditer — coin supérieur droit au survol */}
@@ -127,7 +131,7 @@ export function PersonaCard({
             </span>
           </div>
         </button>
-      }
+      )}
     />
   );
 }

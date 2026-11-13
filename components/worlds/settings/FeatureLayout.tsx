@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { HelpHint } from "@/components/ui/help-hint";
 
 /**
@@ -24,9 +25,9 @@ import { HelpHint } from "@/components/ui/help-hint";
  */
 
 /** Une carte : encadré de réglages, liste, tuile. */
-export const SURFACE = "border border-border-soft bg-card";
+export const SURFACE = "border border-border bg-card";
 /** Un champ dans une carte ou sur la page : saisie, sélecteur, petite case. */
-export const FIELD = "border-border-soft bg-background shadow-none dark:bg-background dark:hover:bg-background";
+export const FIELD = "border-border bg-background shadow-none hover:bg-background";
 
 /** Un titre suivi de son aide. */
 function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {
@@ -102,7 +103,7 @@ export function SettingsSection({
   return (
     <section
       aria-label={title}
-      className={cn("grid gap-4 border-t border-border-soft pt-6 @2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10", className)}
+      className={cn("grid gap-4 border-t border-border pt-6 @2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10", className)}
     >
       <div className="space-y-1">
         <h4 className="text-sm font-semibold">
@@ -119,7 +120,7 @@ export function SettingsSection({
 /** Une liste bordée de réglages, une ligne chacun. */
 export function ToggleList({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("divide-y divide-border-soft rounded-md", SURFACE, className)}>
+    <div className={cn("divide-y divide-border rounded-md", SURFACE, className)}>
       {children}
     </div>
   );
@@ -183,16 +184,14 @@ export function ToggleItem({
 /** L'état d'une catégorie, dans la colonne de gauche : « Actif » ou « Off ». */
 export function StatusPill({ id, active, onLabel, offLabel }: { id?: string; active: boolean; onLabel: string; offLabel: string }) {
   return (
-    <span
+    <Badge
       id={id}
-      className={cn(
-        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-        active ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground",
-      )}
+      tone={active ? "success" : "neutral"}
+      className={active ? undefined : "text-muted-foreground"}
       data-testid="feature-status"
       data-active={active || undefined}
     >
       {active ? onLabel : offLabel}
-    </span>
+    </Badge>
   );
 }

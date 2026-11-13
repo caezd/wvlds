@@ -26,6 +26,7 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { CatalogVisual } from "./CatalogVisual";
 import { useCatalogueRow } from "./CatalogueRowContext";
 import { type CatalogItem } from "./catalogueTypes";
+import { buttonVariants } from "@/components/ui/button";
 
 // Briques élémentaires d'une ligne de catalogue.
 
@@ -59,7 +60,7 @@ export function DragHandle(props: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
       {...props}
-      className="flex h-7 w-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors active:cursor-grabbing"
+      className="flex h-7 w-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-muted-foreground transition-colors active:cursor-grabbing"
     >
       <GripVertical className="h-4 w-4" />
     </span>
@@ -157,7 +158,7 @@ export function SortableItemRow({
           {usageCount !== undefined && usageCount > 0 && (
             <span
               title={t("usageCount", { count: usageCount })}
-              className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+              className="shrink-0 rounded-full bg-muted px-1.5 text-2xs font-medium tabular-nums text-muted-foreground"
             >
               {usageCount}
             </span>
@@ -173,7 +174,7 @@ export function SortableItemRow({
             <button
               type="button"
               aria-label={t("itemActions", { name: item.name })}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-60 transition-opacity hover:bg-secondary hover:text-foreground hover:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100 data-[state=open]:opacity-100"
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-7 opacity-60 hover:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100 data-[state=open]:opacity-100")}
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
             </button>
@@ -226,7 +227,7 @@ export function SortableItemRow({
 export function ItemRowOverlay({ item }: { item: CatalogItem }) {
   return (
     <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background/95 px-2 py-2 shadow-xl backdrop-blur-sm">
-      <GripVertical className="h-4 w-5 shrink-0 text-muted-foreground/30" />
+      <GripVertical className="h-4 w-5 shrink-0 text-muted-foreground" />
       <CatalogIcon icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} />
       <div className="flex-1 min-w-0 px-1">
         <p className="text-sm font-medium leading-snug">{item.name}</p>
@@ -241,8 +242,8 @@ export function ItemRowOverlay({ item }: { item: CatalogItem }) {
 export function CategoryRowOverlay({ name }: { name: string }) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-border bg-background/95 px-3 py-1.5 shadow-xl backdrop-blur-sm">
-      <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/30" />
-      <span className="text-sm font-semibold text-foreground/80">{name}</span>
+      <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="text-sm font-semibold text-foreground">{name}</span>
     </div>
   );
 }

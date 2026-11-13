@@ -12,7 +12,7 @@ describe("WorldPanelHeader", () => {
     const classes = header.className.split(" ");
     // Sous `lg`, `<main>` est transparent (AppShell.tsx) : un `bg-background`
     // seul faisait une bande plus claire au-dessus des panneaux.
-    expect(classes).toEqual(expect.arrayContaining(["bg-body", "lg:bg-background"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-canvas", "lg:bg-background"]));
     expect(classes).not.toContain("bg-background");
   });
 });

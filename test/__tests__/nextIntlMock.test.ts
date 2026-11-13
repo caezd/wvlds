@@ -7,10 +7,10 @@ import { useTranslations } from "next-intl";
 
 describe("mock de next-intl — format ICU", () => {
   it("accorde un pluriel selon les règles du français (0 et 1 au singulier)", () => {
-    const t = useTranslations("worlds.members");
-    expect(t("morePersonas", { count: 0 })).toBe("0 autre persona");
-    expect(t("morePersonas", { count: 1 })).toBe("1 autre persona");
-    expect(t("morePersonas", { count: 3 })).toBe("3 autres personas");
+    const t = useTranslations("explore");
+    expect(t("worldsCount", { count: 0 })).toBe("0 monde public");
+    expect(t("worldsCount", { count: 1 })).toBe("1 monde public");
+    expect(t("worldsCount", { count: 3 })).toBe("3 mondes publics");
   });
 
   it("résout deux pluriels dans la même phrase", () => {

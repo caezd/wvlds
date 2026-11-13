@@ -86,7 +86,7 @@ export function EventSpans({
   if (spans.length === 0) return null;
   return (
     <svg
-      className="pointer-events-none absolute inset-0 z-[2] h-full w-full overflow-visible"
+      className="pointer-events-none absolute inset-0 z-2 h-full w-full overflow-visible"
       aria-hidden
       data-testid="timeline-event-spans"
     >

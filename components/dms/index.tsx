@@ -5,11 +5,14 @@ import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
 import { Ban, Loader2, Mail, Pencil, Pin, PinOff, Plus, Search, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PRESENCE_BG } from "@/components/avatars/PresenceDot";
 import { createClient } from "@/lib/supabase/client";
 import { RPC } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { CountPip } from "@/components/ui/count-pip";
 import { useDms } from "@/components/providers/DmsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -68,25 +71,19 @@ function PresenceDot({
       className={cn(
         "absolute rounded-full border-2 border-background",
         size === "sm" ? "bottom-0 right-0 h-2.5 w-2.5" : "bottom-0 right-0 h-3 w-3",
-        status === "online" ? "bg-green-500" : "bg-yellow-500",
+        PRESENCE_BG[status],
       )}
     />
   );
 }
 
 function UnreadBadge({ count, offset = "default" }: { count: number; offset?: "default" | "tight" }) {
-  if (count <= 0) return null;
   return (
-    <span
-      className={cn(
-        "absolute flex min-w-4 h-4 items-center justify-center rounded-full bg-accent text-accent-foreground font-bold px-0.5 shadow-[0_0_0_2px_hsl(var(--background))]",
-        offset === "tight"
-          ? "-top-0.5 -right-0.5 h-4 text-[9px]"
-          : "-top-1 -right-1 h-4 text-[10px]",
-      )}
-    >
-      {count > 9 ? "9+" : count}
-    </span>
+    <CountPip
+      count={count}
+      max={9}
+      className={cn("absolute", offset === "tight" ? "-right-0.5 -top-0.5" : "-right-1 -top-1")}
+    />
   );
 }
 
@@ -103,22 +100,19 @@ export function DmsToggleButton() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={togglePanel}
           aria-label={t("title")}
           aria-pressed={panelOpen}
-          className={cn(
-            "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-            panelOpen
-              ? "text-accent bg-accent/10"
-              : "text-mist-100 hover:bg-muted hover:text-mist-50",
-          )}
+          className="relative"
         >
           <Mail size={17} />
           {unpinnedUnread > 0 && (
             <UnreadBadge count={unpinnedUnread} offset="tight" />
           )}
-        </button>
+        </Button>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>{t("title")}</TooltipContent>
     </Tooltip>
@@ -271,7 +265,7 @@ function ConversationRail({
                   ? "bg-accent text-accent-foreground"
                   : canPin
                     ? "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    : "bg-muted text-muted-foreground/30 cursor-not-allowed",
+                    : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed",
               )}
             >
               {isPinned ? <PinOff size={10} /> : <Pin size={10} />}
@@ -282,7 +276,7 @@ function ConversationRail({
 
       {hasMoreConversations && (
         <div ref={endSentinelRef} className="flex h-11 w-4 shrink-0 items-center justify-center">
-          {loadingMore && <Loader2 size={14} className="animate-spin text-muted-foreground/50" />}
+          {loadingMore && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
         </div>
       )}
 
@@ -402,7 +396,7 @@ function MessageSearch({ onSelectConv, onCancel }: { onSelectConv: (otherUserId:
       </div>
       {loading && <p className="shrink-0 px-1 text-xs text-muted-foreground">{t("searching")}</p>}
       {!loading && query.trim() && results.length === 0 && (
-        <p className="shrink-0 px-1 text-xs text-muted-foreground/60">{t("noResults")}</p>
+        <p className="shrink-0 px-1 text-xs text-muted-foreground">{t("noResults")}</p>
       )}
       <ScrollArea className="flex-1 min-h-0">
         <div className="flex flex-col gap-1">
@@ -433,7 +427,7 @@ function DayDivider({ date }: { date: Date }) {
   return (
     <div className="flex items-center gap-3 py-2">
       <div className="h-px flex-1 bg-border/30" />
-      <span className="shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-xs-plus text-muted-foreground">{label}</span>
       <div className="h-px flex-1 bg-border/30" />
     </div>
   );
@@ -497,17 +491,17 @@ export function MessageBubble({
               rows={1}
               className="resize-none rounded-2xl bg-muted px-4 py-2.5 text-sm outline-none [field-sizing:content] max-h-32"
             />
-            <div className="flex justify-end gap-3 text-[11px]">
-              <button onClick={cancelEdit} className="text-muted-foreground hover:underline">
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="xs" onClick={cancelEdit}>
                 {t("cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
+                size="xs"
                 onClick={() => void saveEdit()}
                 disabled={saving || !draft.trim()}
-                className="font-semibold text-accent hover:underline disabled:opacity-50"
               >
                 {t("save")}
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -516,8 +510,8 @@ export function MessageBubble({
               className={cn(
                 "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-snug",
                 isMine
-                  ? "bg-[#1B1B1D] text-accent-foreground rounded-tr-sm"
-                  : "bg-[#232327] text-foreground rounded-tl-sm",
+                  ? "bg-background text-accent-foreground rounded-tr-sm"
+                  : "bg-muted text-foreground rounded-tl-sm",
                 fontClass, textSizeClass, textAlignClass,
               )}
             >
@@ -525,13 +519,15 @@ export function MessageBubble({
             </div>
             {isMine && (
               <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={startEdit}
                   aria-label={t("editMessage")}
-                  className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="size-6"
                 >
                   <Pencil size={12} />
-                </button>
+                </Button>
                 <DeleteConfirmDialog
                   title={t("deleteMessageConfirmTitle")}
                   description={t("deleteMessageConfirmDescription")}
@@ -539,12 +535,14 @@ export function MessageBubble({
                   confirmLabel={t("delete")}
                   onConfirm={() => void deleteMessage(id)}
                   trigger={
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       aria-label={t("deleteMessage")}
-                      className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="size-6 hover:text-destructive"
                     >
                       <Trash2 size={12} />
-                    </button>
+                    </Button>
                   }
                 />
               </div>
@@ -552,7 +550,7 @@ export function MessageBubble({
           </>
         )}
       </div>
-      <span className="px-1 text-[10px] text-muted-foreground/50">{time}</span>
+      <span className="px-1 text-2xs text-muted-foreground">{time}</span>
     </div>
   );
 }
@@ -639,12 +637,12 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
       <div className="shrink-0 flex items-center gap-3 border-t border-b px-4 py-3">
         <div className="flex-1 min-w-0">
           <p className="truncate text-sm font-semibold leading-tight">{displayName}</p>
-          <p className="text-[11px] text-muted-foreground leading-tight">
+          <p className="text-xs-plus text-muted-foreground leading-tight">
             {otherTyping ? (
               <span className="italic text-accent">{t("typingIndicator")}</span>
             ) : (
               commonWorldsCount !== null && commonWorldsCount > 0 && (
-                <span className="text-mist-200">
+                <span className="text-muted-foreground">
                   {t("commonWorlds", { count: commonWorldsCount })}
                 </span>
               )
@@ -654,14 +652,16 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
         {isBlocked ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => void unblockUser(conv.other_user_id)}
                 aria-label={t("unblock")}
                 aria-pressed={true}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-destructive transition-colors hover:bg-destructive/10"
+                className="size-7 text-destructive hover:text-destructive"
               >
                 <Ban size={15} />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("unblock")}</TooltipContent>
           </Tooltip>
@@ -673,12 +673,14 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
             confirmLabel={t("block")}
             onConfirm={() => void blockUser(conv.other_user_id)}
             trigger={
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 aria-label={t("block")}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                className="size-7 hover:text-destructive"
               >
                 <Ban size={15} />
-              </button>
+              </Button>
             }
           />
         )}
@@ -696,12 +698,12 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
 
           {loadingMore && (
             <div className="flex justify-center py-2">
-              <Loader2 size={14} className="animate-spin text-muted-foreground/50" />
+              <Loader2 size={14} className="animate-spin text-muted-foreground" />
             </div>
           )}
 
           {!hasMoreMessages && messages.length > 0 && (
-            <p className="py-1 text-center text-[10px] text-muted-foreground/30">{t("conversationStart")}</p>
+            <p className="py-1 text-center text-2xs text-muted-foreground">{t("conversationStart")}</p>
           )}
 
           {messages.length === 0 && (
@@ -730,17 +732,18 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
 
       {/* Composer */}
       {isBlocked ? (
-        <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border-soft px-4 py-3 text-xs text-muted-foreground">
+        <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">
           <span>{t("blockedComposerHint")}</span>
-          <button
+          <Button
+            size="xs"
             onClick={() => void unblockUser(conv.other_user_id)}
-            className="shrink-0 font-semibold text-accent hover:underline"
+            className="shrink-0"
           >
             {t("unblock")}
-          </button>
+          </Button>
         </div>
       ) : (
-        <div className="shrink-0 flex items-end gap-2 border-t border-border-soft px-4 py-3">
+        <div className="shrink-0 flex items-end gap-2 border-t border-border px-4 py-3">
           <textarea
             value={draft}
             onChange={e => { setDraft(e.target.value); emitTyping(); }}
@@ -750,21 +753,17 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
             rows={1}
             className="flex-1 resize-none rounded-2xl bg-muted px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground [field-sizing:content] max-h-32"
           />
-          <button
+          <Button
+            size="icon"
             onClick={() => void submit()}
             disabled={!draft.trim()}
             aria-label={t("send")}
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
-              draft.trim()
-                ? "bg-accent text-accent-foreground hover:bg-accent/90"
-                : "bg-muted text-muted-foreground",
-            )}
+            className="shrink-0"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 translate-x-0.5" aria-hidden="true">
               <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
             </svg>
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -807,24 +806,23 @@ export function DmsPanelContent() {
     setShowMessageSearch(v => !v);
   }
 
-  const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors";
-
   return (
     <div className="flex h-full flex-col overflow-hidden py-1 gap-0.5">
       {/* Header */}
       <div className="shrink-0 h-header-height flex items-center px-4 gap-2">
         <span className="flex-1 font-bold">{t("title")}</span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={toggleMessageSearch}
           aria-label={t("searchMessages")}
           aria-pressed={showMessageSearch}
-          className={cn(iconBtn, showMessageSearch && "text-accent bg-accent/10")}
         >
           <Search size={15} />
-        </button>
-        <button onClick={closePanel} className={iconBtn} aria-label={t("title")}>
+        </Button>
+        <Button variant="ghost" size="icon-sm" onClick={closePanel} aria-label={t("title")}>
           <X size={15} />
-        </button>
+        </Button>
       </div>
 
       {/* Rail */}
@@ -850,7 +848,7 @@ export function DmsPanelContent() {
       {!activeConv && !searching && conversations.length === 0 && (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
           <p className="text-sm">{t("empty")}</p>
-          <p className="text-xs text-muted-foreground/60">{t("emptyHint")}</p>
+          <p className="text-xs text-muted-foreground">{t("emptyHint")}</p>
         </div>
       )}
 

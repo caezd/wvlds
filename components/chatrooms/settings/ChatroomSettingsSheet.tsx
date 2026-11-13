@@ -31,7 +31,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { Loader2, Settings } from "lucide-react";
@@ -291,7 +291,7 @@ export default function ChatroomSettingsSheet({
           <TooltipTrigger asChild>
             <DrawerTrigger
               aria-label={tCommon("settings")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+              className={buttonVariants({ variant: "ghost", size: "icon" })}
             >
               <Settings className="h-4 w-4" />
             </DrawerTrigger>
@@ -301,7 +301,7 @@ export default function ChatroomSettingsSheet({
       )}
 
       <SideSheetContent width="chat">
-        <DrawerHeader className="border-b border-border-soft px-4 py-3 sm:px-6 sm:py-4">
+        <DrawerHeader className="border-b border-border px-4 py-3 sm:px-6 sm:py-4">
           <DrawerTitle>{t("settingsTitle")}</DrawerTitle>
         </DrawerHeader>
 
@@ -328,7 +328,7 @@ export default function ChatroomSettingsSheet({
                         />
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
                           disabled={uploading === "icon"}
                           onClick={() => {
@@ -399,7 +399,7 @@ export default function ChatroomSettingsSheet({
                   </div>
 
                   {timelineDate !== null && (
-                    <div className="ml-1 rounded-xl border border-border-soft bg-muted/20 p-3">
+                    <div className="ml-1 rounded-xl border border-border bg-muted/20 p-3">
                       <TimelineDatePicker
                         config={worldTimelineConfig}
                         value={timelineDate}
@@ -408,7 +408,7 @@ export default function ChatroomSettingsSheet({
                       />
                       {/* L'arc du salon et le salon dont il est la suite. */}
                       {worldId && (
-                        <div className="mt-3 border-t border-border-soft pt-3">
+                        <div className="mt-3 border-t border-border pt-3">
                           <ChatroomTimelineLinks
                             chatroomId={chatroom.id}
                             worldId={worldId}
@@ -435,14 +435,15 @@ export default function ChatroomSettingsSheet({
                       </p>
                     </div>
                     {categoryId && (
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
                         disabled={savingCategory}
                         onClick={() => void persistCategory(null)}
-                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                       >
                         {t("settingsCategoryNone")}
-                      </button>
+                      </Button>
                     )}
                   </div>
                   <div className="grid gap-1">
@@ -456,14 +457,14 @@ export default function ChatroomSettingsSheet({
                           "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors",
                           categoryId === cat.id
                             ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border-soft bg-background text-foreground hover:bg-secondary",
+                            : "border-border bg-background text-foreground hover:bg-secondary",
                         )}
                       >
                         <CategoryAvatar
                           title={cat.title}
                           bannerUrl={cat.banner_url}
                           iconUrl={cat.icon_url}
-                          letterClassName="text-[9px]"
+                          letterClassName="text-2xs"
                           className="h-5 w-5 rounded-md"
                         />
                         {cat.title}
@@ -484,14 +485,15 @@ export default function ChatroomSettingsSheet({
                       </p>
                     </div>
                     {mapPinId && (
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
                         disabled={savingPin}
                         onClick={() => void persistMapPin(null)}
-                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                       >
                         Retirer
-                      </button>
+                      </Button>
                     )}
                   </div>
                   <div className="grid gap-1">
@@ -505,7 +507,7 @@ export default function ChatroomSettingsSheet({
                           "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors",
                           mapPinId === pin.id
                             ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border-soft bg-background text-foreground hover:bg-secondary",
+                            : "border-border bg-background text-foreground hover:bg-secondary",
                         )}
                       >
                         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
@@ -532,16 +534,18 @@ export default function ChatroomSettingsSheet({
                       onConfirm={onBannerConfirm}
                     />
                     {bannerUrl && (
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="w-fit"
                         onClick={() => {
                           form.setValue("banner_url", "", { shouldDirty: true });
                           void persistField("banner_url", "");
                         }}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Retirer la bannière
-                      </button>
+                      </Button>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -549,17 +553,15 @@ export default function ChatroomSettingsSheet({
               />
             </div>
 
-            <DrawerFooter className="border-t border-border-soft px-4 py-3 sm:px-6 flex-row justify-start">
+            <DrawerFooter className="border-t border-border px-4 py-3 sm:px-6 flex-row justify-start">
               <DeleteConfirmDialog
                 description={t("roomDeleteDescription")}
                 onConfirm={() => void handleDelete()}
                 trigger={
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="sm"
+                    variant="destructive"
                     disabled={deleting}
-                    className="inline-flex text-destructive hover:bg-destructive/10 hover:text-destructive"
                   >
                     {deleting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
                     Supprimer la salle

@@ -17,6 +17,7 @@ import { cn, isSafeUrl } from "@/lib/utils";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
 import { useWikiLinks } from "@/components/worlds/wiki/WikiLinkContext";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { withOpacity } from "@/lib/colorOpacity";
 
 export function ChatroomMessageBubble({
   persona: _persona,
@@ -103,13 +104,13 @@ export function ChatroomMessageBubble({
         const bubble = (
           <div
             className={cn(
-              "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
+              "relative rounded-xl rounded-tl-xs px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
               !color && "bg-muted",
               fontClass,
               textSizeClass,
               textAlignClass,
             )}
-            style={color ? { backgroundColor: color + "33" } : undefined}
+            style={color ? { backgroundColor: withOpacity(color, 0.2) } : undefined}
           >
             <MarkdownContent content={wiki(part.speech)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} {...mentionProps} />
           </div>

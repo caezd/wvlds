@@ -27,6 +27,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
+import { SectionLabel } from "@/components/ui/section-label";
 import { Star, UserPlus, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { getInitials } from "@/lib/textFormatting";
@@ -72,7 +73,7 @@ function PersonaRow({
   return (
     <>
     {groupLabel && (
-      <p className="mt-2 px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{groupLabel}</p>
+      <SectionLabel as="p" className="mt-2 px-2.5 pb-1">{groupLabel}</SectionLabel>
     )}
     <div
       className={cn(
@@ -120,9 +121,9 @@ function PersonaRow({
         onClick={onToggleFavorite}
         aria-pressed={favorite}
         aria-label={favoriteLabel}
-        className="shrink-0 p-1.5 text-muted-foreground transition-colors hover:text-yellow-500 focus-visible:outline-none"
+        className="shrink-0 p-1.5 text-muted-foreground transition-colors hover:text-warning focus-visible:outline-none"
       >
-        <Star size={18} className={favorite ? "fill-yellow-400 text-yellow-500" : ""} />
+        <Star size={18} className={favorite ? "fill-warning text-warning" : ""} />
       </button>
     </div>
     </>
@@ -362,7 +363,7 @@ export function PersonaPickerDialog({
             {emptyOrLoading ?? <div className="flex flex-col gap-1 pb-1">{rows}</div>}
           </div>
           <DrawerFooter className="flex-row gap-2">
-            <DrawerClose render={<Button variant="ghost" className="flex-1" />}>
+            <DrawerClose render={<Button variant="secondary" className="flex-1" />}>
               {tCommon("cancel")}
             </DrawerClose>
             <Button className="flex-1" disabled={!canConfirm} onClick={confirm}>
@@ -398,7 +399,7 @@ export function PersonaPickerDialog({
 
         <DialogFooter className="gap-2">
           <DialogClose asChild>
-            <Button variant="ghost">{tCommon("cancel")}</Button>
+            <Button variant="secondary">{tCommon("cancel")}</Button>
           </DialogClose>
           <Button disabled={!canConfirm} onClick={confirm}>
             {tCommon("confirm")}

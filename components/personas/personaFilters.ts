@@ -1,5 +1,6 @@
 import type { PersonaNarrativeStatus } from "@/types/db";
 import { sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
+import { isRetiredStatus } from "@/lib/personaStatus";
 
 // Les filtres et le tri de la liste des personas d'un monde — pur, testé dans
 // `__tests__/WorldPersonasPanel.filters.test.tsx`. Partagé entre le panneau
@@ -7,8 +8,11 @@ import { sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
 
 export const PERSONA_FILTER_ALL = "__all__";
 export const PERSONA_FILTER_NO_GROUP = "__none__";
+/** Valeur du filtre de statut : décédés et retirés ensemble (« Hors jeu »). */
+export const PERSONA_FILTER_OFFSTAGE = "__offstage__";
 const ALL = PERSONA_FILTER_ALL;
 const NO_GROUP = PERSONA_FILTER_NO_GROUP;
+const OFFSTAGE = PERSONA_FILTER_OFFSTAGE;
 
 export type PersonaSortKey = "name" | "newest" | "oldest";
 
@@ -34,7 +38,7 @@ export type PersonaFilters = {
   query: string;
   player: string; // ALL | user_id
   group: string; // ALL | NO_GROUP | group_id
-  status: string; // ALL | PersonaNarrativeStatus
+  status: string; // ALL | OFFSTAGE | PersonaNarrativeStatus
   /** ALL | PersonaSheetBadgeKind — l'état de la fiche (migration 181). */
   sheet: string;
   /** ALL | "player" | "npc" — personas des joueurs ou PNJ (migration 182). */
@@ -60,7 +64,9 @@ export function applyPersonaFilters<
     if (filters.player !== ALL && p.user_id !== filters.player) return false;
     if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
     if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
-    if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
+    if (filters.status === OFFSTAGE) {
+      if (!isRetiredStatus(p.narrative_status)) return false;
+    } else if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
     if (filters.sheet !== ALL && (sheetBadgeOf(p, filters.reviewActive ?? true) ?? "approved") !== filters.sheet) return false;
     if (q && !normalize(p.name ?? "").includes(q) && !normalize(p.username ?? "").includes(q)) return false;
     return true;

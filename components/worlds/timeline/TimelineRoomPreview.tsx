@@ -146,7 +146,7 @@ function PreviewBody({ ctx, roomId, status }: { ctx: PreviewContext; roomId: str
             {shown.map((p) => (
               <span
                 key={p.id}
-                className="flex size-6 items-center justify-center rounded-full border-2 bg-muted text-[10px] font-semibold text-foreground"
+                className="flex size-6 items-center justify-center rounded-full border-2 bg-muted text-2xs font-semibold text-foreground"
                 style={{ borderColor: p.color ?? "var(--color-border)" }}
               >
                 {p.name.trim().charAt(0).toUpperCase()}
@@ -164,7 +164,7 @@ function PreviewBody({ ctx, roomId, status }: { ctx: PreviewContext; roomId: str
       ) : (
         <>
           {data.excerpt ? (
-            <p className="line-clamp-3 italic text-foreground/90">{tv("previewQuote", { text: data.excerpt })}</p>
+            <p className="line-clamp-3 italic text-foreground">{tv("previewQuote", { text: data.excerpt })}</p>
           ) : (
             <p className="text-xs text-muted-foreground">{tv("previewEmpty")}</p>
           )}

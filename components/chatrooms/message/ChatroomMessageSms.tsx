@@ -48,6 +48,7 @@ export function ChatroomMessageSms({
       presenceState={presenceState}
       size={22}
       frameUrl={frameUrl}
+      circle
     />
   ) : (
     <div className="w-[22px] shrink-0" aria-hidden />
@@ -86,9 +87,9 @@ export function ChatroomMessageSms({
           </div>
           <div
             className={cn(
-              "relative rounded-xl px-3 py-0.5 text-sm sm:text-base leading-snug max-w-prose bg-hoverCard",
-              sharpTop ? "rounded-tr-[3px]" : "rounded-tr-xl",
-              sharpBottom ? "rounded-br-[3px]" : "rounded-br-xl",
+              "relative rounded-xl px-3 py-0.5 text-sm sm:text-base leading-snug max-w-prose bg-muted",
+              sharpTop ? "rounded-tr-xs" : "rounded-tr-xl",
+              sharpBottom ? "rounded-br-xs" : "rounded-br-xl",
             )}
           >
             <ChatroomMessageBubble persona={message.persona} message={message} isMine={mine} ignoreBubbles />
@@ -100,9 +101,9 @@ export function ChatroomMessageSms({
           {avatar}
           <div
             className={cn(
-              "relative rounded-xl px-3 py-0.5 text-sm sm:text-base leading-snug max-w-prose bg-[#232327]",
-              sharpTop ? "rounded-tl-[3px]" : "rounded-tl-xl",
-              sharpBottom ? "rounded-bl-[3px]" : "rounded-bl-xl",
+              "relative rounded-xl px-3 py-0.5 text-sm sm:text-base leading-snug max-w-prose bg-muted/50",
+              sharpTop ? "rounded-tl-xs" : "rounded-tl-xl",
+              sharpBottom ? "rounded-bl-xs" : "rounded-bl-xl",
             )}
           >
             <ChatroomMessageBubble persona={message.persona} message={message} isMine={mine} ignoreBubbles />

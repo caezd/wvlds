@@ -8,13 +8,14 @@ import { Trash2 } from "lucide-react";
 import type { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ColorPickerButton } from "@/components/worlds/settings/ColorPickerButton";
 import type { TimelineArc } from "@/components/worlds/timeline/useTimelineData";
 
-const DEFAULT_ARC_COLOR = "#94a3b8";
+const DEFAULT_ARC_COLOR = DEFAULT_PLAYER_COLOR;
 
 /**
  * Les arcs narratifs d'un monde (migration 193) : un nom et une couleur, qui
@@ -88,6 +89,7 @@ export function TimelineArcsDialog({
               <ColorPickerButton
                 color={arc.color}
                 onChange={(c) => void saveArc(arc.id, { color: c })}
+                alpha={false}
                 className="h-9 w-9"
               />
               <Input
@@ -137,7 +139,7 @@ export function TimelineArcsDialog({
           className="flex items-center gap-2 border-t border-border pt-4"
           onSubmit={(e) => { e.preventDefault(); void add(); }}
         >
-          <ColorPickerButton color={color} onChange={setColor} className="h-9 w-9" />
+          <ColorPickerButton color={color} onChange={setColor} alpha={false} className="h-9 w-9" />
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}

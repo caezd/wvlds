@@ -252,7 +252,7 @@ export function SearchCenter({
     <>
       <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
         <SideSheetContent width="search">
-          <DrawerHeader className="gap-3 border-b border-border-soft px-4 py-4">
+          <DrawerHeader className="gap-3 border-b border-border px-4 py-4">
             <DrawerTitle>{t("search.title")}</DrawerTitle>
             <div className="flex items-start gap-2">
               <div className="flex-1">
@@ -273,7 +273,6 @@ export function SearchCenter({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="rounded-md"
                 aria-label={t("search.filtersTitle")}
                 onClick={() => setFiltersOpen(true)}
               >
@@ -281,7 +280,7 @@ export function SearchCenter({
               </Button>
             </div>
             {needFilterWarning && (
-              <p className="text-xs text-amber-500">{t("search.needFilter")}</p>
+              <p className="text-xs text-warning">{t("search.needFilter")}</p>
             )}
           </DrawerHeader>
 
