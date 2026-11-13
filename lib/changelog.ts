@@ -8,13 +8,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11",
-    tag: "Technique",
-    text: "Le direct d’un salon (messages, réactions, votes, ordre de passage) passe par un canal plus léger et mieux protégé : les notes privées ne sont plus jamais annoncées à ceux qui ne peuvent pas les lire.",
+    tag: "Salons",
+    text: "On peut répondre à un message : « Répondre » dans son menu (appui long sur mobile). La réponse s’affiche avec une citation de l’original — auteur et extrait — qui ramène à lui d’un clic, même loin dans l’historique. Un message retouché par son auteur porte désormais la mention « (modifié) » à côté de sa date ; la survoler indique quand.",
   },
   {
     date: "2026-11",
     tag: "Salons",
-    text: "Ordre de passage : le créateur d’un salon (ou qui gère les salons) peut ranger les joueurs depuis l’en-tête du salon. Un bandeau au-dessus de la zone de saisie indique « À toi de jouer » ou à qui c’est le tour, et le tour passe tout seul au suivant dès que le joueur concerné poste. Poster hors tour reste possible.",
+    text: "Ordre de passage : le créateur d’un salon (ou qui gère les salons) range les joueurs depuis l’en-tête du salon. Une languette au-dessus de la zone de saisie indique « À toi de jouer » ou à qui c’est le tour, et le tour passe tout seul au suivant dès que le joueur concerné poste. Poster hors tour reste possible.",
   },
   {
     date: "2026-11",
@@ -23,63 +23,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-11",
-    tag: "Mondes",
-    text: "Rejoindre un monde fait apparaître ses non-lus en direct, sans recharger ; en être retiré coupe aussitôt tout ce qui en venait. Les départs d’un monde ne sont plus signalés qu’à la personne concernée.",
-  },
-  {
-    date: "2026-11",
-    tag: "Salons",
-    text: "On peut répondre à un message : « Répondre » dans son menu (appui long sur mobile). La réponse s’affiche avec une citation de l’original — auteur et extrait — qui ramène à lui d’un clic, même s’il est loin dans l’historique.",
-  },
-  {
-    date: "2026-11",
-    tag: "Salons",
-    text: "Un message retouché par son auteur porte la mention « (modifié) » à côté de sa date ; la survoler indique quand.",
-  },
-  {
-    date: "2026-11",
-    tag: "Technique",
-    text: "Les compteurs de messages non lus arrivent en direct par un canal plus léger, prévu pour tenir la charge des grands mondes très actifs.",
-  },
-  {
-    date: "2026-11",
-    tag: "Salons",
-    text: "Passer d’un salon à l’autre d’un même monde est plus rapide et plus fluide : la barre latérale reste en place, sans se recharger ni perdre sa position de défilement.",
-  },
-  {
-    date: "2026-11",
-    tag: "Salons",
-    text: "Au retour d’une coupure réseau ou d’une mise en veille, un salon se remet entièrement à jour : messages modifiés ou supprimés entre-temps, réactions et votes compris.",
-  },
-  {
-    date: "2026-11",
-    tag: "Salons",
-    text: "Envoyer un message est instantané : il s’affiche dès qu’il est enregistré et la zone de saisie se libère aussitôt, sans attendre les mentions ni l’attribution des points, qui se font en arrière-plan.",
+    tag: "Performance",
+    text: "Tout va plus vite. Les salons s’ouvrent en une seule fois, envoyer un message est instantané, et passer d’un salon à l’autre garde la barre latérale en place. Les mondes s’affichent sans attendre leur barre latérale et chaque onglet ne charge que ce qu’il montre. Revenir sur une page quittée depuis moins de 30 secondes est immédiat, et le serveur tourne désormais à Londres, à côté de la base de données.",
   },
   {
     date: "2026-11",
     tag: "Correctif",
-    text: "Les sondages plus anciens d’un salon, chargés en remontant la conversation, affichent de nouveau leurs votes et votre choix — ils apparaissaient à zéro.",
-  },
-  {
-    date: "2026-11",
-    tag: "Performance",
-    text: "Le serveur de l’application tourne désormais à Londres, à côté de la base de données, au lieu de l’autre côté de l’Atlantique : chaque page gagne plusieurs centaines de millisecondes.",
-  },
-  {
-    date: "2026-11",
-    tag: "Performance",
-    text: "Moins d’attente dans les mondes : les onglets Wiki, Carte, Membres… ne chargent plus les blocs de l’accueil qu’ils n’affichent pas, l’onglet Personas arrive en une seule requête, et la chronologie des salons vient avec leur liste. Les salons d’une liste ne se préparent plus tous à l’affichage, seulement celui que l’on survole ou touche.",
-  },
-  {
-    date: "2026-11",
-    tag: "Performance",
-    text: "Les salons s’ouvrent plus vite : messages, réactions, votes et défis remportés arrivent ensemble au lieu d’en plusieurs allers-retours. À l’entrée dans un monde, la page s’affiche sans attendre la barre latérale, qui la rejoint un instant après. Et revenir sur un salon ou un monde quitté depuis moins de 30 secondes est instantané.",
-  },
-  {
-    date: "2026-11",
-    tag: "Correctif",
-    text: "Les messages postés pendant une coupure réseau ou pendant que l’onglet était en veille s’affichent dès le retour, à leur place dans la conversation — il fallait jusqu’ici recharger la page pour les voir.",
+    text: "Un direct plus fiable. Au retour d’une coupure ou d’une veille, un salon se remet entièrement à jour : nouveaux messages, modifications, suppressions, réactions et votes. Les sondages anciens affichent de nouveau leurs votes. Rejoindre un monde fait apparaître ses non-lus sans recharger, en être retiré coupe aussitôt tout ce qui en venait, et les notes privées ne sont jamais annoncées à ceux qui ne peuvent pas les lire.",
   },
   {
     date: "2026-11",
