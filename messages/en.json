@@ -1966,7 +1966,12 @@
     "dirOut": "towards",
     "dirIn": "from them",
     "panelRelations": "Relations · {count}",
-    "dblClickHint": "Double-click: focused view"
+    "dblClickHint": "Double-click: focused view",
+    "groupBy": "Group",
+    "groupByPlayer": "By player",
+    "groupByGroup": "By group",
+    "hideIsolated": "Hide isolated",
+    "secondRing": "Second circle"
   },
   "wiki": {
     "changeIcon": "Change icon",

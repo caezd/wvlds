@@ -1966,7 +1966,12 @@
     "dirOut": "hacia",
     "dirIn": "de su parte",
     "panelRelations": "Relaciones · {count}",
-    "dblClickHint": "Doble clic: vista centrada"
+    "dblClickHint": "Doble clic: vista centrada",
+    "groupBy": "Agrupar",
+    "groupByPlayer": "Por jugador",
+    "groupByGroup": "Por grupo",
+    "hideIsolated": "Sin los aislados",
+    "secondRing": "Segundo círculo"
   },
   "wiki": {
     "changeIcon": "Cambiar icono",

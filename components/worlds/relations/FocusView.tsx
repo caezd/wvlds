@@ -39,6 +39,7 @@ export function FocusView({
   ix,
   statusOf,
   onRecenter,
+  showSecond = true,
 }: {
   focusId: string;
   personaMap: ReadonlyMap<string, CPersona>;
@@ -49,9 +50,17 @@ export function FocusView({
   /** Libellé du statut narratif d'un persona. */
   statusOf: (persona: CPersona) => string;
   onRecenter: (id: string) => void;
+  /** Montrer le second anneau (relations des relations). */
+  showSecond?: boolean;
 }) {
   const t = useTranslations("relations");
-  const layout = React.useMemo(() => focusLayout(focusId, edges, typeOrder), [focusId, edges, typeOrder]);
+  const full = React.useMemo(() => focusLayout(focusId, edges, typeOrder), [focusId, edges, typeOrder]);
+  // Sans le second anneau : ni ses personas, ni ses liens, ni son cercle.
+  const layout = React.useMemo(() => {
+    if (showSecond) return full;
+    const pos = new Map([...full.pos].filter(([id]) => !full.parentOf.has(id)));
+    return { ...full, pos, r2: null, edges: full.edges.filter((e) => !e.second) };
+  }, [full, showSecond]);
   const { pos, sizes, angles, r1, r2 } = layout;
 
   const hf = ix.hoverPersonaId && pos.has(ix.hoverPersonaId) ? ix.hoverPersonaId : null;

@@ -51,6 +51,7 @@ export function RingView({
   onOpenFocus,
   onActivatePlayer,
   onBackgroundClick,
+  groupArcs,
 }: {
   ring: RingLayout;
   personaMap: ReadonlyMap<string, CPersona>;
@@ -63,6 +64,12 @@ export function RingView({
   onOpenFocus: (id: string) => void;
   onActivatePlayer: (userId: string) => void;
   onBackgroundClick: () => void;
+  /**
+   * Arcs par groupe (réglage « Regrouper par groupe ») : leur nom et leur
+   * couleur viennent du groupe, et ils ne se choisissent pas comme un joueur.
+   * Absent : les arcs sont ceux des joueurs.
+   */
+  groupArcs?: { labelOf: (key: string) => string; colorOf: (key: string) => string | undefined };
 }) {
   const t = useTranslations("relations");
   const { angles, step, spacing } = ring;
@@ -138,9 +145,26 @@ export function RingView({
         />
         {drawn}
         {ring.arcs.map((arc) => {
+          const d = playerArcPath(arc, step);
+          if (groupArcs) {
+            const color = groupArcs.colorOf(arc.userId);
+            return (
+              <path
+                key={arc.userId}
+                d={d}
+                fill="none"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                pointerEvents="none"
+                data-group-arc={arc.userId}
+                className={color ? undefined : "stroke-zinc-700"}
+                style={color ? { stroke: color } : undefined}
+              />
+            );
+          }
           const on = fu === arc.userId || (!!fp && owner(fp) === arc.userId);
           const handle = ix.handleOf(arc.userId);
-          const d = playerArcPath(arc, step);
           return (
             <g
               key={arc.userId}
@@ -171,8 +195,9 @@ export function RingView({
 
       {/* Les noms des joueurs, au milieu de leur arc, tournés vers le centre. */}
       {ring.arcs.map((arc) => {
-        const on = fu === arc.userId || (!!fp && owner(fp) === arc.userId);
+        const on = !groupArcs && (fu === arc.userId || (!!fp && owner(fp) === arc.userId));
         const l = inwardLabel(arc.mid, PLAYER_LABEL_R);
+        const groupColor = groupArcs?.colorOf(arc.userId);
         return (
           <span
             key={arc.userId}
@@ -189,9 +214,10 @@ export function RingView({
               fontSize: "clamp(9px, 1.25cqw, 12px)",
               textShadow: "0 0 3px var(--background), 0 0 6px var(--background)",
               opacity: ring.arcs.length <= PLAYER_NAMES_UP_TO || on || ix.zoom >= 1.5 ? 1 : 0,
+              ...(groupColor ? { color: groupColor } : null),
             }}
           >
-            {ix.handleOf(arc.userId)}
+            {groupArcs ? groupArcs.labelOf(arc.userId) : ix.handleOf(arc.userId)}
           </span>
         );
       })}
