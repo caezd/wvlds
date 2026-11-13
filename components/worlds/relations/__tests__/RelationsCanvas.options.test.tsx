@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
@@ -69,6 +69,7 @@ function canvas() {
   return within(screen.getByTestId("relations-canvas"));
 }
 const node = (id: string) => document.querySelector<HTMLElement>(`[data-persona-node="${id}"]`)!;
+const edges = () => document.querySelectorAll("[data-relation-edge]");
 const viewRadio = (name: string) => screen.getByRole("radio", { name });
 
 async function mount(opts?: Parameters<typeof mockSetup>[0]) {
@@ -121,5 +122,37 @@ describe("RelationsCanvas — réglages d'affichage", () => {
     await user.click(screen.getByRole("button", { name: "Second cercle" }));
     expect(document.querySelector('[data-persona-node="p3"]')).toBeNull();
     expect(node("p2")).not.toBeNull();
+  });
+
+  it("la vue Constellations place les personas en îlots et range à part les isolés", async () => {
+    const { user } = await mount({ personas: [...BASE_PERSONAS, P3] });
+    await user.click(viewRadio("Constellations"));
+
+    // Placement calculé à la demande : les avatars apparaissent ensuite.
+    await waitFor(() => expect(document.querySelector('[data-persona-node="p1"]')).not.toBeNull());
+    expect(document.querySelector('[data-constellation-cluster="u1"]')).not.toBeNull();
+    expect(screen.getByText("1 persona sans relation")).toBeInTheDocument();
+    expect(edges()).toHaveLength(1);
+
+    // Le regroupement s'applique aussi : un îlot par groupe.
+    await user.click(screen.getByRole("radio", { name: "Par groupe" }));
+    await waitFor(() => expect(document.querySelector('[data-constellation-cluster="group:g1"]')).not.toBeNull());
+
+    // « Sans les isolés » les retire aussi d'ici.
+    await user.click(screen.getByRole("button", { name: "Sans les isolés" }));
+    await waitFor(() => expect(document.querySelector('[data-persona-node="p3"]')).toBeNull());
+  });
+
+  it("en Constellations, un clic choisit un persona et nomme ses liens ; un double-clic passe en vue Centré", async () => {
+    const { user } = await mount();
+    await user.click(viewRadio("Constellations"));
+    await waitFor(() => expect(document.querySelector('[data-persona-node="p1"]')).not.toBeNull());
+
+    await user.click(node("p1"));
+    expect(node("p1")).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector("[data-edge-label]")).toHaveTextContent("Allié");
+
+    await user.dblClick(node("p2"));
+    expect(viewRadio("Centré")).toHaveAttribute("aria-checked", "true");
   });
 });

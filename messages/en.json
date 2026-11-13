@@ -1971,7 +1971,10 @@
     "groupByPlayer": "By player",
     "groupByGroup": "By group",
     "hideIsolated": "Hide isolated",
-    "secondRing": "Second circle"
+    "secondRing": "Second circle",
+    "viewConstellations": "Constellations",
+    "constellationsLoading": "Placing personas…",
+    "isolatedCount": "{count, plural, one {# persona without relations} other {# personas without relations}}"
   },
   "wiki": {
     "changeIcon": "Change icon",

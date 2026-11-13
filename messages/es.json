@@ -1971,7 +1971,10 @@
     "groupByPlayer": "Por jugador",
     "groupByGroup": "Por grupo",
     "hideIsolated": "Sin los aislados",
-    "secondRing": "Segundo círculo"
+    "secondRing": "Segundo círculo",
+    "viewConstellations": "Constelaciones",
+    "constellationsLoading": "Colocando las personas…",
+    "isolatedCount": "{count, plural, one {# persona sin relaciones} other {# personas sin relaciones}}"
   },
   "wiki": {
     "changeIcon": "Cambiar icono",

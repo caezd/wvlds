@@ -147,7 +147,7 @@ describe("RelationsCanvas — vue Cercle", () => {
     expect(screen.queryByRole("complementary", { name: "Adhi" })).toBeNull();
 
     await user.click(node("p1"));
-    await user.click(document.querySelector("svg rect")!);
+    await user.click(document.querySelector("[data-relations-plate] svg rect")!);
     expect(screen.queryByRole("complementary", { name: "Adhi" })).toBeNull();
   });
 

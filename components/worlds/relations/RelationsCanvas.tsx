@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CircleDashed, Crosshair, Minus, MousePointerClick, Plus, Shrink, Waypoints, type LucideIcon } from "lucide-react";
+import { CircleDashed, Crosshair, Minus, MousePointerClick, Network, Plus, Shrink, Waypoints, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { isRetiredStatus } from "@/lib/personaStatus";
@@ -32,19 +32,23 @@ import { RelationsSidePanel } from "./RelationsSidePanel";
 import { DENSE_FROM, RingView } from "./RingView";
 import { FocusView } from "./FocusView";
 import type { PlateInteractions } from "./PlateParts";
-import { groupIdOfKey, parseGroupBy, ringArcsInput, type RingGroupBy } from "./ringGrouping";
+import { GROUPLESS_KEY, groupIdOfKey, parseGroupBy, ringArcsInput, type RingGroupBy } from "./ringGrouping";
+import { ConstellationView } from "./ConstellationView";
+import type { ConstellationInput } from "./constellationLayout";
 import { ViewOptions } from "./ViewOptions";
 
-type View = "ring" | "focus";
+type View = "ring" | "constellations" | "focus";
 
-const VIEWS: ReadonlyArray<[View, "viewRing" | "viewOrbit", LucideIcon]> = [
+const VIEWS: ReadonlyArray<[View, "viewRing" | "viewConstellations" | "viewOrbit", LucideIcon]> = [
   ["ring", "viewRing", CircleDashed],
+  ["constellations", "viewConstellations", Network],
   ["focus", "viewOrbit", Crosshair],
 ];
 
 /** Une vue retenue ; les anciennes valeurs (Réseau, Orbite) retombent sur les nouvelles. */
 function parseView(value: unknown): View | null {
   if (value === "ring" || value === "network") return "ring";
+  if (value === "constellations") return "constellations";
   if (value === "focus" || value === "orbit") return "focus";
   return null;
 }
@@ -240,13 +244,26 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
     for (const e of edges) { ids.add(e.from); ids.add(e.to); }
     return ids;
   }, [edges]);
-  const ring = React.useMemo(
-    () => ringLayout(ringArcsInput(
+  // Les arcs du cercle et les îlots des constellations : même découpage.
+  const arcsInput = React.useMemo(
+    () => ringArcsInput(
       effectiveGroupBy, userList, groups, groupByPersona,
       (id) => !personaHidden(id) && (!hideIsolated || connected.has(id)),
-    )),
+    ),
     [effectiveGroupBy, userList, groups, groupByPersona, personaHidden, hideIsolated, connected],
   );
+  const ring = React.useMemo(() => ringLayout(arcsInput), [arcsInput]);
+  const constellationInput = React.useMemo<ConstellationInput>(() => {
+    const clusterByPersona = new Map<string, string>();
+    for (const arc of arcsInput) for (const id of arc.personaIds) clusterByPersona.set(id, arc.userId);
+    return {
+      personaIds: arcsInput.flatMap((a) => a.personaIds),
+      edges,
+      clusterOf: (id) => clusterByPersona.get(id) ?? GROUPLESS_KEY,
+      clusterOrder: arcsInput.filter((a) => a.personaIds.length > 0).map((a) => a.userId),
+      centralKey: effectiveGroupBy === "group" ? GROUPLESS_KEY : undefined,
+    };
+  }, [arcsInput, edges, effectiveGroupBy]);
   const groupArcs = React.useMemo(() => {
     if (effectiveGroupBy !== "group") return undefined;
     const byId = new Map(groups.map((g) => [g.id, g]));
@@ -493,7 +510,21 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                   transition: animating ? "width .45s cubic-bezier(.3,.7,.2,1), transform .45s cubic-bezier(.3,.7,.2,1)" : "none",
                 }}
               >
-                {focusMode ? (
+                {view === "constellations" ? (
+                  <ConstellationView
+                    input={constellationInput}
+                    personaMap={personaMap}
+                    ix={ix}
+                    clusterLabel={(key) => (groupArcs ? groupArcs.labelOf(key) : handleOf(key))}
+                    clusterColor={(key) => groupArcs?.colorOf(key)}
+                    onActivatePersona={(pid) => {
+                      setSelectedPersonaId((cur) => (cur === pid ? null : pid));
+                      if (selectedUserId && personaMap.get(pid)?.user_id !== selectedUserId) setSelectedUserId(null);
+                    }}
+                    onOpenFocus={openFocus}
+                    onBackgroundClick={clearSelection}
+                  />
+                ) : focusMode ? (
                   focusId && (
                     <FocusView
                       focusId={focusId}
