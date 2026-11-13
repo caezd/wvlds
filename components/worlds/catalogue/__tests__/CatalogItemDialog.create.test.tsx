@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -123,13 +123,13 @@ describe("CatalogItemDialog — pages du wiki liées (migration 186)", () => {
     );
 
     expect(await screen.findByText("La Forge")).toBeInTheDocument();
-    // Le sélecteur (Popover) s'ouvre par-dessus le dialogue modal : Radix
-    // rend la couche du dessus cliquable, mais jsdom ne calcule pas les
-    // styles hérités et user-event voit `pointer-events: none` — d'où
-    // `fireEvent` pour ouvrir et un utilisateur sans cette vérification.
-    fireEvent.click(screen.getByRole("button", { name: "Lier une page" }));
-    const picker = userEvent.setup({ pointerEventsCheck: 0 });
-    await picker.click(await screen.findByRole("option", { name: /Karsk/ }));
+    // Le sélecteur (Popover) s'ouvre par-dessus le dialogue modal et reste
+    // cliquable : les deux couches Radix partagent la même
+    // `react-dismissable-layer` — avec deux copies du paquet, la couche du
+    // dessus héritait du `pointer-events: none` posé sur le corps par le
+    // dialogue, et rien ne répondait au clic.
+    await user.click(screen.getByRole("button", { name: "Lier une page" }));
+    await user.click(await screen.findByRole("option", { name: /Karsk/ }));
     expect(screen.getByRole("button", { name: "Retirer la page Karsk" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
