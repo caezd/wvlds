@@ -44,6 +44,11 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-16",
+    category: "Correctif",
+    text: "Les menus ouverts depuis une fenêtre (choix d’icône ou d’emoji de l’encadré, listes déroulantes…) répondent de nouveau : on peut y faire défiler la liste, cliquer dans la recherche et y écrire.",
+  },
+  {
     date: "2026-11-13",
     category: "Fonctionnalité",
     area: "Relations",
