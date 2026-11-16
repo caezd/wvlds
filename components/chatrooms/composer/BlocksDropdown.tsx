@@ -40,7 +40,7 @@ import {
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { clampTimelineDate, formatTimelineLabel } from "@/lib/worldTimeline";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
-import { withOpacity } from "@/lib/colorOpacity";
+import { bubbleStyle } from "@/lib/bubbleColors";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -399,7 +399,7 @@ export function BlocksDropdown({
                                 <div key={i} className="inline-flex flex-nowrap items-end gap-2">
                                     <div
                                         className={cn("rounded-xl rounded-tl-xs px-3 py-1.5 text-sm leading-snug", !bubbleColor && "bg-muted")}
-                                        style={bubbleColor ? { backgroundColor: withOpacity(bubbleColor, 0.2) } : undefined}
+                                        style={bubbleStyle(bubbleColor)}
                                     >
                                         {text}
                                     </div>
@@ -586,7 +586,7 @@ export function BlocksDropdown({
                                     <div key={i} className="inline-flex items-end gap-2 flex-nowrap">
                                         <div
                                             className={cn("rounded-xl rounded-tl-xs px-3 py-1.5 text-sm leading-snug whitespace-nowrap", !bubbleColor && "bg-muted")}
-                                            style={bubbleColor ? { backgroundColor: withOpacity(bubbleColor, 0.2) } : undefined}
+                                            style={bubbleStyle(bubbleColor)}
                                         >
                                             {text}
                                         </div>

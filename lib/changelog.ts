@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-16",
+    category: "Interface",
+    area: "Salons",
+    text: "Les bulles de dialogue prennent la couleur choisie telle quelle, au lieu d’une version pâlie, et leur texte passe au noir sur une couleur claire pour rester lisible.",
+  },
+  {
+    date: "2026-11-16",
     category: "Correctif",
     text: "Les menus ouverts depuis une fenêtre (choix d’icône ou d’emoji de l’encadré, listes déroulantes…) répondent de nouveau : on peut y faire défiler la liste, cliquer dans la recherche et y écrire.",
   },
