@@ -165,6 +165,9 @@ const THUMB_CLASS =
  * enregistrée, passer par `withOpacity` (lib/colorOpacity.ts), jamais par un
  * suffixe accolé au code.
  *
+ * `maxAlpha` (0 à 1, avec `alpha`) plafonne l'opacité : le curseur s'arrête là,
+ * et une pastille ou un code plus opaque y est ramené.
+ *
  * `framed` dessine le panneau (bord, fond, arrondi) ; dans un Popover qui le
  * dessine déjà, passer `framed={false}`.
  */
@@ -173,6 +176,7 @@ export function HsvColorPicker({
   onChange,
   presets = DEFAULT_COLOR_PRESETS,
   alpha = false,
+  maxAlpha = 1,
   framed = true,
   className,
 }: {
@@ -180,12 +184,19 @@ export function HsvColorPicker({
   onChange: (hex: string) => void;
   presets?: ColorPreset[];
   alpha?: boolean;
+  maxAlpha?: number;
   framed?: boolean;
   className?: string;
 }) {
   const t = useTranslations("colorPicker");
+  const alphaCap = alpha ? clamp01(maxAlpha) : 1;
+  const capped = (c: Hsva): Hsva => (c.a > alphaCap ? { ...c, a: alphaCap } : c);
+  const parse = (value: string) => {
+    const parsed = hexToHsva(value);
+    return parsed && capped(parsed);
+  };
 
-  const [hsva, setHsva] = useState<Hsva>(() => hexToHsva(color) ?? FALLBACK_HSVA);
+  const [hsva, setHsva] = useState<Hsva>(() => parse(color) ?? capped(FALLBACK_HSVA));
   // L'état HSV est gardé en interne : une couleur grise ou noire n'a pas de
   // teinte en hex, et la recalculer depuis la prop ramènerait la teinte à 0.
   // On ne le resynchronise que si la prop change pour une autre couleur.
@@ -193,8 +204,8 @@ export function HsvColorPicker({
   let current = hsva;
   if (color !== syncedColor) {
     setSyncedColor(color);
-    const parsed = hexToHsva(color);
-    if (parsed && normalizeHexColor(color, alpha) !== hsvaToHex(hsva, alpha)) {
+    const parsed = parse(color);
+    if (parsed && hsvaToHex(parsed, alpha) !== hsvaToHex(hsva, alpha)) {
       setHsva(parsed);
       current = parsed;
     }
@@ -208,23 +219,29 @@ export function HsvColorPicker({
   const hex = hsvaToHex(current, alpha);
   const opaqueHex = hsvaToHex({ ...current, a: 1 });
 
-  const isActivePreset = (value: string) => normalizeHexColor(value, alpha) === hex;
+  const isActivePreset = (value: string) => {
+    const parsed = parse(value);
+    return !!parsed && hsvaToHex(parsed, alpha) === hex;
+  };
 
   const [hexDraft, setHexDraft] = useState<string | null>(null);
 
-  function commit(next: Hsva) {
+  function commit(raw: Hsva) {
+    const next = capped(raw);
     hsvaRef.current = next;
     setHsva(next);
     onChangeRef.current(hsvaToHex(next, alpha));
   }
 
   function pickPreset(value: string) {
-    const parsed = hexToHsva(value);
-    if (!parsed) return;
+    const raw = hexToHsva(value);
+    if (!raw) return;
+    const parsed = capped(raw);
     hsvaRef.current = parsed;
     setHsva(parsed);
-    // La valeur exacte du preset, pour que l'appelant puisse la comparer.
-    onChangeRef.current(value);
+    // La valeur exacte du preset, pour que l'appelant puisse la comparer —
+    // sauf si l'opacité plafonnée l'a changée.
+    onChangeRef.current(parsed === raw ? value : hsvaToHex(parsed, alpha));
   }
 
   function pickSV(e: React.PointerEvent<HTMLDivElement>) {
@@ -365,12 +382,12 @@ export function HsvColorPicker({
                 />
                 <div
                   className="absolute inset-0 rounded-full"
-                  style={{ backgroundImage: `linear-gradient(to right,transparent,${opaqueHex})` }}
+                  style={{ backgroundImage: `linear-gradient(to right,transparent,${hsvaToHex({ ...current, a: alphaCap }, true)})` }}
                 />
                 <input
                   type="range"
                   min={0}
-                  max={100}
+                  max={Math.round(alphaCap * 100)}
                   value={Math.round(current.a * 100)}
                   aria-label={t("opacity")}
                   onChange={(e) => commit({ ...hsvaRef.current, a: Number(e.target.value) / 100 })}
@@ -378,7 +395,7 @@ export function HsvColorPicker({
                 />
                 <span
                   className={THUMB_CLASS}
-                  style={{ left: `${current.a * 100}%`, backgroundColor: opaqueHex }}
+                  style={{ left: `${(current.a / (alphaCap || 1)) * 100}%`, backgroundColor: opaqueHex }}
                 />
               </div>
             )}

@@ -1,11 +1,21 @@
 import { describe, it, expect } from "vitest";
 
-import { bubbleStyle, readableTextOn } from "@/lib/bubbleColors";
+import { BUBBLE_MAX_ALPHA, bubbleStyle, readableTextOn } from "@/lib/bubbleColors";
 
 describe("couleur des bulles de dialogue", () => {
-  it("le fond est la couleur choisie telle quelle, sans opacité réduite", () => {
-    expect(bubbleStyle("#f27a12")?.backgroundColor).toBe("#f27a12");
+  it("le fond est la couleur choisie, son opacité plafonnée à 80 %", () => {
+    expect(BUBBLE_MAX_ALPHA).toBe(0.8);
+    // Opaque (choisie avant le plafond, ou écrite à la main) : ramenée à 80 % (cc).
+    expect(bubbleStyle("#f27a12")?.backgroundColor).toBe("#f27a12cc");
+    expect(bubbleStyle("#f27a12ff")?.backgroundColor).toBe("#f27a12cc");
+    // Déjà sous le plafond : inchangée.
+    expect(bubbleStyle("#f27a12cc")?.backgroundColor).toBe("#f27a12cc");
     expect(bubbleStyle("#f27a1280")?.backgroundColor).toBe("#f27a1280");
+  });
+
+  it("le texte se choisit sur la couleur plafonnée", () => {
+    expect(bubbleStyle("#f27a12")?.color).toBe("#000");
+    expect(bubbleStyle("#1d4ed8")?.color).toBe("#fff");
   });
 
   it("texte noir sur un fond clair, blanc sur un fond sombre", () => {

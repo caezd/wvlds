@@ -40,7 +40,7 @@ import {
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { clampTimelineDate, formatTimelineLabel } from "@/lib/worldTimeline";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
-import { bubbleStyle } from "@/lib/bubbleColors";
+import { BUBBLE_MAX_ALPHA, bubbleBackground, bubbleStyle } from "@/lib/bubbleColors";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -416,7 +416,7 @@ export function BlocksDropdown({
                         >
                             <span
                                 className="size-3 shrink-0 rounded-full border border-border/60"
-                                style={bubbleColor ? { backgroundColor: bubbleColor } : undefined}
+                                style={bubbleColor ? { backgroundColor: bubbleBackground(bubbleColor) } : undefined}
                             >
                                 {!bubbleColor && <Pipette className="m-auto size-2.5 text-muted-foreground" />}
                             </span>
@@ -606,6 +606,7 @@ export function BlocksDropdown({
                                 color={bubbleColor ?? DEFAULT_PLAYER_COLOR}
                                 onChange={onBubbleColorChange}
                                 alpha
+                                maxAlpha={BUBBLE_MAX_ALPHA}
                             />
                             <div className="flex gap-2">
                                 <Button

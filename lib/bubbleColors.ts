@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 
-import { parseHexColor } from "@/components/ui/hsv-color-picker";
+import { parseHexColor, rgbaToHex } from "@/components/ui/hsv-color-picker";
+
+/** Opacité maximale d'une bulle : le fond de la page transparaît toujours un peu. */
+export const BUBBLE_MAX_ALPHA = 0.8;
 
 /**
  * Fond des pages (`--background`, #18181B) : l'application n'a qu'un thème
@@ -32,11 +35,23 @@ export function readableTextOn(background: string): string | undefined {
 }
 
 /**
- * Style d'une bulle de dialogue : la couleur choisie telle quelle (son alpha
- * compris), et un texte noir ou blanc selon ce qui se lit le mieux dessus.
+ * Fond d'une bulle : la couleur choisie, son opacité ramenée à
+ * `BUBBLE_MAX_ALPHA` au plus — y compris pour une couleur enregistrée opaque
+ * avant ce plafond, ou écrite à la main (`"…"{#ff0000}`).
+ */
+export function bubbleBackground(color: string): string {
+  const c = parseHexColor(color);
+  if (!c || c.a <= BUBBLE_MAX_ALPHA) return color;
+  return rgbaToHex({ ...c, a: BUBBLE_MAX_ALPHA }, true);
+}
+
+/**
+ * Style d'une bulle de dialogue : la couleur choisie (opacité plafonnée), et
+ * un texte noir ou blanc selon ce qui se lit le mieux dessus.
  */
 export function bubbleStyle(color: string | null | undefined): CSSProperties | undefined {
   if (!color) return undefined;
-  const text = readableTextOn(color);
-  return { backgroundColor: color, ...(text ? { color: text } : null) };
+  const background = bubbleBackground(color);
+  const text = readableTextOn(background);
+  return { backgroundColor: background, ...(text ? { color: text } : null) };
 }

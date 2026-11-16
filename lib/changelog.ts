@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-16",
     category: "Interface",
     area: "Salons",
-    text: "Les bulles de dialogue prennent la couleur choisie telle quelle, au lieu d’une version pâlie, et leur texte passe au noir sur une couleur claire pour rester lisible.",
+    text: "Les bulles de dialogue prennent la couleur choisie, au lieu d’une version pâlie : son opacité va jusqu’à 80 %, et leur texte passe au noir sur une couleur claire pour rester lisible.",
   },
   {
     date: "2026-11-16",

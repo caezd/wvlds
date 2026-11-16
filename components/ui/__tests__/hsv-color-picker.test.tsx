@@ -216,4 +216,33 @@ describe("HsvColorPicker — opacité", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Code hexadécimal" }), { target: { value: "#7038F408" } });
     expect(onChange).toHaveBeenLastCalledWith("#7038f408");
   });
+
+  describe("maxAlpha", () => {
+    it("le curseur s'arrête au plafond", () => {
+      render(<HsvColorPicker color="#ff0000" onChange={vi.fn()} presets={[]} alpha maxAlpha={0.8} />);
+      const slider = screen.getByRole("slider", { name: "Opacité" });
+      expect(slider).toHaveAttribute("max", "80");
+      // Une couleur opaque s'affiche déjà plafonnée.
+      expect(slider).toHaveValue("80");
+      expect(screen.getByRole("textbox", { name: "Code hexadécimal" })).toHaveValue("#FF0000CC");
+    });
+
+    it("une pastille ou un code plus opaque est ramené au plafond", () => {
+      const onChange = vi.fn();
+      render(<HsvColorPicker color="#00ff00" onChange={onChange} presets={PRESETS} alpha maxAlpha={0.8} />);
+      fireEvent.click(screen.getByRole("button", { name: "Rouge" }));
+      expect(onChange).toHaveBeenLastCalledWith("#f56868cc");
+      expect(screen.getByRole("button", { name: "Rouge" })).toHaveAttribute("aria-pressed", "true");
+
+      fireEvent.change(screen.getByRole("textbox", { name: "Code hexadécimal" }), { target: { value: "#0000ff" } });
+      expect(onChange).toHaveBeenLastCalledWith("#0000ffcc");
+    });
+
+    it("une opacité sous le plafond reste telle quelle", () => {
+      const onChange = vi.fn();
+      render(<HsvColorPicker color="#ff0000" onChange={onChange} presets={[]} alpha maxAlpha={0.8} />);
+      fireEvent.change(screen.getByRole("slider", { name: "Opacité" }), { target: { value: "50" } });
+      expect(onChange).toHaveBeenLastCalledWith("#ff000080");
+    });
+  });
 });
