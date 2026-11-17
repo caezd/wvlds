@@ -24,7 +24,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ColorSwatchRow } from "@/components/ui/color-swatch-row";
 import { PLAYER_COLORS, DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
@@ -35,6 +34,7 @@ import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
 import { ReactionEmoji } from "@/components/chatrooms/reactions/ReactionEmoji";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
+import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 
 /* ─── Presets : reproduisent l'esprit des anciens blocs ──────────────────── */
 
@@ -130,28 +130,33 @@ function renderGauges(gauges: Gauge[], gaugeDefault: string) {
 
 /* ─── Rendu Markdown ────────────────────────────────────────────────────── */
 
+/**
+ * Paragraphes espacés comme ceux d'un message (`gap-3`, cf.
+ * ChatroomMessageBubble) : le texte se saisit avec le même éditeur que le
+ * composeur, il doit se lire de la même façon.
+ */
 function CalloutMarkdown({ children, className }: { children: string; className?: string }) {
   return (
-    <div className={cn("text-sm leading-relaxed text-foreground [&>*:last-child]:mb-0", className)}>
+    <div className={cn("flex flex-col gap-3 text-sm leading-relaxed text-foreground", className)}>
       <ReactMarkdown
         skipHtml
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
-          p: ({ children }) => <p className="mb-1">{children}</p>,
+          p: ({ children }) => <p>{children}</p>,
           strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
-          ul: ({ children }) => <ul className="list-disc pl-4 mb-1 space-y-0.5">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal pl-4 mb-1 space-y-0.5">{children}</ol>,
+          ul: ({ children }) => <ul className="list-disc pl-4 space-y-0.5">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-4 space-y-0.5">{children}</ol>,
           li: ({ children }) => <li>{children}</li>,
           code: ({ children }) => <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{children}</code>,
-          blockquote: ({ children }) => <blockquote className="border-l-2 border-border pl-3 italic opacity-70 mb-1">{children}</blockquote>,
+          blockquote: ({ children }) => <blockquote className="border-l-2 border-border pl-3 italic opacity-70">{children}</blockquote>,
           a: ({ href, children }) => {
             const safe = href && /^https?:\/\//i.test(href) ? href : href?.startsWith("/") ? href : "#";
             return <a href={safe} className="underline underline-offset-2 hover:opacity-80" target="_blank" rel="noopener noreferrer">{children}</a>;
           },
-          h1: ({ children }) => <p className="font-bold mb-1">{children}</p>,
-          h2: ({ children }) => <p className="font-bold mb-1">{children}</p>,
-          h3: ({ children }) => <p className="font-semibold mb-1">{children}</p>,
+          h1: ({ children }) => <p className="font-bold">{children}</p>,
+          h2: ({ children }) => <p className="font-bold">{children}</p>,
+          h3: ({ children }) => <p className="font-semibold">{children}</p>,
         }}
       >
         {children}
@@ -491,14 +496,42 @@ export function CalloutDialog({
               {/* Texte */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">{t("callout.contentLabel")}</Label>
-                <Textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder={t("callout.contentPlaceholder")}
-                  rows={3}
-                  className="max-h-60 resize-none overflow-y-auto"
-                  onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSend(); }}
-                />
+                {/* Même éditeur que le composeur, et mêmes retours que son
+                    Maj+Entrée : un premier retour fait un saut de ligne, un
+                    second ouvre un nouveau paragraphe. Le texte s'enregistre
+                    comme un message (paragraphes séparés par une ligne vide).
+                    Ctrl/⌘+Entrée insère l'encadré. */}
+                <div
+                  className="rounded-md border border-input bg-transparent px-3 py-2 shadow-2xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
+                  onKeyDownCapture={(e) => {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSend();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // L'éditeur a déjà traité un second retour (nouveau
+                    // paragraphe) : il a alors empêché le comportement natif.
+                    // Pour un premier retour, le navigateur couperait le bloc
+                    // (Entrée seule) au lieu d'insérer un saut de ligne comme
+                    // Maj+Entrée : on insère ce saut nous-mêmes.
+                    if (e.key !== "Enter" || e.defaultPrevented || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+                    e.preventDefault();
+                    document.execCommand("insertLineBreak");
+                  }}
+                  data-testid="callout-content-editor"
+                >
+                  <ParagraphBlockEditor
+                    value={text}
+                    onChange={setText}
+                    placeholder={t("callout.contentPlaceholder")}
+                    submitOnEnter={false}
+                    formatting
+                    className="w-full text-sm"
+                    wrapperClassName="min-h-16 max-h-60"
+                  />
+                </div>
               </div>
 
               {/* Icône */}

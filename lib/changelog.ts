@@ -45,6 +45,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-17",
+    category: "Interface",
+    area: "Salons",
+    text: "Le contenu d’un encadré se rédige comme un message : un retour fait un saut de ligne, un second ouvre un nouveau paragraphe, avec la même barre de mise en forme. Ses paragraphes s’affichent aussi espacés que ceux d’un message.",
+  },
+  {
+    date: "2026-11-17",
+    category: "Correctif",
+    area: "Salons",
+    text: "Supprimer un message, même ancien, ne fait plus disparaître l’avatar, l’heure et l’aperçu du dernier message dans la liste des salons.",
+  },
+  {
+    date: "2026-11-17",
     category: "Correctif",
     area: "Salons",
     text: "La fenêtre de l’encadré ne déborde plus de l’écran avec un long texte : l’aperçu et le formulaire défilent chacun de leur côté, et les boutons restent visibles.",
