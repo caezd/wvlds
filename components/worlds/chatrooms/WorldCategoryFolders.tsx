@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -68,47 +68,33 @@ export function WorldCategoryFolders({
   });
 
 
-  const reconnectEpoch = useReconnectEpoch();
   const hasServerCategories = initialCategories !== undefined;
 
-  useEffect(() => {
+  const load = async () => {
     const supabase = createClient();
+    const [{ data: cats }, { data: rooms }] = await Promise.all([
+      supabase
+        .from("chatroom_categories")
+        .select("id, title, description, banner_url, icon_url, position")
+        .eq("world_id", worldId)
+        .order("position"),
+      supabase.from("chatrooms").select("category_id").eq("world_id", worldId),
+    ]);
+    setCategories((cats as Category[] | null) ?? []);
+    setCounts(countByCategory((rooms as { category_id: string | null }[] | null) ?? []));
+  };
 
-    const load = async () => {
-      const [{ data: cats }, { data: rooms }] = await Promise.all([
-        supabase
-          .from("chatroom_categories")
-          .select("id, title, description, banner_url, icon_url, position")
-          .eq("world_id", worldId)
-          .order("position"),
-        supabase.from("chatrooms").select("category_id").eq("world_id", worldId),
-      ]);
-      setCategories((cats as Category[] | null) ?? []);
-      setCounts(countByCategory((rooms as { category_id: string | null }[] | null) ?? []));
-    };
-
-    // Pas de chargement au montage quand le serveur a déjà fourni les données :
-    // `load` ne sert plus qu'à rafraîchir sur événement Realtime.
+  // Pas de chargement au montage quand le serveur a déjà fourni les données :
+  // `load` ne sert plus qu'à rafraîchir sur avis du canal du monde.
+  useEffect(() => {
     if (!hasServerCategories) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, hasServerCategories]);
 
-    const channel = supabase
-      .channel(`world_category_folders:${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
-        () => void load(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "chatroom_categories", filter: `world_id=eq.${worldId}` },
-        () => void load(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [worldId, reconnectEpoch, hasServerCategories]);
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub.
+  useTopic(topic.world(worldId), ({ event }) => {
+    if (event === "chatroom" || event === "category") void load();
+  });
 
   if (categories.length === 0) return null;
 

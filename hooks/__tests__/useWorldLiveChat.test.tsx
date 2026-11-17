@@ -22,6 +22,7 @@ vi.mock("@/components/providers/PresenceProvider", () => ({
 import { useWorldLiveChat, mergeMessage, type LiveChatMessage } from "@/hooks/useWorldLiveChat";
 import { createClient } from "@/lib/supabase/client";
 import { __resetRealtimeChannels } from "@/lib/realtimeChannel";
+import { __resetRealtimeHub } from "@/lib/realtimeHub";
 
 const row = (id: string, user_id: string, created_at: string, username: string | null = user_id) => ({
   id,
@@ -39,16 +40,15 @@ function setup(results: QueryResult[], worldId: string | null = "w1") {
   return { mock, ...view };
 }
 
-const isInsert = (h: { type: string; config: Record<string, unknown> }) =>
-  h.type === "postgres_changes" && h.config.event === "INSERT";
-const isDelete = (h: { type: string; config: Record<string, unknown> }) =>
-  h.type === "postgres_changes" && h.config.event === "DELETE";
+const isLive = (h: { type: string; config: Record<string, unknown> }) =>
+  h.type === "broadcast" && h.config.event === "*";
 const isSync = (h: { type: string; config: Record<string, unknown> }) =>
   h.type === "presence" && h.config.event === "sync";
 
 beforeEach(() => {
   vi.clearAllMocks();
   __resetRealtimeChannels();
+  __resetRealtimeHub();
   presenceMock.appearOffline = false;
 });
 
@@ -72,9 +72,10 @@ describe("useWorldLiveChat", () => {
 
   it("ajoute un message reçu en direct et retrouve son auteur inconnu", async () => {
     const { result, mock } = setup([{ data: [] }, { data: { username: "carol", avatar_url: null } }]);
-    await waitFor(() => expect(mock.channelNamed("world-live:w1")).toBeDefined());
-    const ch = mock.channelNamed("world-live:w1")!;
-    act(() => ch.emit(isInsert, { new: row("c", "u3", "2026-11-09T10:02:00Z", null) }));
+    // Les messages arrivent par le canal privé du monde (migration 214).
+    await waitFor(() => expect(mock.channelNamed("world:w1")).toBeDefined());
+    const ch = mock.channelNamed("world:w1")!;
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", record: row("c", "u3", "2026-11-09T10:02:00Z", null) } }));
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
     expect(result.current.messages[0].author?.username).toBe("carol");
   });
@@ -82,8 +83,8 @@ describe("useWorldLiveChat", () => {
   it("retire un message effacé", async () => {
     const { result, mock } = setup([{ data: [row("a", "u1", "2026-11-09T10:00:00Z")] }]);
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
-    const ch = mock.channelNamed("world-live:w1")!;
-    act(() => ch.emit(isDelete, { old: { id: "a" } }));
+    const ch = mock.channelNamed("world:w1")!;
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "DELETE", id: "a" } }));
     expect(result.current.messages).toHaveLength(0);
   });
 
@@ -112,7 +113,7 @@ describe("useWorldLiveChat", () => {
     expect(res).toBe("ok");
     const insertBuilder = mock.from.mock.results[1].value as { insert: ReturnType<typeof vi.fn> };
     expect(insertBuilder.insert).toHaveBeenCalledWith({ world_id: "w1", user_id: "me", content: "salut" });
-    act(() => mock.channelNamed("world-live:w1")!.emit(isInsert, { new: sent }));
+    act(() => mock.channelNamed("world:w1")!.emit(isLive, { event: "live", payload: { op: "INSERT", record: sent } }));
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
   });
 

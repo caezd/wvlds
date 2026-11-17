@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight, FileText } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { relativeTime } from "@/lib/relativeTime";
@@ -37,7 +37,12 @@ export function WorldWikiShortcutsWidget({
   const locale = useLocale();
   const [pages, setPages] = useState<WikiPage[]>(initialPages ?? []);
   const hasServerData = initialPages !== undefined;
-  const reconnectEpoch = useReconnectEpoch();
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub : un
+  // avis `wiki_page` relance le chargement ci-dessous.
+  const [rev, setRev] = useState(0);
+  useTopic(topic.world(worldId), ({ event }) => {
+    if (event === "wiki_page") setRev((n) => n + 1);
+  });
 
   useEffect(() => {
     const supabase = createClient();
@@ -54,21 +59,8 @@ export function WorldWikiShortcutsWidget({
     };
 
     // Le serveur a déjà fourni la liste : `load` ne sert plus qu'au Realtime.
-    if (!hasServerData) void load();
-
-    const channel = supabase
-      .channel(`world_wiki_shortcuts:${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "world_wiki_pages", filter: `world_id=eq.${worldId}` },
-        () => void load(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [worldId, reconnectEpoch, limit, hasServerData]);
+    if (!hasServerData || rev > 0) void load();
+  }, [worldId, limit, hasServerData, rev]);
 
   if (pages.length === 0) return null;
 

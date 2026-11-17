@@ -231,15 +231,18 @@ describe("NotificationsProvider — realtime UPDATE", () => {
         });
 
         // Récupérer le canal notifs
-        const notifChannel = mock.channels.find((c) => c.name === "notifs:u1");
+        const notifChannel = mock.channels.find((c) => c.name === "msgs:u1");
         expect(notifChannel).toBeDefined();
 
         // Simuler que le provider retire la notif du state (comme archiveNotif le fait)
         // puis qu'un événement UPDATE Realtime arrive avec archived_at défini
         act(() => {
             notifChannel!.emit(
-                (h) => h.type === "postgres_changes" && (h.config as { event?: string }).event === "UPDATE",
-                { new: { ...BASE_NOTIF, archived_at: new Date().toISOString() } },
+
+                h => h.type === "broadcast",
+
+                { event: "notification", payload: avisNotif("UPDATE", { ...BASE_NOTIF, archived_at: new Date().toISOString() }) },
+
             );
         });
 
@@ -263,7 +266,7 @@ describe("NotificationsProvider — realtime UPDATE", () => {
             expect(screen.getByTestId("notif-n1")).toBeInTheDocument();
         });
 
-        const notifChannel = mock.channels.find((c) => c.name === "notifs:u1");
+        const notifChannel = mock.channels.find((c) => c.name === "msgs:u1");
 
         const updatedNotif: AppNotification = {
             ...BASE_NOTIF,
@@ -273,8 +276,11 @@ describe("NotificationsProvider — realtime UPDATE", () => {
 
         act(() => {
             notifChannel!.emit(
-                (h) => h.type === "postgres_changes" && (h.config as { event?: string }).event === "UPDATE",
-                { new: updatedNotif },
+
+                h => h.type === "broadcast",
+
+                { event: "notification", payload: avisNotif("UPDATE", updatedNotif) },
+
             );
         });
 
@@ -293,14 +299,17 @@ describe("NotificationsProvider — realtime UPDATE", () => {
             expect(screen.getByTestId("notif-n1")).toBeInTheDocument();
         });
 
-        const notifChannel = mock.channels.find((c) => c.name === "notifs:u1");
+        const notifChannel = mock.channels.find((c) => c.name === "msgs:u1");
 
         // Émettre un UPDATE avec archived_at défini (scénario du bug : bouton × déclenche
         // un UPDATE en DB qui revenait via realtime et réinsérait la notification)
         act(() => {
             notifChannel!.emit(
-                (h) => h.type === "postgres_changes" && (h.config as { event?: string }).event === "UPDATE",
-                { new: { ...BASE_NOTIF, archived_at: "2026-01-01T00:00:00Z" } },
+
+                h => h.type === "broadcast",
+
+                { event: "notification", payload: avisNotif("UPDATE", { ...BASE_NOTIF, archived_at: "2026-01-01T00:00:00Z" }) },
+
             );
         });
 
@@ -405,14 +414,17 @@ describe("Realtime INSERT — notification pour le chatroom actif", () => {
             screen.getByTestId("activate-c1").click();
         });
 
-        const notifChannel = mock.channels.find(c => c.name === "notifs:u1");
+        const notifChannel = mock.channels.find(c => c.name === "msgs:u1");
         expect(notifChannel).toBeDefined();
 
         // Arrivée d'une notification pour c1 (chatroom actif)
         await act(async () => {
             notifChannel!.emit(
-                h => h.type === "postgres_changes" && (h.config as { event?: string }).event === "INSERT",
-                { new: { id: "notif-incoming", chat_id: "c1", recipient_id: "u1" } },
+
+                h => h.type === "broadcast",
+
+                { event: "notification", payload: avisNotif("INSERT", { id: "notif-incoming", chat_id: "c1", recipient_id: "u1" }) },
+
             );
         });
 
@@ -451,14 +463,17 @@ describe("Realtime INSERT — notification pour le chatroom actif", () => {
             screen.getByTestId("activate-c1").click();
         });
 
-        const notifChannel = mock.channels.find(c => c.name === "notifs:u1");
+        const notifChannel = mock.channels.find(c => c.name === "msgs:u1");
         expect(notifChannel).toBeDefined();
 
         // Notification pour c2 (pas c1)
         await act(async () => {
             notifChannel!.emit(
-                h => h.type === "postgres_changes" && (h.config as { event?: string }).event === "INSERT",
-                { new: { id: "notif-other", chat_id: "c2", recipient_id: "u1" } },
+
+                h => h.type === "broadcast",
+
+                { event: "notification", payload: avisNotif("INSERT", { id: "notif-other", chat_id: "c2", recipient_id: "u1" }) },
+
             );
         });
 
@@ -514,13 +529,22 @@ function setupUnreads(shell: Partial<AppShellResult> = UNREAD_SHELL) {
     return mock;
 }
 
+/** Avis `notification` du canal personnel (migration 214), à partir de la ligne. */
+function avisNotif(op: string, row: { id: string; chat_id?: string | null; archived_at?: string | null; [colonne: string]: unknown }) {
+    return { op, id: row.id, chat_id: row.chat_id ?? null, archived: !!row.archived_at };
+}
+
+/** Le canal personnel écoute tous les événements (lib/realtimeHub). */
+const ecoute = (h: { type: string; config: Record<string, unknown> }, event: string) =>
+    h.type === "broadcast" && (h.config.event === event || h.config.event === "*");
+
 /** Avis diffusé par la base (migration 206) sur le canal privé du monde. */
 function emitMessage(mock: SupabaseMock, row: Record<string, unknown>, topic = `world-msgs:${row.world_id}`) {
     const msgChannel = mock.channels.find(c => c.name === topic);
     expect(msgChannel).toBeDefined();
     act(() => {
         msgChannel!.emit(
-            h => h.type === "broadcast" && (h.config as { event?: string }).event === "message",
+            h => ecoute(h, "message"),
             { type: "broadcast", event: "message", payload: row },
         );
     });
@@ -855,7 +879,7 @@ describe("NotificationsProvider — markWorldRead", () => {
 // ── Realtime : cleanup et reconnexion ─────────────────────────────────────────
 
 describe("NotificationsProvider — cleanup et reconnexion", () => {
-    it("supprime les canaux msgs et notifs au démontage", async () => {
+    it("supprime le canal personnel au démontage (messages et notifications y passent)", async () => {
         const mock = createSupabaseMock({ user: { id: "u1" } });
         mockAppShell(mock);
         vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -868,18 +892,15 @@ describe("NotificationsProvider — cleanup et reconnexion", () => {
 
         await waitFor(() => {
             expect(mock.channelNamed("msgs:u1")).toBeDefined();
-            expect(mock.channelNamed("notifs:u1")).toBeDefined();
         });
         const msgCh = mock.channelNamed("msgs:u1")!;
-        const notifCh = mock.channelNamed("notifs:u1")!;
 
         unmount();
 
         expect(mock.removeChannel).toHaveBeenCalledWith(msgCh);
-        expect(mock.removeChannel).toHaveBeenCalledWith(notifCh);
     });
 
-    it("recrée les canaux msgs et notifs après un retour de connexion réseau", async () => {
+    it("recrée le canal personnel après un retour de connexion réseau", async () => {
         const mock = createSupabaseMock({ user: { id: "u1" } });
         mockAppShell(mock);
         vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -892,10 +913,8 @@ describe("NotificationsProvider — cleanup et reconnexion", () => {
 
         await waitFor(() => {
             expect(mock.channelNamed("msgs:u1")).toBeDefined();
-            expect(mock.channelNamed("notifs:u1")).toBeDefined();
         });
         const oldMsgCh = mock.channelNamed("msgs:u1")!;
-        const oldNotifCh = mock.channelNamed("notifs:u1")!;
 
         await act(async () => {
             window.dispatchEvent(new Event("online"));
@@ -903,15 +922,13 @@ describe("NotificationsProvider — cleanup et reconnexion", () => {
 
         await waitFor(() => {
             expect(mock.removeChannel).toHaveBeenCalledWith(oldMsgCh);
-            expect(mock.removeChannel).toHaveBeenCalledWith(oldNotifCh);
         });
 
         const msgChannels = mock.channels.filter(c => c.name === "msgs:u1");
-        const notifChannels = mock.channels.filter(c => c.name === "notifs:u1");
         expect(msgChannels).toHaveLength(2);
-        expect(notifChannels).toHaveLength(2);
+        // Plus de canal `notifs:` : les notifications passent par le canal personnel.
+        expect(mock.channelNamed("notifs:u1")).toBeUndefined();
         expect(msgChannels[1]).not.toBe(oldMsgCh);
-        expect(notifChannels[1]).not.toBe(oldNotifCh);
     });
 });
 
@@ -995,7 +1012,7 @@ describe("Adhésion et retrait d'un monde (migration 208)", () => {
         const perso = mock.channelNamed("msgs:u1")!;
         act(() => {
             perso.emit(
-                h => h.type === "broadcast" && (h.config as { event?: string }).event === "membership",
+                h => ecoute(h, "membership"),
                 { type: "broadcast", event: "membership", payload },
             );
         });
@@ -1051,7 +1068,7 @@ describe("Notes privées d'un salon (migration 212)", () => {
 
         act(() => {
             mock.channelNamed("msgs:u1")!.emit(
-                h => h.type === "broadcast" && (h.config as { event?: string }).event === "room_message",
+                h => ecoute(h, "room_message"),
                 { type: "broadcast", event: "room_message", payload: { op: "INSERT", id: 12, chat_id: "c1", author_id: "x" } },
             );
         });

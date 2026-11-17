@@ -17,6 +17,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
 import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { subscribeTopic, topic } from "@/lib/realtimeHub";
 import { emitMembershipChange } from "@/lib/membershipEvents";
 import { emitRoomMessage, type RoomMessageEvent } from "@/lib/roomMessageEvents";
 
@@ -519,79 +520,64 @@ export default function NotificationsProvider({ children }: { children: React.Re
                 }
                 emitMembershipChange({ worldId: wid, change: avis.change });
             };
-            enregistrer(openRealtimeChannel(
-                supabase,
-                channel.userMessages(userId),
-                (ch) => ch
-                    .on("broadcast", { event: "message" }, surNouveauMessage)
-                    .on("broadcast", { event: "membership" }, surAdhesion)
-                    // Notes privées d'un salon (migration 212) : relayées au
-                    // salon ouvert, jamais annoncées sur le canal du salon.
-                    .on("broadcast", { event: "room_message" }, (msg: { payload?: Record<string, unknown> }) => {
-                        const avis = (msg.payload ?? {}) as Partial<RoomMessageEvent>;
-                        if (!avis.chat_id || typeof avis.id !== "number" || !avis.op) return;
-                        emitRoomMessage({ op: avis.op, id: avis.id, chat_id: avis.chat_id, author_id: avis.author_id ?? null });
-                    })
-                    .subscribe(),
-                prive,
-            ));
-
-            // Realtime : nouvelles notifications + mises à jour agrégées (chatroom_reply)
-            const fermerNotif = openRealtimeChannel(supabase, channel.userNotifs(userId), (notifCh) => notifCh
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "INSERT",
-                        schema: "public",
-                        table: TABLE.NOTIFICATIONS,
-                        filter: `recipient_id=eq.${userId}`,
-                    },
-                    async (payload: { new: Record<string, unknown> }) => {
-                        const incoming = payload.new as { id: string; chat_id: string | null };
-                        // Si la notification concerne le chatroom actuellement ouvert,
-                        // on l'archive immédiatement sans l'afficher.
-                        if (incoming.chat_id && activeChatRef.current === incoming.chat_id) {
-                            void archiveNotifs([incoming.id]);
+            // Canal personnel `msgs:<user>` (migrations 206, 208, 212, 214),
+            // partagé par lib/realtimeHub avec DmsProvider (messages privés).
+            const surNotification = async (avis: { op?: string; id?: string; chat_id?: string | null; archived?: boolean }) => {
+                if (!avis.id) return;
+                const id = avis.id;
+                if (avis.op === "INSERT") {
+                    // Si la notification concerne le chatroom actuellement ouvert,
+                    // on l'archive immédiatement sans l'afficher.
+                    if (avis.chat_id && activeChatRef.current === avis.chat_id) {
+                        void archiveNotifs([id]);
+                        return;
+                    }
+                } else if (avis.archived) {
+                    // Mise à jour agrégée (chatroom_reply) d'une notification
+                    // archivée : rien à remonter.
+                    return;
+                }
+                const { data } = await supabase
+                    .from(TABLE.NOTIFICATIONS)
+                    .select(NOTIF_SELECT)
+                    .eq("id", id)
+                    .single();
+                if (!data) return;
+                if (avis.op === "INSERT") {
+                    setNotifications(prev => {
+                        if (prev.some(n => n.id === data.id)) return prev;
+                        notifOffsetRef.current += 1;
+                        return [data as AppNotification, ...prev];
+                    });
+                } else {
+                    setNotifications(prev =>
+                        [data as AppNotification, ...prev.filter(n => n.id !== id)],
+                    );
+                }
+            };
+            enregistrer(subscribeTopic(topic.user(userId), {
+                onEvent: ({ event, payload }) => {
+                    switch (event) {
+                        case "message":
+                            surNouveauMessage({ payload });
+                            return;
+                        case "membership":
+                            surAdhesion({ payload });
+                            return;
+                        case "room_message": {
+                            // Notes privées d'un salon (migration 212) : relayées au
+                            // salon ouvert, jamais annoncées sur le canal du salon.
+                            const avis = payload as Partial<RoomMessageEvent>;
+                            if (!avis.chat_id || typeof avis.id !== "number" || !avis.op) return;
+                            emitRoomMessage({ op: avis.op, id: avis.id, chat_id: avis.chat_id, author_id: avis.author_id ?? null });
                             return;
                         }
-                        const { data } = await supabase
-                            .from(TABLE.NOTIFICATIONS)
-                            .select(NOTIF_SELECT)
-                            .eq("id", incoming.id)
-                            .single();
-                        if (!data) return;
-                        setNotifications(prev => {
-                            if (prev.some(n => n.id === data.id)) return prev;
-                            notifOffsetRef.current += 1;
-                            return [data as AppNotification, ...prev];
-                        });
-                    },
-                )
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "UPDATE",
-                        schema: "public",
-                        table: TABLE.NOTIFICATIONS,
-                        filter: `recipient_id=eq.${userId}`,
-                    },
-                    async (payload: { new: Record<string, unknown> }) => {
-                        const updated = payload.new as AppNotification;
-                        if (updated.archived_at) return;
-                        const id = updated.id;
-                        const { data } = await supabase
-                            .from(TABLE.NOTIFICATIONS)
-                            .select(NOTIF_SELECT)
-                            .eq("id", id)
-                            .single();
-                        if (!data) return;
-                        setNotifications(prev =>
-                            [data as AppNotification, ...prev.filter(n => n.id !== id)],
-                        );
-                    },
-                )
-                .subscribe());
-            enregistrer(fermerNotif);
+                        case "notification":
+                            void surNotification(payload as Parameters<typeof surNotification>[0]);
+                            return;
+                    }
+                },
+            }));
         })();
 
         return () => {

@@ -96,7 +96,32 @@ vi.mock("@/components/ui/LazyLucideIcon", () => ({
   LazyLucideIcon: () => { iconRenders.count += 1; return null; },
 }));
 
-const CANAL = "w:w1:map";
+// Canal privé du monde (migration 214), partagé par lib/realtimeHub.
+const CANAL = "world:w1";
+
+/**
+ * Diffuse un changement comme le fait la base depuis la migration 214 : avis
+ * `map` (ligne entière, ou id pour un retrait) ou `persona` (id seul), à
+ * partir d'un écho au format historique `{ eventType, new, old }`.
+ */
+function diffuserCarte(
+  mock: SupabaseMock,
+  table: string,
+  echo: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> },
+) {
+  const payload =
+    table === "personas"
+      ? { event: "persona", payload: { op: echo.eventType, id: echo.new?.id ?? echo.old?.id } }
+      : {
+          event: "map",
+          payload: {
+            table,
+            op: echo.eventType,
+            ...(echo.eventType === "DELETE" ? { id: echo.old?.id } : { record: echo.new }),
+          },
+        };
+  mock.channelNamed(CANAL)?.emit((h) => h.type === "broadcast", payload);
+}
 
 type CarteInitiale = {
   maps: ReturnType<typeof makeMap>[];
@@ -135,13 +160,10 @@ function monter(
   };
 }
 
-/** Déclenche un événement Postgres sur la table des épingles. */
-function emettre(mock: SupabaseMock, payload: unknown) {
+/** Diffuse un changement d'épingle sur le canal du monde. */
+function emettre(mock: SupabaseMock, payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }) {
   act(() => {
-    mock.channelNamed(CANAL)?.emit(
-      (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "world_map_pins",
-      payload,
-    );
+    diffuserCarte(mock, "world_map_pins", payload);
   });
 }
 
@@ -780,10 +802,7 @@ describe("WorldMap — les marqueurs ne se re-rendent pas pour rien", () => {
     // Un changement qui ne concerne aucune épingle : le libellé de la carte,
     // mis à jour par le temps réel.
     act(() => {
-      mock.channelNamed(CANAL)?.emit(
-        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "world_maps",
-        { eventType: "UPDATE", new: makeMap({ label: "Hadea, renommée" }) },
-      );
+      diffuserCarte(mock, "world_maps", { eventType: "UPDATE", new: makeMap({ label: "Hadea, renommée" }) });
     });
 
     expect(screen.getByText("Hadea, renommée")).toBeInTheDocument();
@@ -1126,12 +1145,9 @@ describe("WorldMap — les régions", () => {
 
   it("voit arriver, changer et partir une région par le canal", () => {
     const { mock } = monter({ maps: [makeMap()], pins: [] });
-    const emettreRegion = (payload: unknown) =>
+    const emettreRegion = (payload: Parameters<typeof diffuserCarte>[2]) =>
       act(() => {
-        mock.channelNamed(CANAL)?.emit(
-          (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "world_map_regions",
-          payload,
-        );
+        diffuserCarte(mock, "world_map_regions", payload);
       });
 
     emettreRegion({ eventType: "INSERT", new: makeRegion() });
@@ -1471,10 +1487,7 @@ describe("WorldMap — qui se trouve où", () => {
     const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
 
     act(() => {
-      mock.channelNamed(CANAL)?.emit(
-        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
-        { eventType: "UPDATE", new: { id: "a" } },
-      );
+      diffuserCarte(mock, "personas", { eventType: "UPDATE", new: { id: "a" } });
     });
 
     await waitFor(() => expect(screen.getByLabelText("2 sur place")).toBeInTheDocument());
@@ -1488,10 +1501,7 @@ describe("WorldMap — qui se trouve où", () => {
 
     act(() => {
       for (let i = 0; i < 3; i++) {
-        mock.channelNamed(CANAL)?.emit(
-          (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
-          { eventType: "UPDATE", new: { id: "a" } },
-        );
+        diffuserCarte(mock, "personas", { eventType: "UPDATE", new: { id: "a" } });
       }
     });
 

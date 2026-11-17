@@ -46,6 +46,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-17",
     category: "Performance",
+    text: "Tout le temps réel passe désormais par des canaux privés partagés entre les écrans : moins de travail pour le serveur, et la liste des salons suit enfin les renommages, les suppressions et le premier message d’un salon sans recharger la page.",
+  },
+  {
+    date: "2026-11-17",
+    category: "Performance",
     area: "Monde",
     text: "Passer de l’accueil d’un monde à l’un de ses salons, et retour, ne recharge plus la barre latérale : elle reste en place, avec sa position de défilement, et la page s’affiche plus vite. En changeant de monde, l’ancienne liste de salons laisse place à un squelette le temps d’afficher la nouvelle.",
   },

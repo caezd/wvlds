@@ -119,12 +119,12 @@ function setup() {
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("DmsProvider — cleanup et reconnexion (canal des conversations)", () => {
+describe("DmsProvider — cleanup et reconnexion (canal personnel, migration 214)", () => {
     it("supprime le canal des conversations au démontage", async () => {
         const { mock, unmount } = setup();
 
-        await waitFor(() => expect(mock.channelNamed("dm:u1:conversations")).toBeDefined());
-        const ch = mock.channelNamed("dm:u1:conversations")!;
+        await waitFor(() => expect(mock.channelNamed("msgs:u1")).toBeDefined());
+        const ch = mock.channelNamed("msgs:u1")!;
 
         unmount();
 
@@ -134,15 +134,15 @@ describe("DmsProvider — cleanup et reconnexion (canal des conversations)", () 
     it("recrée le canal des conversations après un retour de connexion réseau", async () => {
         const { mock } = setup();
 
-        await waitFor(() => expect(mock.channelNamed("dm:u1:conversations")).toBeDefined());
-        const oldCh = mock.channelNamed("dm:u1:conversations")!;
+        await waitFor(() => expect(mock.channelNamed("msgs:u1")).toBeDefined());
+        const oldCh = mock.channelNamed("msgs:u1")!;
 
         await act(async () => {
             window.dispatchEvent(new Event("online"));
         });
 
         await waitFor(() => expect(mock.removeChannel).toHaveBeenCalledWith(oldCh));
-        const named = mock.channels.filter(c => c.name === "dm:u1:conversations");
+        const named = mock.channels.filter(c => c.name === "msgs:u1");
         expect(named).toHaveLength(2);
         expect(named[1]).not.toBe(oldCh);
     });
@@ -289,11 +289,9 @@ function setupWithConv1() {
 }
 
 function emitDmInsert(mock: SupabaseMock, msg: { id: number; conversation_id: string; author_id: string; content: string; created_at: string }) {
-    const convCh = mock.channelNamed("dm:u1:conversations")!;
-    convCh.emit(
-        (h) => h.type === "postgres_changes" && (h.config as { event?: string }).event === "INSERT",
-        { new: msg },
-    );
+    // Canal personnel `msgs:<user>` (migration 214) : la ligne entière, aux deux interlocuteurs.
+    const convCh = mock.channelNamed("msgs:u1")!;
+    convCh.emit((h) => h.type === "broadcast", { event: "dm", payload: { op: "INSERT", record: msg } });
 }
 
 describe("DmsProvider — canal des conversations (mise à jour incrémentale)", () => {
@@ -556,12 +554,12 @@ describe("DmsProvider — édition et suppression de message", () => {
             screen.getByTestId("open").click();
         });
         await waitFor(() => expect(mock.channelNamed("dm:conv1:messages")).toBeDefined());
-        const msgCh = mock.channelNamed("dm:conv1:messages")!;
+        const perso = mock.channelNamed("msgs:u1")!;
 
         act(() => {
-            msgCh.emit(
-                (h) => h.type === "postgres_changes" && (h.config as { event?: string }).event === "UPDATE",
-                { new: { ...MSG1, content: "édité par l'autre" } },
+            perso.emit(
+                (h) => h.type === "broadcast",
+                { event: "dm", payload: { op: "UPDATE", record: { ...MSG1, content: "édité par l'autre" } } },
             );
         });
 
@@ -575,12 +573,12 @@ describe("DmsProvider — édition et suppression de message", () => {
             screen.getByTestId("open").click();
         });
         await waitFor(() => expect(screen.getByTestId("msg-count").textContent).toBe("1"));
-        const msgCh = mock.channelNamed("dm:conv1:messages")!;
+        const perso = mock.channelNamed("msgs:u1")!;
 
         act(() => {
-            msgCh.emit(
-                (h) => h.type === "postgres_changes" && (h.config as { event?: string }).event === "DELETE",
-                { old: { id: 501 } },
+            perso.emit(
+                (h) => h.type === "broadcast",
+                { event: "dm", payload: { op: "DELETE", id: 501, conversation_id: MSG1.conversation_id } },
             );
         });
 

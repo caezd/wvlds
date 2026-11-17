@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { subscribeTopic, topic } from "@/lib/realtimeHub";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 
 /**
@@ -128,83 +127,85 @@ export function patchWorldRoom(
   });
 }
 
-/** Ouvre LE canal Realtime du monde — un seul, quel que soit le nombre d'instances. */
+/**
+ * Écoute le canal privé du monde (`world:<id>`, migration 214), partagé avec
+ * les autres écrans du monde par lib/realtimeHub — une seule souscription,
+ * quel que soit le nombre d'instances de la liste.
+ *
+ * `chatroom` : salon créé, renommé (titre, icône, catégorie) ou supprimé.
+ * `summary`  : dernier message d'un salon (tri et avatar du dernier auteur).
+ */
 function ouvrirCanal(worldId: string): () => void {
-  const supabase = createClient();
-  // Nom stable, ouverture sérialisée : c'est le mécanisme commun à tous les
-  // canaux du dépôt. Une réouverture attend la fermeture précédente, sans quoi
-  // `channel()` rendrait le canal encore joint et `.on()` lèverait.
-  return openRealtimeChannel(supabase, `sidebar-rooms:${worldId}`, (ch) =>
-    ch
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
-      (payload: { new: Record<string, unknown> }) => {
-        const r = payload.new as Pick<
-          WorldRoom,
-          "id" | "title" | "name" | "icon_url" | "last_message_at" | "category_id"
-        >;
-        majRooms(worldId, (prev) => {
-          if (prev.some((x) => x.id === r.id)) return prev;
-          return trier([
-            ...prev,
-            {
+  return subscribeTopic(topic.world(worldId), {
+    onEvent: ({ event, payload }) => {
+      if (event === "chatroom") surSalon(worldId, payload);
+      else if (event === "summary") surResume(worldId, payload);
+    },
+  });
+}
+
+type AvisSalon = Partial<Pick<WorldRoom, "id" | "title" | "name" | "icon_url" | "category_id">> & { op?: string };
+
+function surSalon(worldId: string, avis: Record<string, unknown>): void {
+  const r = avis as AvisSalon;
+  if (!r.id) return;
+  const id = r.id;
+  if (r.op === "DELETE") {
+    majRooms(worldId, (prev) => (prev.some((x) => x.id === id) ? prev.filter((x) => x.id !== id) : prev));
+    return;
+  }
+  const champs = {
+    title: r.title ?? null,
+    name: r.name ?? null,
+    icon_url: r.icon_url ?? null,
+    category_id: r.category_id ?? null,
+  };
+  majRooms(worldId, (prev) => {
+    if (prev.some((x) => x.id === id)) return prev; // corrigé ci-dessous
+    if (r.op !== "INSERT") return prev;
+    return trier([
+      ...prev,
+      {
+        id,
+        ...champs,
+        last_message_at: null,
+        unread_count: 0,
+        last_poster_avatar_url: null,
+        last_poster_id: null,
+        participant_count: 0,
+        second_poster_avatar_url: null,
+      },
+    ]);
+  });
+  patchWorldRoom(worldId, id, champs);
+}
+
+function surResume(worldId: string, avis: Record<string, unknown>): void {
+  const s = avis as {
+    op?: string;
+    chat_id?: string;
+    last_message_at?: string | null;
+    last_message_author_id?: string | null;
+    last_message_persona_avatar_url?: string | null;
+  };
+  const chatId = s.chat_id;
+  if (!chatId) return;
+  majRooms(worldId, (prev) => {
+    if (!prev.some((r) => r.id === chatId)) return prev;
+    const suivant = prev.map((r) =>
+      r.id !== chatId
+        ? r
+        : s.op === "DELETE"
+          ? { ...r, last_poster_id: null, last_poster_avatar_url: null, last_message_at: null }
+          : {
               ...r,
-              unread_count: 0,
-              last_poster_avatar_url: null,
-              last_poster_id: null,
-              participant_count: 0,
-              second_poster_avatar_url: null,
+              last_message_at: s.last_message_at ?? null,
+              last_poster_id: s.last_message_author_id ?? null,
+              last_poster_avatar_url: s.last_message_persona_avatar_url ?? null,
             },
-          ]);
-        });
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "chatroom_summaries" },
-      (payload: { new: Record<string, unknown> }) => {
-        const s = payload.new as {
-          chat_id: string;
-          last_message_at: string | null;
-          last_message_author_id: string | null;
-          last_message_persona_avatar_url: string | null;
-        };
-        majRooms(worldId, (prev) => {
-          if (!prev.some((r) => r.id === s.chat_id)) return prev;
-          return trier(
-            prev.map((r) =>
-              r.id === s.chat_id
-                ? {
-                    ...r,
-                    last_message_at: s.last_message_at,
-                    last_poster_id: s.last_message_author_id,
-                    last_poster_avatar_url: s.last_message_persona_avatar_url,
-                  }
-                : r,
-            ),
-          );
-        });
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "DELETE", schema: "public", table: "chatroom_summaries" },
-      (payload: { old: Record<string, unknown> }) => {
-        const chatId = (payload.old as { chat_id?: string }).chat_id;
-        if (!chatId) return;
-        majRooms(worldId, (prev) => {
-          if (!prev.some((r) => r.id === chatId)) return prev;
-          return prev.map((r) =>
-            r.id === chatId
-              ? { ...r, last_poster_id: null, last_poster_avatar_url: null, last_message_at: null }
-              : r,
-          );
-        });
-      },
-    )
-      .subscribe(),
-  );
+    );
+    return s.op === "DELETE" ? suivant : trier(suivant);
+  });
 }
 
 /** Prend une référence sur le monde ; rend la fonction de relâchement. */

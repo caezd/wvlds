@@ -17,7 +17,7 @@ import { renderToString } from "react-dom/server";
 type Handler = (payload: unknown) => void;
 
 /** Canaux créés, avec leurs handlers, pour piloter le temps réel depuis le test. */
-const canaux: { topic: string; handlers: { table: string; event: string; handler: Handler }[] }[] = [];
+const canaux: { topic: string; handlers: { type: string; event: string; handler: Handler }[] }[] = [];
 let retires = 0;
 
 /**
@@ -30,22 +30,23 @@ let retires = 0;
 const registre = new Map<string, ReturnType<typeof creerCanal>>();
 
 function creerCanal(topic: string) {
-  const entree = { topic, handlers: [] as { table: string; event: string; handler: Handler }[] };
+  const entree = { topic, handlers: [] as { type: string; event: string; handler: Handler }[] };
   canaux.push(entree);
   let souscrit = false;
   const ch = {
     topic,
-    on(_type: string, cfg: { table: string; event: string }, handler: Handler) {
+    on(type: string, cfg: { event: string }, handler: Handler) {
       if (souscrit) {
         throw new Error(
-          `cannot add \`postgres_changes\` callbacks for realtime:${topic} after \`subscribe()\`.`,
+          `cannot add \`${type}\` callbacks for realtime:${topic} after \`subscribe()\`.`,
         );
       }
-      entree.handlers.push({ table: cfg.table, event: cfg.event, handler });
+      entree.handlers.push({ type, event: cfg.event, handler });
       return ch;
     },
-    subscribe() {
+    subscribe(cb?: (status: string) => void) {
       souscrit = true;
+      cb?.("SUBSCRIBED");
       return ch;
     },
   };
@@ -78,6 +79,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/hooks/useReconnectEpoch", () => ({ useReconnectEpoch: () => 0 }));
 
+import { __resetRealtimeHub } from "@/lib/realtimeHub";
 import {
   useWorldRooms,
   patchWorldRoom,
@@ -102,12 +104,12 @@ function room(id: string, last: string | null): WorldRoom {
   };
 }
 
-/** Déclenche un événement Realtime sur tous les canaux ouverts. */
-function emettre(table: string, event: string, payload: unknown) {
+/** Diffuse un avis du canal privé du monde (migration 214) sur les canaux ouverts. */
+function emettre(event: string, payload: Record<string, unknown>) {
   act(() => {
     for (const c of canaux) {
       for (const h of c.handlers) {
-        if (h.table === table && h.event === event) h.handler(payload);
+        if (h.type === "broadcast" && h.event === "*") h.handler({ event, payload });
       }
     }
   });
@@ -118,6 +120,7 @@ const B = room("b", "2026-01-01T00:00:00Z");
 
 beforeEach(() => {
   __resetWorldRoomsStore();
+  __resetRealtimeHub();
   canaux.length = 0;
   registre.clear();
   retires = 0;
@@ -159,33 +162,27 @@ describe("useWorldRooms", () => {
     const un = renderHook(() => useWorldRooms("w1", [A]));
     const deux = renderHook(() => useWorldRooms("w1", [A]));
 
-    emettre("chatrooms", "INSERT", {
-      new: { id: "c", title: "Nouveau", name: null, icon_url: null,
-             last_message_at: "2026-01-03T00:00:00Z", category_id: null },
-    });
+    emettre("chatroom", { op: "INSERT", id: "c", title: "Nouveau", name: null, icon_url: null, category_id: null });
 
-    expect(un.result.current.map((r) => r.id)).toEqual(["c", "a"]);
-    expect(deux.result.current.map((r) => r.id)).toEqual(["c", "a"]);
+    // Sans message, le nouveau salon se range après ceux qui en ont.
+    expect(un.result.current.map((r) => r.id)).toEqual(["a", "c"]);
+    expect(deux.result.current.map((r) => r.id)).toEqual(["a", "c"]);
   });
 
   it("ignore un salon déjà présent", () => {
     const { result } = renderHook(() => useWorldRooms("w1", [A]));
-    emettre("chatrooms", "INSERT", {
-      new: { id: "a", title: "Doublon", name: null, icon_url: null,
-             last_message_at: "2026-01-02T00:00:00Z", category_id: null },
-    });
+    emettre("chatroom", { op: "INSERT", id: "a", title: A.title, name: null, icon_url: null, category_id: null });
     expect(result.current).toHaveLength(1);
   });
 
   it("remonte le salon dont un message vient d'arriver", () => {
     const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
-    emettre("chatroom_summaries", "UPDATE", {
-      new: {
-        chat_id: "b",
-        last_message_at: "2026-01-09T00:00:00Z",
-        last_message_author_id: "u1",
-        last_message_persona_avatar_url: "/x.webp",
-      },
+    emettre("summary", {
+      op: "UPDATE",
+      chat_id: "b",
+      last_message_at: "2026-01-09T00:00:00Z",
+      last_message_author_id: "u1",
+      last_message_persona_avatar_url: "/x.webp",
     });
     expect(result.current.map((r) => r.id)).toEqual(["b", "a"]);
     expect(result.current[0].last_poster_id).toBe("u1");
@@ -194,10 +191,8 @@ describe("useWorldRooms", () => {
   it("ne notifie pas quand l'événement ne concerne aucun salon connu", () => {
     const { result } = renderHook(() => useWorldRooms("w1", [A]));
     const avant = result.current;
-    emettre("chatroom_summaries", "UPDATE", {
-      new: { chat_id: "inconnu", last_message_at: "2026-02-01T00:00:00Z",
-             last_message_author_id: null, last_message_persona_avatar_url: null },
-    });
+    emettre("summary", { op: "UPDATE", chat_id: "inconnu", last_message_at: "2026-02-01T00:00:00Z",
+                         last_message_author_id: null, last_message_persona_avatar_url: null });
     // Référence inchangée : aucun rendu inutile déclenché.
     expect(result.current).toBe(avant);
   });
@@ -208,12 +203,12 @@ describe("useWorldRooms", () => {
     });
     // Le nom reste stable — c'est l'enchaînement qui est sérialisé.
     expect(canaux).toHaveLength(1);
-    expect(canaux[0].topic).toBe("sidebar-rooms:w1");
+    expect(canaux[0].topic).toBe("world:w1");
 
     act(() => { vue.rerender({ w: "w2" }); });
 
     expect(canaux).toHaveLength(2);
-    expect(canaux[1].topic).toBe("sidebar-rooms:w2");
+    expect(canaux[1].topic).toBe("world:w2");
     expect(retires).toBe(1);
     expect(__openChannelCount()).toBe(1);
   });
@@ -282,5 +277,30 @@ describe("patchWorldRoom", () => {
     act(() => patchWorldRoom("w1", "inconnu", { title: "x" }));
     act(() => patchWorldRoom("w1", "a", { title: A.title }));
     expect(result.current).toBe(avant);
+  });
+});
+
+describe("useWorldRooms — avis du canal du monde", () => {
+  it("renomme un salon annoncé par le canal du monde", () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
+    emettre("chatroom", { op: "UPDATE", id: "a", title: "Renommé", name: null, icon_url: "/i.webp", category_id: "cat" });
+    const a = result.current.find((r) => r.id === "a")!;
+    expect(a.title).toBe("Renommé");
+    expect(a.icon_url).toBe("/i.webp");
+    expect(a.category_id).toBe("cat");
+    expect(a.last_message_at).toBe(A.last_message_at);
+  });
+
+  it("retire un salon supprimé", () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
+    emettre("chatroom", { op: "DELETE", id: "a" });
+    expect(result.current.map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("le premier message d'un salon (résumé créé) le remonte", () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A, room("c", null)]));
+    emettre("summary", { op: "INSERT", chat_id: "c", last_message_at: "2026-03-01T00:00:00Z",
+                         last_message_author_id: "u2", last_message_persona_avatar_url: null });
+    expect(result.current.map((r) => r.id)).toEqual(["c", "a"]);
   });
 });

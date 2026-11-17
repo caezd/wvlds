@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import {
   Drawer,
   DrawerHeader,
@@ -129,17 +128,19 @@ export default function ChatroomStatsSheet({
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
+  latestMessageId = null,
 }: {
   chatId: string;
   initialStats?: ChatroomStatsPayload | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  /** Id du dernier message affiché dans le salon : quand il change, les statistiques se recalculent. */
+  latestMessageId?: number | null;
 }) {
   const tCommon = useTranslations("common");
   const t = useTranslations("chatrooms");
   const supabase = createClient();
-  const reconnectEpoch = useReconnectEpoch();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   function setOpen(v: boolean) {
@@ -175,19 +176,21 @@ export default function ChatroomStatsSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Un nouveau message affiché dans le salon relance le calcul, regroupé par
+  // `scheduleRefetch`. Le salon tient déjà son canal temps réel : la fiche
+  // n'ouvre plus son propre abonnement à `chat_messages`.
+  const dernierVu = useRef(latestMessageId);
   useEffect(() => {
-    if (!open) return;
-    const ch = supabase
-      .channel(`chatroom-stats:${chatId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` }, scheduleRefetch)
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-      if (refetchTimer.current) window.clearTimeout(refetchTimer.current);
-      refetchTimer.current = null;
-    };
+    if (dernierVu.current === latestMessageId) return;
+    dernierVu.current = latestMessageId;
+    if (open) scheduleRefetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, chatId, reconnectEpoch]);
+  }, [latestMessageId, open]);
+
+  useEffect(() => () => {
+    if (refetchTimer.current) window.clearTimeout(refetchTimer.current);
+    refetchTimer.current = null;
+  }, []);
 
   const userRows = useMemo(() => stats?.users ?? [], [stats]);
 

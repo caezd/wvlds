@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { WorldHomeRoom as Room } from "@/types/worlds";
 import Image from "next/image";
 import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import { ChevronRight, MessagesSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
@@ -57,67 +57,31 @@ export function WorldChatroomsGrid({
 
 
   const { roomUnread } = useNotifications();
-  const reconnectEpoch = useReconnectEpoch();
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    const load = async () => {
-      const { data, error } = await supabase.rpc("list_chatrooms_nav", {
-        p_world_id: worldId,
-      });
-      if (!error && data) setRooms(data as Room[]);
-    };
-
-    const channel = supabase
-      .channel(`world_rooms_grid:${worldId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "chatrooms",
-          filter: `world_id=eq.${worldId}`,
-        },
-        () => void load(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "chatroom_summaries" },
-        (payload: { new: Record<string, unknown> }) => {
-          const s = payload.new as {
-            chat_id: string;
-            last_message_at: string | null;
-            last_message_persona_avatar_url: string | null;
-          };
-          setRooms((prev) =>
-            prev.map((r) =>
-              r.id === s.chat_id
-                ? { ...r, last_message_at: s.last_message_at, last_poster_avatar_url: s.last_message_persona_avatar_url }
-                : r,
-            ),
-          );
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "chatroom_summaries" },
-        (payload: { old: Record<string, unknown> }) => {
-          const chatId = (payload.old as { chat_id?: string }).chat_id;
-          if (!chatId) return;
-          setRooms((prev) =>
-            prev.map((r) =>
-              r.id === chatId ? { ...r, last_poster_avatar_url: null, last_message_at: null } : r,
-            ),
-          );
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [worldId, reconnectEpoch]);
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub avec
+  // la barre latérale et les autres écrans du monde.
+  useTopic(topic.world(worldId), ({ event, payload }) => {
+    if (event === "chatroom") {
+      // Créé, renommé, déplacé ou supprimé : la liste se relit en bloc.
+      void createClient()
+        .rpc("list_chatrooms_nav", { p_world_id: worldId })
+        .then(({ data, error }: { data: unknown; error: unknown }) => {
+          if (!error && data) setRooms(data as Room[]);
+        });
+      return;
+    }
+    if (event !== "summary") return;
+    const s = payload as { op?: string; chat_id?: string; last_message_at?: string | null; last_message_persona_avatar_url?: string | null };
+    if (!s.chat_id) return;
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id !== s.chat_id
+          ? r
+          : s.op === "DELETE"
+            ? { ...r, last_poster_avatar_url: null, last_message_at: null }
+            : { ...r, last_message_at: s.last_message_at ?? null, last_poster_avatar_url: s.last_message_persona_avatar_url ?? null },
+      ),
+    );
+  });
 
   const visibleRooms =
     categoryId === undefined || categoryId === null

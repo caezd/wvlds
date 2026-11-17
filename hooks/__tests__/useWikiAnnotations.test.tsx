@@ -183,16 +183,17 @@ describe("useWikiAnnotations", () => {
     expect(result.current.annotations).toEqual([]);
   });
 
-  it("se réabonne aux changements de la page", async () => {
-    const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
+  it("écoute le canal privé de la page et se relit sur un avis d'annotation", async () => {
+    const mock = createSupabaseMock({ results: [{ data: [], error: null }, { data: [], error: null }] });
     renderHook(() => useWikiAnnotations({ ...params, supabase: mock.client as never, enabled: true }));
 
     await waitFor(() => expect(mock.channels.length).toBe(1));
-    expect(mock.channels[0].name).toBe("wiki_annotations:p1");
-    expect(mock.channels[0].handlers[0].config).toMatchObject({
-      table: "world_wiki_page_annotations",
-      filter: "page_id=eq.p1",
+    expect(mock.channels[0].name).toBe("wiki:p1");
+    const lectures = mock.from.mock.calls.length;
+    await act(async () => {
+      mock.channels[0].emit((h) => h.type === "broadcast", { event: "annotation", payload: { op: "INSERT", id: "a1" } });
     });
+    await waitFor(() => expect(mock.from.mock.calls.length).toBeGreaterThan(lectures));
   });
 
   it("n'écrit rien sans utilisateur identifié", async () => {

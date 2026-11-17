@@ -661,7 +661,8 @@ export default function ChatRoomView({
     }
   }, [messages, userId, scrollToBottom]);
 
-  const { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId } = useChatPins(chatId);
+  const { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId, applyPinEvent, reloadPins } = useChatPins(chatId);
+  const pinsJoinedRef = useRef<string | null>(null);
 
   // Messages épinglés situés hors de la fenêtre de pagination chargée (historique
   // trop ancien) : récupérés à part pour que PinBar/PinsSheet affichent bien leur
@@ -812,7 +813,14 @@ export default function ChatRoomView({
     chatId,
     selfId: userId,
     isMessageKnown: (id) => messagesRef.current.some((m) => m.id === id),
-    onSubscribed: () => void resyncDisplayedMessages(),
+    onSubscribed: () => {
+      void resyncDisplayedMessages();
+      // Les épingles sont déjà chargées à l'ouverture du salon : on ne les
+      // relit qu'au RETOUR d'une coupure, pour rattraper celles manquées.
+      if (pinsJoinedRef.current === chatId) void reloadPins();
+      pinsJoinedRef.current = chatId;
+    },
+    onPinChanged: applyPinEvent,
     onCatchUpGap: rechargerDernierePage,
     onTurnChanged: setTurn,
     onChallengeWon: (messageId, badge) =>
@@ -1148,7 +1156,7 @@ export default function ChatRoomView({
                 open={settingsOpen}
                 onOpenChange={setSettingsOpen}
               />
-              <ChatroomStatsSheet chatId={chatId} hideTrigger open={statsOpen} onOpenChange={setStatsOpen} />
+              <ChatroomStatsSheet chatId={chatId} hideTrigger open={statsOpen} onOpenChange={setStatsOpen} latestMessageId={messages.at(-1)?.id ?? null} />
               <PinsSheet
                 open={pinsOpen}
                 onOpenChange={setPinsOpen}

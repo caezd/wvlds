@@ -15,7 +15,6 @@ type Deferred = { resolve: (rows: unknown[]) => void };
 
 /** Requêtes `chat_pins` en attente, indexées par `chat_id`. */
 const pending = new Map<string, Deferred>();
-let removedChannels = 0;
 
 function makeQuery() {
   let chatId = "";
@@ -28,16 +27,12 @@ function makeQuery() {
   return builder;
 }
 
-const channelStub = {
-  on() { return channelStub; },
-  subscribe() { return channelStub; },
-};
+let channelOpened = 0;
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     from: () => makeQuery(),
-    channel: () => channelStub,
-    removeChannel: () => { removedChannels += 1; },
+    channel: () => { channelOpened += 1; throw new Error("useChatPins ne doit plus ouvrir de canal"); },
   }),
 }));
 
@@ -58,7 +53,7 @@ const pinB = { id: "pin-b", chat_id: "room-b", message_id: 2, pinned_by: "u1" };
 
 beforeEach(() => {
   pending.clear();
-  removedChannels = 0;
+  channelOpened = 0;
 });
 
 describe("useChatPins — changement de salon", () => {
@@ -99,12 +94,34 @@ describe("useChatPins — changement de salon", () => {
     await waitFor(() => expect(result.current.pins).toEqual([pinB]));
   });
 
-  it("désabonne le canal du salon quitté", () => {
-    const { rerender } = renderHook(
-      ({ chatId }: { chatId: string }) => useChatPins(chatId),
-      { initialProps: { chatId: "room-a" } },
-    );
-    act(() => { rerender({ chatId: "room-b" }); });
-    expect(removedChannels).toBeGreaterThanOrEqual(1);
+  it("n'ouvre plus de canal : les épingles arrivent par celui du salon", () => {
+    // Le salon (useRealtimeChatSync) tient déjà le canal privé `room:<id>` ;
+    // la migration 214 y diffuse les épingles, relayées par `applyPinEvent`.
+    renderHook(() => useChatPins("room-a"));
+    expect(channelOpened).toBe(0);
+  });
+});
+
+describe("useChatPins — avis du canal du salon", () => {
+  it("ajoute, modifie puis retire une épingle", async () => {
+    const { result } = renderHook(() => useChatPins("room-a"));
+    await settle("room-a", []);
+
+    act(() => result.current.applyPinEvent({ op: "INSERT", record: pinA }));
+    expect(result.current.pins).toEqual([pinA]);
+
+    const renommee = { ...pinA, label: "Repère" };
+    act(() => result.current.applyPinEvent({ op: "UPDATE", record: renommee }));
+    expect(result.current.pins).toEqual([renommee]);
+
+    act(() => result.current.applyPinEvent({ op: "DELETE", id: pinA.id }));
+    expect(result.current.pins).toEqual([]);
+  });
+
+  it("ignore l'épingle d'un autre salon", async () => {
+    const { result } = renderHook(() => useChatPins("room-a"));
+    await settle("room-a", []);
+    act(() => result.current.applyPinEvent({ op: "INSERT", record: pinB }));
+    expect(result.current.pins).toEqual([]);
   });
 });

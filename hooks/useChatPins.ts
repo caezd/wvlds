@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
-import { TABLE, channel } from "@/lib/constants";
+import { TABLE } from "@/lib/constants";
 import type { ChatPin } from "@/types/db";
 
 export function useChatPins(chatId: string | undefined) {
   const supabase = useMemo(() => createClient(), []);
-  const reconnectEpoch = useReconnectEpoch();
   const [pins, setPins] = useState<ChatPin[]>([]);
 
   // Chargement initial.
@@ -40,37 +38,35 @@ export function useChatPins(chatId: string | undefined) {
   }, [chatId, supabase]);
 
   // Realtime — INSERT / DELETE
-  useEffect(() => {
+  /**
+   * Avis `pin` du canal privé du salon (migration 214), relayé par
+   * `useRealtimeChatSync` qui tient ce canal : ajout ou modification avec la
+   * ligne entière, retrait avec son id.
+   */
+  const applyPinEvent = useCallback((avis: Record<string, unknown>) => {
+    const { op, id, record } = avis as { op?: string; id?: string; record?: ChatPin };
+    if (op === "DELETE") {
+      if (id) setPins((prev) => prev.filter((p) => p.id !== id));
+      return;
+    }
+    if (!record || record.chat_id !== chatId) return;
+    setPins((prev) =>
+      prev.some((p) => p.id === record.id)
+        ? prev.map((p) => (p.id === record.id ? record : p))
+        : [...prev, record],
+    );
+  }, [chatId]);
+
+  /** Relit les épingles — après une reconnexion, pour rattraper ce qui a été manqué. */
+  const reloadPins = useCallback(async () => {
     if (!chatId) return;
-    const ch = supabase
-      .channel(channel.chatPins(chatId))
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: TABLE.CHAT_PINS, filter: `chat_id=eq.${chatId}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const pin = payload.new as ChatPin;
-          setPins((prev) => prev.some((p) => p.id === pin.id) ? prev : [...prev, pin]);
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: TABLE.CHAT_PINS, filter: `chat_id=eq.${chatId}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const updated = payload.new as ChatPin;
-          setPins((prev) => prev.map((p) => p.id === updated.id ? updated : p));
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: TABLE.CHAT_PINS, filter: `chat_id=eq.${chatId}` },
-        (payload: { old: Record<string, unknown> }) => {
-          const old = payload.old as { id: string };
-          setPins((prev) => prev.filter((p) => p.id !== old.id));
-        },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [chatId, supabase, reconnectEpoch]);
+    const { data } = await supabase
+      .from(TABLE.CHAT_PINS)
+      .select("*")
+      .eq("chat_id", chatId)
+      .order("created_at", { ascending: true });
+    if (data) setPins(data as ChatPin[]);
+  }, [chatId, supabase]);
 
   const pin = useCallback(async (messageId: number, selfId: string) => {
     if (!chatId) return;
@@ -112,5 +108,5 @@ export function useChatPins(chatId: string | undefined) {
     pins.find((p) => p.message_id === messageId) ?? null,
   [pins]);
 
-  return { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId };
+  return { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId, applyPinEvent, reloadPins };
 }

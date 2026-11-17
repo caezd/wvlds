@@ -7,6 +7,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { TABLE } from "@/lib/constants";
+import { topic, useTopic } from "@/lib/realtimeHub";
 
 export type LiveChatAuthor = { username: string | null; avatar_url: string | null };
 
@@ -45,10 +46,10 @@ export type SendResult = "ok" | "too_fast" | "error";
 
 /**
  * Chat en direct d'un monde : derniers messages, flux temps réel et nombre de
- * membres présents. Un seul canal par monde (`world-live:<id>`) porte à la
- * fois les `postgres_changes` de `world_live_messages` et la présence — son
- * nom est le point de rendez-vous de la présence, il reste donc stable (cf.
- * lib/realtimeChannel.ts).
+ * membres présents. Les messages arrivent par le canal privé du monde
+ * (`world:<id>`, lib/realtimeHub) ; la présence a son propre canal,
+ * `world-live:<id>`, dont le nom est le point de rendez-vous de tous les
+ * navigateurs — il reste donc stable (cf. lib/realtimeChannel.ts).
  *
  * `worldId` nul : rien n'est chargé ni ouvert.
  */
@@ -118,7 +119,25 @@ export function useWorldLiveChat(worldId: string | null) {
     };
   }, [supabase, worldId, userId, reconnectEpoch]);
 
-  // Flux temps réel + présence.
+  // Flux des messages : canal privé du monde (migration 214), partagé par
+  // lib/realtimeHub avec la barre latérale et les autres écrans du monde. Un
+  // ajout porte la ligne entière (lisible par tous les membres) ; un retrait,
+  // son id.
+  useTopic(worldId && userId ? topic.world(worldId) : null, ({ event, payload }) => {
+    if (event !== "live") return;
+    const avis = payload as { op?: string; id?: string; record?: Row };
+    if (avis.op === "INSERT" && avis.record) {
+      const msg = toMessage(avis.record);
+      if (msg.world_id !== worldId) return;
+      void resolveAuthor(msg).then((full) => setMessages((prev) => mergeMessage(prev, full)));
+    } else if (avis.op === "DELETE" && avis.id) {
+      const id = avis.id;
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    }
+  });
+
+  // Présence : qui regarde le chat en ce moment. Le nom du canal est le point
+  // de rendez-vous commun à tous les navigateurs ; il reste donc stable.
   useEffect(() => {
     if (!worldId || !userId) return;
 
@@ -127,23 +146,6 @@ export function useWorldLiveChat(worldId: string | null) {
       `world-live:${worldId}`,
       (channel) => {
         channel
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: TABLE.WORLD_LIVE_MESSAGES, filter: `world_id=eq.${worldId}` },
-            (payload: { new: Record<string, unknown> }) => {
-              const msg = toMessage(payload.new as Row);
-              void resolveAuthor(msg).then((full) => setMessages((prev) => mergeMessage(prev, full)));
-            },
-          )
-          // Les DELETE ne se filtrent pas côté Realtime : seul l'id compte.
-          .on(
-            "postgres_changes",
-            { event: "DELETE", schema: "public", table: TABLE.WORLD_LIVE_MESSAGES },
-            (payload: { old: Record<string, unknown> }) => {
-              const id = (payload.old as { id?: string }).id;
-              if (id) setMessages((prev) => prev.filter((m) => m.id !== id));
-            },
-          )
           .on("presence", { event: "sync" }, () => {
             setPresentCount(Object.keys(channel.presenceState()).length);
           });
@@ -165,7 +167,7 @@ export function useWorldLiveChat(worldId: string | null) {
       channelRef.current = null;
       close();
     };
-  }, [supabase, worldId, userId, reconnectEpoch, resolveAuthor]);
+  }, [supabase, worldId, userId, reconnectEpoch]);
 
   // Passer en invisible (ou en revenir) sans rouvrir le canal. Seul un
   // CHANGEMENT agit : au montage, c'est l'abonnement qui décide de `track`.

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { getInitials } from "@/lib/textFormatting";
@@ -42,7 +42,12 @@ export function WorldRecentPersonasWidget({
   const [personas, setPersonas] = useState<RecentPersona[]>(initialPersonas ?? []);
   const hasServerData = initialPersonas !== undefined;
   const { getUserPresence } = useGlobalPresence();
-  const reconnectEpoch = useReconnectEpoch();
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub : un
+  // avis `persona` relance le chargement ci-dessous.
+  const [rev, setRev] = useState(0);
+  useTopic(topic.world(worldId), ({ event }) => {
+    if (event === "persona") setRev((n) => n + 1);
+  });
 
   useEffect(() => {
     const supabase = createClient();
@@ -60,21 +65,8 @@ export function WorldRecentPersonasWidget({
     };
 
     // Le serveur a déjà fourni la liste : `load` ne sert plus qu'au Realtime.
-    if (!hasServerData) void load();
-
-    const channel = supabase
-      .channel(`world_recent_personas:${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "personas", filter: `world_id=eq.${worldId}` },
-        () => void load(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [worldId, reconnectEpoch, limit, hasServerData]);
+    if (!hasServerData || rev > 0) void load();
+  }, [worldId, limit, hasServerData, rev]);
 
   if (personas.length === 0) return null;
 

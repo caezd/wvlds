@@ -4,8 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
-import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
 import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
@@ -80,7 +79,6 @@ export function useWikiAnnotations({
 }) {
   const [annotations, setAnnotations] = React.useState<WikiAnnotation[] | null>(null);
   const [pending, setPending] = React.useState(false);
-  const reconnectEpoch = useReconnectEpoch();
 
   const load = React.useCallback(async () => {
     const { data, error } = await supabase
@@ -99,27 +97,13 @@ export function useWikiAnnotations({
   React.useEffect(() => {
     if (!enabled) return;
     void load();
+  }, [enabled, load]);
 
-    // Même précaution que pour les notes : la fermeture d'un canal est
-    // asynchrone, et rouvrir le même nom trop tôt retombe sur celui qui n'est
-    // pas encore parti (voir `lib/realtimeChannel.ts`).
-    return openRealtimeChannel(
-      supabase,
-      `wiki_annotations:${pageId}`,
-      channel => channel
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "world_wiki_page_annotations",
-            filter: `page_id=eq.${pageId}`,
-          },
-          () => void load(),
-        )
-        .subscribe(),
-    );
-  }, [enabled, pageId, supabase, load, reconnectEpoch]);
+  // Canal privé de la page (`wiki:<page>`, migration 214), partagé avec les
+  // notes par lib/realtimeHub.
+  useTopic(enabled ? topic.wikiPage(pageId) : null, ({ event }) => {
+    if (event === "annotation") void load();
+  }, { client: supabase });
 
   /** Insère la ligne rendue par la base, ou remplace celle du même id. */
   const merge = React.useCallback((row: WikiAnnotation) => {

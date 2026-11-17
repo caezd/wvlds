@@ -2,10 +2,8 @@
 
 import * as React from "react";
 
-import { channel } from "@/lib/constants";
-import { openRealtimeChannel } from "@/lib/realtimeChannel";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import type {
   MapPin,
   MapPinLink,
@@ -70,7 +68,7 @@ function appliquer<T extends { id: string }>(
 /**
  * Tient la carte à jour de ce que les autres y font.
  *
- * Un seul canal pour les cinq tables : chaque abonnement de plus est une
+ * Un seul canal pour les cinq tables — celui du monde, partagé : chaque abonnement de plus est une
  * connexion que le serveur maintient, et elles parlent toutes du même monde.
  *
  * Les cibles sont lues dans une ref plutôt que déclarées en dépendances : ce
@@ -83,59 +81,54 @@ export function useMapRealtime(
   worldId: string,
   targets: MapRealtimeTargets,
 ) {
-  const reconnectEpoch = useReconnectEpoch();
   const cibles = React.useRef(targets);
   cibles.current = targets;
 
-  React.useEffect(() => {
-    const t = () => cibles.current;
-
-    return openRealtimeChannel(supabase, channel.worldMap(worldId), (ch) =>
-      ch
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_pins", filter: `world_id=eq.${worldId}` },
-          (echo: Echo) => appliquer<MapPin>(echo, t().setPins, t().setSelectedPin),
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_regions", filter: `world_id=eq.${worldId}` },
-          (echo: Echo) => appliquer<MapRegion>(echo, t().setRegions, t().setSelectedRegion),
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_pin_links", filter: `world_id=eq.${worldId}` },
-          (echo: Echo) => appliquer<MapPinLink>(echo, t().setLinks, t().setSelectedLink),
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
-          (echo: Echo) => {
-            // Une carte supprimée emporte ce qui vivait dessus. Rien ne s'en
-            // voit — l'écran ne montre que la carte ouverte, et celle-ci
-            // n'existe plus —, mais garder en mémoire des lignes que la base
-            // a effacées finit toujours par se payer. Les liens manquaient à
-            // l'appel : les trois y sont.
-            if (echo.eventType === "DELETE") {
-              const id = (echo.old as { id: string }).id;
-              t().setMaps((prev) => prev.filter((m) => m.id !== id));
-              t().setPins((prev) => prev.filter((p) => p.map_id !== id));
-              t().setRegions((prev) => prev.filter((r) => r.map_id !== id));
-              t().setLinks((prev) => prev.filter((l) => l.map_id !== id));
-              return;
-            }
-            t().setMaps((prev) => mergeById(prev, echo.new as WorldMapData));
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "personas", filter: `world_id=eq.${worldId}` },
-          // On ne regarde même pas ce que l'écho porte : la liste se relit
-          // entière, et c'est ce qui la garde juste.
-          () => t().reloadPersonas(),
-        )
-        .subscribe(),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, reconnectEpoch]);
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub avec
+  // les autres écrans du monde. Les avis `map` portent la ligne entière (les
+  // quatre tables sont lisibles par tous les membres) ; `persona` ne porte
+  // qu'un id : la liste des personas placés se relit en bloc.
+  useTopic(topic.world(worldId), ({ event, payload }) => {
+    const t = cibles.current;
+    if (event === "persona") {
+      t.reloadPersonas();
+      return;
+    }
+    if (event !== "map") return;
+    const avis = payload as { table?: string; op?: string; id?: string; record?: Record<string, unknown> };
+    if (!avis.op) return;
+    const echo: Echo = {
+      eventType: avis.op,
+      new: avis.record ?? {},
+      old: { id: avis.id ?? (avis.record?.id as string | undefined) },
+    };
+    switch (avis.table) {
+      case "world_map_pins":
+        appliquer<MapPin>(echo, t.setPins, t.setSelectedPin);
+        return;
+      case "world_map_regions":
+        appliquer<MapRegion>(echo, t.setRegions, t.setSelectedRegion);
+        return;
+      case "world_map_pin_links":
+        appliquer<MapPinLink>(echo, t.setLinks, t.setSelectedLink);
+        return;
+      case "world_maps": {
+        // Une carte supprimée emporte ce qui vivait dessus. Rien ne s'en
+        // voit — l'écran ne montre que la carte ouverte, et celle-ci
+        // n'existe plus —, mais garder en mémoire des lignes que la base
+        // a effacées finit toujours par se payer. Les liens manquaient à
+        // l'appel : les trois y sont.
+        if (echo.eventType === "DELETE") {
+          const id = (echo.old as { id: string }).id;
+          t.setMaps((prev) => prev.filter((m) => m.id !== id));
+          t.setPins((prev) => prev.filter((p) => p.map_id !== id));
+          t.setRegions((prev) => prev.filter((r) => r.map_id !== id));
+          t.setLinks((prev) => prev.filter((l) => l.map_id !== id));
+          return;
+        }
+        t.setMaps((prev) => mergeById(prev, echo.new as WorldMapData));
+        return;
+      }
+    }
+  }, { client: supabase });
 }

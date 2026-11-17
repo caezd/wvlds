@@ -19,6 +19,7 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { DmConversation, DmMessage } from "@/types/db";
 import { fetchAppShell } from "@/lib/appShell";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { subscribeTopic, topic, useTopic } from "@/lib/realtimeHub";
 
 // Déduplication défensive : `get_dm_conversations()` trie par date desc, on
 // garde la 1re occurrence par other_user_id.
@@ -407,53 +408,6 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         // différée par une fermeture en cours.
         msgChannelRef.current = ch;
         return ch
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: TABLE.DM_MESSAGES,
-          filter: `conversation_id=eq.${activeConvId}`,
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const msg = payload.new as DmMessage;
-          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-          setConversations(prev => applyNewMessage(prev, msg));
-          if (
-            activeConvIdRef.current === msg.conversation_id &&
-            msg.author_id !== userIdRef.current
-          ) {
-            void markConvRead(msg.conversation_id);
-            setOtherTyping(false);
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: TABLE.DM_MESSAGES,
-          filter: `conversation_id=eq.${activeConvId}`,
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const msg = payload.new as DmMessage;
-          setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: TABLE.DM_MESSAGES,
-          filter: `conversation_id=eq.${activeConvId}`,
-        },
-        (payload: { old: Record<string, unknown> }) => {
-          const oldId = (payload.old as { id?: number }).id;
-          setMessages(prev => prev.filter(m => m.id !== oldId));
-        },
-      )
       .on("broadcast", { event: "typing" }, () => {
         setOtherTyping(true);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -470,7 +424,34 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setOtherTyping(false);
     };
-  }, [activeConvId, supabase, markConvRead, reconnectEpoch]);
+  }, [activeConvId, supabase, reconnectEpoch]);
+
+  // Messages de la conversation active : canal personnel `msgs:<user>`
+  // (migration 214), partagé par lib/realtimeHub avec la liste des
+  // conversations et NotificationsProvider. La ligne entière y est diffusée
+  // aux deux interlocuteurs, et à eux seuls.
+  useTopic(activeConvId && userId ? topic.user(userId) : null, ({ event, payload }) => {
+    if (event !== "dm" || !activeConvId) return;
+    const avis = payload as { op?: string; id?: number; conversation_id?: string; record?: DmMessage };
+    if (avis.op === "DELETE") {
+      if (avis.conversation_id !== activeConvId || avis.id === undefined) return;
+      const oldId = avis.id;
+      setMessages(prev => prev.filter(m => m.id !== oldId));
+      return;
+    }
+    const msg = avis.record;
+    if (!msg || msg.conversation_id !== activeConvId) return;
+    if (avis.op === "UPDATE") {
+      setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+      return;
+    }
+    setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+    setConversations(prev => applyNewMessage(prev, msg));
+    if (msg.author_id !== userIdRef.current) {
+      void markConvRead(msg.conversation_id);
+      setOtherTyping(false);
+    }
+  });
 
   const emitTyping = useCallback(() => {
     const now = Date.now();
@@ -582,12 +563,20 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     })();
     void loadBlockedUsers();
 
-    const fermerConvCanal = openRealtimeChannel(
-      supabase,
-      channel.dmConversations(userId),
-      (convCh) => convCh
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: TABLE.DM_MESSAGES }, (payload: { new: Record<string, unknown> }) => {
-        const msg = payload.new as DmMessage;
+    // Canal personnel `msgs:<user>` (migration 214), partagé par
+    // lib/realtimeHub. Avant : `postgres_changes` NON FILTRÉ sur `dm_messages`,
+    // où Realtime vérifiait chaque message privé posté pour chaque abonné.
+    const fermerConvCanal = subscribeTopic(topic.user(userId), {
+      onEvent: ({ event, payload }) => {
+        if (event !== "dm") return;
+        const avis = payload as { op?: string; record?: DmMessage };
+        // Édition/suppression d'un message (pas d'UI aujourd'hui, mais possible
+        // via modération ou correctif direct) : resynchronise l'aperçu et le tri.
+        if (avis.op !== "INSERT" || !avis.record) {
+          void loadConversations();
+          return;
+        }
+        const msg = avis.record;
 
         // Conversation inédite (premier message reçu d'un nouvel
         // interlocuteur) : son profil n'est pas encore en mémoire, seul un
@@ -612,17 +601,8 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
             }
           : c,
         )));
-      })
-      // Édition/suppression d'un message (pas d'UI aujourd'hui, mais possible
-      // via modération ou correctif direct) : resynchronise l'aperçu et le tri.
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: TABLE.DM_MESSAGES }, () => {
-        void loadConversations();
-      })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: TABLE.DM_MESSAGES }, () => {
-        void loadConversations();
-      })
-        .subscribe(),
-    );
+      },
+    });
 
     return () => {
       mounted = false;

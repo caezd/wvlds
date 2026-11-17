@@ -219,16 +219,22 @@ describe("useWikiPageNotes", () => {
     expect(result.current.groups[0].notes.map(n => n.id)).toEqual(["n1", "n2"]);
   });
 
-  it("s'abonne aux deux tables pour cette page", async () => {
-    const { mock } = monte([{ data: [], error: null }, { data: [], error: null }]);
+  it("écoute le canal privé de la page et se relit sur un avis de fiche ou de catégorie", async () => {
+    const { mock } = monte([
+      { data: [], error: null }, { data: [], error: null },
+      { data: [], error: null }, { data: [], error: null },
+    ]);
 
     await waitFor(() => expect(mock.channels.length).toBe(1));
-    expect(mock.channels[0].name).toBe("wiki_page_notes:p1");
-    expect(mock.channels[0].handlers.map(h => h.config.table)).toEqual([
-      "world_wiki_page_note_categories",
-      "world_wiki_page_notes",
-    ]);
-    expect(mock.channels[0].handlers[0].config.filter).toBe("page_id=eq.p1");
+    // Canal `wiki:<page>` (migration 214), privé : ouvert à qui peut lire la page.
+    expect(mock.channels[0].name).toBe("wiki:p1");
+    expect(mock.client.channel).toHaveBeenCalledWith("wiki:p1", { config: { private: true } });
+
+    const lectures = mock.from.mock.calls.length;
+    await act(async () => {
+      mock.channels[0].emit((h) => h.type === "broadcast", { event: "note", payload: { op: "UPDATE", id: "n1" } });
+    });
+    await waitFor(() => expect(mock.from.mock.calls.length).toBeGreaterThan(lectures));
   });
 });
 

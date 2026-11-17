@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowUpRight, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,7 +51,12 @@ export function WorldMembersOnlineWidget({
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [online, setOnline] = useState<Member[]>([]);
   const { onlineUsers } = useGlobalPresence();
-  const reconnectEpoch = useReconnectEpoch();
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub : un
+  // avis `member` relance le chargement ci-dessous.
+  const [rev, setRev] = useState(0);
+  useTopic(topic.world(worldId), ({ event }) => {
+    if (event === "member") setRev((n) => n + 1);
+  });
 
   useEffect(() => {
     const supabase = createClient();
@@ -65,20 +70,7 @@ export function WorldMembersOnlineWidget({
     };
 
     void load();
-
-    const channel = supabase
-      .channel(`world_members_online:${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "world_members", filter: `world_id=eq.${worldId}` },
-        () => void load(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [worldId, reconnectEpoch]);
+  }, [worldId, rev]);
 
   // Membres présents à la fois dans world_members et dans la présence globale
   // (temps réel, tous mondes confondus) — seuls ceux-ci ont besoin d'un profil.

@@ -106,7 +106,7 @@ function renderSidebar(
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("WorldSidebarChatrooms — avatar via chatroom_summaries realtime", () => {
+describe("WorldSidebarChatrooms — avatar via les avis `summary` du canal du monde", () => {
   let mock: ReturnType<typeof createSupabaseMock>;
 
   beforeEach(() => {
@@ -121,7 +121,7 @@ describe("WorldSidebarChatrooms — avatar via chatroom_summaries realtime", () 
     expect(avatarSrc()).toBe("https://example.com/avatar.png");
   });
 
-  it("met à jour l'avatar lorsque chatroom_summaries reçoit un UPDATE", async () => {
+  it("met à jour l'avatar lorsque chatroom_summaries reçoit un avis de mise à jour", async () => {
     renderSidebar([makeRoom()], mock);
 
     const channel = mock.lastChannel();
@@ -129,30 +129,28 @@ describe("WorldSidebarChatrooms — avatar via chatroom_summaries realtime", () 
 
     await act(async () => {
       channel!.emit(
-        (h) => h.config.event === "UPDATE" && h.config.table === "chatroom_summaries",
-        {
-          new: {
+        (h) => h.type === "broadcast",
+        { event: "summary", payload: { op: "UPDATE",
             chat_id: "room-1",
             last_message_at: "2024-01-01T11:00:00Z",
             last_message_author_id: "user-2",
             last_message_persona_avatar_url: "https://example.com/persona-avatar.png",
-          },
-        },
+        } },
       );
     });
 
     expect(avatarSrc()).toBe("https://example.com/persona-avatar.png");
   });
 
-  it("efface l'avatar lorsque chatroom_summaries reçoit un DELETE (dernier message supprimé)", async () => {
+  it("efface l'avatar lorsque chatroom_summaries reçoit un avis de suppression (dernier message supprimé)", async () => {
     renderSidebar([makeRoom()], mock);
 
     const channel = mock.lastChannel();
 
     await act(async () => {
       channel!.emit(
-        (h) => h.config.event === "DELETE" && h.config.table === "chatroom_summaries",
-        { old: { chat_id: "room-1" } },
+        (h) => h.type === "broadcast",
+        { event: "summary", payload: { op: "DELETE", chat_id: "room-1" } },
       );
     });
 
@@ -167,15 +165,13 @@ describe("WorldSidebarChatrooms — avatar via chatroom_summaries realtime", () 
 
     await act(async () => {
       channel!.emit(
-        (h) => h.config.event === "UPDATE" && h.config.table === "chatroom_summaries",
-        {
-          new: {
+        (h) => h.type === "broadcast",
+        { event: "summary", payload: { op: "UPDATE",
             chat_id: "room-1",
             last_message_at: "2024-01-02T09:00:00Z",
             last_message_author_id: "user-3",
             last_message_persona_avatar_url: "https://example.com/new-persona.png",
-          },
-        },
+        } },
       );
     });
 

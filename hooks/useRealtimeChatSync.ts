@@ -56,6 +56,8 @@ type Props = {
   onTurnChanged?: (turn: ChatroomTurn) => void;
   /** Défi du jour relevé par un message du salon (migration 213). */
   onChallengeWon?: (messageId: number, badge: { title: string; description: string | null }) => void;
+  /** Épingle ajoutée, modifiée ou retirée (migration 214) : l'avis tel quel. */
+  onPinChanged?: (avis: Record<string, unknown>) => void;
   /**
    * Le rattrapage a atteint sa limite (CATCHUP_MAX_PAGES pages pleines) : trop
    * de messages manqués pour les rejouer un à un. La vue recharge alors la page
@@ -82,6 +84,7 @@ export function useRealtimeChatSync({
   onSubscribed,
   onTurnChanged,
   onChallengeWon,
+  onPinChanged,
   onCatchUpGap,
 }: Props) {
   const t = useTranslations("chatrooms");
@@ -111,6 +114,7 @@ export function useRealtimeChatSync({
     onSubscribed,
     onTurnChanged,
     onChallengeWon,
+    onPinChanged,
     onCatchUpGap,
   });
   callbacksRef.current = {
@@ -125,6 +129,7 @@ export function useRealtimeChatSync({
     onSubscribed,
     onTurnChanged,
     onChallengeWon,
+    onPinChanged,
     onCatchUpGap,
   };
 
@@ -285,6 +290,12 @@ export function useRealtimeChatSync({
       const row = (msg.payload ?? {}) as { message_id?: number; title?: string; description?: string | null };
       if (row.message_id === undefined || !row.title) return;
       callbacksRef.current.onChallengeWon?.(Number(row.message_id), { title: row.title, description: row.description ?? null });
+    });
+
+    // Épingles (migration 214)
+    ch.on("broadcast", { event: "pin" }, (msg: Avis) => {
+      if (!isMounted) return;
+      callbacksRef.current.onPinChanged?.(msg.payload ?? {});
     });
 
     // Avatar d'une persona ayant écrit dans ce salon

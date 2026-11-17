@@ -4,8 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
-import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 
 const CATEGORY_COLUMNS = "id, page_id, name, sort_index";
@@ -181,7 +180,6 @@ export function useWikiPageNotes({
   const [categories, setCategories] = React.useState<WikiNoteCategory[] | null>(null);
   const [notes, setNotes] = React.useState<WikiPageNote[] | null>(null);
   const [pending, setPending] = React.useState(false);
-  const reconnectEpoch = useReconnectEpoch();
 
   const load = React.useCallback(async () => {
     const [cats, rows] = await Promise.all([
@@ -210,39 +208,15 @@ export function useWikiPageNotes({
   React.useEffect(() => {
     if (!enabled) return;
     void load();
+  }, [enabled, load]);
 
-    // `openRealtimeChannel` plutôt que `supabase.channel` : le panneau change
-    // de place selon la largeur — colonne au-dessus de `xl`, tiroir en dessous
-    // — et un passage de l'un à l'autre referme puis rouvre un canal du même
-    // nom. `removeChannel` étant asynchrone, la réouverture retombait sur le
-    // canal encore joint, et `.on()` lève après `subscribe()`.
-    return openRealtimeChannel(
-      supabase,
-      `wiki_page_notes:${pageId}`,
-      channel => channel
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "world_wiki_page_note_categories",
-            filter: `page_id=eq.${pageId}`,
-          },
-          () => void load(),
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "world_wiki_page_notes",
-            filter: `page_id=eq.${pageId}`,
-          },
-          () => void load(),
-        )
-        .subscribe(),
-    );
-  }, [enabled, pageId, supabase, load, reconnectEpoch]);
+  // Canal privé de la page (`wiki:<page>`, migration 214), ouvert à qui peut
+  // lire la page — brouillons et pages restreintes compris. Partagé par
+  // lib/realtimeHub avec les annotations : le panneau peut passer de la
+  // colonne au tiroir (et rouvrir) sans conflit de nom de canal.
+  useTopic(enabled ? topic.wikiPage(pageId) : null, ({ event }) => {
+    if (event === "note" || event === "note_category") void load();
+  }, { client: supabase });
 
   /** Rejoue `revenir` et signale l'erreur si la base a refusé l'écriture. */
   function echoue(error: { message: string } | null, revenir: () => void): boolean {

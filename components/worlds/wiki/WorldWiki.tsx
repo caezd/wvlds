@@ -86,7 +86,7 @@ import {
   type Zone,
 } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { topic, useTopic } from "@/lib/realtimeHub";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { NO_DISPLACEMENT } from "@/lib/dndSort";
 import { columnFits } from "@/lib/wikiSideColumn";
@@ -487,7 +487,12 @@ export function WorldWiki({
   const tCommon = useTranslations("common");
   const tNav = useTranslations("worlds.nav");
   const supabase = React.useMemo(() => createClient(), []);
-  const reconnectEpoch = useReconnectEpoch();
+  // Canal privé du monde (migration 214), partagé par lib/realtimeHub : un
+  // avis `lexicon` relance le chargement ci-dessous.
+  const [lexiconRev, setLexiconRev] = React.useState(0);
+  useTopic(topic.world(worldId), ({ event }) => {
+    if (event === "lexicon") setLexiconRev((n) => n + 1);
+  }, { client: supabase });
   const [pages, setPages] = React.useState<WikiPage[] | null>(null);
   const [lexiconTerms, setLexiconTerms] = React.useState<WorldLexiconTerm[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -750,20 +755,7 @@ export function WorldWiki({
     };
 
     void loadLexicon();
-
-    const channel = supabase
-      .channel(`world_lexicon_terms:${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "world_lexicon_terms", filter: `world_id=eq.${worldId}` },
-        () => void loadLexicon(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [worldId, supabase, reconnectEpoch]);
+  }, [worldId, supabase, lexiconRev]);
 
   // Sélectionne `initialSlug` une fois les pages chargées (ex: arrivée depuis
   // un raccourci de l'accueil du monde) — une seule fois, pour ne pas revenir
