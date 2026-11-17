@@ -46,6 +46,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-17",
     category: "Performance",
+    text: "Chaque mise à jour de l’application télécharge environ 6 Mo de moins en arrière-plan : l’application ne garde d’avance que ce qu’il faut pour afficher la page « Vous êtes hors ligne ». Le reste se met en cache au fil des pages visitées, comme avant.",
+  },
+  {
+    date: "2026-11-17",
+    category: "Performance",
     text: "Les pages s’ouvrent plus vite : environ un tiers de JavaScript en moins sur les pages de réglages, de boutique et d’exploration, et 40 à 55 ko de moins sur un salon ou un monde. Le catalogue d’icônes, la compression d’images, les panneaux de messages et de notifications, la fiche de profil et la fenêtre d’encadré ne se chargent plus qu’au moment où l’on s’en sert.",
   },
   {
