@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MobileSidebarProvider } from "@/components/providers/MobileSidebarProvider";
-import Loading from "@/app/(protected)/w/[id]/loading";
+import Loading from "@/app/(protected)/(world)/w/[id]/loading";
 
 // AppShell masque sa barre mobile générique sur tout `/w/` (cf. `isWorldRoute`
 // dans AppShell.tsx) — mais le header propre de chaque vue (WorldPanelHeader

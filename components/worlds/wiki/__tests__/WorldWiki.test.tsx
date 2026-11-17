@@ -20,7 +20,7 @@ vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
   WikiNotesPanel: () => <div data-testid="panneau-notes" />,
 }));
 
-vi.mock("@/app/(protected)/w/actions", () => ({ saveWorldPrefs: vi.fn() }));
+vi.mock("@/app/(protected)/(world)/w/actions", () => ({ saveWorldPrefs: vi.fn() }));
 
 // Le champ de l'article est le vrai CodeEditor — un <textarea>. Seule sa
 // coloration est écartée : elle charge Shiki, hors sujet et lent ici.

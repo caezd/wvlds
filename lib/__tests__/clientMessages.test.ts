@@ -175,9 +175,12 @@ describe("découpage des messages envoyés au client", () => {
     it("les namespaces d'onglets de monde sont inatteignables depuis une page de salon", () => {
         const reachable = reachableFrom([
             "app/(protected)/layout.tsx",
-            "app/(protected)/c/layout.tsx",
-            "app/(protected)/c/[id]/layout.tsx",
-            "app/(protected)/c/[id]/page.tsx",
+            // La barre latérale du monde : sous le seul tronc commun, elle ne
+            // doit lire aucun namespace d'onglet de monde.
+            "app/(protected)/(world)/layout.tsx",
+            "app/(protected)/(world)/c/layout.tsx",
+            "app/(protected)/(world)/c/[id]/layout.tsx",
+            "app/(protected)/(world)/c/[id]/page.tsx",
         ]);
         // Garde-fou du garde-fou : si le parcours ne trouve presque rien, c'est
         // la résolution qui est cassée, pas le code — un test vert ne voudrait
@@ -186,7 +189,7 @@ describe("découpage des messages envoyés au client", () => {
 
         // `catalogue` fait exception : la fiche d'un objet (CatalogItemDetail)
         // s'ouvre depuis l'inventaire d'un persona consulté dans le salon, et
-        // `app/(protected)/c/layout.tsx` (commun aux salons) remonte ce namespace-là.
+        // `app/(protected)/(world)/c/layout.tsx` (commun aux salons) remonte ce namespace-là.
         const offenders: string[] = [];
         for (const ns of WORLD_ROUTE_NAMESPACES.filter((n) => n !== "catalogue")) {
             const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);
@@ -197,7 +200,7 @@ describe("découpage des messages envoyés au client", () => {
             }
         }
         expect(offenders).toEqual([]);
-        const chatLayout = byPath.get(join(ROOT, "app/(protected)/c/layout.tsx").replace(/\\/g, "/")) ?? "";
+        const chatLayout = byPath.get(join(ROOT, "app/(protected)/(world)/c/layout.tsx").replace(/\\/g, "/")) ?? "";
         expect(chatLayout).toContain('withRouteMessages(messages, ["catalogue"])');
     });
 
@@ -206,8 +209,8 @@ describe("découpage des messages envoyés au client", () => {
         // tronc commun sans que personne ne le lise passerait pour un succès.
         const reachable = reachableFrom([
             "app/(protected)/layout.tsx",
-            "app/(protected)/w/[id]/layout.tsx",
-            "app/(protected)/w/[id]/page.tsx",
+            "app/(protected)/(world)/w/[id]/layout.tsx",
+            "app/(protected)/(world)/w/[id]/page.tsx",
         ]);
         for (const ns of WORLD_ROUTE_NAMESPACES) {
             const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);

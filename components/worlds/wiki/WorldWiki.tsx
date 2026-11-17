@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { saveWorldPrefs } from "@/app/(protected)/w/actions";
+import { saveWorldPrefs } from "@/app/(protected)/(world)/w/actions";
 import {
   ArrowDown,
   ArrowLeft,

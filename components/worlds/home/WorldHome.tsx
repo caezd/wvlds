@@ -19,7 +19,7 @@ import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import type { InitialWorldMap } from "../map/WorldMap";
-import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
+import { toggleWorldFavorite } from "@/app/(protected)/(world)/w/actions";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 import { permissionListHas, type WorldPermission } from "@/lib/worldPermissions";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.

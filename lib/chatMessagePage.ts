@@ -6,7 +6,7 @@ import type { ChoiceVoteSummary, ReactionSummary } from "@/types/db";
 
 /**
  * Chargement d'une page de messages d'un salon, partagé entre le rendu serveur
- * (première page, cf. app/(protected)/c/[id]/getChatroomMessages.ts) et le
+ * (première page, cf. app/(protected)/(world)/c/[id]/getChatroomMessages.ts) et le
  * client (pages plus anciennes, en remontant l'historique).
  *
  * Une seule définition pour les deux : la page « historique » avait divergé

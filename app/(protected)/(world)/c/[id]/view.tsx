@@ -9,7 +9,7 @@ import { decryptMessage } from "@/lib/crypto";
 import Link from "next/link";
 import { BarChart3, Globe, GlobeLock, ListOrdered, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
+import { toggleFollowChatroom } from "@/app/(protected)/(world)/w/actions";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { toast } from "sonner";

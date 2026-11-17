@@ -1,4 +1,4 @@
-// app/(protected)/w/[id]/page.tsx
+// app/(protected)/(world)/w/[id]/page.tsx
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";

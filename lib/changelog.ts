@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-17",
     category: "Performance",
+    area: "Monde",
+    text: "Passer de l’accueil d’un monde à l’un de ses salons, et retour, ne recharge plus la barre latérale : elle reste en place, avec sa position de défilement, et la page s’affiche plus vite. En changeant de monde, l’ancienne liste de salons laisse place à un squelette le temps d’afficher la nouvelle.",
+  },
+  {
+    date: "2026-11-17",
+    category: "Performance",
     text: "Les images (avatars, bannières, icônes) restent en cache un an au lieu d’une heure : elles ne sont plus retéléchargées à chaque visite. Le badge d’un défi relevé apparaît en direct chez tous les joueurs du salon, et régler la couleur des dialogues n’envoie plus qu’une seule sauvegarde.",
   },
   {

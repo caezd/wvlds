@@ -5,7 +5,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }),
 }));
 
-vi.mock("@/app/(protected)/w/actions", () => ({
+vi.mock("@/app/(protected)/(world)/w/actions", () => ({
   saveWorldPrefs: vi.fn(),
   toggleWorldFavorite: vi.fn(),
 }));

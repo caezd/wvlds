@@ -1,5 +1,5 @@
-// app/(protected)/w/[id]/layout.tsx
-import { Suspense, type ReactNode } from "react";
+// app/(protected)/(world)/w/[id]/layout.tsx
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { getWorldById, getWorldMembership } from "@/lib/currentRequest";
@@ -11,8 +11,7 @@ import { WORLD_ROUTE_NAMESPACES, withRouteMessages } from "@/lib/clientMessages"
 import { AgeGate } from "@/components/worlds/AgeGate";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
-import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
-import { WorldSidebarSkeleton } from "@/components/worlds/sidebar/WorldSidebarSkeleton";
+import { SidebarWorldGuard } from "@/components/worlds/sidebar/SidebarWorld";
 import { WorldLiveChatAnchor } from "@/components/worlds/live-chat/WorldLiveChatAnchor";
 
 export default async function WorldLayout({
@@ -60,7 +59,14 @@ export default async function WorldLayout({
 
   const myAgeConfirmedAt = members.find((m) => m.user_id === userId)?.age_confirmed_at ?? null;
   if (world.is_age_restricted && !myAgeConfirmedAt) {
-    return <AgeGate worldId={world.id} worldName={world.name} />;
+    // La barre latérale (layout parent) ne s'affiche pas devant l'écran d'âge :
+    // si elle montre encore un autre monde, la garde la fait disparaître.
+    return (
+      <>
+        <SidebarWorldGuard worldId={null} />
+        <AgeGate worldId={world.id} worldName={world.name} />
+      </>
+    );
   }
 
   // Ce layout n'est pas enveloppé par le `loading.tsx` du segment (seul
@@ -80,18 +86,16 @@ export default async function WorldLayout({
         roles={roles}
         myRoleIds={membership.roles.map((r) => r.id)}
       >
-        <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
+        {/* La barre latérale vit dans le layout parent, partagé avec les
+            salons (`app/(protected)/(world)/layout.tsx`) : elle n'est plus
+            refaite quand on passe de l'accueil du monde à un salon. Si elle
+            montre un autre monde (arrivée depuis un salon d'ailleurs), la
+            garde rafraîchit une fois. */}
+        <SidebarWorldGuard worldId={world.id} />
+        <main className="composer-parent flex h-full min-w-0 flex-1 flex-col focus-visible:outline-0">
           <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
           <WorldLiveChatAnchor worldId={world.id} />
           <div className="flex min-h-0 w-full flex-1 flex-row">
-            {/* La sidebar (salons, non-lus, mondes, quota… ~8 requêtes) n'est
-                plus attendue avant d'envoyer la page : elle arrive en streaming
-                derrière son squelette. Sans risque de clignotement en naviguant
-                dans le monde : changer de `?view=` ne remonte pas ce layout, la
-                limite Suspense ne se redéclenche qu'à l'entrée dans un monde. */}
-            <Suspense fallback={<WorldSidebarSkeleton />}>
-              <WorldSidebar worldId={id} />
-            </Suspense>
             {children}
           </div>
         </main>

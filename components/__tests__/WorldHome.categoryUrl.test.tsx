@@ -17,7 +17,7 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   }),
 }));
 
-vi.mock("@/app/(protected)/w/actions", () => ({
+vi.mock("@/app/(protected)/(world)/w/actions", () => ({
   saveWorldPrefs: vi.fn(),
   toggleWorldFavorite: vi.fn(),
 }));

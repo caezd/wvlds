@@ -67,7 +67,7 @@ function AppShellInner({
 
   // Les pages de chatroom affichent leur propre header (visible sur mobile
   // désormais) avec le bouton menu intégré en tête — la barre générique
-  // ci-dessous serait redondante (cf. ChatroomHeader dans app/(protected)/c/[id]/view.tsx).
+  // ci-dessous serait redondante (cf. ChatroomHeader dans app/(protected)/(world)/c/[id]/view.tsx).
   const isChatRoute = pathname?.startsWith("/c/") ?? false;
   // Idem pour *toutes* les vues d'un monde : les onglets secondaires (membres,
   // personas, wiki, …) ont leur WorldPanelHeader, et la vue par défaut a son

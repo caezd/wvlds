@@ -4,7 +4,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
+import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/(world)/w/actions";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 

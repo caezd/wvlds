@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MobileSidebarProvider } from "@/components/providers/MobileSidebarProvider";
-import Loading from "@/app/(protected)/c/[id]/loading";
+import Loading from "@/app/(protected)/(world)/c/[id]/loading";
 
 // AppShell masque toujours sa barre générique sur `/c/*` (cf. `isChatRoute`
 // dans AppShell.tsx) en anticipant le ChatroomHeader de la page — qui est

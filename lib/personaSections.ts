@@ -1,5 +1,5 @@
 // Récupération des sections d'un persona avec leurs champs, regroupées.
-// Partagée entre les pages serveur (app/(protected)/p, app/(protected)/w/[id])
+// Partagée entre les pages serveur (app/(protected)/p, app/(protected)/(world)/w/[id])
 // et les composants client (PersonaCreateSheet, WorldPersonaTemplateSection) —
 // le client Supabase (navigateur ou serveur) est passé en paramètre.
 

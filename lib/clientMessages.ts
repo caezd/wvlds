@@ -63,7 +63,7 @@ export const ROUTE_SCOPED_NAMESPACES = [
 ] as const;
 
 /**
- * Namespaces remontés par `app/(protected)/w/[id]/layout.tsx`.
+ * Namespaces remontés par `app/(protected)/(world)/w/[id]/layout.tsx`.
  *
  * Séparé de la liste ci-dessus parce que ces quatre-là partagent une même
  * route, là où `admin`/`settings`/`shop` ont chacune la leur.

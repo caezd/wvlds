@@ -22,7 +22,7 @@ import { join } from "node:path";
 
 /** Composants qui survivent à un changement d'identifiant de route. */
 const SURVIVORS: { file: string; routeId: string }[] = [
-  { file: join("app", "(protected)", "c", "[id]", "view.tsx"), routeId: "chatId" },
+  { file: join("app", "(protected)", "(world)", "c", "[id]", "view.tsx"), routeId: "chatId" },
   { file: join("components", "worlds", "home", "WorldHome.tsx"), routeId: "worldId" },
   // `WorldSidebarChatrooms` n'y figure plus : sa liste de salons a quitté
   // l'état local pour `lib/worldRoomsStore`, qui la resème lui-même au

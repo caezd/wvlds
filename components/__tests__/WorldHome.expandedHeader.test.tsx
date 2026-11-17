@@ -19,7 +19,7 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
 }));
 
 const toggleWorldFavorite = vi.fn();
-vi.mock("@/app/(protected)/w/actions", () => ({
+vi.mock("@/app/(protected)/(world)/w/actions", () => ({
   toggleWorldFavorite: (...args: unknown[]) => toggleWorldFavorite(...args),
 }));
 

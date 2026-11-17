@@ -8,7 +8,7 @@ import {
   reorderWorldCatalogCategories,
   reorderWorldCatalogItems,
 } from "@/app/actions/worldCatalog";
-import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
+import { toggleFollowChatroom } from "@/app/(protected)/(world)/w/actions";
 import { createClient } from "@/lib/supabase/server";
 
 const use = (mock: ReturnType<typeof createSupabaseMock>) =>

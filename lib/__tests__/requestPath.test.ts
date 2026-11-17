@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chatIdFromPathname } from "@/lib/requestPath";
+import { chatIdFromPathname, worldIdFromPathname } from "@/lib/requestPath";
 
 describe("chatIdFromPathname", () => {
   it("extrait l'id d'un chemin de salon", () => {
@@ -11,5 +11,18 @@ describe("chatIdFromPathname", () => {
     expect(chatIdFromPathname("/w/abc")).toBeNull();
     expect(chatIdFromPathname("/c")).toBeNull();
     expect(chatIdFromPathname(null)).toBeNull();
+  });
+});
+
+describe("worldIdFromPathname", () => {
+  it("extrait l'id d'un chemin de monde", () => {
+    expect(worldIdFromPathname("/w/monde-1")).toBe("monde-1");
+    expect(worldIdFromPathname("/w/monde-1/autre")).toBe("monde-1");
+  });
+
+  it("rend null hors des mondes ou sans chemin", () => {
+    expect(worldIdFromPathname("/c/abc")).toBeNull();
+    expect(worldIdFromPathname("/w")).toBeNull();
+    expect(worldIdFromPathname(undefined)).toBeNull();
   });
 });
