@@ -20,6 +20,7 @@ import {
   type AvatarCategory,
   type AvatarPartRef,
 } from "./avatarCatalog";
+import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 type LayerItem = { partId: string; variantKey?: string };
 
@@ -776,7 +777,7 @@ export function PersonaAvatarPicker({
       const path = `avatars/${personaId}.webp`;
       const { error: uploadError } = await supabase.storage
         .from("personas")
-        .upload(path, file, { upsert: true, contentType: "image/webp" });
+        .upload(path, file, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: "image/webp" });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("personas").getPublicUrl(path);

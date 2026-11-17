@@ -44,6 +44,11 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-17",
+    category: "Performance",
+    text: "Les images (avatars, bannières, icônes) restent en cache un an au lieu d’une heure : elles ne sont plus retéléchargées à chaque visite. Le badge d’un défi relevé apparaît en direct chez tous les joueurs du salon, et régler la couleur des dialogues n’envoie plus qu’une seule sauvegarde.",
+  },
+  {
     date: "2026-11-16",
     category: "Interface",
     area: "Salons",

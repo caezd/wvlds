@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
-import { catalogCategoryBannerPath } from "@/lib/storagePaths";
+import { catalogCategoryBannerPath, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { storagePathFromUrl } from "@/lib/storage";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { updateWorldCatalogCategory } from "@/app/actions/worldCatalog";
@@ -52,7 +52,7 @@ export function CatalogCategoryDialog({
       const path = catalogCategoryBannerPath(category.world_id, category.id, converted.type);
       const { error } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { upsert: true, contentType: converted.type });
+        .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: converted.type });
       if (error) throw error;
       // Un cache-buster : le chemin ne change pas d'un envoi à l'autre.
       setBannerUrl(`${supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl}?v=${Date.now()}`);

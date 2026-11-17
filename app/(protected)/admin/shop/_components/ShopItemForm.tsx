@@ -18,7 +18,7 @@ import { X, Loader2, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import { nomDeFichierPourType } from "@/lib/storagePaths";
+import { nomDeFichierPourType, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 const BUCKET = "cosmetics";
 
@@ -77,7 +77,7 @@ function ImageUploader({
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, file, { upsert: false });
+        .upload(path, file, { cacheControl: STORAGE_CACHE_CONTROL, upsert: false });
 
       if (upErr) throw upErr;
 

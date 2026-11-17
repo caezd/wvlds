@@ -8,7 +8,7 @@ import { Expand, GripVertical, Loader2, MoveHorizontal, Plus, Square, SquareDash
 
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
-import { nomDeFichierPourType } from "@/lib/storagePaths";
+import { nomDeFichierPourType, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { cn } from "@/lib/utils";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import type { PersonaGridImage } from "@/types/personas";
@@ -128,7 +128,7 @@ export function ImageGridField({
       Array.from(files).map(async (rawFile): Promise<PersonaGridImage | null> => {
         const file = await toWebP(rawFile);
         const path = `user-${userId}/section-images/${personaId}/${fieldId}/${nomDeFichierPourType(file.type)}`;
-        const { error } = await supabase.storage.from("personas").upload(path, file, { upsert: false, contentType: file.type });
+        const { error } = await supabase.storage.from("personas").upload(path, file, { cacheControl: STORAGE_CACHE_CONTROL, upsert: false, contentType: file.type });
         if (error) return null;
         const { data } = supabase.storage.from("personas").getPublicUrl(path);
         return { id: path, url: data.publicUrl };

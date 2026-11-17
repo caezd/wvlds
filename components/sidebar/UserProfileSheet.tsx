@@ -29,6 +29,7 @@ import { WorldCardTab } from "@/components/profile/sheet/WorldCardTab";
 import { AccountTab } from "@/components/profile/sheet/AccountTab";
 import { ProfileSaveBar } from "@/components/profile/sheet/ProfileSaveBar";
 import { pronounsOf, useProfileDraft } from "@/components/profile/sheet/useProfileDraft";
+import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 type Tab = "profile" | "card" | "account";
 
@@ -122,7 +123,7 @@ export function UserProfileSheet({
         const path = `user-${userId}/profile.webp`;
         const { error: upErr } = await supabase.storage
           .from("personas")
-          .upload(path, file, { upsert: true, contentType: "image/webp" });
+          .upload(path, file, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: "image/webp" });
         if (upErr) throw upErr;
         const { data } = supabase.storage.from("personas").getPublicUrl(path);
         const displayUrl = `${data.publicUrl}?t=${Date.now()}`;

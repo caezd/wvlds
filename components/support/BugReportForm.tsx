@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toWebP } from "@/lib/imageUtils";
-import { nomDeFichierPourType } from "@/lib/storagePaths";
+import { nomDeFichierPourType, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { submitBugReport } from "@/app/actions/bugReports";
 import { messageErreurAction } from "@/lib/actionErrors";
 import {
@@ -147,7 +147,7 @@ export function BugReportForm({
         const chemin = `user-${userId}/${nomDeFichierPourType(converti.type)}`;
         const { error } = await supabase.storage
           .from(BUG_REPORT_BUCKET)
-          .upload(chemin, converti, { contentType: converti.type });
+          .upload(chemin, converti, { cacheControl: STORAGE_CACHE_CONTROL, contentType: converti.type });
         return { chemin, error };
       }),
     );

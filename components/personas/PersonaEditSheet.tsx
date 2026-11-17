@@ -65,6 +65,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
 import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
+import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 // ---------------------------------------------------------------------------
 // Sélection + recadrage d'une image (fichier, presse-papiers ou lien externe),
@@ -101,7 +102,7 @@ function StorageUploadTab({
     const path = `user-${userId}/${subfolder}/${personaId}.webp`;
     const { error: upErr } = await supabase.storage
       .from("personas")
-      .upload(path, file, { upsert: true, contentType: file.type });
+      .upload(path, file, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: file.type });
     if (upErr) { setError(upErr.message); setUploading(false); return; }
     const { data } = supabase.storage.from("personas").getPublicUrl(path);
     const displayUrl = `${data.publicUrl}?t=${Date.now()}`;

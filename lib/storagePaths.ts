@@ -53,6 +53,19 @@ export function extensionDepuisLeType(type: string | undefined, defaut = "bin"):
 }
 
 /**
+ * Durée de cache des fichiers envoyés : un an (en secondes, la forme
+ * qu'attend `upload()`). Sans elle, Supabase sert chaque fichier avec
+ * `max-age=3600` : au-delà d'une heure, le navigateur et le CDN redemandaient
+ * chaque avatar, bannière ou image à l'origine — environ 0,8 s par image.
+ *
+ * Sûr parce qu'un fichier n'est jamais modifié sous la même URL : les chemins
+ * sont uniques (`nomDeFichierUnique`), ou, quand un fichier est réécrit au même
+ * chemin (`upsert`), l'URL enregistrée porte un `?t=` qui change à chaque envoi.
+ * Un nouvel envoi à chemin fixe doit garder ce `?t=` (`supabaseThumb` le relaie).
+ */
+export const STORAGE_CACHE_CONTROL = "31536000";
+
+/**
  * Nom de fichier unique et non devinable.
  *
  * Ne conserve rien du fichier d'origine : ni son nom, ni sa date. Un horodatage

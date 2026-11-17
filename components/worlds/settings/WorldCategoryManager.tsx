@@ -35,6 +35,7 @@ import {
 } from "@/app/actions/chatroomCategories";
 import type { ChatroomCategory } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -52,7 +53,7 @@ async function uploadCategoryImage(
 
   const { error } = await supabase.storage
     .from("chatroom-categories")
-    .upload(path, converted, { upsert: true, contentType: converted.type });
+    .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: converted.type });
   if (error) throw error;
 
   return supabase.storage.from("chatroom-categories").getPublicUrl(path).data.publicUrl;

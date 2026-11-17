@@ -8,7 +8,7 @@ import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
 import { createClient } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toWebP } from "@/lib/imageUtils";
-import { nomDeFichierUnique } from "@/lib/storagePaths";
+import { nomDeFichierUnique, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
@@ -324,7 +324,7 @@ export function WorldHomeGridEditor({
       const path = `user-${userId}/world-${worldId}/home-banner-${nomDeFichierUnique("webp")}`;
       const { error } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { contentType: "image/webp" });
+        .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: "image/webp" });
       if (error) {
         // Pas `error.message` : le stockage renvoie le texte brut de la
         // policy refusée.

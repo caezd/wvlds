@@ -41,6 +41,7 @@ import { Switch } from "@/components/ui/switch";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
+import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
@@ -168,10 +169,13 @@ export default function ChatroomSettingsSheet({
 
     const { error } = await supabase.storage
       .from("chatrooms")
-      .upload(path, converted, { upsert: true, contentType: converted.type });
+      .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: converted.type });
     if (error) throw error;
 
-    return supabase.storage.from("chatrooms").getPublicUrl(path).data.publicUrl;
+    // Même chemin à chaque envoi (`upsert`) : sans `?t=`, l'URL enregistrée ne
+    // changerait pas et le cache (un an, STORAGE_CACHE_CONTROL) resservirait
+    // l'ancienne image. `supabaseThumb` relaie ce paramètre aux miniatures.
+    return `${supabase.storage.from("chatrooms").getPublicUrl(path).data.publicUrl}?t=${Date.now()}`;
   }
 
   async function uploadFile(file: File, kind: "icon" | "banner") {

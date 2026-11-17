@@ -92,6 +92,7 @@ import {
   truthyOrNull,
   type WorldFormValues,
 } from "./worldSettingsSchema";
+import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 
 export interface WorldSettingsViewProps {
     world: World;
@@ -182,7 +183,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
         const { error } = await supabase.storage
             .from("worlds")
-            .upload(path, converted, { upsert: true, contentType: converted.type });
+            .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: converted.type });
         if (error) throw error;
 
         return supabase.storage.from("worlds").getPublicUrl(path).data

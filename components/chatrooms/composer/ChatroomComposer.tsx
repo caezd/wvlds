@@ -21,7 +21,7 @@ import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
-import { nomDeFichierPourType, nomDeFichierUnique } from "@/lib/storagePaths";
+import { nomDeFichierPourType, nomDeFichierUnique, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { ParagraphBlockEditor, type MentionQuery, type ParagraphBlockEditorHandle } from "./ParagraphBlockEditor";
 import { MentionAutocomplete, buildMentionCandidates, useWorldMentionMembers, type MentionCandidate } from "./MentionAutocomplete";
@@ -441,7 +441,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         try {
             const converted = await toWebP(new File([blob], "banner.png", { type: blob.type || "image/png" }));
             const path = `${chatId}/${crypto.randomUUID()}.webp`;
-            const { error } = await supabase.storage.from("chat-banners").upload(path, converted, { contentType: "image/webp" });
+            const { error } = await supabase.storage.from("chat-banners").upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: "image/webp" });
             if (error) { toast.error(tCommon("uploadBannerError"), { description: error.message }); return; }
             const { data } = supabase.storage.from("chat-banners").getPublicUrl(path);
             await sendRaw(JSON.stringify({ _type: "banner", url: data.publicUrl }));
@@ -473,7 +473,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             files.map(async (rawFile): Promise<{ url: string; name: string } | null> => {
                 const file = await toWebP(rawFile);
                 const path = `${targetChatId}/${nomDeFichierPourType(file.type)}`;
-                const { error } = await supabase.storage.from("chat-media").upload(path, file, { contentType: file.type });
+                const { error } = await supabase.storage.from("chat-media").upload(path, file, { cacheControl: STORAGE_CACHE_CONTROL, contentType: file.type });
                 if (error) { toast.error(tCommon("uploadImageError"), { description: error.message }); return null; }
                 const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
                 return { url: data.publicUrl, name: file.name };
@@ -491,7 +491,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         const path = `${chatId}/${nomDeFichierUnique("webp")}`;
         const { error } = await supabase.storage
             .from("chat-media")
-            .upload(path, converted, { contentType: "image/webp" });
+            .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: "image/webp" });
         if (error) { toast.error(tCommon("uploadImageError"), { description: error.message }); return null; }
         const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
         pendingBlockMediaRef.current = [...pendingBlockMediaRef.current, { url: data.publicUrl, name: file.name }];

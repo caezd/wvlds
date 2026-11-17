@@ -10,7 +10,7 @@ import {
 
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
-import { pinBannerPath } from "@/lib/storagePaths";
+import { pinBannerPath, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { createClient } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -234,7 +234,7 @@ export function PinDetail({
 
       const { error: upErr } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { contentType: converted.type });
+        .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: converted.type });
       if (upErr) throw upErr;
 
       const banner_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;

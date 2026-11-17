@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import { MAX_MAP_IMAGE_MB } from "@/lib/constants";
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
-import { mapImagePath } from "@/lib/storagePaths";
+import { mapImagePath, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
   createMapPin,
@@ -687,7 +687,7 @@ export function WorldMap({
 
       const { error: upErr } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { contentType: converted.type });
+        .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: converted.type });
       if (upErr) throw upErr;
 
       const image_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;

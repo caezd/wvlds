@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { toWebP } from "@/lib/imageUtils";
-import { nomDeFichierUnique } from "@/lib/storagePaths";
+import { nomDeFichierUnique, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { applyOwnVote } from "@/lib/choiceVotes";
 import type { ChatBlock } from "@/lib/chat-blocks";
@@ -110,7 +110,7 @@ export function GameBlockRenderer({
         const path = `${message.chat_id}/${nomDeFichierUnique("webp")}`;
         const { error } = await supabase.storage
           .from("chat-media")
-          .upload(path, converted, { contentType: "image/webp" });
+          .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: "image/webp" });
         if (error) {
           toast.error(tCommon("uploadImageError"), { description: error.message });
           return null;

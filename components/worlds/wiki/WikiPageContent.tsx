@@ -29,7 +29,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cropToWebP, firstImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
 import { ImageCropPicker } from "@/components/ui/image-crop-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { WIKI_BUCKET, wikiImagePath } from "@/lib/storagePaths";
+import { WIKI_BUCKET, wikiImagePath, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
 import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
@@ -651,7 +651,7 @@ export function WikiPageContent({
       const chemin = wikiImagePath(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
         .from(WIKI_BUCKET)
-        .upload(chemin, converti, { contentType: "image/webp" });
+        .upload(chemin, converti, { cacheControl: STORAGE_CACHE_CONTROL, contentType: "image/webp" });
       // Pas `error.message` : le stockage renvoie le texte brut de la policy.
       if (error) { console.error("[WikiPageContent]", error); toast.error(tCommon("uploadImageError")); return; }
 
@@ -787,7 +787,7 @@ export function WikiPageContent({
       const chemin = wikiImagePath(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
         .from(WIKI_BUCKET)
-        .upload(chemin, converti, { contentType: "image/webp" });
+        .upload(chemin, converti, { cacheControl: STORAGE_CACHE_CONTROL, contentType: "image/webp" });
       if (error) { console.error("[WikiPageContent]", error); toast.error(tCommon("uploadImageError")); return; }
 
       const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);

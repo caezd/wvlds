@@ -8,7 +8,7 @@ import { ImageIcon, Loader2, Plus, Shapes, Swords, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { isStorableImage, toWebP } from "@/lib/imageUtils";
-import { catalogItemImagePath } from "@/lib/storagePaths";
+import { catalogItemImagePath, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { storagePathFromUrl } from "@/lib/storage";
 import { CATALOG_RARITIES, MAX_CATALOG_PROPERTIES, RARITY_COLORS } from "@/lib/worldCatalog";
 import type { WorldCatalogProperty, WorldCatalogRarity } from "@/types/worlds";
@@ -189,7 +189,7 @@ export function CatalogItemDialog({
       const path = catalogItemImagePath(worldId, item.id, converted.type);
       const { error } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { contentType: converted.type });
+        .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: converted.type });
       if (error) throw error;
       setImageUrl(supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl);
     } catch {
