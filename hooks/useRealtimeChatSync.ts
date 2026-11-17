@@ -54,6 +54,8 @@ type Props = {
   onSubscribed?: () => void;
   /** Ordre de passage du salon créé ou modifié (migration 211). */
   onTurnChanged?: (turn: ChatroomTurn) => void;
+  /** Défi du jour relevé par un message du salon (migration 213). */
+  onChallengeWon?: (messageId: number, badge: { title: string; description: string | null }) => void;
   /**
    * Le rattrapage a atteint sa limite (CATCHUP_MAX_PAGES pages pleines) : trop
    * de messages manqués pour les rejouer un à un. La vue recharge alors la page
@@ -79,6 +81,7 @@ export function useRealtimeChatSync({
   isMessageKnown,
   onSubscribed,
   onTurnChanged,
+  onChallengeWon,
   onCatchUpGap,
 }: Props) {
   const t = useTranslations("chatrooms");
@@ -107,6 +110,7 @@ export function useRealtimeChatSync({
     isMessageKnown,
     onSubscribed,
     onTurnChanged,
+    onChallengeWon,
     onCatchUpGap,
   });
   callbacksRef.current = {
@@ -120,6 +124,7 @@ export function useRealtimeChatSync({
     isMessageKnown,
     onSubscribed,
     onTurnChanged,
+    onChallengeWon,
     onCatchUpGap,
   };
 
@@ -272,6 +277,14 @@ export function useRealtimeChatSync({
     ch.on("broadcast", { event: "turn" }, (msg: Avis) => {
       if (!isMounted) return;
       callbacksRef.current.onTurnChanged?.((msg.payload ?? {}) as unknown as ChatroomTurn);
+    });
+
+    // Défi du jour relevé (migration 213) : le badge du message, sans relecture
+    ch.on("broadcast", { event: "challenge" }, (msg: Avis) => {
+      if (!isMounted) return;
+      const row = (msg.payload ?? {}) as { message_id?: number; title?: string; description?: string | null };
+      if (row.message_id === undefined || !row.title) return;
+      callbacksRef.current.onChallengeWon?.(Number(row.message_id), { title: row.title, description: row.description ?? null });
     });
 
     // Avatar d'une persona ayant écrit dans ce salon

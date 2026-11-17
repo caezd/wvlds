@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { amorcerCleDeSalon } from "@/lib/chatroomKeyBootstrap";
@@ -233,7 +232,6 @@ export default function ChatRoomView({
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
-  const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
   const searchParams = useSearchParams();
   // Contexte des actions seules : ChatRoomView n'a besoin que de ces deux
@@ -305,33 +303,9 @@ export default function ChatRoomView({
   // Les couleurs de groupe arrivent en props (résolues côté serveur) : plus
   // d'aller-retour réseau après l'hydratation pour cette donnée.
 
-  /* challenge badges — mis à jour en Realtime */
-  useEffect(() => {
-    // Les badges des messages initiaux viennent des props, ceux de l'historique
-    // de la page chargée (lib/chatMessagePage) ; ne reste que le Realtime.
-
-    const sub = supabase
-      .channel(`challenge-badges-${chatId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: TABLE.CHALLENGE_ATTEMPTS, filter: `chat_id=eq.${chatId}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const row = payload.new as { message_id: number; challenge_id: string; status: string };
-          if (row.status !== "won") return;
-          void (async () => {
-            const { data } = await supabase
-              .from(TABLE.CHALLENGES)
-              .select("title, description")
-              .eq("id", row.challenge_id)
-              .single();
-            if (data) setChallengeBadges((prev) => new Map(prev).set(Number(row.message_id), data));
-          })();
-        },
-      )
-      .subscribe();
-
-    return () => { void supabase.removeChannel(sub); };
-  }, [chatId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* Les badges de défi des messages initiaux viennent des props, ceux de
+     l'historique de la page chargée (lib/chatMessagePage) ; ceux gagnés en
+     direct arrivent par le canal du salon (`onChallengeWon`, migration 213). */
 
   /* défis actifs du jour — chargés une fois à l'ouverture du chatroom */
   useEffect(() => {
@@ -840,6 +814,8 @@ export default function ChatRoomView({
     onSubscribed: () => void resyncDisplayedMessages(),
     onCatchUpGap: rechargerDernierePage,
     onTurnChanged: setTurn,
+    onChallengeWon: (messageId, badge) =>
+      setChallengeBadges((prev) => new Map(prev).set(messageId, badge)),
     initialLatestId: initialMessages.at(-1)?.id ?? null,
     onMessageInserted: (msg, authorId) => {
       void (async () => {

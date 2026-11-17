@@ -296,6 +296,26 @@ describe("useRealtimeChatSync — ordre de passage", () => {
   });
 });
 
+describe("useRealtimeChatSync — défi relevé", () => {
+  it("relaie le badge d'un défi gagné dans le salon", async () => {
+    const onChallengeWon = vi.fn();
+    const { mock } = setup({ results: [{ data: [] }] }, { onChallengeWon });
+    act(() => {
+      diffuser(mock, "challenge", { message_id: 42, title: "Cent mots", description: "Écrire cent mots" });
+    });
+    expect(onChallengeWon).toHaveBeenCalledWith(42, { title: "Cent mots", description: "Écrire cent mots" });
+  });
+
+  it("ignore un avis incomplet", async () => {
+    const onChallengeWon = vi.fn();
+    const { mock } = setup({ results: [{ data: [] }] }, { onChallengeWon });
+    act(() => {
+      diffuser(mock, "challenge", { message_id: 42 });
+    });
+    expect(onChallengeWon).not.toHaveBeenCalled();
+  });
+});
+
 describe("useRealtimeChatSync — trou trop grand pour le rattrapage", () => {
   const pagesPleines = () =>
     Array.from({ length: CATCHUP_MAX_PAGES }, (_, p) => ({
