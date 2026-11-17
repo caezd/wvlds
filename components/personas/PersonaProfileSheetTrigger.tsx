@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import * as React from "react";
 import { ClipboardCheck, NotebookText, Waypoints, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,7 +29,9 @@ import { narrativeStatusOf } from "@/lib/personaStatus";
 import { reviewStatusOf } from "@/lib/personaReview";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
 import { PersonaNpcBadge } from "./PersonaNpcBadge";
-import { PersonaReviewSection } from "./PersonaReviewPanel";
+// La relecture n'apparaît que fiche ouverte, et seulement aux relecteurs :
+// chargée à ce moment-là plutôt qu'avec chaque salon.
+const PersonaReviewSection = dynamic(() => import("./PersonaReviewPanel").then((m) => m.PersonaReviewSection));
 import { PersonaJournalSection } from "./PersonaJournalSection";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";

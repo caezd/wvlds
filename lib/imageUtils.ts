@@ -1,4 +1,21 @@
-import imageCompression from "browser-image-compression";
+/**
+ * `browser-image-compression` (~50 ko) n'est chargé qu'à la première
+ * conversion : ce module est importé par le composeur et la fiche de profil,
+ * présents sur la plupart des pages, alors que la compression ne sert qu'au
+ * moment d'envoyer une image.
+ */
+let compressionPromise: Promise<typeof import("browser-image-compression").default> | null = null;
+function chargerCompression() {
+  // Un échec de téléchargement (réseau coupé) n'est pas gardé : le prochain
+  // envoi réessaie.
+  compressionPromise ??= import("browser-image-compression")
+    .then((m) => m.default)
+    .catch((e) => {
+      compressionPromise = null;
+      throw e;
+    });
+  return compressionPromise;
+}
 
 const SKIP_TYPES = new Set(["image/gif", "image/svg+xml", "image/webp"]);
 
@@ -31,6 +48,7 @@ export function isStorableImage(file: File): boolean {
 export async function toWebP(file: File, maxWidthOrHeight = 2048): Promise<File> {
   if (SKIP_TYPES.has(file.type)) return file;
 
+  const imageCompression = await chargerCompression();
   const compressed = await imageCompression(file, {
     fileType: "image/webp",
     maxWidthOrHeight,

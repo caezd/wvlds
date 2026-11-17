@@ -21,7 +21,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { StoredImage } from "@/components/ui/stored-image";
 import { buttonVariants } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import { VALID_LUCIDE_ICONS } from "@/lib/lucideIconNames";
 import type { LinkPreview } from "@/lib/wikiLinkPreview";
 import type { WorldLexiconTerm } from "@/types/worlds";
 import { withOpacity } from "@/lib/colorOpacity";

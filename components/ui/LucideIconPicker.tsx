@@ -6,10 +6,13 @@ import { Search } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SectionLabel } from "@/components/ui/section-label";
-import { LUCIDE_CATEGORIES, LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
+import { LUCIDE_CATEGORIES } from "@/lib/lucideCategories";
+import { LUCIDE_ALL_ICONS, VALID_LUCIDE_ICONS } from "@/lib/lucideIconNames";
 import { cn } from "@/lib/utils";
 
-export const VALID_LUCIDE_ICONS = new Set<string>(LUCIDE_ALL_ICONS);
+// Ré-exporté pour les imports existants ; la liste vit dans lib/lucideIconNames
+// pour que l'afficher n'oblige pas à charger tout le sélecteur.
+export { VALID_LUCIDE_ICONS };
 
 const ICON_RENDER_CAP = 180;
 

@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { topic, useTopic } from "@/lib/realtimeHub";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import { VALID_LUCIDE_ICONS } from "@/lib/lucideIconNames";
 import { relativeTime } from "@/lib/relativeTime";
 
 const DEFAULT_PAGE_LIMIT = 6;

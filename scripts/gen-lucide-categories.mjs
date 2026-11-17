@@ -105,10 +105,27 @@ export type LucideCategory = { title: string; icons: string[] };
 
 export const LUCIDE_CATEGORIES: LucideCategory[] = ${JSON.stringify(categories, null, 2)};
 
+export { LUCIDE_ALL_ICONS } from "./lucideIconNames";
+`;
+
+// Les noms seuls, dans leur propre module : afficher une icône n'a besoin que
+// de savoir si son nom existe, pas de tout le catalogue des catégories.
+const noms = `// FICHIER GÉNÉRÉ — ne pas éditer à la main.
+// Régénérer avec : node scripts/gen-lucide-categories.mjs (voir le script).
+//
+// Les seuls NOMS des icônes Lucide, séparés de lucideCategories.ts (et de ses
+// ${categories.length} catégories, ~70 ko) : afficher une icône n'a besoin que de savoir si son
+// nom existe. Le rendu Markdown, chargé sur toutes les pages, embarquait sinon
+// tout le catalogue du sélecteur d'icônes.
+
 export const LUCIDE_ALL_ICONS: string[] = ${JSON.stringify([...available].sort())};
+
+/** Noms d'icônes Lucide valides (kebab-case). */
+export const VALID_LUCIDE_ICONS: ReadonlySet<string> = new Set<string>(LUCIDE_ALL_ICONS);
 `;
 
 writeFileSync(OUT, header, "utf8");
+writeFileSync(join(__dirname, "..", "lib", "lucideIconNames.ts"), noms, "utf8");
 console.log(`OK -> ${OUT}`);
 console.log(`${categories.length} catégories, ${total} icônes.`);
 console.log("Aperçu:", categories.slice(0, 6).map((c) => `${c.title}(${c.icons.length})`).join(", "));

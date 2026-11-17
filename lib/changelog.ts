@@ -45,6 +45,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-17",
+    category: "Performance",
+    text: "Les pages s’ouvrent plus vite : environ un tiers de JavaScript en moins sur les pages de réglages, de boutique et d’exploration, et 40 à 55 ko de moins sur un salon ou un monde. Le catalogue d’icônes, la compression d’images, les panneaux de messages et de notifications, la fiche de profil et la fenêtre d’encadré ne se chargent plus qu’au moment où l’on s’en sert.",
+  },
+  {
+    date: "2026-11-17",
     category: "Interface",
     area: "Salons",
     text: "Le contenu d’un encadré se rédige comme un message : un retour fait un saut de ligne, un second ouvre un nouveau paragraphe, avec la même barre de mise en forme. Ses paragraphes s’affichent aussi espacés que ceux d’un message.",

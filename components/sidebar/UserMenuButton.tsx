@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -22,9 +23,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bug, ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
 import { cn } from "@/lib/utils";
-import { UserProfileSheet } from "./UserProfileSheet";
 import { useTranslations } from "next-intl";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+
+// Chargée à la demande : la fiche (envoi et recadrage d'avatar, compression
+// d'image, fiche de membre) entrait sinon dans le JavaScript de TOUTES les pages,
+// pour un panneau qu'on n'ouvre que depuis ce menu. Elle ne charge ses données
+// qu'à l'ouverture (useProfileDraft) : la monter plus tard ne change rien.
+const UserProfileSheet = dynamic(() => import("./UserProfileSheet").then((m) => m.UserProfileSheet), { ssr: false });
 
 type UserMenuButtonProps = {
   userId: string;
@@ -58,6 +64,10 @@ export function UserMenuButton({
   const supabase = createClient();
   const { status, setStatus } = useGlobalPresence();
   const [profileOpen, setProfileOpen] = useState(false);
+  // Montée dès la première ouverture du menu : son code se télécharge pendant
+  // que le menu est ouvert, et elle s'ouvre ensuite avec son animation, comme
+  // avant. Elle reste montée ensuite (l'animation de fermeture est préservée).
+  const [profileMounted, setProfileMounted] = useState(false);
   const tPresence = useTranslations("presence");
   const tNav = useTranslations("nav");
   const { canInstall, installed, promptInstall } = useInstallPrompt();
@@ -88,15 +98,17 @@ export function UserMenuButton({
 
   return (
     <>
-      <UserProfileSheet
-        open={profileOpen}
-        onOpenChange={setProfileOpen}
-        userId={userId}
-        initialUsername={username}
-        initialAvatarUrl={avatarUrl ?? null}
-        email={email}
-      />
-      <DropdownMenu>
+      {profileMounted && (
+        <UserProfileSheet
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+          userId={userId}
+          initialUsername={username}
+          initialAvatarUrl={avatarUrl ?? null}
+          email={email}
+        />
+      )}
+      <DropdownMenu onOpenChange={(ouvert) => { if (ouvert) setProfileMounted(true); }}>
         <DropdownMenuTrigger asChild>
           {variant === "compact" ? (
             <button
@@ -171,7 +183,7 @@ export function UserMenuButton({
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={afterMenuClose(() => setProfileOpen(true))}>
+          <DropdownMenuItem onClick={afterMenuClose(() => { setProfileMounted(true); setProfileOpen(true); })}>
             <UserRound className="mr-2 size-4" />
             {tNav("profile")}
           </DropdownMenuItem>

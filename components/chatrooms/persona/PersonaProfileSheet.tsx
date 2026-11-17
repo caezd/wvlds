@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { PersonaTimelineView } from "@/components/personas/PersonaTimelineView";
 import { createClient } from "@/lib/supabase/client";
@@ -32,7 +33,10 @@ import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { PersonaJournalSection } from "@/components/personas/PersonaJournalSection";
 import { indexCatalog } from "@/lib/worldCatalog";
-import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
+// Inventaire et compétences (fiches d'objets du catalogue) : chargés à
+// l'ouverture d'une fiche qui en a, plutôt qu'avec chaque salon.
+const InventoryFieldView = dynamic(() => import("@/components/personas/fields/CatalogFieldViews").then((m) => m.InventoryFieldView));
+const SkillsFieldView = dynamic(() => import("@/components/personas/fields/CatalogFieldViews").then((m) => m.SkillsFieldView));
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
 import type { WorldCatalogItem } from "@/types/worlds";
 import { useTranslations } from "next-intl";

@@ -50,7 +50,7 @@ const DiceDialog = dynamic(() => import("../blocks/DiceDialog").then((m) => m.Di
 const NarrativeBlockDialog = dynamic(() => import("../blocks/NarrativeBlockDialog").then((m) => m.NarrativeBlockDialog), { ssr: false });
 const NpcDialog = dynamic(() => import("../blocks/NpcBlock").then((m) => m.NpcDialog), { ssr: false });
 const HpDialog = dynamic(() => import("../blocks/HpBlock").then((m) => m.HpDialog), { ssr: false });
-const CalloutDialog = dynamic(() => import("../blocks/CalloutBlock").then((m) => m.CalloutDialog), { ssr: false });
+const CalloutDialog = dynamic(() => import("../blocks/CalloutDialog").then((m) => m.CalloutDialog), { ssr: false });
 const AnchorDialog = dynamic(() => import("../blocks/AnchorDialog").then((m) => m.AnchorDialog), { ssr: false });
 const ChoiceDialog = dynamic(() => import("../blocks/ChoiceBlock").then((m) => m.ChoiceDialog), { ssr: false });
 

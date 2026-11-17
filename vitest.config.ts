@@ -48,7 +48,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["lib/**", "hooks/**", "components/**", "app/**"],
-      exclude: ["**/*.d.ts", "lib/lucideCategories.ts", "components/ui/**"],
+      exclude: ["**/*.d.ts", "lib/lucideCategories.ts", "lib/lucideIconNames.ts", "components/ui/**"],
     },
   },
 });

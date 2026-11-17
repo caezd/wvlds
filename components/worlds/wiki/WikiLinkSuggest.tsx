@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { FileText, Hash } from "lucide-react";
 
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import { VALID_LUCIDE_ICONS } from "@/lib/lucideIconNames";
 import { cn } from "@/lib/utils";
 import type { CaretPosition } from "@/lib/caretPosition";
 

@@ -2,8 +2,11 @@ import { cookies } from "next/headers";
 import { ShoppingBasket, ShieldCheck, Dices, UserRound, Compass } from "lucide-react";
 import { RailIcon } from "./SidebarRailIcons";
 import { WorldsQuickAccess } from "./WorldsQuickAccess";
-import { NotificationBellButton } from "@/components/notifications";
-import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
+// Importés depuis leurs fichiers à eux, pas depuis les index : ceux-ci portent
+// aussi les panneaux, chargés à la demande par AppShell. Les importer ici les
+// faisait entrer dans le JavaScript de toutes les pages.
+import { NotificationBellButton } from "@/components/notifications/NotificationRailButtons";
+import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms/DmsRailButtons";
 import { UserMenuButton } from "./UserMenuButton";
 import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth, getFavoriteWorlds, getNewBugReportCount } from "@/lib/currentRequest";
 import { SidebarLogo } from "./SidebarLogo";

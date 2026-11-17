@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -13,12 +14,19 @@ import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Coins, Flame, Zap } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { isPronounOption } from "@/lib/pronouns";
 import { levelInfo } from "@/lib/xp";
-import { MemberWorldCardSection } from "@/components/worlds/members/MemberWorldCardSection";
+
+// Le rendu Markdown (micromark, remark…) ne sert ici qu'à la bio et à la fiche
+// de membre, affichées une fois la fiche ouverte et le profil chargé : ils sont
+// chargés avec elles plutôt qu'avec la page. Ce déclencheur est présent sur
+// toutes les pages (chat en direct du monde).
+const MarkdownRenderer = dynamic(() => import("@/components/MarkdownRenderer"));
+const MemberWorldCardSection = dynamic(() =>
+  import("@/components/worlds/members/MemberWorldCardSection").then((m) => m.MemberWorldCardSection),
+);
 
 function formatMemberSince(value: string) {
   return new Intl.DateTimeFormat("fr-CA", {
