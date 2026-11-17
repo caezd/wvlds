@@ -47,6 +47,14 @@ const isBroadcastTyping = (h: { type: string; config: Record<string, unknown> })
 beforeEach(() => vi.clearAllMocks());
 
 describe("usePresenceChannel", () => {
+  it("ouvre le canal du salon en privé (migration 218)", async () => {
+    const { mock } = await setup({});
+    expect(mock.channel).toHaveBeenCalledWith(
+      "chat:c1",
+      expect.objectContaining({ config: expect.objectContaining({ private: true }) }),
+    );
+  });
+
   it("parse l'état de présence sur l'événement sync", async () => {
     const { ch, result } = await setup({
       u2: { metas: [{ username: "bob", persona_name: "Mage" }] },

@@ -132,6 +132,9 @@ export function usePresenceChannel({
       },
       {
         config: {
+          // Privé (migration 218) : seuls les membres du monde du salon
+          // peuvent le rejoindre, voir qui est là et qui écrit.
+          private: true,
           presence: { key: userId },
           broadcast: { self: false },
         },

@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-17",
+    category: "Correctif",
+    area: "Salons",
+    text: "Qui se trouve dans un salon et qui y écrit n’est plus visible que des membres du monde. Après la mise à jour, rechargez la page si l’indication « … écrit » ne s’affiche plus.",
+  },
+  {
+    date: "2026-11-17",
     category: "Performance",
     text: "Chaque mise à jour de l’application télécharge environ 6 Mo de moins en arrière-plan : l’application ne garde d’avance que ce qu’il faut pour afficher la page « Vous êtes hors ligne ». Le reste se met en cache au fil des pages visitées, comme avant.",
   },
