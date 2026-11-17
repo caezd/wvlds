@@ -121,6 +121,12 @@ export type ChatMessage = {
   visible_to?: string[] | null;
   /** Id du message auquel celui-ci répond (migration 207). */
   reply_to_id?: number | null;
+  /**
+   * « Insérer avant » (migration 216) : date réelle d'envoi. `created_at` place
+   * le message dans le fil, juste avant `insert_before_id`.
+   */
+  inserted_at?: string | null;
+  insert_before_id?: number | null;
 };
 
 export type ChatMessageReaction = {

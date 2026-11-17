@@ -107,6 +107,7 @@ function ChatroomMessage({
   smsSharpBottom,
   smsShowAvatar,
   onReply,
+  onInsertBefore,
   onJumpToMessage,
   onReport,
 }: {
@@ -142,6 +143,8 @@ function ChatroomMessage({
   smsShowAvatar?: boolean;
   /** Répondre à ce message (reçoit son id — même raison que `onRequestDelete`). */
   onReply?: (id: number) => void;
+  /** « Insérer avant » ce message (migration 216) ; absent si l'on ne peut pas poster. */
+  onInsertBefore?: (id: number) => void;
   /** Remonter jusqu'à un message (citation cliquable). */
   onJumpToMessage?: (id: number) => void;
   /** Signaler ce message (reçoit son id). */
@@ -182,7 +185,7 @@ function ChatroomMessage({
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
-  const hasActions = mine || !!emoji_reactions || !!onReply || !!onReport;
+  const hasActions = mine || !!emoji_reactions || !!onReply || !!onInsertBefore || !!onReport;
   const longPressHandlers = useLongPress(useCallback(() => {
     try { navigator.vibrate?.(50); } catch { /* noop */ }
     setDrawerOpen(true);
@@ -214,6 +217,7 @@ function ChatroomMessage({
     [onRequestDelete, message.id],
   );
   const repondre = useCallback(() => onReply?.(message.id), [onReply, message.id]);
+  const insererAvant = useCallback(() => onInsertBefore?.(message.id), [onInsertBefore, message.id]);
   const signaler = useCallback(() => onReport?.(message.id), [onReport, message.id]);
   const citation = message.reply_to_id ? (
     <MessageReplyQuote replyToId={message.reply_to_id} replyTo={message.reply_to} onJump={onJumpToMessage} />
@@ -357,6 +361,7 @@ function ChatroomMessage({
             pickerOpen={pickerOpen}
             setPickerOpen={setPickerOpen}
             onReply={onReply ? repondre : undefined}
+            onInsertBefore={onInsertBefore ? insererAvant : undefined}
             onReport={onReport ? signaler : undefined}
           />
 
@@ -517,6 +522,7 @@ function ChatroomMessage({
         onRequestDelete={demanderSuppression}
         toggleReaction={toggleReaction}
         onReply={onReply ? repondre : undefined}
+            onInsertBefore={onInsertBefore ? insererAvant : undefined}
         onReport={onReport ? signaler : undefined}
       />
 

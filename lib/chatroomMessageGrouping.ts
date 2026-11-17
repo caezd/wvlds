@@ -89,18 +89,30 @@ export function aggregateContentWarnings(messages: ChatMessageWithPersona[]): st
 }
 
 /**
- * Ajoute un message à la liste en respectant l'ordre des ids (croissants),
- * sans doublon. Les messages arrivent presque toujours dans l'ordre — on
- * ajoute alors en fin de liste, sans parcours — mais un rattrapage après
- * coupure peut livrer des messages plus anciens qu'un INSERT Realtime reçu
- * pendant sa lecture (cf. useRealtimeChatSync).
+ * Ordre du fil : par date (`created_at`), puis par id à date égale. L'id seul
+ * ne suffit plus depuis « Insérer avant » (migration 216) : un message inséré
+ * a l'id le plus récent mais se date juste avant sa cible.
+ */
+export function vientAvant<T extends { id: number; created_at?: string }>(a: T, b: T): boolean {
+  if (a.created_at && b.created_at && a.created_at !== b.created_at) {
+    return Date.parse(a.created_at) < Date.parse(b.created_at);
+  }
+  return a.id < b.id;
+}
+
+/**
+ * Ajoute un message à sa place dans le fil (cf. `vientAvant`), sans doublon.
+ * Les messages arrivent presque toujours dans l'ordre — on ajoute alors en fin
+ * de liste, sans parcours — mais un rattrapage après coupure peut livrer des
+ * messages plus anciens qu'un INSERT Realtime reçu pendant sa lecture (cf.
+ * useRealtimeChatSync), et un message inséré se place avant sa cible.
  *
  * Rend la liste d'origine, inchangée, si le message y figure déjà.
  */
-export function insertMessageById<T extends { id: number }>(list: T[], msg: T): T[] {
-  const last = list.at(-1);
-  if (!last || last.id < msg.id) return [...list, msg];
+export function insertMessageById<T extends { id: number; created_at?: string }>(list: T[], msg: T): T[] {
   if (list.some((m) => m.id === msg.id)) return list;
-  const index = list.findIndex((m) => m.id > msg.id);
-  return [...list.slice(0, index), msg, ...list.slice(index)];
+  const last = list.at(-1);
+  if (!last || vientAvant(last, msg)) return [...list, msg];
+  const index = list.findIndex((m) => vientAvant(msg, m));
+  return index === -1 ? [...list, msg] : [...list.slice(0, index), msg, ...list.slice(index)];
 }

@@ -158,3 +158,32 @@ describe("ChatroomMessage — indicateur « modifié »", () => {
     expect(Number.isNaN(Date.parse(metadata!.edited_at!))).toBe(false);
   });
 });
+
+describe("ChatroomMessage — « insérer avant » (migration 216)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupMock();
+  });
+
+  it("affiche « inséré » et sa date réelle pour un message inséré", () => {
+    const message = makeMessage({ inserted_at: "2026-11-17T16:40:00Z" });
+    render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
+    expect(screen.getByTestId("message-inserted")).toHaveTextContent("inserted");
+    expect(screen.getByText("insertedAt")).toBeInTheDocument();
+  });
+
+  it("n'affiche rien pour un message posté normalement", () => {
+    render(<ChatroomMessage message={makeMessage({ inserted_at: null })} online={{}} selfId="viewer-1" />);
+    expect(screen.queryByTestId("message-inserted")).toBeNull();
+  });
+
+  it("propose « insérer avant » dans le menu et transmet l'id du message", () => {
+    const onInsertBefore = vi.fn();
+    const message = makeMessage();
+    render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" onReply={vi.fn()} onInsertBefore={onInsertBefore} />);
+    // Menu de bureau et tiroir mobile sont tous deux rendus ici : les deux le proposent.
+    expect(screen.getAllByRole("button", { name: "insertBefore" })).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("button", { name: "insertBefore" })[0]);
+    expect(onInsertBefore).toHaveBeenCalledWith(message.id);
+  });
+});

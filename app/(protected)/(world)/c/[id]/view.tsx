@@ -972,6 +972,21 @@ export default function ChatRoomView({
       excerpt: replyExcerpt(m.content) ?? t("replyBlock"),
     };
   }, [replyToId, messages, t]);
+  // « Insérer avant » (migration 216) : même mécanique que « Répondre » ; le
+  // message envoyé se place dans le fil juste avant celui-ci.
+  const [insertBeforeId, setInsertBeforeId] = useState<number | null>(null);
+  const handleInsertBefore = useCallback((id: number) => setInsertBeforeId(id), []);
+  const cancelInsertBefore = useCallback(() => setInsertBeforeId(null), []);
+  const insertBeforeRef = useMemo(() => {
+    if (insertBeforeId === null) return null;
+    const m = messages.find((x) => x.id === insertBeforeId);
+    if (!m) return null;
+    return {
+      id: m.id,
+      author: replyAuthorLabel(m) ?? t("replyUnknownAuthor"),
+      excerpt: replyExcerpt(m.content) ?? t("replyBlock"),
+    };
+  }, [insertBeforeId, messages, t]);
   // Ordre de passage : « passer » le tour (qui règle l'ordre seulement).
   const handleSkipTurn = useCallback(async () => {
     if (!turn) return;
@@ -1012,6 +1027,7 @@ export default function ChatRoomView({
       onRequestDelete={handleRequestDelete}
       onAnchorEdited={handleAnchorEdited}
       onReply={canReply ? handleReply : undefined}
+      onInsertBefore={canReply ? handleInsertBefore : undefined}
       onJumpToMessage={handleJumpToMessage}
       onReport={userId ? handleReport : undefined}
     />
@@ -1233,6 +1249,8 @@ export default function ChatRoomView({
                   }}
                   replyTo={replyToRef}
                   onCancelReply={cancelReply}
+                  insertBefore={insertBeforeRef}
+                  onCancelInsertBefore={cancelInsertBefore}
                   topTab={isTurnActive(turn) ? (
                     <ChatroomTurnBar
                       turn={turn}

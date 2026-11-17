@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-17",
+    category: "Fonctionnalité",
+    area: "Salons",
+    text: "« Insérer avant », dans le menu d’un message : comme pour « Répondre », le composeur passe en mode insertion, et le message envoyé prend place dans le fil juste avant le message choisi — pratique pour une réplique oubliée. Il porte la mention « (inséré) », avec sa vraie date d’envoi au survol.",
+  },
+  {
+    date: "2026-11-17",
     category: "Performance",
     text: "Tout le temps réel passe désormais par des canaux privés partagés entre les écrans : moins de travail pour le serveur, et la liste des salons suit enfin les renommages, les suppressions et le premier message d’un salon sans recharger la page.",
   },

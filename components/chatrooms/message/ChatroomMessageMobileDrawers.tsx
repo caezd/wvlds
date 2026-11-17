@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Code, CornerUpLeft, FileText, Flag, Pencil, Pipette, SmilePlus, Trash2 } from "lucide-react";
+import { BetweenHorizontalStart, Code, CornerUpLeft, FileText, Flag, Pencil, Pipette, SmilePlus, Trash2 } from "lucide-react";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   Drawer,
@@ -28,6 +28,7 @@ export function ChatroomMessageMobileDrawers({
   onRequestDelete,
   toggleReaction,
   onReply,
+  onInsertBefore,
   onReport,
 }: {
   personaName?: string | null;
@@ -45,6 +46,7 @@ export function ChatroomMessageMobileDrawers({
   onRequestDelete?: () => void;
   toggleReaction: (emoteKey: string) => void | Promise<void>;
   onReply?: () => void;
+  onInsertBefore?: () => void;
   onReport?: () => void;
 }) {
   const t = useTranslations("chatrooms");
@@ -123,6 +125,19 @@ export function ChatroomMessageMobileDrawers({
               >
                 <CornerUpLeft className="h-5 w-5 shrink-0 text-muted-foreground" />
                 {t("reply")}
+              </button>
+            )}
+            {onInsertBefore && (
+              <button
+                type="button"
+                className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  onInsertBefore();
+                }}
+              >
+                <BetweenHorizontalStart className="h-5 w-5 shrink-0 text-muted-foreground" />
+                {t("insertBefore")}
               </button>
             )}
             {!mine && onReport && (

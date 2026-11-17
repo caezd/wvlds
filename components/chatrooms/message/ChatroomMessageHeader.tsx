@@ -51,6 +51,7 @@ export function ChatroomMessageHeader({
   pickerOpen,
   setPickerOpen,
   onReply,
+  onInsertBefore,
   onReport,
 }: {
   message: ChatMessageWithPersona;
@@ -80,6 +81,7 @@ export function ChatroomMessageHeader({
   pickerOpen: boolean;
   setPickerOpen: (open: boolean) => void;
   onReply?: () => void;
+  onInsertBefore?: () => void;
   onReport?: () => void;
 }) {
   const t = useTranslations("chatrooms");
@@ -171,7 +173,7 @@ export function ChatroomMessageHeader({
               </Popover>
             )}
 
-            {!editing && !isMobile && (mine || onPin || onReply || onReport) && (
+            {!editing && !isMobile && (mine || onPin || onReply || onInsertBefore || onReport) && (
               <MessageActionsDropdown
                 mine={mine}
                 isPinned={!!pinId}
@@ -181,6 +183,7 @@ export function ChatroomMessageHeader({
                 onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
                 onRequestDelete={onRequestDelete}
                 onReply={onReply}
+                onInsertBefore={onInsertBefore}
                 onReport={onReport}
               />
             )}
@@ -232,6 +235,18 @@ export function ChatroomMessageHeader({
                 </TooltipTrigger>
                 <TooltipContent>
                   {t("editedAt", { date: new Date(message.metadata.edited_at) })}
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {message.inserted_at && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-default select-none" data-testid="message-inserted">
+                    {t("inserted")}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("insertedAt", { date: new Date(message.inserted_at) })}
                 </TooltipContent>
               </Tooltip>
             )}

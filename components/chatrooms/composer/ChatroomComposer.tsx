@@ -17,7 +17,7 @@ import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { ContentWarningChipInput } from "@/components/chatrooms/composer/ContentWarningChipInput";
 import { Button } from "../../ui/button";
-import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft } from "lucide-react";
+import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft, BetweenHorizontalStart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -93,6 +93,9 @@ type ChatroomComposerProps = {
     replyTo?: { id: number; author: string; excerpt: string } | null;
     /** Abandonne la réponse — appelé aussi après un envoi réussi. */
     onCancelReply?: () => void;
+    /** « Insérer avant » (migration 216) : le message envoyé se place juste avant celui-ci dans le fil. */
+    insertBefore?: { id: number; author: string; excerpt: string } | null;
+    onCancelInsertBefore?: () => void;
     /**
      * Languette accrochée au haut du composeur (même largeur, la carte en
      * recouvre le bas) — ex. l'ordre de passage du salon. Rien si null.
@@ -134,6 +137,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     onMessageCreated,
     replyTo = null,
     onCancelReply,
+    insertBefore = null,
+    onCancelInsertBefore,
     topTab = null,
     worldTimelineConfig,
     timelineDate,
@@ -560,6 +565,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     metadata: finalMetadata,
                     ...(visibleTo !== null ? { visible_to: [userId, ...visibleTo] } : {}),
                     ...(replyTo ? { reply_to_id: replyTo.id } : {}),
+                    // La base le date juste avant sa cible (trigger, migration 216).
+                    ...(insertBefore ? { insert_before_id: insertBefore.id } : {}),
                 })
                 .select(`world_id, ${MESSAGE_COLUMNS}`)
                 .single();
@@ -567,6 +574,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             const newMessage = inserted as unknown as ChatMessageWithPersona & { id: number; world_id: string | null };
             onMessageCreated?.({ ...newMessage, content: text });
             if (replyTo) onCancelReply?.();
+            if (insertBefore) onCancelInsertBefore?.();
             onMessageSent?.(newMessage.id, targetChatId, text);
 
             // Effets annexes, en parallèle et SANS les attendre : le composeur se
@@ -690,10 +698,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         </div>
     );
 
-    // « Répondre » sur mobile : le composeur vit dans un tiroir fermé, on l'ouvre.
+    // « Répondre » / « Insérer avant » sur mobile : le composeur vit dans un
+    // tiroir fermé, on l'ouvre.
     useEffect(() => {
-        if (replyTo && useMobileDrawer) setDrawerOpen(true);
-    }, [replyTo, useMobileDrawer]);
+        if ((replyTo || insertBefore) && useMobileDrawer) setDrawerOpen(true);
+    }, [replyTo, insertBefore, useMobileDrawer]);
 
     const replyBar = replyTo ? (
         <div
@@ -708,6 +717,25 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 onClick={onCancelReply}
                 className="shrink-0 rounded p-0.5 hover:bg-muted hover:text-foreground"
                 aria-label={tChatrooms("cancelReply")}
+            >
+                <X className="size-3.5" />
+            </button>
+        </div>
+    ) : null;
+
+    const insertBar = insertBefore ? (
+        <div
+            className="mb-1.5 flex items-center gap-2 rounded-md border-l-2 border-warning/70 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
+            data-testid="composer-insert-before"
+        >
+            <BetweenHorizontalStart className="size-3.5 shrink-0" />
+            <span className="shrink-0">{tChatrooms("insertingBefore", { author: insertBefore.author })}</span>
+            <span className="min-w-0 flex-1 truncate">{insertBefore.excerpt}</span>
+            <button
+                type="button"
+                onClick={onCancelInsertBefore}
+                className="shrink-0 rounded p-0.5 hover:bg-muted hover:text-foreground"
+                aria-label={tChatrooms("cancelInsertBefore")}
             >
                 <X className="size-3.5" />
             </button>
@@ -834,6 +862,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     </div>
                 )}
 
+                {insertBar && <div className="px-2.5 pt-2">{insertBar}</div>}
                 {replyBar && <div className="px-2.5 pt-2">{replyBar}</div>}
 
                 {/* Zone de saisie */}
@@ -971,6 +1000,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 carte (z-10) qui en recouvre le bas : elle fait corps avec le
                 composeur. */}
             {topTab && <div className="relative z-5 -mb-2.5">{topTab}</div>}
+            {useMobileDrawer && !drawerOpen && insertBar}
             {useMobileDrawer && !drawerOpen && replyBar}
 
             {useMobileDrawer ? (

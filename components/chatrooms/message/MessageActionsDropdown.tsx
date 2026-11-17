@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
-import { Pencil, Pin, PinOff, MoreHorizontal, Trash2, Copy, FileText, Code, CornerUpLeft, Flag } from "lucide-react";
+import { Pencil, Pin, PinOff, MoreHorizontal, Trash2, Copy, FileText, Code, CornerUpLeft, Flag, BetweenHorizontalStart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,7 @@ export function MessageActionsDropdown({
   onUnpin,
   onRequestDelete,
   onReply,
+  onInsertBefore,
   onReport,
 }: {
   mine: boolean;
@@ -38,6 +39,8 @@ export function MessageActionsDropdown({
   onRequestDelete?: () => void;
   /** Répondre à ce message (absent si l'on ne peut pas poster). */
   onReply?: () => void;
+  /** Poster un message juste avant celui-ci dans le fil (migration 216). */
+  onInsertBefore?: () => void;
   /** Signaler ce message aux modérateurs (pas pour ses propres messages). */
   onReport?: () => void;
 }) {
@@ -66,12 +69,20 @@ export function MessageActionsDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        {onReply && (
+        {(onReply || onInsertBefore) && (
           <>
-            <DropdownMenuItem onClick={onReply}>
-              <CornerUpLeft className="mr-2 h-3.5 w-3.5" />
-              {t("reply")}
-            </DropdownMenuItem>
+            {onReply && (
+              <DropdownMenuItem onClick={onReply}>
+                <CornerUpLeft className="mr-2 h-3.5 w-3.5" />
+                {t("reply")}
+              </DropdownMenuItem>
+            )}
+            {onInsertBefore && (
+              <DropdownMenuItem onClick={onInsertBefore}>
+                <BetweenHorizontalStart className="mr-2 h-3.5 w-3.5" />
+                {t("insertBefore")}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
           </>
         )}

@@ -3,6 +3,7 @@ import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import { decryptMessage } from "@/lib/crypto";
 import type { ChoiceVoteSummary, ReactionSummary } from "@/types/db";
+import { insertMessageById } from "@/lib/chatroomMessageGrouping";
 
 /**
  * Chargement d'une page de messages d'un salon, partagé entre le rendu serveur
@@ -22,7 +23,7 @@ type ChallengeRef = { title: string; description: string | null } | null;
 
 /** Colonnes d'un message, telles que la vue les attend. */
 export const MESSAGE_COLUMNS =
-  "id, chat_id, content, author_id, created_at, metadata, visible_to, reply_to_id, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username), reply_to:reply_to_id(id, content, author_id, persona:personas(name), author:profiles(username))";
+  "id, chat_id, content, author_id, created_at, inserted_at, metadata, visible_to, reply_to_id, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username), reply_to:reply_to_id(id, content, author_id, persona:personas(name), author:profiles(username))";
 
 /**
  * Réactions, votes et badges « défi remporté » joints aux messages dans la
@@ -228,9 +229,6 @@ export function mergeResync<T extends { id: number; created_at?: string }>(
   }
   if (!changed && byId.size === 0) return current;
   let merged = out;
-  for (const m of byId.values()) {
-    const index = merged.findIndex((x) => x.id > m.id);
-    merged = index === -1 ? [...merged, m] : [...merged.slice(0, index), m, ...merged.slice(index)];
-  }
+  for (const m of byId.values()) merged = insertMessageById(merged, m);
   return merged;
 }

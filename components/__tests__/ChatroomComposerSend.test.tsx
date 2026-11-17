@@ -159,6 +159,49 @@ describe("ChatroomComposer — envoi", () => {
     const insertion = mock.buildersFor("chat_messages")[0];
     expect(insertion.insert).toHaveBeenCalledWith(expect.objectContaining({ reply_to_id: 7 }));
   });
+
+  it("« insérer avant » : envoie la cible, puis quitte le mode insertion", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: ligneInseree }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const onCancelInsertBefore = vi.fn();
+    const user = userEvent.setup({ delay: null });
+    localStorage.setItem("draft:chat1", "Réplique oubliée");
+
+    render(
+      <ChatroomComposer
+        chatId="chat1"
+        presetPersona={mockPersona}
+        insertBefore={{ id: 12, author: "Bran", excerpt: "Et ensuite ?" }}
+        onCancelInsertBefore={onCancelInsertBefore}
+      />,
+    );
+    expect(screen.getByTestId("composer-insert-before")).toHaveTextContent("Insertion avant Bran");
+    expect(screen.getByTestId("composer-insert-before")).toHaveTextContent("Et ensuite ?");
+    await user.click(screen.getByTitle("Envoyer"));
+
+    await waitFor(() => expect(onCancelInsertBefore).toHaveBeenCalledTimes(1));
+    const insertion = mock.buildersFor("chat_messages")[0];
+    // La base date le message (trigger, migration 216) : le client n'envoie que la cible.
+    expect(insertion.insert).toHaveBeenCalledWith(expect.objectContaining({ insert_before_id: 12 }));
+    expect(insertion.insert.mock.calls[0][0]).not.toHaveProperty("created_at");
+  });
+
+  it("annuler l'insertion depuis la barre", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const onCancelInsertBefore = vi.fn();
+    const user = userEvent.setup({ delay: null });
+    render(
+      <ChatroomComposer
+        chatId="chat1"
+        presetPersona={mockPersona}
+        insertBefore={{ id: 12, author: "Bran", excerpt: "Et ensuite ?" }}
+        onCancelInsertBefore={onCancelInsertBefore}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Annuler l’insertion" }));
+    expect(onCancelInsertBefore).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("ChatroomComposer — languette du haut", () => {

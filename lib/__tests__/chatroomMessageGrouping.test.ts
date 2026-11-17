@@ -155,3 +155,30 @@ describe("insertMessageById", () => {
     expect(ids(insertMessageById([], { id: 7 }))).toEqual([7]);
   });
 });
+
+describe("insertMessageById — messages insérés (migration 216)", () => {
+  const m = (id: number, created_at: string) => ({ id, created_at });
+
+  it("place un message inséré avant sa cible, malgré son id plus récent", () => {
+    const fil = [m(1, "2026-11-17T10:00:00Z"), m(2, "2026-11-17T10:05:00Z"), m(3, "2026-11-17T10:10:00Z")];
+    // Inséré avant le message 2 : daté deux secondes avant lui, id le plus récent.
+    const insere = m(9, "2026-11-17T10:04:58Z");
+    expect(insertMessageById(fil, insere).map((x) => x.id)).toEqual([1, 9, 2, 3]);
+  });
+
+  it("ajoute en fin de fil un message plus récent", () => {
+    const fil = [m(1, "2026-11-17T10:00:00Z"), m(9, "2026-11-17T10:04:58Z"), m(2, "2026-11-17T10:05:00Z")];
+    expect(insertMessageById(fil, m(10, "2026-11-17T10:20:00Z")).map((x) => x.id)).toEqual([1, 9, 2, 10]);
+  });
+
+  it("à date égale, départage par id ; sans date, par id comme avant", () => {
+    const fil = [m(1, "2026-11-17T10:00:00Z"), m(3, "2026-11-17T10:00:00Z")];
+    expect(insertMessageById(fil, m(2, "2026-11-17T10:00:00Z")).map((x) => x.id)).toEqual([1, 2, 3]);
+    expect(insertMessageById([{ id: 1 }, { id: 3 }], { id: 2 }).map((x) => x.id)).toEqual([1, 2, 3]);
+  });
+
+  it("ignore un doublon, même placé ailleurs", () => {
+    const fil = [m(1, "2026-11-17T10:00:00Z"), m(9, "2026-11-17T10:04:58Z")];
+    expect(insertMessageById(fil, m(9, "2026-11-17T10:04:58Z"))).toBe(fil);
+  });
+});
