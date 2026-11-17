@@ -426,27 +426,38 @@ export function CalloutDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       {!onOpenChange && trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[75vw] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-3">
+      <DialogContent className="flex h-[100dvh] max-h-[100dvh] flex-col gap-0 overflow-hidden p-0 sm:h-auto sm:max-w-[75vw]">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle className="flex items-center gap-2">
             <Square className="h-4 w-4" />
             {t("callout.title")}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] border-t border-border">
-          {/* Aperçu live — fixe à gauche */}
-          <div className="flex flex-col gap-2 border-b border-border bg-background/40 p-5 sm:border-b-0 sm:border-r">
+        {/* La fenêtre ne dépasse jamais l'écran (100 vh) : un encadré au texte
+            long l'étirait au-delà, formulaire et boutons coupés. Elle suit son
+            contenu jusque-là, puis chaque colonne défile seule ; en-tête et
+            boutons restent visibles. */}
+        <div className="flex min-h-0 flex-1 flex-col border-t border-border sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:grid-rows-[minmax(0,1fr)]">
+          {/* Aperçu live — à gauche, défile seul */}
+          <div
+            className="flex max-h-[30vh] min-h-0 shrink-0 flex-col gap-2 overflow-y-auto border-b border-border bg-background/40 p-5 sm:max-h-none sm:border-b-0 sm:border-r"
+            data-testid="callout-preview-pane"
+          >
             <SectionLabel as="p">
               {t("callout.preview")}
             </SectionLabel>
-            <div className="flex flex-1 items-center">
-              <CalloutBlockView block={previewBlock} mine={false} />
+            {/* `my-auto` plutôt qu'un centrage flex : centré tant qu'il tient,
+                le haut reste visible dès qu'il déborde. */}
+            <div className="flex flex-1 flex-col">
+              <div className="my-auto">
+                <CalloutBlockView block={previewBlock} mine={false} />
+              </div>
             </div>
           </div>
 
-          {/* Formulaire — scrolle à droite */}
-          <ScrollArea className="max-h-[60vh]">
+          {/* Formulaire — défile à droite */}
+          <ScrollArea className="min-h-0 flex-1 sm:h-full">
             <div className="space-y-4 p-5">
               {/* Presets */}
               <div className="space-y-1.5">
@@ -485,7 +496,7 @@ export function CalloutDialog({
                   onChange={(e) => setText(e.target.value)}
                   placeholder={t("callout.contentPlaceholder")}
                   rows={3}
-                  className="resize-none"
+                  className="max-h-60 resize-none overflow-y-auto"
                   onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSend(); }}
                 />
               </div>
@@ -728,7 +739,7 @@ export function CalloutDialog({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t border-border px-6 py-4">
+        <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <Button variant="secondary" onClick={() => setOpen(false)}>{t("callout.cancel")}</Button>
           <Button onClick={handleSend} disabled={!isValid}>
             {initialBlock ? t("callout.save") : t("callout.insert")}

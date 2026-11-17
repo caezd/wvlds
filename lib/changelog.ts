@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-17",
+    category: "Correctif",
+    area: "Salons",
+    text: "La fenêtre de l’encadré ne déborde plus de l’écran avec un long texte : l’aperçu et le formulaire défilent chacun de leur côté, et les boutons restent visibles.",
+  },
+  {
+    date: "2026-11-17",
     category: "Fonctionnalité",
     area: "Salons",
     text: "« Insérer avant », dans le menu d’un message : comme pour « Répondre », le composeur passe en mode insertion, et le message envoyé prend place dans le fil juste avant le message choisi — pratique pour une réplique oubliée. Il porte la mention « (inséré) », avec sa vraie date d’envoi au survol.",
