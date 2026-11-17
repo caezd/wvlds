@@ -80,6 +80,7 @@ vi.mock("@/hooks/useReconnectEpoch", () => ({ useReconnectEpoch: () => 0 }));
 
 import {
   useWorldRooms,
+  patchWorldRoom,
   __resetWorldRoomsStore,
   __openChannelCount,
   type WorldRoom,
@@ -260,5 +261,26 @@ describe("useWorldRooms", () => {
     expect(canaux).toHaveLength(2);
     expect(canaux[1].topic).toBe(premier.topic);
     expect(canaux[1]).not.toBe(premier);
+  });
+});
+
+describe("patchWorldRoom", () => {
+  it("renomme un salon dans la liste, chez toutes les instances", () => {
+    const un = renderHook(() => useWorldRooms("w1", [A, B]));
+    const deux = renderHook(() => useWorldRooms("w1", [A, B]));
+    act(() => patchWorldRoom("w1", "a", { title: "Nouveau titre" }));
+    expect(un.result.current.find((r) => r.id === "a")?.title).toBe("Nouveau titre");
+    expect(deux.result.current.find((r) => r.id === "a")?.title).toBe("Nouveau titre");
+    // Le reste du salon et de la liste ne bouge pas.
+    expect(un.result.current.map((r) => r.id)).toEqual(["a", "b"]);
+    expect(un.result.current.find((r) => r.id === "a")?.last_message_at).toBe(A.last_message_at);
+  });
+
+  it("ignore un salon absent ou un patch sans changement", () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
+    const avant = result.current;
+    act(() => patchWorldRoom("w1", "inconnu", { title: "x" }));
+    act(() => patchWorldRoom("w1", "a", { title: A.title }));
+    expect(result.current).toBe(avant);
   });
 });

@@ -105,6 +105,29 @@ function majRooms(worldId: string, f: (prev: WorldRoom[]) => WorldRoom[]): void 
   notifier(e);
 }
 
+/**
+ * Corrige un salon déjà listé (titre, nom, icône, catégorie). La liste ne se
+ * resème pas sur les rendus serveur — ce serait écraser les mises à jour
+ * reçues en direct — : un renommage doit donc y être reporté explicitement,
+ * sinon la barre latérale, qui reste montée, garde l'ancien titre.
+ */
+export function patchWorldRoom(
+  worldId: string,
+  chatId: string,
+  patch: Partial<Pick<WorldRoom, "title" | "name" | "icon_url" | "category_id">>,
+): void {
+  majRooms(worldId, (prev) => {
+    const i = prev.findIndex((r) => r.id === chatId);
+    if (i < 0) return prev;
+    const avant = prev[i];
+    const apres = { ...avant, ...patch };
+    if ((Object.keys(patch) as (keyof typeof patch)[]).every((k) => avant[k] === apres[k])) return prev;
+    const next = prev.slice();
+    next[i] = apres;
+    return next;
+  });
+}
+
 /** Ouvre LE canal Realtime du monde — un seul, quel que soit le nombre d'instances. */
 function ouvrirCanal(worldId: string): () => void {
   const supabase = createClient();

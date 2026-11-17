@@ -64,6 +64,7 @@ import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary,
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
+import { patchWorldRoom } from "@/lib/worldRoomsStore";
 import { decorateMessagePage, decryptReplyTo, fetchMessagePage, mergeResync } from "@/lib/chatMessagePage";
 import { replyAuthorLabel, replyExcerpt } from "@/lib/replyExcerpt";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
@@ -842,6 +843,16 @@ export default function ChatRoomView({
       setMessages((prev) => prev.filter((m) => m.id !== id));
     },
     onChatroomPatched: (patch) => {
+      // La barre latérale reste montée d'un salon à l'autre : sans ce report,
+      // elle garderait l'ancien titre jusqu'au prochain chargement complet.
+      const worldId = chat.worlds?.id;
+      if (worldId) {
+        patchWorldRoom(worldId, chatId, {
+          ...("title" in patch ? { title: patch.title ?? null } : {}),
+          ...("name" in patch ? { name: patch.name ?? null } : {}),
+          ...("icon_url" in patch ? { icon_url: patch.icon_url ?? null } : {}),
+        });
+      }
       setChat((prev) => {
         if (!prev) return prev;
         return {
