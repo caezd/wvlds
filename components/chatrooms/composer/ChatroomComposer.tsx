@@ -9,6 +9,7 @@ import { supabaseThumb } from "@/lib/storage";
 import { getInitials } from "@/lib/textFormatting";
 import type { ChatMessageWithPersona, Persona } from "@/types/db";
 import { MESSAGE_COLUMNS } from "@/lib/chatMessagePage";
+import { useCoalescedPersonaWrite } from "./useCoalescedPersonaWrite";
 import { TABLE, RPC } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -355,26 +356,28 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         setBubbleColorRaw(v);
         try { if (v) localStorage.setItem(BUBBLE_COLOR_KEY, v); else localStorage.removeItem(BUBBLE_COLOR_KEY); } catch { }
     }
+    // Le sélecteur appelle `onChange` à chaque mouvement du pointeur : l'écran
+    // suit chaque valeur, la base ne reçoit que la dernière (cf. le hook).
+    // Sans lire l'erreur, la couleur restait appliquée à l'écran et revenait à
+    // l'ancienne au rechargement, sans explication.
+    const schedulePersonaColor = useCoalescedPersonaWrite<string | null, { bubble: string | null; persona: string | null }>(
+        (personaId, color) => supabase.from(TABLE.PERSONAS).update({ dialogue_color: color }).eq("id", personaId),
+        (personaId, restore, message) => {
+            setSelectedPersona((prev) => (prev && prev.id === personaId ? { ...prev, dialogue_color: restore.persona } : prev));
+            setBubbleColor(restore.bubble);
+            toast.error(message);
+        },
+    );
     /** Change la couleur des bulles et l'associe durablement au persona actif. */
-    async function handleBubbleColorChange(v: string | null) {
+    function handleBubbleColorChange(v: string | null) {
         const previousColor = bubbleColor;
         setBubbleColor(v);
         // La couleur d'un PNJ appartient à ses gestionnaires : un joueur la
         // change pour lui seul, le temps de la session.
         if (selectedPersona && (!selectedPersona.is_npc || can("npc.manage"))) {
-            const previousPersona = selectedPersona;
             setSelectedPersona((prev) => (prev ? { ...prev, dialogue_color: v } : prev));
-            // Sans lire l'erreur, la couleur restait appliquée à l'écran et
-            // revenait à l'ancienne au rechargement, sans explication.
-            const { error } = await supabase
-                .from(TABLE.PERSONAS)
-                .update({ dialogue_color: v })
-                .eq("id", selectedPersona.id);
-            if (error) {
-                setBubbleColor(previousColor);
-                setSelectedPersona(previousPersona);
-                toast.error(error.message);
-            }
+            const saved = selectedPersona.dialogue_color ?? null;
+            schedulePersonaColor(selectedPersona.id, v, saved, { bubble: previousColor, persona: saved });
         }
     }
 
