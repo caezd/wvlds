@@ -85,6 +85,7 @@ export const channel = {
   worldMessages: (worldId: string) => `world-msgs:${worldId}`,
   worldRooms: (wid: string) => `w:${wid}:rooms`,
   worldMap: (wid: string) => `w:${wid}:map`,
+  /** Canal PRIVÉ : présence et « … écrit » du salon (migration 218). */
   chatPresence: (chatId: string) => `chat:${chatId}`,
   /** Canal PRIVÉ du salon : messages, réactions, votes, ordre… (migration 212). */
   chatMessages: (chatId: string) => `room:${chatId}`,
@@ -93,6 +94,7 @@ export const channel = {
   navReads: (selfId: string) => `nav-reads-${selfId}`,
   appPresence: () => "presence:app",
   userNotifs: (userId: string) => `notifs:${userId}`,
+  /** Canal PRIVÉ : « … écrit » d'une conversation privée (migration 219). */
   dmMessages: (convId: string) => `dm:${convId}:messages`,
   dmConversations: (userId: string) => `dm:${userId}:conversations`,
 } as const;

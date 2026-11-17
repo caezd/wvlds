@@ -415,7 +415,9 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
       })
         .subscribe();
       },
-      { config: { broadcast: { self: false } } },
+      // Privé (migration 219) : seuls les deux participants peuvent le
+      // rejoindre et voir l'autre écrire.
+      { config: { private: true, broadcast: { self: false } } },
     );
 
     return () => {

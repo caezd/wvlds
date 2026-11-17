@@ -46,8 +46,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-17",
     category: "Correctif",
-    area: "Salons",
-    text: "Qui se trouve dans un salon et qui y écrit n’est plus visible que des membres du monde. Après la mise à jour, rechargez la page si l’indication « … écrit » ne s’affiche plus.",
+    text: "Qui se trouve dans un salon et qui y écrit n’est plus visible que des membres du monde ; dans une conversation privée, seuls ses deux participants voient l’autre écrire. Après la mise à jour, rechargez la page si l’indication « … écrit » ne s’affiche plus.",
   },
   {
     date: "2026-11-17",

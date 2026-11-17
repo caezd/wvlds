@@ -149,6 +149,19 @@ describe("DmsProvider — cleanup et reconnexion (canal personnel, migration 214
 });
 
 describe("DmsProvider — cleanup et reconnexion (canal des messages de la conversation active)", () => {
+    it("ouvre le canal « … écrit » de la conversation en privé (migration 219)", async () => {
+        const { mock } = setup();
+
+        await act(async () => {
+            screen.getByTestId("open").click();
+        });
+        await waitFor(() => expect(mock.channelNamed("dm:conv1:messages")).toBeDefined());
+        expect(mock.channel).toHaveBeenCalledWith(
+            "dm:conv1:messages",
+            expect.objectContaining({ config: expect.objectContaining({ private: true }) }),
+        );
+    });
+
     it("supprime le canal de messages au démontage", async () => {
         const { mock, unmount } = setup();
 
