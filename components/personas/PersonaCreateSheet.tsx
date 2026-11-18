@@ -1,12 +1,24 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Drawer,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Save } from "lucide-react";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +28,9 @@ import { useWorldMembership } from "@/components/providers/WorldMembershipProvid
 import { PersonaEditorContent } from "./PersonaEditSheet";
 import { createPersona } from "@/app/(protected)/p/actions";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
 import { fetchPersonaSections } from "@/lib/personaSections";
-import { TABLE } from "@/lib/constants";
 import type { PersonaPatch } from "@/lib/personaDraft";
-import type { PersonaSectionWithFields } from "@/types/personas";
+import { usePersonaSheetDraft } from "./usePersonaSheetDraft";
 import { useTranslations } from "next-intl";
 import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 
@@ -45,10 +55,24 @@ export function PersonaCreateSheet({
   const [createdName, setCreatedName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
-  // L'éditeur n'écrit plus de lui-même : ce qu'il modifie ici s'écrit à la
-  // fermeture, la création n'ayant pas de pied de page à elle.
-  const [draftPatch, setDraftPatch] = useState<PersonaPatch>({});
+  const tCommon = useTranslations("common");
+  // Une fois la fiche créée, même fonctionnement que l'édition : rien ne part
+  // en base avant « Enregistrer », puis tout part en une requête.
+  const initialValues = useMemo<PersonaPatch>(() => ({
+    name: createdName,
+    faceclaim: null,
+    avatar_url: null,
+    avatar_config: null,
+    banner_url: null,
+    avatar_frame_id: null,
+    narrative_status: "alive",
+  }), [createdName]);
+  const { sections, setSections, patchDraft, dirty, saving, save, discard, reset } = usePersonaSheetDraft({
+    personaId: createdId,
+    initialSections: [],
+    initialValues,
+  });
+  const [confirmClose, setConfirmClose] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   // PNJ partagé (migration 182) : proposé à qui gère les PNJ du monde ;
   // `defaultNpc` précoche la case (bouton « Nouveau PNJ »).
@@ -58,30 +82,27 @@ export function PersonaCreateSheet({
   const [asNpc, setAsNpc] = useState(!!defaultNpc);
   const router = useRouter();
 
-  function handleOpen(v: boolean) {
-    setOpen(v);
-    if (!v) {
-      if (createdId) void flushDraft(createdId, draftPatch);
-      // reset à la fermeture
-      setDraftPatch({});
-      setPhase("name");
-      setCreatedId(null);
-      setCreatedName("");
-      setError(null);
-      setSections([]);
-      setAsNpc(!!defaultNpc);
-      if (createdId) {
-        notifyPersonasChanged();
-        router.refresh();
-      }
+  /** Ferme et remet le tiroir à zéro. La fiche, elle, existe déjà. */
+  function fermer() {
+    setOpen(false);
+    setPhase("name");
+    setCreatedId(null);
+    setCreatedName("");
+    setError(null);
+    reset([]);
+    setAsNpc(!!defaultNpc);
+    if (createdId) {
+      notifyPersonasChanged();
+      router.refresh();
     }
   }
 
-  /** Ce que l'éditeur a modifié depuis la création, écrit à la fermeture. */
-  async function flushDraft(personaId: string, patch: PersonaPatch) {
-    if (Object.keys(patch).length === 0) return;
-    const { error } = await createClient().from(TABLE.PERSONAS).update(patch).eq("id", personaId);
-    if (error) toast.error(t("saveFailed"), { description: error.message });
+  function handleOpen(v: boolean) {
+    if (v) { setOpen(true); return; }
+    // Fermer avec des modifications en attente : on demande plutôt que de
+    // les perdre en silence.
+    if (dirty) { setConfirmClose(true); return; }
+    fermer();
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -100,7 +121,7 @@ export function PersonaCreateSheet({
     // La fiche par défaut du monde a pu être copiée côté serveur : recharge
     // les sections du persona créé avant d'ouvrir l'éditeur.
     if (worldId) {
-      setSections(await fetchPersonaSections(createClient(), result.id!));
+      reset(await fetchPersonaSections(createClient(), result.id!));
     }
     setCreatedId(result.id!);
     setCreatedName(name);
@@ -170,7 +191,8 @@ export function PersonaCreateSheet({
             </form>
           ) : createdId ? (
             <PersonaEditorContent
-              onPatch={(patch) => setDraftPatch((prev) => ({ ...prev, ...patch }))}
+              onPatch={patchDraft}
+              deferred
               personaId={createdId}
               personaName={createdName}
               sections={sections}
@@ -181,8 +203,45 @@ export function PersonaCreateSheet({
             />
           ) : null}
           </div>
+
+          {phase === "edit" && createdId && (
+            <DrawerFooter className="flex-row border-t border-border bg-background px-6 py-3">
+              {/* Grisé tant qu'il n'y a rien à écrire. */}
+              <Button size="sm" className="ml-auto" disabled={!dirty || saving} onClick={() => void save()}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {tCommon("save")}
+              </Button>
+            </DrawerFooter>
+          )}
         </SideSheetContent>
       </Drawer>
+
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("unsavedTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("unsavedDescription")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={() => { setConfirmClose(false); void discard().then(fermer); }}
+            >
+              {t("unsavedDiscard")}
+            </Button>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setConfirmClose(false);
+                void save().then((ok) => { if (ok) fermer(); });
+              }}
+            >
+              {tCommon("save")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

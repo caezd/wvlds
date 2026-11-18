@@ -34,7 +34,17 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { Loader2, Settings } from "lucide-react";
+import { Loader2, Save, Settings } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -57,6 +67,46 @@ type FormValues = z.infer<typeof schema>;
 function truthyOrNull(v: string | undefined | null): string | null {
   const s = (v ?? "").trim();
   return s.length ? s : null;
+}
+
+/** Les réglages enregistrables d'une salle, sous leur forme en base. */
+type Reglages = {
+  title: string | null;
+  icon_url: string | null;
+  banner_url: string | null;
+  timeline_date: WorldTimelineDate | null;
+  map_pin_id: string | null;
+  category_id: string | null;
+};
+
+function reglagesDe(c: Props["chatroom"]): Reglages {
+  return {
+    title: c.title?.trim() || null,
+    icon_url: truthyOrNull(c.icon_url),
+    banner_url: truthyOrNull(c.banner_url),
+    timeline_date: c.timeline_date ?? null,
+    map_pin_id: c.map_pin_id ?? null,
+    category_id: c.category_id ?? null,
+  };
+}
+
+/** Ce qui a changé, prêt à écrire. */
+function ecart(avant: Reglages, apres: Reglages): Partial<Reglages> {
+  const patch: Partial<Reglages> = {};
+  for (const cle of Object.keys(apres) as (keyof Reglages)[]) {
+    if (JSON.stringify(avant[cle]) !== JSON.stringify(apres[cle])) {
+      (patch as Record<string, unknown>)[cle] = apres[cle];
+    }
+  }
+  return patch;
+}
+
+/** Chemin dans le bucket `chatrooms` d'une URL publique, sinon nul. */
+function cheminDe(url: string | null): string | null {
+  if (!url) return null;
+  const i = url.indexOf("/object/public/chatrooms/");
+  if (i < 0) return null;
+  return decodeURIComponent(url.slice(i + "/object/public/chatrooms/".length).split("?")[0]);
 }
 
 type Props = {
@@ -100,14 +150,18 @@ export default function ChatroomSettingsSheet({
   const [uploading, setUploading] = React.useState<"icon" | "banner" | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [timelineDate, setTimelineDate] = React.useState<WorldTimelineDate | null>(chatroom.timeline_date ?? null);
-  const [savingTimeline, setSavingTimeline] = React.useState(false);
   const { world_map } = useFeatureFlags();
   const [mapPins, setMapPins] = React.useState<MapPinOption[]>([]);
   const [mapPinId, setMapPinId] = React.useState<string | null>(chatroom.map_pin_id ?? null);
-  const [savingPin, setSavingPin] = React.useState(false);
   const [categories, setCategories] = React.useState<CategoryOption[]>([]);
   const [categoryId, setCategoryId] = React.useState<string | null>(chatroom.category_id ?? null);
-  const [savingCategory, setSavingCategory] = React.useState(false);
+  // Rien ne part en base avant « Enregistrer » : `base` est l'état enregistré,
+  // l'écart avec les valeurs affichées dit quoi écrire — en UNE requête.
+  const [base, setBase] = React.useState<Reglages>(() => reglagesDe(chatroom));
+  // Images envoyées pendant la séance : effacées si l'on abandonne.
+  const [envoyees, setEnvoyees] = React.useState<string[]>([]);
+  const [saving, setSaving] = React.useState(false);
+  const [confirmClose, setConfirmClose] = React.useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -120,6 +174,8 @@ export default function ChatroomSettingsSheet({
 
   React.useEffect(() => {
     if (open) {
+      setBase(reglagesDe(chatroom));
+      setEnvoyees([]);
       form.reset({
         title: chatroom.title ?? "",
         icon_url: chatroom.icon_url ?? "",
@@ -153,6 +209,18 @@ export default function ChatroomSettingsSheet({
 
   const iconUrl = form.watch("icon_url");
   const bannerUrl = form.watch("banner_url");
+  const titre = form.watch("title");
+
+  const courants: Reglages = {
+    title: titre?.trim() || null,
+    icon_url: truthyOrNull(iconUrl),
+    banner_url: truthyOrNull(bannerUrl),
+    timeline_date: timelineDate,
+    map_pin_id: mapPinId,
+    category_id: categoryId,
+  };
+  const patch = ecart(base, courants);
+  const dirty = Object.keys(patch).length > 0;
 
   // ---------- upload ----------
 
@@ -165,17 +233,16 @@ export default function ChatroomSettingsSheet({
     if (file.size > 5 * 1024 * 1024) throw new Error(t("settingsErrorTooLarge"));
 
     const converted = await toWebP(file);
-    const path = `chatroom-${chatroom.id}/${kind}.webp`;
+    // Un nom neuf à chaque envoi : l'image en place reste intacte tant que
+    // « Enregistrer » n'a pas été cliqué, et un abandon n'efface que la neuve.
+    const path = `chatroom-${chatroom.id}/${kind}-${Date.now()}.webp`;
 
     const { error } = await supabase.storage
       .from("chatrooms")
       .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: converted.type });
     if (error) throw error;
-
-    // Même chemin à chaque envoi (`upsert`) : sans `?t=`, l'URL enregistrée ne
-    // changerait pas et le cache (un an, STORAGE_CACHE_CONTROL) resservirait
-    // l'ancienne image. `supabaseThumb` relaie ce paramètre aux miniatures.
-    return `${supabase.storage.from("chatrooms").getPublicUrl(path).data.publicUrl}?t=${Date.now()}`;
+    setEnvoyees((prev) => [...prev, path]);
+    return supabase.storage.from("chatrooms").getPublicUrl(path).data.publicUrl;
   }
 
   async function uploadFile(file: File, kind: "icon" | "banner") {
@@ -184,8 +251,6 @@ export default function ChatroomSettingsSheet({
       const url = await uploadToChatrooms(file, kind);
       const field = kind === "icon" ? "icon_url" : "banner_url";
       form.setValue(field, url, { shouldDirty: true, shouldValidate: true });
-      await persistField(field, url);
-      toast.success(tCommon("imageSaved"));
     } catch (e: unknown) {
       // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
       console.error("[ChatroomSettingsSheet] envoi d'image", e);
@@ -203,65 +268,53 @@ export default function ChatroomSettingsSheet({
     await uploadFile(new File([blob], "banner.png", { type: blob.type || "image/png" }), "banner");
   }
 
-  // ---------- persist ----------
+  // ---------- enregistrer ----------
 
-  async function persistField(
-    field: "title" | "icon_url" | "banner_url",
-    value: string | null,
-  ) {
-    const clean = field === "title" ? (value?.trim() || null) : truthyOrNull(value);
-    const { error } = await supabase
+  /** Écrit tous les réglages modifiés en une requête. */
+  async function save(): Promise<boolean> {
+    if (!dirty || saving) return true;
+    if (!(await form.trigger("title"))) return false;
+    setSaving(true);
+    const { data, error } = await supabase
       .from("chatrooms")
-      .update({ [field]: clean })
-      .eq("id", chatroom.id);
-    if (error) { toast.error(error.message); return; }
+      .update(patch)
+      .eq("id", chatroom.id)
+      .select("id");
+    setSaving(false);
+    // Une RLS qui refuse ne lève pas d'erreur : elle ne touche aucune ligne.
+    if (error || !Array.isArray(data) || data.length !== 1) {
+      if (error) console.error("[ChatroomSettingsSheet] enregistrement", error);
+      toast.error(tCommon("saveError"));
+      return false;
+    }
+    // Les images remplacées ou retirées ne servent plus : on les efface, comme
+    // les envois de la séance qui n'ont pas été retenus.
+    const gardees = new Set([courants.icon_url, courants.banner_url].map(cheminDe).filter(Boolean));
+    const inutiles = [
+      ...[base.icon_url, base.banner_url].map(cheminDe),
+      ...envoyees,
+    ].filter((c): c is string => !!c && c.startsWith(`chatroom-${chatroom.id}/`) && !gardees.has(c));
+    if (inutiles.length > 0) await supabase.storage.from("chatrooms").remove([...new Set(inutiles)]);
+    setBase(courants);
+    setEnvoyees([]);
     toast.success(tCommon("changesSaved"));
     router.refresh();
+    return true;
   }
 
-  // ---------- lieu ----------
-
-  async function persistMapPin(pinId: string | null) {
-    setSavingPin(true);
-    const { error } = await supabase
-      .from("chatrooms")
-      .update({ map_pin_id: pinId })
-      .eq("id", chatroom.id);
-    setSavingPin(false);
-    if (error) { toast.error(error.message); return; }
-    setMapPinId(pinId);
-    toast.success(tCommon("changesSaved"));
-    router.refresh();
+  /** Abandonne : retour à l'état enregistré, sans garder les images envoyées. */
+  async function discard() {
+    if (envoyees.length > 0) await supabase.storage.from("chatrooms").remove(envoyees);
+    setEnvoyees([]);
+    form.reset({ title: base.title ?? "", icon_url: base.icon_url ?? "", banner_url: base.banner_url ?? "" });
+    setTimelineDate(base.timeline_date);
+    setMapPinId(base.map_pin_id);
+    setCategoryId(base.category_id);
   }
 
-  // ---------- catégorie ----------
-
-  async function persistCategory(catId: string | null) {
-    setSavingCategory(true);
-    const { error } = await supabase
-      .from("chatrooms")
-      .update({ category_id: catId })
-      .eq("id", chatroom.id);
-    setSavingCategory(false);
-    if (error) { toast.error(error.message); return; }
-    setCategoryId(catId);
-    toast.success(tCommon("changesSaved"));
-    router.refresh();
-  }
-
-  // ---------- timeline ----------
-
-  async function persistTimeline(date: WorldTimelineDate | null) {
-    setSavingTimeline(true);
-    const { error } = await supabase
-      .from("chatrooms")
-      .update({ timeline_date: date })
-      .eq("id", chatroom.id);
-    setSavingTimeline(false);
-    if (error) { toast.error(error.message); return; }
-    setTimelineDate(date);
-    toast.success(tCommon("changesSaved"));
-    router.refresh();
+  function requestOpenChange(next: boolean) {
+    if (next || !dirty) { setOpen(next); return; }
+    setConfirmClose(true);
   }
 
   // ---------- delete ----------
@@ -269,10 +322,11 @@ export default function ChatroomSettingsSheet({
   async function handleDelete() {
     setDeleting(true);
     try {
-      await supabase.storage.from("chatrooms").remove([
-        `chatroom-${chatroom.id}/icon.webp`,
-        `chatroom-${chatroom.id}/banner.webp`,
-      ]);
+      // Tout le dossier de la salle : les images portent un nom par envoi.
+      const dossier = `chatroom-${chatroom.id}`;
+      const { data: fichiers } = await supabase.storage.from("chatrooms").list(dossier, { limit: 1000 });
+      const chemins = (fichiers ?? []).map((f: { name: string }) => `${dossier}/${f.name}`);
+      if (chemins.length > 0) await supabase.storage.from("chatrooms").remove(chemins);
       const { error } = await supabase.from("chatrooms").delete().eq("id", chatroom.id);
       if (error) throw error;
       toast.success(t("roomDeleted"));
@@ -289,7 +343,8 @@ export default function ChatroomSettingsSheet({
   }
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
+    <>
+    <Drawer open={open} onOpenChange={requestOpenChange} swipeDirection="right">
       {!hideTrigger && canEdit && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -335,10 +390,7 @@ export default function ChatroomSettingsSheet({
                           variant="secondary"
                           size="sm"
                           disabled={uploading === "icon"}
-                          onClick={() => {
-                            form.setValue("icon_url", "", { shouldDirty: true });
-                            void persistField("icon_url", "");
-                          }}
+                          onClick={() => form.setValue("icon_url", "", { shouldDirty: true })}
                         >
                           Retirer
                         </Button>
@@ -367,11 +419,6 @@ export default function ChatroomSettingsSheet({
                         placeholder={t("settingsNamePlaceholder")}
                         className="h-8 text-sm"
                         {...field}
-                        onBlur={(e) => {
-                          field.onBlur();
-                          const v = e.target.value.trim();
-                          if (v.length >= 1) void persistField("title", v);
-                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -391,13 +438,10 @@ export default function ChatroomSettingsSheet({
                     </div>
                     <Switch
                       checked={timelineDate !== null}
-                      disabled={savingTimeline}
                       onCheckedChange={(v) => {
-                        if (v) {
-                          void persistTimeline(clampTimelineDate(worldTimelineConfig, { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month, day: null }));
-                        } else {
-                          void persistTimeline(null);
-                        }
+                        setTimelineDate(v
+                          ? clampTimelineDate(worldTimelineConfig, { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month, day: null })
+                          : null);
                       }}
                     />
                   </div>
@@ -407,8 +451,7 @@ export default function ChatroomSettingsSheet({
                       <TimelineDatePicker
                         config={worldTimelineConfig}
                         value={timelineDate}
-                        disabled={savingTimeline}
-                        onCommit={(date) => void persistTimeline(date)}
+                        onCommit={setTimelineDate}
                       />
                       {/* L'arc du salon et le salon dont il est la suite. */}
                       {worldId && (
@@ -418,7 +461,6 @@ export default function ChatroomSettingsSheet({
                             worldId={worldId}
                             config={worldTimelineConfig}
                             supabase={supabase}
-                            disabled={savingTimeline}
                             onSaved={() => { toast.success(tCommon("changesSaved")); router.refresh(); }}
                           />
                         </div>
@@ -443,8 +485,7 @@ export default function ChatroomSettingsSheet({
                         type="button"
                         variant="secondary"
                         size="sm"
-                        disabled={savingCategory}
-                        onClick={() => void persistCategory(null)}
+                        onClick={() => setCategoryId(null)}
                       >
                         {t("settingsCategoryNone")}
                       </Button>
@@ -455,8 +496,7 @@ export default function ChatroomSettingsSheet({
                       <button
                         key={cat.id}
                         type="button"
-                        disabled={savingCategory}
-                        onClick={() => void persistCategory(cat.id === categoryId ? null : cat.id)}
+                        onClick={() => setCategoryId(cat.id === categoryId ? null : cat.id)}
                         className={cn(
                           "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors",
                           categoryId === cat.id
@@ -493,8 +533,7 @@ export default function ChatroomSettingsSheet({
                         type="button"
                         variant="secondary"
                         size="sm"
-                        disabled={savingPin}
-                        onClick={() => void persistMapPin(null)}
+                        onClick={() => setMapPinId(null)}
                       >
                         Retirer
                       </Button>
@@ -505,8 +544,7 @@ export default function ChatroomSettingsSheet({
                       <button
                         key={pin.id}
                         type="button"
-                        disabled={savingPin}
-                        onClick={() => void persistMapPin(pin.id === mapPinId ? null : pin.id)}
+                        onClick={() => setMapPinId(pin.id === mapPinId ? null : pin.id)}
                         className={cn(
                           "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors",
                           mapPinId === pin.id
@@ -543,10 +581,7 @@ export default function ChatroomSettingsSheet({
                         variant="secondary"
                         size="sm"
                         className="w-fit"
-                        onClick={() => {
-                          form.setValue("banner_url", "", { shouldDirty: true });
-                          void persistField("banner_url", "");
-                        }}
+                        onClick={() => form.setValue("banner_url", "", { shouldDirty: true })}
                       >
                         Retirer la bannière
                       </Button>
@@ -572,10 +607,51 @@ export default function ChatroomSettingsSheet({
                   </Button>
                 }
               />
+              {/* Rien n'est enregistré tant qu'on ne l'a pas demandé. Le bouton
+                  reste en place, grisé tant qu'il n'y a rien à écrire. */}
+              <Button
+                type="button"
+                className="ml-auto"
+                disabled={!dirty || saving || uploading !== null}
+                onClick={() => void save()}
+              >
+                {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                {tCommon("save")}
+              </Button>
             </DrawerFooter>
           </form>
         </Form>
       </SideSheetContent>
     </Drawer>
+
+    {/* Fermer avec des réglages en attente : on demande plutôt que de les
+        perdre en silence. */}
+    <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("settingsUnsavedTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("settingsUnsavedDescription")}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            onClick={() => { setConfirmClose(false); void discard().then(() => setOpen(false)); }}
+          >
+            {t("settingsUnsavedDiscard")}
+          </Button>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              setConfirmClose(false);
+              void save().then((ok) => { if (ok) setOpen(false); });
+            }}
+          >
+            {tCommon("save")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { diffSections, applySectionOps, hasOps, tempId, isTempId } from "@/lib/personaSectionsDiff";
+import { diffSections, savePersonaSheet, hasOps, tempId, isTempId } from "@/lib/personaSectionsDiff";
 import type { PersonaSectionWithFields } from "@/types/personas";
 
 function section(over: Partial<PersonaSectionWithFields> & { id: string }): PersonaSectionWithFields {
@@ -82,39 +82,8 @@ describe("diffSections", () => {
   });
 });
 
-describe("applySectionOps", () => {
-  /** Un faux client qui note ses appels dans l'ordre. */
-  function client(inserts: string[] = []) {
-    const appels: string[] = [];
-    let n = 0;
-    const supabase = {
-      from: (table: string) => ({
-        insert: (row: unknown) => ({
-          select: () => ({
-            single: async () => {
-              appels.push(`insert ${table} ${JSON.stringify(row)}`);
-              return { data: { id: inserts[n++] ?? `new-${n}` }, error: null };
-            },
-          }),
-        }),
-        update: (patch: unknown) => ({
-          eq: async (_col: string, value: string) => {
-            appels.push(`update ${table} ${value} ${JSON.stringify(patch)}`);
-            return { error: null };
-          },
-        }),
-        delete: () => ({
-          in: async (_col: string, values: string[]) => {
-            appels.push(`delete ${table} ${values.join(",")}`);
-            return { error: null };
-          },
-        }),
-      }),
-    };
-    return { supabase, appels };
-  }
-
-  it("efface, puis crée les sections, puis leurs champs — qui reçoivent le vrai identifiant", async () => {
+describe("savePersonaSheet", () => {
+  it("envoie la fiche et tout l'écart en UNE requête", async () => {
     const neuve = tempId();
     const ops = {
       deleteFields: ["f9"],
@@ -124,35 +93,25 @@ describe("applySectionOps", () => {
       insertFields: [{ tempId: tempId(), sectionId: neuve, row: { type: "text", data: { text: "hop" }, position: 0 } }],
       updateFields: [{ id: "f1", patch: { data: { text: "Kaela" } } }],
     };
-    const { supabase, appels } = client(["s-neuve"]);
+    const rpc = vi.fn(async () => ({ error: null }));
 
-    const res = await applySectionOps(supabase, "p1", ops);
+    const res = await savePersonaSheet({ rpc }, "p1", { name: "Kaela" }, ops);
 
     expect(res.error).toBeNull();
-    expect(appels[0]).toBe("delete persona_section_fields f9");
-    expect(appels[1]).toBe("delete persona_sections s9");
-    expect(appels[2]).toContain('insert persona_sections {"persona_id":"p1","name":"Notes"');
-    expect(appels[3]).toContain("update persona_sections s1");
-    // Le champ se rattache à la section qui vient de naître.
-    expect(appels[4]).toContain('"section_id":"s-neuve"');
-    expect(appels[5]).toContain("update persona_section_fields f1");
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("save_persona_sheet", {
+      p_persona_id: "p1",
+      p_patch: { name: "Kaela" },
+      p_ops: ops,
+    });
   });
 
-  it("la première erreur arrête tout", async () => {
-    const supabase = {
-      from: () => ({
-        insert: () => ({ select: () => ({ single: async () => ({ data: null, error: { message: "refusé" } }) }) }),
-        update: () => ({ eq: async () => ({ error: null }) }),
-        delete: () => ({ in: async () => ({ error: null }) }),
-      }),
-    };
-    const suite = vi.fn();
-    const res = await applySectionOps(supabase, "p1", {
-      deleteFields: [], deleteSections: [],
-      insertSections: [{ tempId: tempId(), name: "Notes", position: 0 }],
-      updateSections: [], insertFields: [], updateFields: [],
+  it("remonte le refus de la base", async () => {
+    const rpc = vi.fn(async () => ({ error: { message: "Champ introuvable ou non modifiable" } }));
+    const res = await savePersonaSheet({ rpc }, "p1", {}, {
+      deleteFields: [], deleteSections: [], insertSections: [],
+      updateSections: [], insertFields: [], updateFields: [{ id: "f1", patch: { position: 1 } }],
     });
-    expect(res.error).toBe("refusé");
-    expect(suite).not.toHaveBeenCalled();
+    expect(res.error).toBe("Champ introuvable ou non modifiable");
   });
 });

@@ -10,7 +10,6 @@ import { messageErreurAction } from "@/lib/actionErrors";
 import { useTranslations } from "next-intl";
 import { NARRATIVE_STATUSES } from "@/lib/personaStatus";
 import { createClient } from "@/lib/supabase/client";
-import { TABLE } from "@/lib/constants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,9 +48,8 @@ import type { PersonaNarrativeStatus, PersonaReviewStatus, MaritalStatus } from 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import { PersonaProfileBody, usePersonaProfile } from "./PersonaProfileSheetTrigger";
 import type { PersonaSectionWithFields } from "@/types/personas";
-import { EMPTY_DRAFT, applyPatch, isDirty, noteOrphan, noteUpload, storagePathOf, type PersonaPatch } from "@/lib/personaDraft";
-import { applySectionOps, diffSections, hasOps } from "@/lib/personaSectionsDiff";
-import { fetchPersonaSections } from "@/lib/personaSections";
+import type { PersonaPatch } from "@/lib/personaDraft";
+import { usePersonaSheetDraft } from "./usePersonaSheetDraft";
 
 import {
   PersonaAvatarPicker,
@@ -1030,19 +1028,11 @@ export function PersonaEditSheet({
   const router = useRouter();
   const [open, setOpen] = useState(openOnMount);
   const [deleting, setDeleting] = useState(false);
-  const [sections, setSections] = useState(initialSections);
-  // L'arbre tel qu'il a été chargé : l'écart avec `sections` dira quoi écrire.
-  const [savedSections, setSavedSections] = useState(initialSections);
   // Le faceclaim est saisi dans la fiche et pèse sur la validation quand le
   // monde l'exige : la barre le lit ici plutôt que de le relire en base.
   const [faceclaim, setFaceclaim] = useState<string | null>(initialFaceclaim ?? null);
   const tCommon = useTranslations("common");
-  // Rien ne part en base avant « Enregistrer » : les modifications s'empilent
-  // ici, avec les fichiers qu'elles laissent derrière elles.
-  const [draft, setDraft] = useState(EMPTY_DRAFT);
-  const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
-  const supabase = useMemo(() => createClient(), []);
   const initialValues = useMemo<PersonaPatch>(() => ({
     name: personaName,
     faceclaim: initialFaceclaim ?? null,
@@ -1052,61 +1042,12 @@ export function PersonaEditSheet({
     avatar_frame_id: initialFrameId ?? null,
     narrative_status: initialNarrativeStatus ?? "alive",
   }), [personaName, initialFaceclaim, initialAvatarUrl, initialAvatarConfig, initialBannerUrl, initialFrameId, initialNarrativeStatus]);
-  const sectionOps = useMemo(() => diffSections(savedSections, sections), [savedSections, sections]);
-  const dirty = isDirty(draft) || hasOps(sectionOps);
-
-  function patchDraft(patch: PersonaPatch, files?: { uploaded?: string | null; orphan?: string | null }) {
-    setDraft((prev) => {
-      let next = applyPatch(prev, patch, initialValues);
-      if (files?.uploaded) next = noteUpload(next, files.uploaded);
-      // Un fichier de la fiche, remplacé ou retiré : effacé une fois la
-      // nouvelle version enregistrée, pas avant.
-      if (files?.orphan && !next.uploaded.includes(storagePathOf(files.orphan) ?? "")) {
-        next = noteOrphan(next, files.orphan);
-      }
-      return next;
-    });
-  }
-
-  /** Écrit la fiche, puis efface les fichiers qu'elle ne porte plus. */
-  async function save() {
-    if (!dirty || saving) return true;
-    setSaving(true);
-    if (isDirty(draft)) {
-      const { error } = await supabase.from(TABLE.PERSONAS).update(draft.patch).eq("id", personaId);
-      if (error) {
-        setSaving(false);
-        toast.error(tPersonas("saveFailed"), { description: error.message });
-        return false;
-      }
-    }
-    if (hasOps(sectionOps)) {
-      const { error } = await applySectionOps(supabase, personaId, sectionOps);
-      if (error) {
-        setSaving(false);
-        toast.error(tPersonas("saveFailed"), { description: error });
-        return false;
-      }
-      // Les identifiants provisoires n'ont plus cours : on repart de la base.
-      const frais = await fetchPersonaSections(supabase, personaId);
-      setSections(frais);
-      setSavedSections(frais);
-    }
-    if (draft.orphans.length > 0) await supabase.storage.from("personas").remove(draft.orphans);
-    setDraft(EMPTY_DRAFT);
-    setSaving(false);
-    toast.success(tPersonas("saved"));
-    notifyPersonasChanged();
-    router.refresh();
-    return true;
-  }
-
-  /** Abandonne : les fichiers envoyés pour rien ne restent pas au stockage. */
-  async function discard() {
-    if (draft.uploaded.length > 0) await supabase.storage.from("personas").remove(draft.uploaded);
-    setDraft(EMPTY_DRAFT);
-    setSections(savedSections);
-  }
+  // Rien ne part en base avant « Enregistrer », et tout part en une requête.
+  const { sections, setSections, patchDraft, dirty, saving, save, discard } = usePersonaSheetDraft({
+    personaId,
+    initialSections,
+    initialValues,
+  });
 
   function requestClose(next: boolean) {
     if (next || !dirty) { setOpen(next); return; }
@@ -1195,14 +1136,12 @@ export function PersonaEditSheet({
               description={`"${personaName}" sera supprimé définitivement, ainsi que son avatar, sa bannière et toutes ses images de section.`}
               onConfirm={handleDelete}
             />
-            {/* Rien n'est enregistré tant qu'on ne l'a pas demandé : le bouton
-                ne paraît que lorsqu'il y a quelque chose à écrire. */}
-            {dirty && (
-              <Button size="sm" className="ml-auto" disabled={saving} onClick={() => void save()}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {tCommon("save")}
-              </Button>
-            )}
+            {/* Rien n'est enregistré tant qu'on ne l'a pas demandé. Le bouton
+                reste en place, grisé tant qu'il n'y a rien à écrire. */}
+            <Button size="sm" className="ml-auto" disabled={!dirty || saving} onClick={() => void save()}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {tCommon("save")}
+            </Button>
           </DrawerFooter>
         </SideSheetContent>
       </Drawer>

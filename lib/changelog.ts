@@ -45,6 +45,24 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-18",
+    category: "Interface",
+    area: "Personas",
+    text: "La fiche d’un persona a toujours son bouton « Enregistrer » en bas, grisé tant que rien n’a changé — y compris juste après sa création, qui fonctionne désormais comme l’édition : rien ne part avant « Enregistrer », et fermer avec des modifications en attente demande quoi en faire.",
+  },
+  {
+    date: "2026-11-18",
+    category: "Performance",
+    area: "Personas",
+    text: "Enregistrer une fiche part en une seule fois, quel que soit le nombre d’onglets et de champs touchés, et c’est tout ou rien : un refus n’enregistre plus une fiche à moitié. Un champ déplacé dans un onglet tout neuf s’enregistre aussi correctement.",
+  },
+  {
+    date: "2026-11-18",
+    category: "Interface",
+    area: "Salons",
+    text: "Les réglages d’une salle (nom, icône, bannière, date, catégorie, lieu) ne s’enregistrent plus un à un : un bouton « Enregistrer » en bas les écrit tous ensemble, et fermer avec des réglages en attente demande quoi en faire. Une image choisie puis abandonnée ne remplace plus l’ancienne.",
+  },
+  {
+    date: "2026-11-18",
     category: "Performance",
     area: "Monde",
     text: "La liste des salons d’un monde se calcule environ 30 % plus vite, et ne ralentira plus à mesure que les salons se remplissent. Les salons à date égale apparaissent désormais toujours dans le même ordre.",

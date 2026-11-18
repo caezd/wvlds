@@ -41,28 +41,35 @@ beforeEach(() => {
 });
 
 describe("PersonaEditSheet — rien ne part avant « Enregistrer »", () => {
-  it("le bouton n'apparaît qu'une fois la fiche modifiée, et écrit tout d'un coup", async () => {
+  it("le bouton reste en bas, grisé tant que rien n'a changé, et écrit tout en UNE requête", async () => {
     const mock = createSupabaseMock();
     const user = userEvent.setup();
     monter(mock);
 
-    // Fiche intacte : pas de bouton.
-    expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull();
+    // Fiche intacte : le bouton est là, mais grisé.
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled();
 
     const nom = screen.getByPlaceholderText("Nom du personnage");
     await user.clear(nom);
     await user.type(nom, "Kaela");
     // La frappe n'écrit rien.
+    expect(mock.rpc).not.toHaveBeenCalled();
     expect(mock.buildersFor("personas")).toHaveLength(0);
 
-    const enregistrer = await screen.findByRole("button", { name: "Enregistrer" });
+    const enregistrer = screen.getByRole("button", { name: "Enregistrer" });
+    await waitFor(() => expect(enregistrer).toBeEnabled());
     await user.click(enregistrer);
 
-    await waitFor(() => expect(mock.buildersFor("personas")).toHaveLength(1));
-    expect(mock.buildersFor("personas")[0].update).toHaveBeenCalledWith({ name: "Kaela" });
+    await waitFor(() => expect(mock.rpc).toHaveBeenCalledTimes(1));
+    expect(mock.rpc).toHaveBeenCalledWith("save_persona_sheet", expect.objectContaining({
+      p_persona_id: "p1",
+      p_patch: { name: "Kaela" },
+    }));
+    // Plus aucune écriture directe dans les tables.
+    expect(mock.buildersFor("personas")).toHaveLength(0);
     expect(refresh).toHaveBeenCalled();
-    // Écrite, la fiche est propre : le bouton disparaît.
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull());
+    // Écrite, la fiche est propre : le bouton se grise de nouveau.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled());
   });
 
   it("revenir à la valeur d'origine range le brouillon", async () => {
@@ -72,10 +79,10 @@ describe("PersonaEditSheet — rien ne part avant « Enregistrer »", () => {
 
     const nom = screen.getByPlaceholderText("Nom du personnage");
     await user.type(nom, "a");
-    await screen.findByRole("button", { name: "Enregistrer" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enregistrer" })).toBeEnabled());
 
     await user.type(nom, "{Backspace}");
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled());
   });
 
   it("fermer avec des modifications en attente demande quoi en faire", async () => {
@@ -125,16 +132,20 @@ describe("PersonaEditSheet — les sections aussi attendent", () => {
     await user.type(champ, "E");
 
     // Dès la première lettre, la fiche se sait modifiée…
-    await screen.findByRole("button", { name: "Enregistrer" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enregistrer" })).toBeEnabled());
     await user.type(champ, "nfance");
     await user.tab();
 
     // …mais rien n'est parti en base, ni à la frappe ni à la sortie du champ.
+    expect(mock.rpc).not.toHaveBeenCalled();
     expect(mock.buildersFor("persona_section_fields")).toHaveLength(0);
 
-    await user.click(await screen.findByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    await waitFor(() => expect(mock.buildersFor("persona_section_fields")).toHaveLength(1));
-    expect(mock.buildersFor("persona_section_fields")[0].update).toHaveBeenCalledWith({ data: { text: "Enfance" } });
+    await waitFor(() => expect(mock.rpc).toHaveBeenCalledTimes(1));
+    const [fn, args] = mock.rpc.mock.calls[0] as [string, { p_ops: { updateFields: unknown[] } }];
+    expect(fn).toBe("save_persona_sheet");
+    expect(args.p_ops.updateFields).toEqual([{ id: "f1", patch: { data: { text: "Enfance" } } }]);
+    expect(mock.buildersFor("persona_section_fields")).toHaveLength(0);
   });
 });

@@ -140,64 +140,30 @@ export function diffSections(
 // L'écriture
 // ──────────────────────────────────────────────────────────────────────────
 
-type Supabase = {
-  from: (table: string) => {
-    insert: (row: unknown) => { select: (cols: string) => { single: () => Promise<{ data: unknown; error: { message: string } | null }> } };
-    update: (patch: unknown) => { eq: (col: string, value: string) => Promise<{ error: { message: string } | null }> };
-    delete: () => { in: (col: string, values: string[]) => Promise<{ error: { message: string } | null }> };
-  };
+type RpcClient = {
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
 };
 
 /**
- * Écrit l'écart, dans l'ordre qui tient : on efface avant d'insérer, et les
- * sections nouvelles reçoivent leur identifiant avant que leurs champs ne s'y
- * rattachent. La première erreur arrête tout et remonte.
+ * Écrit la fiche et l'écart de ses onglets en UNE requête (migration 223) :
+ * `save_persona_sheet` applique tout dans une transaction, dans l'ordre qui
+ * tient (effacer, créer les onglets, modifier, créer et modifier les champs),
+ * résout les identifiants provisoires, et vérifie que chaque écriture a porté.
+ * Une écriture refusée annule l'ensemble — jamais de fiche à moitié écrite.
+ *
+ * Avant, une requête par onglet ou champ touché partait l'une après l'autre,
+ * et un refus de la RLS (qui ne lève pas d'erreur) passait inaperçu.
  */
-export async function applySectionOps(
-  supabase: Supabase,
+export async function savePersonaSheet(
+  supabase: RpcClient,
   personaId: string,
+  patch: Record<string, unknown>,
   ops: SectionOps,
 ): Promise<{ error: string | null }> {
-  if (ops.deleteFields.length > 0) {
-    const { error } = await supabase.from("persona_section_fields").delete().in("id", ops.deleteFields);
-    if (error) return { error: error.message };
-  }
-  if (ops.deleteSections.length > 0) {
-    const { error } = await supabase.from("persona_sections").delete().in("id", ops.deleteSections);
-    if (error) return { error: error.message };
-  }
-
-  // Les identifiants provisoires laissent la place aux vrais.
-  const reels = new Map<string, string>();
-  for (const section of ops.insertSections) {
-    const { data, error } = await supabase
-      .from("persona_sections")
-      .insert({ persona_id: personaId, name: section.name, position: section.position })
-      .select("id")
-      .single();
-    if (error) return { error: error.message };
-    reels.set(section.tempId, (data as { id: string }).id);
-  }
-
-  for (const { id, patch } of ops.updateSections) {
-    const { error } = await supabase.from("persona_sections").update(patch).eq("id", id);
-    if (error) return { error: error.message };
-  }
-
-  for (const field of ops.insertFields) {
-    const sectionId = reels.get(field.sectionId) ?? field.sectionId;
-    const { error } = await supabase
-      .from("persona_section_fields")
-      .insert({ ...field.row, section_id: sectionId })
-      .select("id")
-      .single();
-    if (error) return { error: error.message };
-  }
-
-  for (const { id, patch } of ops.updateFields) {
-    const { error } = await supabase.from("persona_section_fields").update(patch).eq("id", id);
-    if (error) return { error: error.message };
-  }
-
-  return { error: null };
+  const { error } = await supabase.rpc("save_persona_sheet", {
+    p_persona_id: personaId,
+    p_patch: patch,
+    p_ops: ops,
+  });
+  return { error: error?.message ?? null };
 }

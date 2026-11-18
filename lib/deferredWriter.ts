@@ -12,7 +12,7 @@ import { tempId } from "@/lib/personaSectionsDiff";
 //
 // Une insertion rend quand même une ligne, avec un identifiant provisoire :
 // l'appelant s'en sert comme clé React et pour ses modifications suivantes,
-// et `applySectionOps` le remplacera par le vrai.
+// et `save_persona_sheet` (migration 223) le remplacera par le vrai.
 // ──────────────────────────────────────────────────────────────────────────
 
 type Reponse = { data: unknown; error: null };

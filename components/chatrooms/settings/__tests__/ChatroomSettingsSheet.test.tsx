@@ -66,8 +66,8 @@ describe("ChatroomSettingsSheet — icône via le sélecteur avec recadrage", ()
     vi.clearAllMocks();
   });
 
-  it("téléverse et enregistre l'icône confirmée depuis ImagePickerCropField", async () => {
-    const mock = setup([{ data: null, error: null }]); // update chatrooms.icon_url
+  it("téléverse l'icône sous un nom neuf, et ne l'enregistre qu'avec « Enregistrer »", async () => {
+    const mock = setup([{ data: [{ id: "c1" }], error: null }]); // update chatrooms
     const user = userEvent.setup();
     render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
 
@@ -75,14 +75,19 @@ describe("ChatroomSettingsSheet — icône via le sélecteur avec recadrage", ()
 
     await waitFor(() => {
       expect(mock.storageUpload).toHaveBeenCalledWith(
-        "chatroom-c1/icon.webp",
+        expect.stringMatching(/^chatroom-c1\/icon-\d+\.webp$/),
         expect.anything(),
-        expect.objectContaining({ upsert: true }),
+        expect.anything(),
       );
     });
+    // Envoyée, mais pas encore enregistrée.
+    expect(mock.buildersFor("chatrooms")).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     await waitFor(() => {
       const builders = mock.buildersFor("chatrooms");
-      expect(builders.at(-1)?.update).toHaveBeenCalledWith({ icon_url: expect.stringContaining("chatroom-c1/icon.webp") });
+      expect(builders).toHaveLength(1);
+      expect(builders[0].update).toHaveBeenCalledWith({ icon_url: expect.stringMatching(/chatroom-c1\/icon-\d+\.webp$/) });
     });
   });
 
@@ -103,47 +108,19 @@ describe("ChatroomSettingsSheet — icône via le sélecteur avec recadrage", ()
   });
 });
 
-describe("ChatroomSettingsSheet — confirmation par toast des modifications", () => {
+describe("ChatroomSettingsSheet — rien ne part avant « Enregistrer », puis tout en une requête", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("confirme l'enregistrement du nom par un toast", async () => {
-    const mock = setup([{ data: null, error: null }]); // update title
-    const user = userEvent.setup();
+  it("le bouton reste en bas, grisé tant que rien n'a changé", () => {
+    setup();
     render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
-
-    const input = screen.getByPlaceholderText("Nom de la salle…");
-    await user.clear(input);
-    await user.type(input, "Nouveau nom");
-    await user.tab(); // blur
-
-    await waitFor(() => {
-      const builders = mock.buildersFor("chatrooms");
-      expect(builders.at(-1)?.update).toHaveBeenCalledWith({ title: "Nouveau nom" });
-    });
-    expect(toast.success).toHaveBeenCalledWith("Modification enregistrée.");
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled();
   });
 
-  it("confirme l'enregistrement de la catégorie par un toast", async () => {
-    const mock = setup([
-      { data: [{ id: "cat1", title: "Aventures", banner_url: null, icon_url: null }], error: null }, // fetch catégories
-      { data: null, error: null }, // update category_id
-    ]);
-    const user = userEvent.setup();
-    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} worldId="w1" open hideTrigger />);
-
-    await user.click(await screen.findByText("Aventures"));
-
-    await waitFor(() => {
-      const builders = mock.buildersFor("chatrooms");
-      expect(builders.at(-1)?.update).toHaveBeenCalledWith({ category_id: "cat1" });
-    });
-    expect(toast.success).toHaveBeenCalledWith("Modification enregistrée.");
-  });
-
-  it("n'affiche pas de toast de succès si l'enregistrement échoue", async () => {
-    setup([{ data: null, error: { message: "boom" } }]); // update title en erreur
+  it("modifier le nom n'écrit rien ; « Enregistrer » l'écrit et le confirme", async () => {
+    const mock = setup([{ data: [{ id: "c1" }], error: null }]);
     const user = userEvent.setup();
     render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
 
@@ -151,8 +128,45 @@ describe("ChatroomSettingsSheet — confirmation par toast des modifications", (
     await user.clear(input);
     await user.type(input, "Nouveau nom");
     await user.tab();
+    expect(mock.buildersFor("chatrooms")).toHaveLength(0);
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("boom"));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => {
+      expect(mock.buildersFor("chatrooms")[0]?.update).toHaveBeenCalledWith({ title: "Nouveau nom" });
+    });
+    expect(toast.success).toHaveBeenCalledWith("Modification enregistrée.");
+  });
+
+  it("nom et catégorie modifiés partent dans la MÊME requête", async () => {
+    const mock = setup([
+      { data: [{ id: "cat1", title: "Aventures", banner_url: null, icon_url: null }], error: null }, // fetch catégories
+      { data: [{ id: "c1" }], error: null }, // update unique
+    ]);
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} worldId="w1" open hideTrigger />);
+
+    await user.click(await screen.findByText("Aventures"));
+    const input = screen.getByPlaceholderText("Nom de la salle…");
+    await user.clear(input);
+    await user.type(input, "Nouveau nom");
+    expect(mock.buildersFor("chatrooms")).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => expect(mock.buildersFor("chatrooms")).toHaveLength(1));
+    expect(mock.buildersFor("chatrooms")[0].update).toHaveBeenCalledWith({ title: "Nouveau nom", category_id: "cat1" });
+  });
+
+  it("un refus (erreur, ou aucune ligne touchée) ne confirme rien", async () => {
+    setup([{ data: [], error: null }]); // RLS : aucune ligne, sans erreur
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
+
+    const input = screen.getByPlaceholderText("Nom de la salle…");
+    await user.clear(input);
+    await user.type(input, "Nouveau nom");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("L'enregistrement a échoué"));
     expect(toast.success).not.toHaveBeenCalled();
   });
 });
