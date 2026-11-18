@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-18",
     category: "Correctif",
+    area: "Salons",
+    text: "Un message « inséré avant » compte désormais dans les non-lus, même si la partie du fil où il se place avait déjà été lue. Avant, le compteur montait sur le moment puis retombait au rechargement.",
+  },
+  {
+    date: "2026-11-18",
+    category: "Correctif",
     area: "Monde",
     text: "En revenant sur un onglet resté en veille ou après une coupure réseau, la liste des salons se remet à jour : ordre, derniers messages et avatars des derniers posteurs. Avant, elle restait figée, et revenait parfois même à son état du chargement de la page. Même rattrapage pour la grille et les dossiers de salons, les widgets de l’accueil, le chat en direct et les messages privés.",
   },
