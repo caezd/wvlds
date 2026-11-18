@@ -100,6 +100,23 @@ describe("PresenceProvider — cleanup et reconnexion", () => {
     expect(mock.removeChannel).toHaveBeenCalledWith(ch);
   });
 
+  it("ouvre la présence globale en privé (migration 220)", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(
+      <PresenceProvider>
+        <div />
+      </PresenceProvider>,
+    );
+
+    await waitFor(() => expect(mock.channelNamed("presence:app")).toBeDefined());
+    expect(mock.channel).toHaveBeenCalledWith(
+      "presence:app",
+      expect.objectContaining({ config: expect.objectContaining({ private: true }) }),
+    );
+  });
+
   it("recrée le canal de présence après un retour de connexion réseau", async () => {
     const mock = createSupabaseMock({ user: { id: "u1" } });
     vi.mocked(createClient).mockReturnValue(mock.client as never);

@@ -97,6 +97,15 @@ describe("useWorldLiveChat", () => {
     expect(result.current.presentCount).toBe(3);
   });
 
+  it("ouvre le canal de présence du chat en privé (migration 220)", async () => {
+    const { mock } = setup([{ data: [] }]);
+    await waitFor(() => expect(mock.channelNamed("world-live:w1")).toBeDefined());
+    expect(mock.channel).toHaveBeenCalledWith(
+      "world-live:w1",
+      expect.objectContaining({ config: expect.objectContaining({ private: true }) }),
+    );
+  });
+
   it("en mode invisible, lit sans se compter", async () => {
     presenceMock.appearOffline = true;
     const { mock } = setup([{ data: [] }]);

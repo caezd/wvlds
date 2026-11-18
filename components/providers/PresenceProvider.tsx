@@ -253,7 +253,8 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             });
             return ch;
                 },
-                { config: { presence: { key: userId } } },
+                // Privé (migration 220) : réservé aux comptes connectés.
+                { config: { private: true, presence: { key: userId } } },
             );
             // L'effet a pu être nettoyé pendant l'attente ci-dessus.
             if (!mounted) { fermerCanal(); fermerCanal = null; }

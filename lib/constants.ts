@@ -92,6 +92,7 @@ export const channel = {
   chatPins: (chatId: string) => `chat-pins-${chatId}`,
   navMessages: (worldId: string) => `nav-messages-${worldId}`,
   navReads: (selfId: string) => `nav-reads-${selfId}`,
+  /** Canal PRIVÉ : présence globale, réservée aux comptes connectés (migration 220). */
   appPresence: () => "presence:app",
   userNotifs: (userId: string) => `notifs:${userId}`,
   /** Canal PRIVÉ : « … écrit » d'une conversation privée (migration 219). */

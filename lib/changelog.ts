@@ -46,7 +46,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-17",
     category: "Correctif",
-    text: "Qui se trouve dans un salon et qui y écrit n’est plus visible que des membres du monde ; dans une conversation privée, seuls ses deux participants voient l’autre écrire. Après la mise à jour, rechargez la page si l’indication « … écrit » ne s’affiche plus.",
+    text: "Qui se trouve dans un salon et qui y écrit n’est plus visible que des membres du monde ; dans une conversation privée, seuls ses deux participants voient l’autre écrire. La liste des personnes en ligne n’est plus visible que des comptes connectés, et les spectateurs du chat en direct d’un monde que de ses membres. Après la mise à jour, rechargez la page si l’indication « … écrit » ou la présence en ligne ne s’affichent plus.",
   },
   {
     date: "2026-11-17",

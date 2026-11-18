@@ -159,7 +159,8 @@ export function useWorldLiveChat(worldId: string | null) {
         channelRef.current = channel;
         return channel;
       },
-      { config: { presence: { key: userId } } },
+      // Privé (migration 220) : réservé aux membres du monde.
+      { config: { private: true, presence: { key: userId } } },
     );
 
     return () => {
