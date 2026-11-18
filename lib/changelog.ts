@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-18",
+    category: "Correctif",
+    area: "Salons",
+    text: "Un salon ouvert depuis le composeur d’un monde garde les options cochées au moment de l’ouvrir : dialogue en bulles, sa couleur et mode SMS. Elles apparaissaient décochées une fois dans le salon.",
+  },
+  {
+    date: "2026-11-18",
     category: "Performance",
     text: "Réordonner part en une seule fois, quel que soit le nombre d’éléments : cartes du monde, pages du wiki, catégories de salons, onglets de la fiche par défaut, notes du wiki et leurs catégories. Mettre à la corbeille ou changer la rareté de plusieurs objets du catalogue aussi. Et un déplacement refusé ne reste plus affiché pour revenir en arrière au rechargement : il est annulé tout de suite, avec un message.",
   },

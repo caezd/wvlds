@@ -396,6 +396,26 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         try { if (v) localStorage.setItem(SMS_KEY, "1"); else localStorage.removeItem(SMS_KEY); } catch { }
     }
 
+    /**
+     * Mode « création » : les options d'écriture (dialogue en bulles, sa
+     * couleur, SMS) sont mémorisées sous la clé `…:new`. Le salon créé, son
+     * propre composeur les lit sous SA clé (`…:<id>`) : sans cette copie, la
+     * case cochée dans le composeur du monde apparaissait décochée dans le
+     * salon. Les clés `…:new` restent : le prochain salon créé part des mêmes
+     * réglages, comme avant.
+     */
+    function reporterOptions(nouveauChatId: string) {
+        try {
+            const ecrire = (cle: string, valeur: string | null) => {
+                if (valeur) localStorage.setItem(cle, valeur);
+                else localStorage.removeItem(cle);
+            };
+            ecrire(`bubbleMode:${nouveauChatId}`, bubbleMode ? "1" : null);
+            ecrire(`bubbleColor:${nouveauChatId}`, bubbleColor);
+            ecrire(`smsMode:${nouveauChatId}`, smsMode ? "1" : null);
+        } catch { /* stockage indisponible (navigation privée) : rien à reporter */ }
+    }
+
     // Note privée
     type Participant = { id: string; username: string | null; avatar_url: string | null };
     const [visibleTo, setVisibleTo] = useState<string[] | null>(null);
@@ -535,6 +555,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 if (!resolved) return false;
                 targetChatId = resolved.chatId;
                 targetKey = resolved.chatroomKey ?? null;
+                reporterOptions(targetChatId);
             }
             if (!targetChatId) return false;
 
