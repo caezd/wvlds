@@ -40,6 +40,8 @@ import {
   addWorldCatalogItem,
   updateWorldCatalogItem,
   trashWorldCatalogItem,
+  trashWorldCatalogItems,
+  setWorldCatalogItemsRarity,
   restoreWorldCatalogItem,
   purgeWorldCatalogItem,
   listTrashedWorldCatalogItems,
@@ -69,7 +71,7 @@ import { CatalogCategoryDialog } from "./CatalogCategoryDialog";
 import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
 import { CatalogTrashDialog } from "./CatalogTrashDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
-import { messageErreurAction } from "@/lib/actionErrors";
+import { ERR_NON_AUTORISE, messageErreurAction } from "@/lib/actionErrors";
 import { buttonVariants } from "@/components/ui/button";
 
 // ── Catalogue list (main DnD logic) ──────────────────────────────────────────
@@ -314,24 +316,28 @@ export function CatalogueList({
     });
   }
 
+  // Toute la sélection en UNE action serveur, qui rend les objets réellement
+  // touchés : ceux qui manquent ont été refusés, et restent sélectionnés.
   async function handleTrashSelected() {
     const ids = [...selectedIds];
-    const results = await Promise.all(ids.map(id => trashWorldCatalogItem(id).then(r => ({ id, ...r }))));
-    const done = new Set(results.filter(r => r.ok).map(r => r.id));
+    if (ids.length === 0) return;
+    const res = await trashWorldCatalogItems(ids);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    const done = new Set(res.ids);
     if (done.size > 0) setItems(prev => prev.filter(i => !done.has(i.id)));
     setSelectedIds(new Set(ids.filter(id => !done.has(id))));
-    const failed = results.find(r => !r.ok);
-    if (failed) toast.error(messageErreurAction(failed.error, tCommon));
+    if (done.size < ids.length) toast.error(messageErreurAction(ERR_NON_AUTORISE, tCommon));
     else toast.success(t("movedToTrashCount", { count: done.size }));
   }
 
   async function handleRaritySelected(rarity: WorldCatalogRarity | null) {
     const ids = [...selectedIds];
-    const results = await Promise.all(ids.map(id => updateWorldCatalogItem(id, { rarity }).then(r => ({ id, ...r }))));
-    const done = new Set(results.filter(r => r.ok).map(r => r.id));
+    if (ids.length === 0) return;
+    const res = await setWorldCatalogItemsRarity(ids, rarity);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    const done = new Set(res.ids);
     if (done.size > 0) setItems(prev => prev.map(i => (done.has(i.id) ? { ...i, rarity } : i)));
-    const failed = results.find(r => !r.ok);
-    if (failed) toast.error(messageErreurAction(failed.error, tCommon));
+    if (done.size < ids.length) toast.error(messageErreurAction(ERR_NON_AUTORISE, tCommon));
   }
 
   // ── Corbeille ──

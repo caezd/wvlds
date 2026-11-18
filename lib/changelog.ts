@@ -45,6 +45,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-18",
+    category: "Performance",
+    text: "Réordonner part en une seule fois, quel que soit le nombre d’éléments : cartes du monde, pages du wiki, catégories de salons, onglets de la fiche par défaut, notes du wiki et leurs catégories. Mettre à la corbeille ou changer la rareté de plusieurs objets du catalogue aussi. Et un déplacement refusé ne reste plus affiché pour revenir en arrière au rechargement : il est annulé tout de suite, avec un message.",
+  },
+  {
+    date: "2026-11-18",
     category: "Interface",
     area: "Personas",
     text: "La fiche d’un persona a toujours son bouton « Enregistrer » en bas, grisé tant que rien n’a changé — y compris juste après sa création, qui fonctionne désormais comme l’édition : rien ne part avant « Enregistrer », et fermer avec des modifications en attente demande quoi en faire.",

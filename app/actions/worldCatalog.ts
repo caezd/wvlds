@@ -454,6 +454,45 @@ export async function trashWorldCatalogItem(id: string) {
   return { ok: true as const };
 }
 
+// ── Actions groupées ──────────────────────────────────────────────────────────
+// La sélection multiple envoyait une action serveur PAR objet — chacune avec
+// sa propre session et sa propre requête. Une seule ici, qui rend les
+// identifiants réellement touchés : la RLS qui refuse ne lève pas d'erreur,
+// l'écart entre ce qui est demandé et ce qui revient est le refus.
+
+const MAX_BULK_ROWS = 500;
+const bulkIdsSchema = z.array(idSchema).min(1).max(MAX_BULK_ROWS);
+
+/** Met plusieurs objets à la corbeille ; rend ceux qui l'ont été. */
+export async function trashWorldCatalogItems(ids: string[]) {
+  const input = parseInput(bulkIdsSchema, ids);
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_catalog_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", input.data)
+    .select("id");
+  if (error) return { ok: false as const, error: echecEnregistrement("trashWorldCatalogItems", error) };
+  return { ok: true as const, ids: ((data ?? []) as { id: string }[]).map((r) => r.id) };
+}
+
+/** Change la rareté de plusieurs objets ; rend ceux qui l'ont été. */
+export async function setWorldCatalogItemsRarity(ids: string[], rarity: WorldCatalogRarity | null) {
+  const input = parseInput(bulkIdsSchema, ids);
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const cleaned = cleanCatalogItemInput({ rarity });
+  if (!cleaned.ok) return { ok: false as const, error: cleaned.error };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_catalog_items")
+    .update(cleaned.value)
+    .in("id", input.data)
+    .select("id");
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldCatalogItemsRarity", error) };
+  return { ok: true as const, ids: ((data ?? []) as { id: string }[]).map((r) => r.id) };
+}
+
 export async function restoreWorldCatalogItem(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

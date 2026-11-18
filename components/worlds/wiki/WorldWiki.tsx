@@ -60,6 +60,7 @@ import { WikiRecentList } from "./WikiRecentList";
 import { WikiTemplatePicker } from "./WikiTemplatePicker";
 import { WIKI_TEMPLATE_ICONS, type WikiTemplateId } from "@/lib/wikiTemplates";
 import { toast } from "sonner";
+import { reorderRows } from "@/lib/reorder";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -1267,28 +1268,19 @@ export function WorldWiki({
     const entree = ecritures.find(e => e.id === pageId)?.parent_id;
     if (entree) setExpandedFolders(prev => new Set([...prev, entree]));
 
-    // Un `update` par ligne, et surtout PAS un `upsert` : PostgREST traduit
-    // l'upsert en `INSERT … ON CONFLICT`, si bien que la RLS évalue la policy
-    // d'INSERT sur une ligne où `world_id` est absent — donc nul. La
-    // vérification `is_world_editor(world_id, …)` échouait alors pour tout le
-    // monde, propriétaire compris, et réordonner une page répondait
-    // « new row violates row-level security policy ». L'UPDATE, lui, ne touche
-    // qu'aux colonnes visées et laisse `world_id` en place.
+    // Un UPDATE en lot (`reorder_world_wiki_pages`, migration 224), et
+    // surtout PAS un `upsert` : PostgREST traduit l'upsert en `INSERT … ON
+    // CONFLICT`, si bien que la RLS évalue la policy d'INSERT sur une ligne où
+    // `world_id` est absent — donc nul — et refuse tout le monde, propriétaire
+    // compris. L'UPDATE ne touche qu'aux colonnes visées.
     //
-    // Le résultat de l'écriture est lu : un refus laissait sinon le nouvel
-    // ordre à l'écran, perdu au rechargement suivant.
-    void Promise.all(
-      ecritures.map(e =>
-        supabase
-          .from("world_wiki_pages")
-          .update({ parent_id: e.parent_id, sort_index: e.sort_index })
-          .eq("id", e.id),
-      ),
-    ).then((resultats: { error: { message: string } | null }[]) => {
-      const erreur = resultats.map(r => r.error).find(Boolean);
-      if (!erreur) return;
+    // La fonction rend le nombre de lignes touchées : un refus silencieux de
+    // la RLS rétablit l'ordre, au lieu de le laisser à l'écran jusqu'au
+    // rechargement suivant.
+    void reorderRows(supabase, "reorder_world_wiki_pages", ecritures).then(({ error }) => {
+      if (!error) return;
       setPages(previousPages);
-      toast.error(t("saveError"), { description: erreur.message });
+      toast.error(t("saveError"), { description: error });
     });
   }
 

@@ -193,19 +193,20 @@ describe("WikiNotesPanel — écriture", () => {
     // Le glisser-déposer était le seul chemin vers l'ordre des fiches, et il
     // demande un pointeur : au clavier, le panneau était figé.
     const user = userEvent.setup();
-    const { mock } = renderPanel([...CHARGEMENT, { data: null, error: null }, { data: null, error: null }]);
+    const { mock } = renderPanel([...CHARGEMENT]);
+    mock.rpc.mockImplementation(async (_fn: string, args: { p_items: unknown[] }) => ({ data: args.p_items.length, error: null }));
 
     await screen.findByText("Mara Kline");
     const fiche = screen.getByText("Mara Kline").closest("li")!;
     await user.click(within(fiche).getByRole("button", { name: "Actions de la fiche" }));
     await user.click(await screen.findByRole("menuitem", { name: "Descendre" }));
 
-    // « Mara Kline » passe derrière « Les Gardiens » : les deux rangs s'échangent.
-    await waitFor(() => {
-      const writes = mock.builders.flatMap(b => b.builder.update.mock.calls.map(c => c[0]));
-      expect(writes).toContainEqual(expect.objectContaining({ sort_index: 1 }));
-      expect(writes).toContainEqual(expect.objectContaining({ sort_index: 0 }));
-    });
+    // « Mara Kline » passe derrière « Les Gardiens » : les deux rangs
+    // s'échangent, en UNE requête (migration 224).
+    await waitFor(() => expect(mock.rpc).toHaveBeenCalledTimes(1));
+    const [fn, args] = mock.rpc.mock.calls[0] as [string, { p_items: { sort_index: number }[] }];
+    expect(fn).toBe("reorder_wiki_notes");
+    expect(args.p_items.map(l => l.sort_index).sort()).toEqual([0, 1]);
   });
 
   it("ne propose que les déplacements qui ont un sens", async () => {
@@ -226,17 +227,16 @@ describe("WikiNotesPanel — écriture", () => {
 
   it("descend une catégorie depuis son menu", async () => {
     const user = userEvent.setup();
-    const { mock } = renderPanel([...CHARGEMENT, { data: null, error: null }, { data: null, error: null }]);
+    const { mock } = renderPanel([...CHARGEMENT]);
+    mock.rpc.mockImplementation(async (_fn: string, args: { p_items: unknown[] }) => ({ data: args.p_items.length, error: null }));
 
     await screen.findByText("Entités");
     const section = screen.getByText("Entités").closest("section")!;
     await user.click(within(section).getByRole("button", { name: /Actions de la catégorie|Options/ }));
     await user.click(await screen.findByRole("menuitem", { name: "Descendre" }));
 
-    await waitFor(() => {
-      const writes = mock.builders.flatMap(b => b.builder.update.mock.calls.map(c => c[0]));
-      expect(writes.length).toBeGreaterThan(0);
-    });
+    await waitFor(() => expect(mock.rpc).toHaveBeenCalledWith("reorder_wiki_note_categories", expect.anything()));
+    expect(mock.rpc).toHaveBeenCalledTimes(1);
   });
 
   it("modifie le titre et le contenu d'une fiche", async () => {

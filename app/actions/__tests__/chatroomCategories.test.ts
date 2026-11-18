@@ -147,23 +147,36 @@ describe("updateChatroomCategory", () => {
 });
 
 describe("reorderChatroomCategories", () => {
-  it("signale l'échec dès qu'une seule mise à jour échoue", async () => {
-    const mock = createSupabaseMock({
-      results: [
-        { data: null, error: null },
-        { data: null, error: { message: "refusé" } },
-        { data: null, error: null },
-      ],
-    });
+  const LISTE = [
+    { id: "a", position: 0 },
+    { id: "b", position: 1 },
+    { id: "c", position: 2 },
+  ];
+
+  it("envoie toute la liste en UNE requête", async () => {
+    const mock = createSupabaseMock({ results: [] });
+    mock.rpc.mockResolvedValueOnce({ data: 3, error: null });
     use(mock);
 
-    const res = await reorderChatroomCategories([
-      { id: "a", position: 0 },
-      { id: "b", position: 1 },
-      { id: "c", position: 2 },
-    ]);
+    expect(await reorderChatroomCategories(LISTE)).toEqual({ ok: true });
+    expect(mock.rpc).toHaveBeenCalledTimes(1);
+    expect(mock.rpc).toHaveBeenCalledWith("reorder_chatroom_categories", { p_items: LISTE });
+  });
 
-    expect(res).toEqual({ ok: false, error: "saveFailed" });
+  it("signale l'échec de la base", async () => {
+    const mock = createSupabaseMock({ results: [] });
+    mock.rpc.mockResolvedValueOnce({ data: null, error: { message: "refusé" } });
+    use(mock);
+
+    expect(await reorderChatroomCategories(LISTE)).toEqual({ ok: false, error: "saveFailed" });
+  });
+
+  it("un refus silencieux de la RLS (lignes manquantes) est un refus", async () => {
+    const mock = createSupabaseMock({ results: [] });
+    mock.rpc.mockResolvedValueOnce({ data: 2, error: null });
+    use(mock);
+
+    expect(await reorderChatroomCategories(LISTE)).toEqual({ ok: false, error: "forbidden" });
   });
 
   it("accepte une liste vide sans rien tenter", async () => {
@@ -171,6 +184,7 @@ describe("reorderChatroomCategories", () => {
     use(mock);
 
     expect(await reorderChatroomCategories([])).toEqual({ ok: true });
+    expect(mock.rpc).not.toHaveBeenCalled();
   });
 });
 

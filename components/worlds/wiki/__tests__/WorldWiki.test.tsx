@@ -366,6 +366,7 @@ describe("WorldWiki — pages restreintes", () => {
       results: [{ data: [PAGE, FOLDER, NESTED_PAGE], error: null }],
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
+    mock.rpc.mockImplementation(async (_fn: string, args: { p_items: unknown[] }) => ({ data: args.p_items.length, error: null }));
 
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit canComment />);
@@ -375,13 +376,13 @@ describe("WorldWiki — pages restreintes", () => {
     await user.click(within(ligne).getByRole("button", { name: "Options" }));
     await user.click(await screen.findByRole("menuitem", { name: "Descendre" }));
 
-    // « Accueil » passe derrière « Lieux » : les deux rangs s'échangent.
-    await waitFor(() => {
-      const appels = mock.buildersFor("world_wiki_pages")
-        .flatMap(b => b.update.mock.calls.map(c => c[0]));
-      expect(appels).toContainEqual({ parent_id: null, sort_index: 1 });
-      expect(appels).toContainEqual({ parent_id: null, sort_index: 0 });
-    });
+    // « Accueil » passe derrière « Lieux » : les deux rangs s'échangent, en
+    // UNE requête (migration 224) — et toujours pas d'upsert.
+    await waitFor(() => expect(mock.rpc).toHaveBeenCalledTimes(1));
+    const [fn, args] = mock.rpc.mock.calls[0] as [string, { p_items: { parent_id: string | null; sort_index: number }[] }];
+    expect(fn).toBe("reorder_world_wiki_pages");
+    expect(args.p_items).toContainEqual(expect.objectContaining({ parent_id: null, sort_index: 1 }));
+    expect(args.p_items).toContainEqual(expect.objectContaining({ parent_id: null, sort_index: 0 }));
   });
 
   it("ne propose que les déplacements qui ont un sens", async () => {

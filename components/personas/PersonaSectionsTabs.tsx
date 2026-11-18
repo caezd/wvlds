@@ -26,6 +26,7 @@ import { Layers, Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { toast } from "sonner";
+import { reorderRows } from "@/lib/reorder";
 import { useTranslations } from "next-intl";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { SectionFieldsEditor } from "./SectionFieldsEditor";
@@ -135,16 +136,20 @@ export function PersonaSectionsTabs({
     [next[idx], next[target]] = [next[target], next[idx]];
     const withPos = next.map((s, i) => ({ ...s, position: i * 10 }));
     onSectionsChange(withPos);
-    // L'ordre était appliqué à l'écran sans que le résultat des écritures ne
-    // soit lu : un refus le laissait affiché jusqu'au rechargement, où il
-    // revenait en arrière sans explication.
-    const results = await Promise.all(
-      withPos.map((s) => supabase.from("persona_sections").update({ position: s.position }).eq("id", s.id)),
+    // Brouillon : l'ordre fait partie de l'arbre en mémoire, « Enregistrer »
+    // l'écrira avec le reste (save_persona_sheet).
+    if (deferred) return;
+    // Sinon, une requête pour tous les onglets (migration 224), qui compte les
+    // lignes touchées : un refus rétablit l'ordre au lieu de le laisser affiché
+    // jusqu'au rechargement.
+    const { error } = await reorderRows(
+      createClient(),
+      "reorder_persona_sections",
+      withPos.map((s) => ({ id: s.id, position: s.position })),
     );
-    const failed = results.find((r) => r.error);
-    if (failed?.error) {
+    if (error) {
       onSectionsChange(sections);
-      toast.error(failed.error.message);
+      toast.error(error);
     }
   }
 

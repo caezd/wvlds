@@ -15,6 +15,7 @@ import {
   shortTextSchema,
 } from "@/lib/inputSchemas";
 import { storagePathFromUrl } from "@/lib/storage";
+import { reorderRows } from "@/lib/reorder";
 import type { WorldTimelineDate } from "@/types/worlds";
 import type { PinRoom, WikiPageOption } from "@/components/worlds/map/types";
 
@@ -367,11 +368,11 @@ export async function updateWorldMap(
 /**
  * Fixe l'ordre des onglets, du premier au dernier.
  *
- * Une mise à jour par carte plutôt qu'un `upsert` en lot : PostgREST traduit
- * l'upsert en `INSERT … ON CONFLICT`, ce qui ferait évaluer à la RLS une
- * policy d'INSERT sur des lignes partielles — le piège documenté dans
- * `components/worlds/wiki/pasDUpsert.test.ts`. À dix cartes au plus, la boucle
- * ne coûte rien.
+ * En une requête (`reorder_world_maps`, migration 224) — pas un `upsert` en
+ * lot : PostgREST le traduirait en `INSERT … ON CONFLICT`, et la RLS
+ * évaluerait une policy d'INSERT sur des lignes partielles (le piège documenté
+ * dans `components/worlds/wiki/pasDUpsert.test.ts`). La fonction rend le
+ * nombre de lignes touchées : un refus silencieux de la RLS devient une erreur.
  */
 export async function reorderWorldMaps(rawOrderedIds: string[]): Promise<void> {
   const supabase = await createClient();
@@ -379,14 +380,12 @@ export async function reorderWorldMaps(rawOrderedIds: string[]): Promise<void> {
 
   const orderedIds = parseInputOrThrow(z.array(idSchema).max(100), rawOrderedIds);
 
-  const horodatage = new Date().toISOString();
-  for (const [index, id] of orderedIds.entries()) {
-    const { error } = await supabase
-      .from("world_maps")
-      .update({ sort_index: index, updated_at: horodatage })
-      .eq("id", id);
-    if (error) throw new Error(error.message);
-  }
+  const { error } = await reorderRows(
+    supabase,
+    "reorder_world_maps",
+    orderedIds.map((id, index) => ({ id, sort_index: index })),
+  );
+  if (error) throw new Error(error);
 }
 
 /**

@@ -23,6 +23,8 @@ const actions = vi.hoisted(() => ({
   addWorldCatalogItem: vi.fn(),
   reorderWorldCatalogItems: vi.fn(),
   trashWorldCatalogItem: vi.fn(),
+  trashWorldCatalogItems: vi.fn(async (ids: string[]) => ({ ok: true, ids })),
+  setWorldCatalogItemsRarity: vi.fn(async (ids: string[]) => ({ ok: true, ids })),
   updateWorldCatalogItem: vi.fn(),
   updateWorldCatalogCategory: vi.fn(),
 }));
@@ -30,6 +32,8 @@ vi.mock("@/app/actions/worldCatalog", () => ({
   addWorldCatalogItem: actions.addWorldCatalogItem,
   updateWorldCatalogItem: actions.updateWorldCatalogItem,
   trashWorldCatalogItem: actions.trashWorldCatalogItem,
+  trashWorldCatalogItems: actions.trashWorldCatalogItems,
+  setWorldCatalogItemsRarity: actions.setWorldCatalogItemsRarity,
   restoreWorldCatalogItem: vi.fn(),
   purgeWorldCatalogItem: vi.fn(),
   listTrashedWorldCatalogItems: vi.fn(),
@@ -160,7 +164,10 @@ describe("CatalogueList — gestion", () => {
 
     await waitFor(() => expect(screen.queryByText("Épée")).toBeNull());
     expect(screen.queryByText("Arc")).toBeNull();
-    expect(actions.trashWorldCatalogItem).toHaveBeenCalledTimes(2);
+    // Toute la sélection en UNE action serveur.
+    expect(actions.trashWorldCatalogItems).toHaveBeenCalledTimes(1);
+    expect(actions.trashWorldCatalogItems).toHaveBeenCalledWith(expect.arrayContaining(["i-epee", "i-arc"]));
+    expect(actions.trashWorldCatalogItem).not.toHaveBeenCalled();
     expect(screen.queryByRole("toolbar", { name: "Sélection" })).toBeNull();
   });
 
@@ -173,7 +180,24 @@ describe("CatalogueList — gestion", () => {
     await user.click(within(screen.getByRole("toolbar", { name: "Sélection" })).getByRole("button", { name: "Rareté" }));
     await user.click(await screen.findByRole("menuitem", { name: "Rare" }));
 
-    await waitFor(() => expect(actions.updateWorldCatalogItem).toHaveBeenCalledWith("i-epee", { rarity: "rare" }));
+    await waitFor(() => expect(actions.setWorldCatalogItemsRarity).toHaveBeenCalledWith(["i-epee"], "rare"));
+    expect(actions.updateWorldCatalogItem).not.toHaveBeenCalled();
+  });
+
+  it("garde sélectionnés les objets que la base a refusés", async () => {
+    actions.trashWorldCatalogItems.mockResolvedValueOnce({ ok: true, ids: ["i-epee"] });
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Potion");
+
+    await user.click(screen.getByRole("checkbox", { name: "Sélectionner Épée" }));
+    await user.click(screen.getByRole("checkbox", { name: "Sélectionner Arc" }));
+    await user.click(within(screen.getByRole("toolbar", { name: "Sélection" })).getByRole("button", { name: "Supprimer" }));
+
+    await waitFor(() => expect(screen.queryByText("Épée")).toBeNull());
+    // L'arc, refusé, reste à l'écran et sélectionné.
+    expect(screen.getByText("Arc")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Sélectionner Arc" })).toBeChecked();
   });
 
   it("« Tout sélectionner » prend les objets visibles, la croix vide la sélection", async () => {

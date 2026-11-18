@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { reorderRows } from "@/lib/reorder";
 
 import type { createClient } from "@/lib/supabase/client";
 import { topic, useTopic } from "@/lib/realtimeHub";
@@ -294,18 +295,13 @@ export function useWikiPageNotes({
       const aEcrire = renumerotees.filter(
         (c) => avant?.find((a) => a.id === c.id)?.sort_index !== c.sort_index,
       );
-      const resultats = await Promise.all(
-        aEcrire.map((c) =>
-          supabase
-            .from("world_wiki_page_note_categories")
-            .update({ sort_index: c.sort_index })
-            .eq("id", c.id),
-        ),
+      // Une requête pour toute la liste (migration 224), refus RLS compris.
+      const { error } = await reorderRows(
+        supabase,
+        "reorder_wiki_note_categories",
+        aEcrire.map((c) => ({ id: c.id, sort_index: c.sort_index })),
       );
-      echoue(
-        resultats.map((r) => r.error).find(Boolean) ?? null,
-        () => setCategories(avant),
-      );
+      echoue(error ? { message: error } : null, () => setCategories(avant));
     },
     [categories, supabase],
   );
@@ -381,18 +377,9 @@ export function useWikiPageNotes({
         }),
       );
 
-      const resultats = await Promise.all(
-        plan.map((ligne) =>
-          supabase
-            .from("world_wiki_page_notes")
-            .update({ category_id: ligne.category_id, sort_index: ligne.sort_index })
-            .eq("id", ligne.id),
-        ),
-      );
-      echoue(
-        resultats.map((r) => r.error).find(Boolean) ?? null,
-        () => setNotes(avant),
-      );
+      // Une requête pour tout le plan (migration 224), refus RLS compris.
+      const { error } = await reorderRows(supabase, "reorder_wiki_notes", plan);
+      echoue(error ? { message: error } : null, () => setNotes(avant));
     },
     [notes, supabase],
   );

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import type { ChatroomCategory } from "@/types/worlds";
-import { echecEnregistrement } from "@/lib/actionErrors";
+import { ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
 
 // Les champs d'une catégorie tels que le client peut les envoyer — et rien
@@ -116,16 +116,14 @@ export async function reorderChatroomCategories(
   const input = parseInput(reorderSchema, categories);
   if (!input.ok) return { ok: false as const, error: input.error };
 
+  if (categories.length === 0) return { ok: true as const };
   const supabase = await createClient();
 
-  const results = await Promise.all(
-    categories.map(({ id, position }) =>
-      supabase.from("chatroom_categories").update({ position }).eq("id", id),
-    ),
-  );
-
-  const firstError = results.find((r) => r.error)?.error;
-  if (firstError) return { ok: false as const, error: echecEnregistrement("reorderChatroomCategories", firstError) };
+  // Une requête pour toute la liste (migration 224), qui rend le nombre de
+  // lignes touchées : un refus silencieux de la RLS ne passe plus pour un succès.
+  const { data, error } = await supabase.rpc("reorder_chatroom_categories", { p_items: input.data });
+  if (error) return { ok: false as const, error: echecEnregistrement("reorderChatroomCategories", error) };
+  if (data !== categories.length) return { ok: false as const, error: ERR_NON_AUTORISE };
 
   return { ok: true as const };
 }
