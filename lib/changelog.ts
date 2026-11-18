@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-18",
+    category: "Performance",
+    area: "Monde",
+    text: "La liste des salons d’un monde se calcule environ 30 % plus vite, et ne ralentira plus à mesure que les salons se remplissent. Les salons à date égale apparaissent désormais toujours dans le même ordre.",
+  },
+  {
+    date: "2026-11-18",
     category: "Correctif",
     area: "Salons",
     text: "Un message « inséré avant » compte désormais dans les non-lus, même si la partie du fil où il se place avait déjà été lue. Avant, le compteur montait sur le moment puis retombait au rechargement.",
