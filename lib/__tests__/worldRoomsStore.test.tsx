@@ -17,7 +17,12 @@ import { renderToString } from "react-dom/server";
 type Handler = (payload: unknown) => void;
 
 /** Canaux créés, avec leurs handlers, pour piloter le temps réel depuis le test. */
-const canaux: { topic: string; handlers: { type: string; event: string; handler: Handler }[] }[] = [];
+const canaux: {
+  topic: string;
+  handlers: { type: string; event: string; handler: Handler }[];
+  /** Re-jonction du canal, comme après une coupure brève (supabase-js). */
+  rejoindre: () => void;
+}[] = [];
 let retires = 0;
 
 /**
@@ -30,7 +35,11 @@ let retires = 0;
 const registre = new Map<string, ReturnType<typeof creerCanal>>();
 
 function creerCanal(topic: string) {
-  const entree = { topic, handlers: [] as { type: string; event: string; handler: Handler }[] };
+  const entree = {
+    topic,
+    handlers: [] as { type: string; event: string; handler: Handler }[],
+    rejoindre: () => {},
+  };
   canaux.push(entree);
   let souscrit = false;
   const ch = {
@@ -46,6 +55,7 @@ function creerCanal(topic: string) {
     },
     subscribe(cb?: (status: string) => void) {
       souscrit = true;
+      entree.rejoindre = () => cb?.("SUBSCRIBED");
       cb?.("SUBSCRIBED");
       return ch;
     },
@@ -61,8 +71,18 @@ function makeChannel(topic: string) {
   return ch;
 }
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
+const serveur = vi.hoisted(() => ({
+  /** Réponse de `list_chatrooms_nav` à la relecture. */
+  salons: [] as unknown[],
+  rpc: null as unknown as ReturnType<typeof import("vitest").vi.fn>,
+  epoch: 0,
+}));
+
+vi.mock("@/lib/supabase/client", async () => {
+  const { vi: v } = await import("vitest");
+  serveur.rpc = v.fn(async () => ({ data: serveur.salons, error: null }));
+  return { createClient: () => ({
+    rpc: serveur.rpc,
     channel: (topic: string) => makeChannel(topic),
     removeChannel: (ch?: { topic: string }) => {
       retires += 1;
@@ -74,10 +94,10 @@ vi.mock("@/lib/supabase/client", () => ({
         return "ok";
       });
     },
-  }),
-}));
+  }) };
+});
 
-vi.mock("@/hooks/useReconnectEpoch", () => ({ useReconnectEpoch: () => 0 }));
+vi.mock("@/hooks/useReconnectEpoch", () => ({ useReconnectEpoch: () => serveur.epoch }));
 
 import { __resetRealtimeHub } from "@/lib/realtimeHub";
 import {
@@ -124,6 +144,9 @@ beforeEach(() => {
   canaux.length = 0;
   registre.clear();
   retires = 0;
+  serveur.salons = [];
+  serveur.epoch = 0;
+  serveur.rpc?.mockClear();
 });
 
 describe("useWorldRooms", () => {
@@ -302,5 +325,40 @@ describe("useWorldRooms — avis du canal du monde", () => {
     emettre("summary", { op: "INSERT", chat_id: "c", last_message_at: "2026-03-01T00:00:00Z",
                          last_message_author_id: "u2", last_message_persona_avatar_url: null });
     expect(result.current.map((r) => r.id)).toEqual(["c", "a"]);
+  });
+  it("relit la liste quand le canal est rejoint après une coupure, pas à la première jonction", async () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
+    expect(serveur.rpc).not.toHaveBeenCalled();
+
+    // Pendant la coupure, B a reçu un message : l'avis est perdu.
+    const Bplus = { ...B, last_message_at: "2026-01-03T00:00:00Z" };
+    serveur.salons = [A, Bplus];
+    await act(async () => {
+      canaux[0].rejoindre();
+    });
+
+    expect(serveur.rpc).toHaveBeenCalledWith("list_chatrooms_nav", { p_world_id: "w1" });
+    expect(result.current.map((r) => r.id)).toEqual(["b", "a"]);
+  });
+
+  it("une reconnexion ne ramène pas la liste du chargement de la page", async () => {
+    const { result, rerender } = renderHook(() => useWorldRooms("w1", [A, B]));
+    // Reçu en direct : B remonte en tête.
+    emettre("summary", { op: "UPDATE", chat_id: "b", last_message_at: "2026-01-03T00:00:00Z" });
+    expect(result.current.map((r) => r.id)).toEqual(["b", "a"]);
+
+    // Reconnexion : canal refermé puis rouvert. La liste ne doit pas revenir
+    // à `initialRooms` (A avant B) ; elle est relue auprès du serveur.
+    serveur.salons = [{ ...B, last_message_at: "2026-01-03T00:00:00Z" }, A];
+    serveur.epoch = 1;
+    await act(async () => {
+      rerender();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.map((r) => r.id)).toEqual(["b", "a"]);
+    expect(serveur.rpc).toHaveBeenCalledTimes(1);
   });
 });

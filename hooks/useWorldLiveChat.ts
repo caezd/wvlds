@@ -95,6 +95,10 @@ export function useWorldLiveChat(worldId: string | null) {
     setPresentCount(0);
   }, [worldId]);
 
+  // Re-jonction automatique du canal par supabase-js (coupure brève, sans
+  // `reconnectEpoch`) : le fil est relu comme après une reconnexion.
+  const [resync, setResync] = useState(0);
+
   // Chargement initial, puis à chaque reconnexion (messages manqués hors ligne).
   useEffect(() => {
     if (!worldId || !userId) return;
@@ -117,7 +121,7 @@ export function useWorldLiveChat(worldId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [supabase, worldId, userId, reconnectEpoch]);
+  }, [supabase, worldId, userId, reconnectEpoch, resync]);
 
   // Flux des messages : canal privé du monde (migration 214), partagé par
   // lib/realtimeHub avec la barre latérale et les autres écrans du monde. Un
@@ -134,7 +138,7 @@ export function useWorldLiveChat(worldId: string | null) {
       const id = avis.id;
       setMessages((prev) => prev.filter((m) => m.id !== id));
     }
-  });
+  }, { onResync: () => setResync((n) => n + 1) });
 
   // Présence : qui regarde le chat en ce moment. Le nom du canal est le point
   // de rendez-vous commun à tous les navigateurs ; il reste donc stable.

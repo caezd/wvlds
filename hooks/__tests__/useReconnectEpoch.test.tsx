@@ -50,6 +50,23 @@ describe("useReconnectEpoch", () => {
     expect(result.current).toBe(avant + 1);
   });
 
+  it("incrémente quand la page est restaurée depuis le cache de navigation", async () => {
+    const { result } = renderHook(() => useReconnectEpoch());
+    const avant = result.current;
+
+    // Chargement normal : rien à faire.
+    await act(async () => {
+      window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: false }));
+    });
+    expect(result.current).toBe(avant);
+
+    // Retour par le bouton Précédent : la socket a été fermée à la mise en cache.
+    await act(async () => {
+      window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
+    });
+    expect(result.current).toBe(avant + 1);
+  });
+
   it("incrémente quand l'onglet redevient visible après une longue absence", async () => {
     const { result } = renderHook(() => useReconnectEpoch());
     const avant = result.current;

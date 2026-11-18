@@ -453,6 +453,30 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
       void markConvRead(msg.conversation_id);
       setOtherTyping(false);
     }
+  }, {
+    // Retour d'une coupure : les messages reçus pendant la coupure n'ont pas
+    // été annoncés. On relit la page la plus récente et on la fusionne.
+    onResync: () => {
+      const convId = activeConvIdRef.current;
+      if (!convId) return;
+      void supabase
+        .from(TABLE.DM_MESSAGES)
+        .select("*")
+        .eq("conversation_id", convId)
+        .order("created_at", { ascending: false })
+        .limit(DM_MESSAGES_PAGE)
+        .then(({ data }: { data: unknown }) => {
+          if (!Array.isArray(data) || activeConvIdRef.current !== convId) return;
+          const recents = (data as DmMessage[]).slice().reverse();
+          setMessages(prev => {
+            const parId = new Map(prev.map(m => [m.id, m]));
+            for (const m of recents) parId.set(m.id, m);
+            return [...parId.values()].sort((a, b) =>
+              a.created_at === b.created_at ? a.id - b.id : a.created_at.localeCompare(b.created_at));
+          });
+          if (recents.some(m => m.author_id !== userIdRef.current)) void markConvRead(convId);
+        });
+    },
   });
 
   const emitTyping = useCallback(() => {
@@ -568,7 +592,15 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     // Canal personnel `msgs:<user>` (migration 214), partagé par
     // lib/realtimeHub. Avant : `postgres_changes` NON FILTRÉ sur `dm_messages`,
     // où Realtime vérifiait chaque message privé posté pour chaque abonné.
+    // Première jonction : la liste vient d'être chargée ci-dessus. Les
+    // suivantes sont des retours de coupure (re-jonction de supabase-js) :
+    // les avis manqués ne reviendront pas, on relit la liste.
+    let convJoint = false;
     const fermerConvCanal = subscribeTopic(topic.user(userId), {
+      onSubscribed: () => {
+        if (convJoint) void loadConversations();
+        convJoint = true;
+      },
       onEvent: ({ event, payload }) => {
         if (event !== "dm") return;
         const avis = payload as { op?: string; record?: DmMessage };

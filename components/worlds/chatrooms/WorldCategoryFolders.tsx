@@ -94,7 +94,8 @@ export function WorldCategoryFolders({
   // Canal privé du monde (migration 214), partagé par lib/realtimeHub.
   useTopic(topic.world(worldId), ({ event }) => {
     if (event === "chatroom" || event === "category") void load();
-  });
+    // Retour d'une coupure : les avis manqués ne reviendront pas, on relit.
+  }, { onResync: () => void load() });
 
   if (categories.length === 0) return null;
 

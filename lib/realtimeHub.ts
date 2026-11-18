@@ -102,24 +102,39 @@ export function subscribeTopic(topic: string, listener: TopicListener, client?: 
  * Les callbacks sont lus dans une ref — les passer en dépendances rouvrirait
  * le canal à chaque rendu. Une reconnexion réseau (`useReconnectEpoch`)
  * referme et rouvre le canal sur une socket neuve, comme les autres canaux.
+ *
+ * `onResync` : appelé quand le canal est rejoint après une coupure (reconnexion
+ * réseau, retour sur un onglet en veille, re-jonction automatique de
+ * supabase-js) — jamais à la première jonction. L'écran y relit ses données :
+ * les avis émis pendant la coupure ne seront jamais reçus.
  */
 export function useTopic(
   topic: string | null | undefined,
   onEvent: (e: TopicEvent) => void,
-  options: { onSubscribed?: () => void; client?: Client } = {},
+  options: { onSubscribed?: () => void; onResync?: () => void; client?: Client } = {},
 ): void {
   const epoch = useReconnectEpoch();
-  const ref = useRef({ onEvent, onSubscribed: options.onSubscribed });
-  ref.current = { onEvent, onSubscribed: options.onSubscribed };
+  const ref = useRef({ onEvent, onSubscribed: options.onSubscribed, onResync: options.onResync });
+  ref.current = { onEvent, onSubscribed: options.onSubscribed, onResync: options.onResync };
   const client = options.client;
+  // Survit aux reconnexions (`epoch`) : une réouverture du canal est une
+  // re-jonction, pas un premier chargement. Remis à zéro au changement de
+  // sujet, dont les données viennent d'être chargées.
+  const joint = useRef<{ topic: string | null | undefined; fois: number }>({ topic, fois: 0 });
+  if (joint.current.topic !== topic) joint.current = { topic, fois: 0 };
 
   useEffect(() => {
     if (!topic) return;
+    const etat = joint.current;
     return subscribeTopic(
       topic,
       {
         onEvent: (e) => ref.current.onEvent(e),
-        onSubscribed: () => ref.current.onSubscribed?.(),
+        onSubscribed: () => {
+          etat.fois += 1;
+          if (etat.fois > 1) ref.current.onResync?.();
+          ref.current.onSubscribed?.();
+        },
       },
       client,
     );

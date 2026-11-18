@@ -75,6 +75,12 @@ function wireGlobalListeners() {
   wired = true;
 
   window.addEventListener("online", () => void reconnect());
+  // Page restaurée depuis le cache de navigation (bouton Précédent) : sa
+  // socket a été fermée à la mise en cache, et l'onglet n'est jamais passé
+  // par « caché » — `visibilitychange` ne dit rien.
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) void reconnect();
+  });
 
   let hiddenAt = 0;
   document.addEventListener("visibilitychange", () => {

@@ -5,7 +5,8 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 import { createClient } from "@/lib/supabase/client";
 import { __resetRealtimeChannels } from "@/lib/realtimeChannel";
-import { subscribeTopic, __resetRealtimeHub, __hubTopicCount } from "@/lib/realtimeHub";
+import { subscribeTopic, useTopic, __resetRealtimeHub, __hubTopicCount } from "@/lib/realtimeHub";
+import { renderHook, act } from "@testing-library/react";
 
 let mock: SupabaseMock;
 
@@ -86,5 +87,30 @@ describe("realtimeHub", () => {
     diffuser("wiki:p1", "note", { op: "INSERT", id: "n1" });
     expect(page).toHaveBeenCalledTimes(1);
     expect(monde).not.toHaveBeenCalled();
+  });
+  it("useTopic : onResync à chaque re-jonction du canal, jamais à la première", async () => {
+    const onResync = vi.fn();
+    renderHook(() => useTopic("world:w1", vi.fn(), { onResync }));
+    expect(onResync).not.toHaveBeenCalled();
+
+    // Re-jonction automatique de supabase-js après une coupure brève : le
+    // même canal repasse SUBSCRIBED.
+    const ch = mock.channelNamed("world:w1")!;
+    const rappel = vi.mocked(ch.subscribe).mock.calls[0][0] as (s: string) => void;
+    act(() => rappel("CHANNEL_ERROR"));
+    act(() => rappel("SUBSCRIBED"));
+    expect(onResync).toHaveBeenCalledTimes(1);
+
+    act(() => rappel("SUBSCRIBED"));
+    expect(onResync).toHaveBeenCalledTimes(2);
+  });
+
+  it("useTopic : un changement de sujet repart d'une première jonction", () => {
+    const onResync = vi.fn();
+    const { rerender } = renderHook(({ t }) => useTopic(t, vi.fn(), { onResync }), {
+      initialProps: { t: "world:w1" },
+    });
+    rerender({ t: "world:w2" });
+    expect(onResync).not.toHaveBeenCalled();
   });
 });

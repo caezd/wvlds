@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { subscribeTopic, topic } from "@/lib/realtimeHub";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Store externe de la liste des salons d'un monde, partagé par toutes les
@@ -50,6 +51,8 @@ type Entree = {
   /** Nombre d'instances montées ; le canal vit tant qu'il est superieur a 0. */
   refs: number;
   fermer: (() => void) | null;
+  /** Le canal a déjà été joint depuis le dernier chargement de la liste. */
+  joint: boolean;
 };
 
 const mondes = new Map<string, Entree>();
@@ -80,18 +83,35 @@ function semerSiAbsent(worldId: string, rooms: WorldRoom[]): void {
   // tous les utilisateurs : rien n'y est écrit, le rendu lit `initialRooms`.
   if (typeof window === "undefined") return;
   if (mondes.has(worldId)) return;
-  mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null });
+  mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null, joint: false });
 }
 
 /** Remplace la liste (retour serveur, changement de monde). */
 export function setWorldRooms(worldId: string, rooms: WorldRoom[]): void {
   const e = entree(worldId);
   if (!e) {
-    mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null });
+    mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null, joint: false });
     return;
   }
+  // Données neuves : la prochaine jonction du canal est une première jonction.
+  e.joint = false;
   if (e.rooms === rooms) return;
   e.rooms = rooms;
+  notifier(e);
+}
+
+/**
+ * Relit la liste auprès du serveur. Appelée quand le canal est rejoint après
+ * une coupure (onglet en veille, réseau perdu) : les avis émis pendant la
+ * coupure ne seront jamais reçus, et l'ordre ou les derniers posteurs
+ * resteraient figés à l'état d'avant.
+ */
+async function relire(worldId: string): Promise<void> {
+  const { data, error } = await createClient().rpc("list_chatrooms_nav", { p_world_id: worldId });
+  if (error || !Array.isArray(data)) return;
+  const e = entree(worldId);
+  if (!e || e.refs === 0) return;
+  e.rooms = trier(data as WorldRoom[]);
   notifier(e);
 }
 
@@ -140,6 +160,13 @@ function ouvrirCanal(worldId: string): () => void {
     onEvent: ({ event, payload }) => {
       if (event === "chatroom") surSalon(worldId, payload);
       else if (event === "summary") surResume(worldId, payload);
+    },
+    // Chaque jonction après la première est un retour de coupure : on relit.
+    onSubscribed: () => {
+      const e = entree(worldId);
+      if (!e) return;
+      if (e.joint) void relire(worldId);
+      e.joint = true;
     },
   });
 }
@@ -263,9 +290,19 @@ export function useWorldRooms(worldId: string, initialRooms: WorldRoom[]): World
   // avant que l'effet ne s'exécute.
   semerSiAbsent(worldId, initialRooms);
 
+  // Monde pour lequel la liste a été semée par CETTE instance.
+  const semeRef = useRef<string | null>(null);
+
   useEffect(() => {
     // Le monde a pu changer sans démontage : on repart des données du serveur.
-    setWorldRooms(worldId, initialRooms);
+    // Mais pas à une reconnexion (`reconnectEpoch`) : `initialRooms` date du
+    // chargement de la page — la barre latérale, dans un layout partagé, n'est
+    // pas re-rendue d'une page à l'autre. Y revenir effaçait tout ce qui
+    // avait été reçu depuis ; la liste est relue à la re-jonction du canal.
+    if (semeRef.current !== worldId) {
+      semeRef.current = worldId;
+      setWorldRooms(worldId, initialRooms);
+    }
     return acquerir(worldId, initialRooms);
     // `initialRooms` volontairement hors dépendances : sa référence change à
     // chaque rendu et le resemis écraserait les mises à jour Realtime reçues.

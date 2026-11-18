@@ -42,7 +42,8 @@ export function WorldWikiShortcutsWidget({
   const [rev, setRev] = useState(0);
   useTopic(topic.world(worldId), ({ event }) => {
     if (event === "wiki_page") setRev((n) => n + 1);
-  });
+    // Retour d'une coupure : les avis manqués ne reviendront pas, on relit.
+  }, { onResync: () => setRev((n) => n + 1) });
 
   useEffect(() => {
     const supabase = createClient();

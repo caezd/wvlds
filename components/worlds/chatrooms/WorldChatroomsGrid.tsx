@@ -59,14 +59,17 @@ export function WorldChatroomsGrid({
   const { roomUnread } = useNotifications();
   // Canal privé du monde (migration 214), partagé par lib/realtimeHub avec
   // la barre latérale et les autres écrans du monde.
+  const relire = () => {
+    void createClient()
+      .rpc("list_chatrooms_nav", { p_world_id: worldId })
+      .then(({ data, error }: { data: unknown; error: unknown }) => {
+        if (!error && data) setRooms(data as Room[]);
+      });
+  };
   useTopic(topic.world(worldId), ({ event, payload }) => {
     if (event === "chatroom") {
       // Créé, renommé, déplacé ou supprimé : la liste se relit en bloc.
-      void createClient()
-        .rpc("list_chatrooms_nav", { p_world_id: worldId })
-        .then(({ data, error }: { data: unknown; error: unknown }) => {
-          if (!error && data) setRooms(data as Room[]);
-        });
+      relire();
       return;
     }
     if (event !== "summary") return;
@@ -81,7 +84,9 @@ export function WorldChatroomsGrid({
             : { ...r, last_message_at: s.last_message_at ?? null, last_poster_avatar_url: s.last_message_persona_avatar_url ?? null },
       ),
     );
-  });
+    // Retour d'une coupure (onglet en veille, réseau perdu) : l'ordre et les
+    // derniers posteurs ont pu changer sans qu'aucun avis ne nous parvienne.
+  }, { onResync: relire });
 
   const visibleRooms =
     categoryId === undefined || categoryId === null
