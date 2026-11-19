@@ -213,3 +213,26 @@ describe("useWikiAnnotations", () => {
     expect(mock.client.from).toHaveBeenCalledTimes(1); // le chargement seul
   });
 });
+
+describe("useWikiAnnotations — retour d'une coupure", () => {
+  it("relit les annotations quand le canal de la page est rejoint", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: [], error: null },
+        { data: [annotation({ id: "manquee", body: "Arrivée pendant la coupure" })], error: null },
+      ],
+    });
+    const { result } = renderHook(() =>
+      useWikiAnnotations({ pageId: "p-resync-a", worldId: "w1", userId: "u1", supabase: mock.client as never, enabled: true }),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.threads).toHaveLength(0);
+
+    const canal = mock.channelNamed("wiki:p-resync-a")!;
+    const rappel = canal.subscribe.mock.calls[0][0] as (s: string) => void;
+    act(() => rappel("CHANNEL_ERROR"));
+    act(() => rappel("SUBSCRIBED"));
+
+    await waitFor(() => expect(result.current.threads).toHaveLength(1));
+  });
+});

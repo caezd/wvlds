@@ -38,6 +38,8 @@ export type MapRealtimeTargets = {
   setSelectedLink: React.Dispatch<React.SetStateAction<MapPinLink | null>>;
   /** Les personas se relisent en bloc : voir `getPlacedPersonas`. */
   reloadPersonas: () => void;
+  /** Relit toute la carte : retour d'une coupure, avis manqués compris. */
+  resync?: () => void;
 };
 
 /**
@@ -130,5 +132,10 @@ export function useMapRealtime(
         return;
       }
     }
-  }, { client: supabase });
+  }, {
+    client: supabase,
+    // Retour d'une coupure : épingles, régions, liens et cartes ont pu bouger
+    // sans qu'aucun avis ne nous parvienne. On relit tout.
+    onResync: () => cibles.current.resync?.(),
+  });
 }

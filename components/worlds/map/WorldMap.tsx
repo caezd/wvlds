@@ -324,6 +324,29 @@ export function WorldMap({
     if (rechargerRef.current) clearTimeout(rechargerRef.current);
   }, []);
 
+  /**
+   * Relit toute la carte — au retour d'une coupure, quand des avis ont pu se
+   * perdre. Les panneaux ouverts suivent : rafraîchis, ou fermés si ce qu'ils
+   * montraient a disparu entre-temps.
+   */
+  const resynchroniser = React.useCallback(() => {
+    void getWorldMaps(worldId).then((carte) => {
+      const frais = <T extends { id: string }>(liste: T[]) =>
+        (prev: T | null) => (prev ? liste.find((x) => x.id === prev.id) ?? null : prev);
+      setMaps(carte.maps);
+      setActiveMapId((prev) => (prev && carte.maps.some((m) => m.id === prev) ? prev : carte.maps[0]?.id ?? null));
+      setPins(carte.pins);
+      setRegions(carte.regions);
+      setLinks(carte.links);
+      setPersonas(carte.personas);
+      setWikiPages(carte.wikiPages);
+      setPinRooms(carte.rooms);
+      setSelectedPin(frais(carte.pins));
+      setSelectedRegion(frais(carte.regions));
+      setSelectedLink(frais(carte.links));
+    }).catch(() => { /* réseau encore instable : la prochaine re-jonction relira */ });
+  }, [worldId]);
+
   // ── Temps réel ────────────────────────────────────────────────
   // Cinq tables, un canal, et une seule façon d'appliquer un écho :
   // voir `useMapRealtime`.
@@ -336,6 +359,7 @@ export function WorldMap({
     setSelectedRegion,
     setSelectedLink,
     reloadPersonas: rechargerLesPersonas,
+    resync: resynchroniser,
   });
 
   // ── Ce dont la fiche d'un lieu a besoin ───────────────────────

@@ -44,6 +44,12 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-19",
+    category: "Correctif",
+    area: "Wiki",
+    text: "En revenant sur un onglet resté en veille ou après une coupure réseau, le wiki (arbre des pages, lexique, notes et annotations) et la carte (lieux, régions, liens) se remettent à jour avec ce qui a changé entre-temps, comme la liste des salons.",
+  },
+  {
     date: "2026-11-18",
     category: "Correctif",
     area: "Salons",

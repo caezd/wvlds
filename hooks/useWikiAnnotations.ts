@@ -103,7 +103,8 @@ export function useWikiAnnotations({
   // notes par lib/realtimeHub.
   useTopic(enabled ? topic.wikiPage(pageId) : null, ({ event }) => {
     if (event === "annotation") void load();
-  }, { client: supabase });
+    // Retour d'une coupure : les avis manqués ne reviendront pas, on relit.
+  }, { client: supabase, onResync: () => void load() });
 
   /** Insère la ligne rendue par la base, ou remplace celle du même id. */
   const merge = React.useCallback((row: WikiAnnotation) => {

@@ -1843,3 +1843,24 @@ describe("WorldMap — rien ne survit au rangement des outils", () => {
     expect(document.querySelector("polygon")).toBeNull();
   });
 });
+
+describe("WorldMap — retour d'une coupure", () => {
+  it("relit toute la carte quand le canal du monde est rejoint, pas à la première jonction", async () => {
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+    expect(getWorldMaps).not.toHaveBeenCalled();
+
+    // Pendant la coupure : le port a été retiré, la forge posée.
+    getWorldMaps.mockResolvedValue({
+      maps: [makeMap()],
+      pins: [makePin({ id: "pin2", title: "La forge" })],
+      regions: [], links: [], personas: [], wikiPages: [], rooms: [],
+    });
+    const rappel = mock.channelNamed(CANAL)!.subscribe.mock.calls[0][0] as (s: string) => void;
+    act(() => rappel("CHANNEL_ERROR"));
+    act(() => rappel("SUBSCRIBED"));
+
+    expect(await screen.findByRole("button", { name: "La forge" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Le port" })).toBeNull();
+    expect(getWorldMaps).toHaveBeenCalledWith("w1");
+  });
+});

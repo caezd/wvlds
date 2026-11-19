@@ -291,3 +291,32 @@ describe("categoryKeyboardMoves", () => {
     expect(categoryKeyboardMoves(groups, "c").down).toBeUndefined();
   });
 });
+
+describe("useWikiPageNotes — retour d'une coupure", () => {
+  it("relit catégories et fiches quand le canal de la page est rejoint, pas à la première jonction", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: [cat("a", 0)], error: null },
+        { data: [], error: null },
+        // Relecture : une fiche arrivée pendant la coupure.
+        { data: [cat("a", 0)], error: null },
+        { data: [note("n-manquee", "a", 0)], error: null },
+      ],
+    });
+    const { result } = renderHook(() =>
+      useWikiPageNotes({ pageId: "p-resync", worldId: "w1", supabase: mock.client as never, enabled: true }),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const lectures = mock.client.from.mock.calls.length;
+
+    const canal = mock.channelNamed("wiki:p-resync")!;
+    const rappel = canal.subscribe.mock.calls[0][0] as (s: string) => void;
+    // La première jonction a déjà eu lieu (le mock répond SUBSCRIBED) : rien relu.
+    expect(mock.client.from.mock.calls.length).toBe(lectures);
+
+    act(() => rappel("CHANNEL_ERROR"));
+    act(() => rappel("SUBSCRIBED"));
+
+    await waitFor(() => expect(result.current.groups[0]?.notes.map(n => n.id)).toEqual(["n-manquee"]));
+  });
+});

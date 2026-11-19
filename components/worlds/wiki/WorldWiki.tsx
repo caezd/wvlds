@@ -493,7 +493,16 @@ export function WorldWiki({
   const [lexiconRev, setLexiconRev] = React.useState(0);
   useTopic(topic.world(worldId), ({ event }) => {
     if (event === "lexicon") setLexiconRev((n) => n + 1);
-  }, { client: supabase });
+  }, {
+    client: supabase,
+    // Retour d'une coupure (onglet en veille, réseau perdu) : pages créées,
+    // renommées ou déplacées et termes du lexique ont pu changer sans
+    // qu'aucun avis ne nous parvienne. On relit l'arbre et le lexique.
+    onResync: () => {
+      void load();
+      setLexiconRev((n) => n + 1);
+    },
+  });
   const [pages, setPages] = React.useState<WikiPage[] | null>(null);
   const [lexiconTerms, setLexiconTerms] = React.useState<WorldLexiconTerm[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);

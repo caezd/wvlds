@@ -217,7 +217,8 @@ export function useWikiPageNotes({
   // colonne au tiroir (et rouvrir) sans conflit de nom de canal.
   useTopic(enabled ? topic.wikiPage(pageId) : null, ({ event }) => {
     if (event === "note" || event === "note_category") void load();
-  }, { client: supabase });
+    // Retour d'une coupure : les avis manqués ne reviendront pas, on relit.
+  }, { client: supabase, onResync: () => void load() });
 
   /** Rejoue `revenir` et signale l'erreur si la base a refusé l'écriture. */
   function echoue(error: { message: string } | null, revenir: () => void): boolean {

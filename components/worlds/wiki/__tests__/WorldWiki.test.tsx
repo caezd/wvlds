@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -818,5 +818,34 @@ describe("WorldWiki — pied de la colonne de navigation", () => {
 
     const pied = await screen.findByTestId("wiki-nav-footer");
     expect(within(pied).getByRole("button", { name: "Page" })).toBeTruthy();
+  });
+});
+
+describe("WorldWiki — retour d'une coupure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("relit l'arbre des pages quand le canal du monde est rejoint, pas à la première jonction", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: [PAGE], error: null }, // pages
+        { data: [], error: null },     // lexique
+        // Relecture : une page créée pendant la coupure.
+        { data: [PAGE, FOLDER], error: null },
+        { data: [], error: null },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(<WorldWiki worldId="w1" canEdit={false} canComment />);
+    await dansLArbre("Accueil");
+    const lectures = mock.buildersFor("world_wiki_pages").length;
+
+    const rappel = mock.channelNamed("world:w1")!.subscribe.mock.calls[0][0] as (s: string) => void;
+    expect(mock.buildersFor("world_wiki_pages").length).toBe(lectures);
+    act(() => rappel("CHANNEL_ERROR"));
+    act(() => rappel("SUBSCRIBED"));
+
+    await waitFor(() => expect(mock.buildersFor("world_wiki_pages").length).toBeGreaterThan(lectures));
   });
 });
