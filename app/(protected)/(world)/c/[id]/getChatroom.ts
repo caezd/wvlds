@@ -13,6 +13,8 @@ export type ChatroomWithWorld = {
   timeline_date: unknown;
   map_pin_id: string | null;
   category_id: string | null;
+  visibility: string;
+  synopsis: string | null;
   worlds: unknown;
 };
 
@@ -29,7 +31,7 @@ export const getChatroomWithWorld = cache(
     const { data, error } = await supabase
       .from("chatrooms")
       .select(
-        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, worlds(id, name, owner_id, restrict_inventory, restrict_skills, timeline_enabled, timeline_config, world_members(user_id))",
+        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, visibility, synopsis, worlds(id, name, owner_id, restrict_inventory, restrict_skills, timeline_enabled, timeline_config, world_members(user_id))",
       )
       .eq("id", id)
       .single();

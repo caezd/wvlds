@@ -23,8 +23,8 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
 vi.mock("@/components/worlds/home/WorldHeroCard", () => ({
   WorldHeroCard: () => <div>hero</div>,
 }));
-vi.mock("@/components/worlds/chatrooms/WorldChatComposer", () => ({
-  WorldChatComposer: () => <div data-testid="composer" />,
+vi.mock("@/components/worlds/chatrooms/NewChatroomDialog", () => ({
+  NewChatroomDialog: () => <div data-testid="composer" />,
 }));
 vi.mock("@/components/worlds/chatrooms/WorldChatroomsGrid", () => ({
   WorldChatroomsGrid: () => <div data-testid="chatrooms" />,

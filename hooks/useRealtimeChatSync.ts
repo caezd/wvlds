@@ -27,6 +27,10 @@ export type ChatroomPatch = {
   name?: string | null;
   banner_url?: string | null;
   icon_url?: string | null;
+  synopsis?: string | null;
+  visibility?: string;
+  /** Les invités ont changé (migration 225) : l'accès en écriture est à relire. */
+  participants?: true;
 };
 
 type Props = {

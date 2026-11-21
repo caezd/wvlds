@@ -171,12 +171,22 @@ function ouvrirCanal(worldId: string): () => void {
   });
 }
 
-type AvisSalon = Partial<Pick<WorldRoom, "id" | "title" | "name" | "icon_url" | "category_id">> & { op?: string };
+type AvisSalon = Partial<Pick<WorldRoom, "id" | "title" | "name" | "icon_url" | "category_id">> & {
+  op?: string;
+  /** Salon privé (migration 225) : l'avis ne dit rien de lui, la liste se relit. */
+  private?: boolean;
+};
 
 function surSalon(worldId: string, avis: Record<string, unknown>): void {
   const r = avis as AvisSalon;
   if (!r.id) return;
   const id = r.id;
+  // Privé avant ou après le changement : seule `list_chatrooms_nav` sait si
+  // on le lit encore (invité ajouté ou retiré, visibilité changée).
+  if (r.private) {
+    void relire(worldId);
+    return;
+  }
   if (r.op === "DELETE") {
     majRooms(worldId, (prev) => (prev.some((x) => x.id === id) ? prev.filter((x) => x.id !== id) : prev));
     return;
@@ -214,6 +224,8 @@ function surResume(worldId: string, avis: Record<string, unknown>): void {
     last_message_at?: string | null;
     last_message_author_id?: string | null;
     last_message_persona_avatar_url?: string | null;
+    /** Salon privé : ni auteur ni avatar dans l'avis, seule l'heure change. */
+    private?: boolean;
   };
   const chatId = s.chat_id;
   if (!chatId) return;
@@ -224,7 +236,9 @@ function surResume(worldId: string, avis: Record<string, unknown>): void {
         ? r
         : s.op === "DELETE"
           ? { ...r, last_poster_id: null, last_poster_avatar_url: null, last_message_at: null }
-          : {
+          : s.private
+            ? { ...r, last_message_at: s.last_message_at ?? null }
+            : {
               ...r,
               last_message_at: s.last_message_at ?? null,
               last_poster_id: s.last_message_author_id ?? null,

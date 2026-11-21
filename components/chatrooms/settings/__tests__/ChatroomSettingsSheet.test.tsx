@@ -13,6 +13,22 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ world_map: false }),
 }));
+// Le champ des invités a ses propres tests : ici, un double qui invite d'un clic.
+vi.mock("@/components/chatrooms/access/ChatroomInviteesField", () => ({
+  ChatroomInviteesField: (props: {
+    label: string;
+    value: { kind: string; id: string }[];
+    onChange: (v: { kind: string; id: string }[]) => void;
+  }) => (
+    <div data-testid="invitees">
+      <span>{props.label}</span>
+      <span data-testid="invitee-count">{props.value.length}</span>
+      <button type="button" onClick={() => props.onChange([...props.value, { kind: "group", id: "g-new" }])}>
+        inviter (double)
+      </button>
+    </div>
+  ),
+}));
 vi.mock("@/lib/imageUtils", () => ({
   toWebP: vi.fn(async (file: File) => file),
 }));
@@ -37,8 +53,15 @@ const CHATROOM = {
   icon_url: null,
 };
 
-function setup(results: { data: unknown; error: unknown }[] = []) {
-  const mock = createSupabaseMock({ user: { id: "u1" }, results });
+/**
+ * `results` : les réponses après la lecture des invités, qui part la première
+ * à l'ouverture (migration 225) ; `invitees` en est la réponse.
+ */
+function setup(
+  results: { data: unknown; error: unknown }[] = [],
+  invitees: { persona_id: string | null; group_id: string | null }[] = [],
+) {
+  const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: invitees, error: null }, ...results] });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   return mock;
 }
@@ -168,5 +191,63 @@ describe("ChatroomSettingsSheet — rien ne part avant « Enregistrer », puis t
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("L'enregistrement a échoué"));
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("ChatroomSettingsSheet — synopsis et accès (migration 225)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("le synopsis part avec les autres réglages, en une requête", async () => {
+    const mock = setup([
+      { data: [], error: null }, // catégories
+      { data: [{ id: "c1" }], error: null }, // update
+    ]);
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={{ ...CHATROOM, synopsis: null }} worldId="w1" open hideTrigger />);
+
+    await user.type(screen.getByLabelText("Synopsis"), "  Une nuit d'orage. ");
+    await user.click(screen.getByRole("radio", { name: /Public/ }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(mock.buildersFor("chatrooms")).toHaveLength(1));
+    expect(mock.buildersFor("chatrooms")[0].update).toHaveBeenCalledWith({
+      synopsis: "Une nuit d'orage.",
+      visibility: "public",
+    });
+  });
+
+  it("les invités enregistrés se relisent à l'ouverture, et seul l'écart part", async () => {
+    const mock = setup(
+      [
+        { data: [], error: null }, // catégories
+        { data: null, error: null }, // ajout d'invités
+      ],
+      [{ persona_id: "p1", group_id: null }],
+    );
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={{ ...CHATROOM, visibility: "private" }} worldId="w1" open hideTrigger />);
+
+    expect(await screen.findByText("Qui peut entrer")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("invitee-count")).toHaveTextContent("1"));
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "inviter (double)" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Modification enregistrée."));
+    // Rien à écrire dans le salon lui-même : seuls les invités changent.
+    expect(mock.buildersFor("chatrooms")).toHaveLength(0);
+    const [lecture, ajout] = mock.buildersFor("chatroom_participants");
+    expect(lecture.eq).toHaveBeenCalledWith("chatroom_id", "c1");
+    expect(ajout.insert).toHaveBeenCalledWith([{ chatroom_id: "c1", persona_id: null, group_id: "g-new" }]);
+  });
+
+  it("un salon ouvert ne montre pas d'invités", async () => {
+    setup([{ data: [], error: null }]);
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} worldId="w1" open hideTrigger />);
+    expect(screen.getByRole("radio", { name: /Ouvert/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByTestId("invitees")).toBeNull();
   });
 });
