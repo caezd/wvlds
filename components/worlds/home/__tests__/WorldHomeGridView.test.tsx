@@ -19,8 +19,8 @@ vi.mock("@/components/worlds/chatrooms/WorldChatroomsGrid", () => ({
 }));
 
 const composerProps = vi.fn();
-vi.mock("@/components/worlds/chatrooms/WorldChatComposer", () => ({
-  WorldChatComposer: (props: Record<string, unknown>) => {
+vi.mock("@/components/worlds/chatrooms/NewChatroomDialog", () => ({
+  NewChatroomDialog: (props: Record<string, unknown>) => {
     composerProps(props);
     return <div data-testid="composer" />;
   },

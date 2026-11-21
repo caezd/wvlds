@@ -493,10 +493,10 @@
       "titlePlaceholder": "Título de la conversación",
       "titleClear": "Borrar el título",
       "titleRandomize": "Generar un título aleatorio",
-      "discardTitle": "¿Abandonar la conversación?",
-      "discardDescription": "Se ha escrito texto. Cerrar el diálogo eliminará su borrador.",
+      "discardTitle": "¿Abandonar esta sala?",
+      "discardDescription": "Lo que ha escrito se perderá.",
       "discardConfirm": "Cerrar de todos modos",
-      "discardCancel": "Seguir escribiendo",
+      "discardCancel": "Seguir editando",
       "categoryPlaceholder": "Categoría",
       "categoryNone": "Ninguna",
       "dateSection": "Fecha en la cronología",
@@ -506,7 +506,14 @@
       "sequelMine": "Donde usted juega",
       "sequelOthers": "Otras salas",
       "sequelProposed": "Sala creada. La continuación está propuesta: los participantes de la otra sala deben aceptarla.",
-      "sequelFailed": "La sala está creada, pero no el enlace de continuación: vuelva a añadirlo desde sus ajustes."
+      "sequelFailed": "La sala está creada, pero no el enlace de continuación: vuelva a añadirlo desde sus ajustes.",
+      "dialogDescription": "La sala se abre vacía, con sus opciones y su sinopsis.",
+      "titleLabel": "Título",
+      "locationLabel": "Lugar",
+      "locationNone": "Ningún lugar",
+      "timelineLabel": "Cronología",
+      "dateToggle": "Fechar esta sala",
+      "inviteesFailed": "La sala se ha creado, pero no sus invitados: añádalos desde sus ajustes."
     },
     "home": {
       "addWidget": "Añadir un widget",
@@ -1871,7 +1878,37 @@
     "turnOf": "Turno de {name}",
     "turnNext": "luego: {names}",
     "turnSkip": "Pasar",
-    "settingsStatus": "Estado"
+    "settingsStatus": "Estado",
+    "access": {
+      "visibility": "Visibilidad",
+      "open": {
+        "title": "Abierta",
+        "description": "Todos leen y escriben."
+      },
+      "public": {
+        "title": "Pública",
+        "description": "Todos leen, solo los invitados escriben."
+      },
+      "private": {
+        "title": "Privada",
+        "description": "Solo los invitados leen y escriben."
+      },
+      "inviteesWriters": "Quién puede escribir",
+      "inviteesMembers": "Quién puede entrar",
+      "inviteesHelp": "Un grupo invita a todos sus personas, actuales y futuros. El creador de la sala y quienes gestionan las salas siempre tienen acceso.",
+      "searchPlaceholder": "Buscar un persona o un grupo…",
+      "groups": "Grupos",
+      "personas": "Personas",
+      "selected": "Invitados",
+      "remove": "Quitar a {name}",
+      "noResults": "Sin resultados.",
+      "synopsis": "Sinopsis",
+      "synopsisPlaceholder": "¿De qué trata esta sala?",
+      "synopsisHelp": "Se muestra al principio de la sala, antes del primer mensaje.",
+      "readOnly": "Puede leer esta sala, pero solo sus invitados escriben en ella.",
+      "uninvited": "Este persona no está invitado a esta sala.",
+      "settingsSection": "Acceso"
+    }
   },
   "changelog": {
     "title": "Historial de cambios",

@@ -107,6 +107,11 @@ type ChatroomComposerProps = {
     mapPins?: MapPinOption[];
     mapPinId?: string | null;
     onMapPinChange?: (id: string | null) => void;
+    /**
+     * Les seuls personas qui peuvent écrire ici : les invités d'un salon public
+     * ou privé (migration 225). `null` ou absent : tous.
+     */
+    allowedPersonaIds?: ReadonlySet<string> | null;
     /** Sur mobile, étire la carte du composer en pleine hauteur (éditeur
      *  flex-1) même quand le composer n'utilise pas son propre Drawer interne
      *  (mode création) — à passer quand le parent héberge déjà le composer
@@ -147,10 +152,12 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     mapPinId,
     onMapPinChange,
     fillHeight = false,
+    allowedPersonaIds = null,
 }, ref) {
     const tChatrooms = useTranslations("chatrooms");
     const tCommon = useTranslations("common");
     const tPersonas = useTranslations("personas");
+    const tAccess = useTranslations("chatrooms.access");
     const tDms = useTranslations("dms");
     const supabase = useMemo(() => createClient(), []);
     const { userId, username, plan } = useCurrentUser();
@@ -695,8 +702,12 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         }
     }
 
-    const selectedPersonaLocked = !!selectedPersona && !!usableIds && !usableIds.has(selectedPersona.id);
-    const selectedLockReason = selectedPersonaLocked && usableIds
+    // Un persona non invité dans un salon public ou privé : la base refuserait
+    // son message (`can_post_in_chatroom`).
+    const selectedPersonaUninvited = !!selectedPersona && !!allowedPersonaIds && !allowedPersonaIds.has(selectedPersona.id);
+    const selectedPersonaLocked =
+        selectedPersonaUninvited || (!!selectedPersona && !!usableIds && !usableIds.has(selectedPersona.id));
+    const selectedLockReason = selectedPersonaLocked && !selectedPersonaUninvited && usableIds
         ? personaLockReason(eligibilityRows.find((p) => p.id === selectedPersona!.id) ?? { id: selectedPersona!.id, created_at: "" }, usableIds, reviewActive !== false)
         : null;
     const canSend =
@@ -956,6 +967,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         userId={userId}
                         worldId={worldId}
                         variant={useMobileDrawer ? "drawer" : "dialog"}
+                        allowedIds={allowedPersonaIds}
+                        notAllowedHint={tAccess("uninvited")}
                     />
                     <BlocksDropdown
                         variant={useMobileDrawer ? "drawer" : "dropdown"}
@@ -997,7 +1010,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         disabled={!canSend}
                         aria-disabled={!canSend}
                         title={
-                            selectedLockReason ? tPersonas(LOCK_REASON_KEYS[selectedLockReason])
+                            selectedPersonaUninvited ? tAccess("uninvited")
+                                : selectedLockReason ? tPersonas(LOCK_REASON_KEYS[selectedLockReason])
                                 : selectedPersona ? tDms("send")
                                     : tPersonas("pick")
                         }

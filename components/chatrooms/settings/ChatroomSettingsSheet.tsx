@@ -52,6 +52,19 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
+import { Textarea } from "@/components/ui/textarea";
+import { HelpHint } from "@/components/ui/help-hint";
+import { ChatroomVisibilityField } from "@/components/chatrooms/access/ChatroomVisibilityField";
+import { ChatroomInviteesField } from "@/components/chatrooms/access/ChatroomInviteesField";
+import {
+  SYNOPSIS_MAX_LENGTH,
+  fetchChatroomInvitees,
+  inviteeKey,
+  saveChatroomInvitees,
+  visibilityHasInvitees,
+  type ChatroomInvitee,
+  type ChatroomVisibility,
+} from "@/lib/chatroomAccess";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
@@ -77,7 +90,16 @@ type Reglages = {
   timeline_date: WorldTimelineDate | null;
   map_pin_id: string | null;
   category_id: string | null;
+  visibility: ChatroomVisibility;
+  synopsis: string | null;
 };
+
+/** Deux listes d'invités identiques, à l'ordre près. */
+function memesInvites(a: ChatroomInvitee[], b: ChatroomInvitee[]): boolean {
+  if (a.length !== b.length) return false;
+  const cles = new Set(a.map(inviteeKey));
+  return b.every((i) => cles.has(inviteeKey(i)));
+}
 
 function reglagesDe(c: Props["chatroom"]): Reglages {
   return {
@@ -87,6 +109,8 @@ function reglagesDe(c: Props["chatroom"]): Reglages {
     timeline_date: c.timeline_date ?? null,
     map_pin_id: c.map_pin_id ?? null,
     category_id: c.category_id ?? null,
+    visibility: c.visibility ?? "open",
+    synopsis: c.synopsis?.trim() || null,
   };
 }
 
@@ -119,6 +143,8 @@ type Props = {
     timeline_date?: WorldTimelineDate | null;
     map_pin_id?: string | null;
     category_id?: string | null;
+    visibility?: ChatroomVisibility;
+    synopsis?: string | null;
   };
   worldTimelineConfig?: WorldTimelineConfig | null;
   worldId?: string | null;
@@ -137,6 +163,7 @@ export default function ChatroomSettingsSheet({
   hideTrigger = false,
 }: Props) {
   const t = useTranslations("chatrooms");
+  const tAccess = useTranslations("chatrooms.access");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
@@ -155,6 +182,12 @@ export default function ChatroomSettingsSheet({
   const [mapPinId, setMapPinId] = React.useState<string | null>(chatroom.map_pin_id ?? null);
   const [categories, setCategories] = React.useState<CategoryOption[]>([]);
   const [categoryId, setCategoryId] = React.useState<string | null>(chatroom.category_id ?? null);
+  const [visibility, setVisibility] = React.useState<ChatroomVisibility>(chatroom.visibility ?? "open");
+  const [synopsis, setSynopsis] = React.useState(chatroom.synopsis ?? "");
+  // Les invités vivent dans leur propre table : relus à l'ouverture, comparés
+  // à part, enregistrés après le salon.
+  const [invitees, setInvitees] = React.useState<ChatroomInvitee[]>([]);
+  const [baseInvitees, setBaseInvitees] = React.useState<ChatroomInvitee[]>([]);
   // Rien ne part en base avant « Enregistrer » : `base` est l'état enregistré,
   // l'écart avec les valeurs affichées dit quoi écrire — en UNE requête.
   const [base, setBase] = React.useState<Reglages>(() => reglagesDe(chatroom));
@@ -184,6 +217,14 @@ export default function ChatroomSettingsSheet({
       setTimelineDate(chatroom.timeline_date ?? null);
       setMapPinId(chatroom.map_pin_id ?? null);
       setCategoryId(chatroom.category_id ?? null);
+      setVisibility(chatroom.visibility ?? "open");
+      setSynopsis(chatroom.synopsis ?? "");
+      setInvitees([]);
+      setBaseInvitees([]);
+      void fetchChatroomInvitees(supabase, chatroom.id).then(
+        (rows) => { setInvitees(rows); setBaseInvitees(rows); },
+        (e: unknown) => console.error("[ChatroomSettingsSheet] invités", e),
+      );
       if (world_map && worldId) {
         void supabase
           .from("world_map_pins")
@@ -218,9 +259,14 @@ export default function ChatroomSettingsSheet({
     timeline_date: timelineDate,
     map_pin_id: mapPinId,
     category_id: categoryId,
+    visibility,
+    synopsis: synopsis.trim() || null,
   };
   const patch = ecart(base, courants);
-  const dirty = Object.keys(patch).length > 0;
+  // Les invités ne comptent que si le salon en a : revenu à « Ouvert », ceux
+  // enregistrés restent en place pour un retour en public ou privé.
+  const invitesModifies = visibilityHasInvitees(visibility) && !memesInvites(baseInvitees, invitees);
+  const dirty = Object.keys(patch).length > 0 || invitesModifies;
 
   // ---------- upload ----------
 
@@ -275,18 +321,30 @@ export default function ChatroomSettingsSheet({
     if (!dirty || saving) return true;
     if (!(await form.trigger("title"))) return false;
     setSaving(true);
-    const { data, error } = await supabase
-      .from("chatrooms")
-      .update(patch)
-      .eq("id", chatroom.id)
-      .select("id");
-    setSaving(false);
-    // Une RLS qui refuse ne lève pas d'erreur : elle ne touche aucune ligne.
-    if (error || !Array.isArray(data) || data.length !== 1) {
-      if (error) console.error("[ChatroomSettingsSheet] enregistrement", error);
-      toast.error(tCommon("saveError"));
-      return false;
+    if (Object.keys(patch).length > 0) {
+      const { data, error } = await supabase
+        .from("chatrooms")
+        .update(patch)
+        .eq("id", chatroom.id)
+        .select("id");
+      // Une RLS qui refuse ne lève pas d'erreur : elle ne touche aucune ligne.
+      if (error || !Array.isArray(data) || data.length !== 1) {
+        setSaving(false);
+        if (error) console.error("[ChatroomSettingsSheet] enregistrement", error);
+        toast.error(tCommon("saveError"));
+        return false;
+      }
+      setBase(courants);
     }
+    if (invitesModifies) {
+      if (!(await saveChatroomInvitees(supabase, chatroom.id, baseInvitees, invitees))) {
+        setSaving(false);
+        toast.error(tCommon("saveError"));
+        return false;
+      }
+      setBaseInvitees(invitees);
+    }
+    setSaving(false);
     // Les images remplacées ou retirées ne servent plus : on les efface, comme
     // les envois de la séance qui n'ont pas été retenus.
     const gardees = new Set([courants.icon_url, courants.banner_url].map(cheminDe).filter(Boolean));
@@ -295,7 +353,6 @@ export default function ChatroomSettingsSheet({
       ...envoyees,
     ].filter((c): c is string => !!c && c.startsWith(`chatroom-${chatroom.id}/`) && !gardees.has(c));
     if (inutiles.length > 0) await supabase.storage.from("chatrooms").remove([...new Set(inutiles)]);
-    setBase(courants);
     setEnvoyees([]);
     toast.success(tCommon("changesSaved"));
     router.refresh();
@@ -310,6 +367,9 @@ export default function ChatroomSettingsSheet({
     setTimelineDate(base.timeline_date);
     setMapPinId(base.map_pin_id);
     setCategoryId(base.category_id);
+    setVisibility(base.visibility);
+    setSynopsis(base.synopsis ?? "");
+    setInvitees(baseInvitees);
   }
 
   function requestOpenChange(next: boolean) {
@@ -425,6 +485,37 @@ export default function ChatroomSettingsSheet({
                   </FormItem>
                 )}
               />
+
+              {/* Synopsis */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="chatroom-synopsis" className="text-sm font-medium">{tAccess("synopsis")}</label>
+                  <HelpHint title={tAccess("synopsis")}>{tAccess("synopsisHelp")}</HelpHint>
+                </div>
+                <Textarea
+                  id="chatroom-synopsis"
+                  value={synopsis}
+                  onChange={(e) => setSynopsis(e.target.value)}
+                  placeholder={tAccess("synopsisPlaceholder")}
+                  maxLength={SYNOPSIS_MAX_LENGTH}
+                  className="max-h-60 min-h-20 text-sm"
+                />
+              </div>
+
+              {/* Accès : visibilité, puis les invités */}
+              {worldId && (
+                <div className="space-y-4">
+                  <ChatroomVisibilityField value={visibility} onChange={setVisibility} />
+                  {visibilityHasInvitees(visibility) && (
+                    <ChatroomInviteesField
+                      worldId={worldId}
+                      value={invitees}
+                      onChange={setInvitees}
+                      label={visibility === "private" ? tAccess("inviteesMembers") : tAccess("inviteesWriters")}
+                    />
+                  )}
+                </div>
+              )}
 
               {/* Chronologie */}
               {worldTimelineConfig && (

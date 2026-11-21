@@ -44,16 +44,16 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-20",
+    category: "Fonctionnalité",
+    area: "Salons",
+    text: "Nouveau salon : il s’ouvre vide, sans premier message à écrire. À la création :\n- titre, lieu de la carte, catégorie ;\n- date et « Suite de… » dans la chronologie ;\n- visibilité : ouvert (tout le monde lit et écrit), public (tout le monde lit, les invités écrivent), privé (seuls les invités lisent et écrivent) ;\n- invités : des personas ou des groupes de personas ;\n- synopsis, affiché en tête du salon.\n\nVisibilité, invités et synopsis se changent aussi dans les réglages de la salle.",
+  },
+  {
     date: "2026-11-19",
     category: "Correctif",
     area: "Wiki",
     text: "En revenant sur un onglet resté en veille ou après une coupure réseau, le wiki (arbre des pages, lexique, notes et annotations) et la carte (lieux, régions, liens) se remettent à jour avec ce qui a changé entre-temps, comme la liste des salons.",
-  },
-  {
-    date: "2026-11-18",
-    category: "Correctif",
-    area: "Salons",
-    text: "Un salon ouvert depuis le composeur d’un monde garde les options cochées au moment de l’ouvrir : dialogue en bulles, sa couleur et mode SMS. Elles apparaissaient décochées une fois dans le salon.",
   },
   {
     date: "2026-11-18",

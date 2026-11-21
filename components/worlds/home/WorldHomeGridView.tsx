@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
+import { NewChatroomDialog } from "../chatrooms/NewChatroomDialog";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
@@ -206,7 +206,7 @@ function renderBlock(
       );
     case "composer":
       return (
-        <WorldChatComposer
+        <NewChatroomDialog
           worldId={ctx.worldId}
           timelineConfig={ctx.timelineConfig}
           initialMapPinId={ctx.initialComposerPinId}

@@ -493,10 +493,10 @@
       "titlePlaceholder": "Conversation title",
       "titleClear": "Clear title",
       "titleRandomize": "Generate a random title",
-      "discardTitle": "Discard conversation?",
-      "discardDescription": "Text has been entered. Closing will discard your draft.",
+      "discardTitle": "Discard this room?",
+      "discardDescription": "What you entered will be lost.",
       "discardConfirm": "Close anyway",
-      "discardCancel": "Continue writing",
+      "discardCancel": "Keep editing",
       "categoryPlaceholder": "Category",
       "categoryNone": "None",
       "dateSection": "Date on the timeline",
@@ -506,7 +506,14 @@
       "sequelMine": "Where you play",
       "sequelOthers": "Other chatrooms",
       "sequelProposed": "Chatroom created. The sequel is proposed: the other chatroom's participants must accept it.",
-      "sequelFailed": "The chatroom is created, but not the sequel link: add it again from its settings."
+      "sequelFailed": "The chatroom is created, but not the sequel link: add it again from its settings.",
+      "dialogDescription": "The room opens empty, with its options and synopsis.",
+      "titleLabel": "Title",
+      "locationLabel": "Location",
+      "locationNone": "No location",
+      "timelineLabel": "Timeline",
+      "dateToggle": "Date this room",
+      "inviteesFailed": "The room was created, but not its invitees: add them from its settings."
     },
     "home": {
       "addWidget": "Add a widget",
@@ -1871,7 +1878,37 @@
     "turnOf": "{name}’s turn",
     "turnNext": "then: {names}",
     "turnSkip": "Skip",
-    "settingsStatus": "Status"
+    "settingsStatus": "Status",
+    "access": {
+      "visibility": "Visibility",
+      "open": {
+        "title": "Open",
+        "description": "Everyone reads and writes."
+      },
+      "public": {
+        "title": "Public",
+        "description": "Everyone reads, only invitees write."
+      },
+      "private": {
+        "title": "Private",
+        "description": "Only invitees read and write."
+      },
+      "inviteesWriters": "Who can write",
+      "inviteesMembers": "Who can enter",
+      "inviteesHelp": "A group invites all its personas, current and future. The room's creator and room managers always have access.",
+      "searchPlaceholder": "Search for a persona or a group…",
+      "groups": "Groups",
+      "personas": "Personas",
+      "selected": "Invitees",
+      "remove": "Remove {name}",
+      "noResults": "No results.",
+      "synopsis": "Synopsis",
+      "synopsisPlaceholder": "What is this room about?",
+      "synopsisHelp": "Shown at the top of the room, before the first message.",
+      "readOnly": "You can read this room, but only its invitees write here.",
+      "uninvited": "This persona is not invited to this room.",
+      "settingsSection": "Access"
+    }
   },
   "changelog": {
     "title": "Changelog",

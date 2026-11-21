@@ -123,7 +123,7 @@ export function WorldMembersOnlineWidget({
   const href = `/w/${worldId}?view=members`;
   const countLabel = online.length > 0 ? t("home.onlineCount", { count: online.length }) : t("home.noneOnline");
 
-  // Même hauteur que le faux composeur « Nouveau jeu… » (WorldChatComposer :
+  // Même hauteur que le faux composeur « Nouveau jeu… » (NewChatroomDialog :
   // px-4 py-3 + une ligne de text-sm = 44 px) pour que les deux blocs
   // s'alignent sur une même ligne : ici l'avatar de 24 px impose py-2.5, et
   // min-h-11 garde la hauteur quand il n'y a que du texte.
