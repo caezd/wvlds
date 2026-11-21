@@ -769,7 +769,7 @@ export function WorldTimeline({
                       {p.age && <Sunrise className="size-3.5 shrink-0" aria-hidden />}
                       {p.label}
                       {current && (periodRooms.get(p.key) ?? 0) > 0 && (
-                        <span className="text-2xs font-normal opacity-60" data-testid="timeline-period-count" aria-hidden>
+                        <span className="text-2xs font-normal opacity-70" data-testid="timeline-period-count" aria-hidden>
                           {periodRooms.get(p.key)}
                         </span>
                       )}
