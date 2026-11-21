@@ -44,6 +44,12 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-21",
+    category: "Correctif",
+    area: "Monde",
+    text: "Chronologie : nombre de salons de la période sélectionnée plus lisible (contraste suffisant).",
+  },
+  {
     date: "2026-11-20",
     category: "Fonctionnalité",
     area: "Salons",
