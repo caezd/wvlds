@@ -36,6 +36,7 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
+import { WorldGroupsSettings } from "@/components/worlds/settings/WorldGroupsSettings";
 import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGridSettings";
 // Les onglets « Fonctions » et « Communauté » portent leur propre état et
 // leurs propres appels serveur — voir l'en-tête de chacun.
@@ -120,6 +121,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         categories: can("world.settings") || can("categories.manage"),
         home: can("world.settings"),
         features: can("world.settings"),
+        // Les groupes de personas s'écrivent sous `relations.manage` (RLS de
+        // `world_persona_groups`) : même permission que l'onglet Relations.
+        groups: can("world.settings") || can("relations.manage"),
         relations: can("world.settings") || can("relations.manage"),
         roles: can("world.settings") || can("roles.manage"),
         community: public_worlds && can("world.settings"),
@@ -311,6 +315,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 )}
                                 {tabs.features && (
                                     <TabBarTrigger value="features">{t("tabFeatures")}</TabBarTrigger>
+                                )}
+                                {tabs.groups && (
+                                    <TabBarTrigger value="groups">{t("tabGroups")}</TabBarTrigger>
                                 )}
                                 {tabs.relations && (
                                     <TabBarTrigger value="relations">{t("tabRelations")}</TabBarTrigger>
@@ -565,6 +572,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             persistField={persistField}
                             onUpdated={onUpdated}
                         />
+
+                        {/* ── Groupes ──────────────────────────────────── */}
+                        <TabsContent value="groups" className="mt-0">
+                            <div className="mx-auto max-w-4xl">
+                                <WorldGroupsSettings worldId={world.id} />
+                            </div>
+                        </TabsContent>
 
                         {/* ── Relations ────────────────────────────────── */}
                         <TabsContent value="relations" className="mt-0">

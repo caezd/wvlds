@@ -554,15 +554,19 @@ export function usePersonaProfile({
         setWorldId(row.world_id ?? null);
         worldIdOfPersona = row.world_id ?? null;
 
-        // La couleur de son groupe, si le monde l'utilise (migration 201).
+        // La couleur de son groupe, si ce groupe l'applique ; celle de son
+        // parent s'il n'en a pas (migration 232, `persona_group_tint`).
         if (row.world_id) {
-          const [{ data: worldRow }, { data: assignRow }] = await Promise.all([
-            supabase.from("worlds").select("persona_group_color").eq("id", row.world_id).maybeSingle(),
-            supabase.from("persona_group_assignments").select("group:group_id(color)").eq("persona_id", personaId!).maybeSingle(),
-          ]);
-          const on = (worldRow as { persona_group_color?: boolean } | null)?.persona_group_color !== false;
-          const color = (assignRow as { group?: { color?: string | null } | null } | null)?.group?.color ?? null;
-          if (!cancelled) setGroupColor(on ? color : null);
+          const { data: assignRow } = await supabase
+            .from("persona_group_assignments")
+            .select("group_id")
+            .eq("persona_id", personaId!)
+            .maybeSingle();
+          const groupId = (assignRow as { group_id?: string | null } | null)?.group_id ?? null;
+          const { data: tint } = groupId
+            ? await supabase.rpc("persona_group_tint", { p_group: groupId })
+            : { data: null };
+          if (!cancelled) setGroupColor(typeof tint === "string" ? tint : null);
         } else if (!cancelled) {
           setGroupColor(null);
         }

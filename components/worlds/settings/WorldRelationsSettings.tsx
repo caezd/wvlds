@@ -11,10 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FIELD, FeaturePage, SURFACE, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, FeaturePage, SURFACE, SettingsSection } from "./FeatureLayout";
 import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
-
-type RelationGroup = { id: string; name: string; color: string; sort_index: number };
 
 const RT_COLUMNS = "id, world_id, name, color, dash, sort_index, mutual, marital_status";
 
@@ -42,8 +40,8 @@ const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm f
 const SWATCH = "size-6 rounded-md border-0 shadow-none";
 
 /**
- * L'onglet Relations des réglages d'un monde : les groupes de personas et
- * les types de relation, en sections (voir FeatureLayout). Chaque ligne se
+ * L'onglet Relations des réglages d'un monde : les types de relation (les
+ * groupes de personas ont leur onglet, WorldGroupsSettings). Chaque ligne se
  * modifie sur place — couleur, nom, trait, réciprocité — et s'enregistre à
  * la sortie du champ (la couleur, un instant après le dernier réglage : le
  * sélecteur HSV change à chaque mouvement).
@@ -54,34 +52,16 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
   const dashOptions = getDashOptions(t);
   const supabase = React.useMemo(() => createClient(), []);
 
-  const [groups, setGroups] = React.useState<RelationGroup[] | null>(null);
-  const [relTypes, setRelTypes] = React.useState<RelationType[]>([]);
-  // La couleur des groupes teinte les personas (nom dans les salons, bordure
-  // de l'avatar sur la fiche) : option du monde, migration 201.
-  const [groupColorOn, setGroupColorOn] = React.useState(true);
+  const [relTypes, setRelTypes] = React.useState<RelationType[] | null>(null);
 
   React.useEffect(() => {
     void (async () => {
-      const [{ data: gRows }, { data: rtRows }, { data: worldRow }] = await Promise.all([
-        supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),
-        supabase.from("world_relation_types").select(RT_COLUMNS).eq("world_id", worldId).order("sort_index"),
-        supabase.from("worlds").select("persona_group_color").eq("id", worldId).maybeSingle(),
-      ]);
-      setGroups((gRows ?? []) as RelationGroup[]);
+      const { data: rtRows } = await supabase.from("world_relation_types").select(RT_COLUMNS).eq("world_id", worldId).order("sort_index");
       setRelTypes((rtRows ?? []) as RelationType[]);
-      setGroupColorOn((worldRow as { persona_group_color?: boolean } | null)?.persona_group_color !== false);
     })();
   }, [supabase, worldId]);
 
-  async function toggleGroupColor(on: boolean) {
-    setGroupColorOn(on);
-    const { error } = await supabase.from("worlds").update({ persona_group_color: on }).eq("id", worldId);
-    if (error) { setGroupColorOn(!on); toast.error(error.message); }
-  }
-
-  // Les nouveaux : un groupe, un type.
-  const [gName, setGName] = React.useState("");
-  const [gColor, setGColor] = React.useState<string>(DEFAULT_PLAYER_COLOR);
+  // Le nouveau type.
   const [rtName, setRtName] = React.useState("");
   const [rtColor, setRtColor] = React.useState<string>(DEFAULT_PLAYER_COLOR);
 
@@ -97,39 +77,10 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     timers.set(key, setTimeout(() => { timers.delete(key); save(); }, 400));
   }
 
-  // ── Groupes ─────────────────────────────────────────────────────────────────
-
-  async function addGroup() {
-    if (!gName.trim() || !groups) return;
-    const { data, error } = await supabase
-      .from("world_persona_groups")
-      .insert({ world_id: worldId, name: gName.trim(), color: gColor, sort_index: groups.length })
-      .select("id, name, color, sort_index")
-      .single();
-    if (error) { toast.error(error.message); return; }
-    setGroups([...groups, data as RelationGroup]);
-    setGName("");
-  }
-
-  async function deleteGroup(id: string) {
-    const { error } = await supabase.from("world_persona_groups").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    setGroups((prev) => prev?.filter((g) => g.id !== id) ?? null);
-  }
-
-  async function saveGroup(id: string, patch: Partial<Pick<RelationGroup, "name" | "color">>) {
-    const { error } = await supabase.from("world_persona_groups").update(patch).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-  }
-
-  function editGroup(id: string, patch: Partial<Pick<RelationGroup, "name" | "color">>) {
-    setGroups((prev) => prev?.map((g) => (g.id === id ? { ...g, ...patch } : g)) ?? null);
-  }
-
   // ── Types de relation ──────────────────────────────────────────────────────
 
   async function addRelType() {
-    if (!rtName.trim()) return;
+    if (!rtName.trim() || !relTypes) return;
     const { data, error } = await supabase
       .from("world_relation_types")
       .insert({ world_id: worldId, name: rtName.trim(), color: rtColor, dash: "", sort_index: relTypes.length, mutual: false })
@@ -143,7 +94,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
   async function deleteRelType(id: string) {
     const { error } = await supabase.from("world_relation_types").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    setRelTypes((prev) => prev.filter((rt) => rt.id !== id));
+    setRelTypes((prev) => prev?.filter((rt) => rt.id !== id) ?? null);
   }
 
   type TypePatch = Partial<Pick<RelationType, "name" | "color" | "dash" | "mutual" | "marital_status">>;
@@ -154,7 +105,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
   }
 
   function editRelType(id: string, patch: TypePatch) {
-    setRelTypes((prev) => prev.map((rt) => (rt.id === id ? { ...rt, ...patch } : rt)));
+    setRelTypes((prev) => prev?.map((rt) => (rt.id === id ? { ...rt, ...patch } : rt)) ?? null);
   }
 
   /** Changer la réciprocité : un type marital l'est d'office (contrainte de la migration 173). */
@@ -167,7 +118,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     if (await saveRelType(rt.id, patch)) editRelType(rt.id, patch);
   }
 
-  if (groups === null) {
+  if (relTypes === null) {
     return (
       <div className="flex items-center justify-center p-6">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -182,56 +133,6 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
 
   return (
     <FeaturePage title={t("settingsTitle")}>
-      {/* ── Groupes ── */}
-      <SettingsSection
-        title={t("groups")}
-        help={t("groupsHelp")}
-        meta={t("groupsCount", { count: groups.length })}
-      >
-        <ToggleList>
-          <ToggleItem
-            title={t("groupColor")}
-            help={t("groupColorHelp")}
-            checked={groupColorOn}
-            onCheckedChange={(on) => void toggleGroupColor(on)}
-          />
-        </ToggleList>
-        {groups.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noGroupsDefined")}</p>}
-        <ul className="space-y-2" aria-label={t("groups")}>
-          {groups.map((g) => (
-            <li key={g.id} className={ROW} data-group-id={g.id}>
-              <ColorPickerButton
-                color={g.color}
-                className={SWATCH}
-                onChange={(color) => {
-                  editGroup(g.id, { color });
-                  persistColorSoon(`g:${g.id}`, () => void saveGroup(g.id, { color }));
-                }}
-              />
-              <Input
-                value={g.name}
-                aria-label={t("groupName")}
-                className={BARE_INPUT}
-                onChange={(e) => editGroup(g.id, { name: e.target.value })}
-                onBlur={(e) => { if (e.target.value.trim()) void saveGroup(g.id, { name: e.target.value.trim() }); }}
-              />
-              <DeleteButton label={t("deleteGroup", { name: g.name })} onClick={() => void deleteGroup(g.id)} />
-            </li>
-          ))}
-        </ul>
-        <AddRow disabled={!gName.trim()} addLabel={t("addGroup")} buttonText={tCommon("add")} onAdd={() => void addGroup()}>
-          <ColorPickerButton color={gColor} onChange={setGColor} className={SWATCH} />
-          <Input
-            value={gName}
-            onChange={(e) => setGName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void addGroup(); }}
-            placeholder={t("groupNamePlaceholder")}
-            aria-label={t("groupNamePlaceholder")}
-            className={cn(BARE_INPUT, "font-normal")}
-          />
-        </AddRow>
-      </SettingsSection>
-
       {/* ── Types de relation ── */}
       <SettingsSection
         title={t("relTypes")}

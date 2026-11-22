@@ -40,6 +40,7 @@ import { CommunityPersonaTile } from "@/components/worlds/community/CommunityPer
 import { PlayerShelf, PlayerShelfHeader, SHELF_ACTION_CLASS, ShelfHeader } from "@/components/worlds/community/PlayerShelf";
 import { CommunityViewToggle, COMMUNITY_VIEWS, isCommunityView, type CommunityView } from "@/components/worlds/community/CommunityViewToggle";
 import { useCommunityData, type CommunityMemberRow, type CommunityPersona } from "@/components/worlds/community/useCommunityData";
+import { groupChoices, groupLineages } from "@/lib/personaGroups";
 import { MemberManageMenu } from "./MemberManageMenu";
 import { displayNameOf, type WorldMemberCardData } from "./WorldMemberCard";
 import { WorldMemberCardDialog } from "./WorldMemberCardDialog";
@@ -100,6 +101,10 @@ export function WorldMembersPanel({
   const { rows, patchRow, removeRow, groups, groupByPersona } = data;
   const roleById = useMemo(() => new Map(worldRoles.map((r) => [r.id, r])), [worldRoles]);
   const groupById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
+  // Les groupes en arbre (migration 232) : sous leur chemin dans les listes,
+  // et filtrer sur un groupe montre aussi ses sous-groupes.
+  const choices = useMemo(() => groupChoices(groups), [groups]);
+  const lineage = useMemo(() => groupLineages(groups), [groups]);
   const myById = useMemo(() => new Map(myPersonas.map((p) => [p.id, p])), [myPersonas]);
 
   const [filters, setFilters] = useState<CommunityFilters>(EMPTY_FILTERS);
@@ -162,24 +167,25 @@ export function WorldMembersPanel({
       meId,
       filters: personaFilters,
       groupByPersona,
+      groupLineage: lineage,
       hoistedRoleIds,
       presenceOf: getUserPresence,
       showNpcBand: npcs.length > 0 || canManageNpc,
       expanded,
     }),
-    [members, personasByUser, npcs, meId, personaFilters, groupByPersona, hoistedRoleIds, getUserPresence, canManageNpc, expanded],
+    [members, personasByUser, npcs, meId, personaFilters, groupByPersona, lineage, hoistedRoleIds, getUserPresence, canManageNpc, expanded],
   );
 
   // Les vues « Personas » : tous les personas filtrés, rangés par groupe ou de A à Z.
   const shelves = useMemo(() => {
     const online = (p: CommunityPersona) => !filters.online || getUserPresence(p.user_id) === "online";
-    const players = applyPersonaFilters(data.personas, personaFilters, groupByPersona).filter(online);
-    const npcList = filters.online ? [] : applyPersonaFilters(data.npcs, personaFilters, groupByPersona);
+    const players = applyPersonaFilters(data.personas, personaFilters, groupByPersona, lineage).filter(online);
+    const npcList = filters.online ? [] : applyPersonaFilters(data.npcs, personaFilters, groupByPersona, lineage);
     return buildShelves<CommunityPersona>({
       mine: [],
       others: players,
       npcs: npcList,
-      groups,
+      groups: choices,
       groupByPersona,
       mode: effectiveView === "groups" ? "group" : "list",
       sort: "name",
@@ -189,7 +195,7 @@ export function WorldMembersPanel({
       keepNpcs: false,
       canCreateNpc: false,
     });
-  }, [data.personas, data.npcs, personaFilters, groupByPersona, groups, effectiveView, meId, filters.online, getUserPresence]);
+  }, [data.personas, data.npcs, personaFilters, groupByPersona, lineage, choices, effectiveView, meId, filters.online, getUserPresence]);
 
   // ── Cartes de tête : chacune bascule un filtre ──
   const everyone = useMemo(() => [...data.personas, ...data.npcs], [data.personas, data.npcs]);
@@ -263,7 +269,7 @@ export function WorldMembersPanel({
         line2={line2}
         lineSwatch={onShelf}
         // La couleur du groupe ne sert qu'à sa pastille : pas de fond teinté sur les murs.
-        groupColor={onShelf ? group?.color : undefined}
+        groupColor={onShelf ? group?.tint : undefined}
         featured={featured}
         openOnMount={p.id === focusPersonaId}
         reviewActive={reviewActive}
@@ -485,7 +491,7 @@ export function WorldMembersPanel({
                   setExpanded(new Set());
                 }}
                 players={filterPlayers}
-                groups={groups}
+                groups={choices}
                 showKind={npcs.length > 0 || canManageNpc}
                 reviewActive={reviewActive}
                 searchPlaceholder={tc("searchPlaceholder")}

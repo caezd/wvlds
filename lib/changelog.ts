@@ -44,6 +44,12 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-22",
+    category: "Fonctionnalité",
+    area: "Personas",
+    text: "Groupes de personas : un onglet « Groupes » dans les réglages du monde, et des sous-groupes sur autant de niveaux que voulu :\n- créer, renommer, réordonner, ranger un groupe dans un autre ou l’en sortir\n- un sous-groupe sans couleur propre prend celle de son parent\n- les personas d’un sous-groupe comptent dans ses parents : inviter un groupe à un salon invite ses sous-groupes, filtrer sur un groupe les montre aussi\n- supprimer un groupe fait remonter ses sous-groupes d’un niveau\n- « Couleur appliquée », groupe par groupe : la couleur teinte ou non le nom des personas dans les salons, l’anneau de leur avatar, leurs tuiles, la chronologie et la toile des relations",
+  },
+  {
     date: "2026-11-21",
     category: "Correctif",
     area: "Monde",

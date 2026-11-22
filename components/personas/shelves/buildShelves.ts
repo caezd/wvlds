@@ -44,7 +44,8 @@ export type Shelf<T> = {
   create: "persona" | "npc" | null;
 };
 
-type Group = { id: string; name: string; color: string };
+/** Un groupe tel que l'étagère l'affiche : son chemin (« Parent › Enfant ») et sa pastille. */
+type Group = { id: string; name: string; color: string | null };
 
 function shelf<T extends ShelfPersona>(fields: Omit<Shelf<T>, "alive" | "playerStatus" | "playerStatusUntil" | "create"> & Partial<Shelf<T>>): Shelf<T> {
   return {

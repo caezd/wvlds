@@ -48,6 +48,7 @@ import {
   PERSONA_FILTER_NO_GROUP as NO_GROUP,
   PERSONA_FILTER_OFFSTAGE as OFFSTAGE,
 } from "@/components/personas/WorldPersonasPanel";
+import { groupLineages } from "@/lib/personaGroups";
 
 const OTHERS = [
   { id: "p1", name: "Aeris", avatar_url: null, user_id: "u1", created_at: "2026-01-01", narrative_status: "alive" as const, review_status: "approved", sheet_complete: true },
@@ -120,6 +121,20 @@ describe("applyPersonaFilters / sortPersonas", () => {
     const withNames = OTHERS.map((p) => ({ ...p, username: p.user_id === "u1" ? "alice" : "bob" }));
     expect(applyPersonaFilters(withNames, { ...base, query: "elise" }, groups).map((p) => p.id)).toEqual(["p3"]);
     expect(applyPersonaFilters(withNames, { ...base, query: "BOB" }, groups).map((p) => p.id)).toEqual(["p2"]);
+  });
+
+  it("filtrer sur un groupe montre aussi les personas de ses sous-groupes (migration 232)", () => {
+    // g1 › g1a › g1b ; p1 dans g1b, p2 dans g1, p3 dans g2.
+    const assignments = new Map([["p1", "g1b"], ["p2", "g1"], ["p3", "g2"]]);
+    const lineage = groupLineages([
+      { id: "g1", parent_id: null }, { id: "g1a", parent_id: "g1" }, { id: "g1b", parent_id: "g1a" }, { id: "g2", parent_id: null },
+    ]);
+    const ids = (group: string) => applyPersonaFilters(OTHERS, { ...base, group }, assignments, lineage).map((p) => p.id);
+    expect(ids("g1")).toEqual(["p1", "p2"]);
+    expect(ids("g1a")).toEqual(["p1"]);
+    expect(ids("g2")).toEqual(["p3"]);
+    // Sans la lignée, seule l'affectation directe compte.
+    expect(applyPersonaFilters(OTHERS, { ...base, group: "g1" }, assignments).map((p) => p.id)).toEqual(["p2"]);
   });
 
   it("trie par nom (accents ignorés), du plus récent ou du plus ancien", () => {

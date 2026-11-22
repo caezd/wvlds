@@ -1,6 +1,7 @@
 import type { PersonaNarrativeStatus } from "@/types/db";
 import { sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
 import { isRetiredStatus } from "@/lib/personaStatus";
+import { isInGroup } from "@/lib/personaGroups";
 
 // Les filtres et le tri de la liste des personas d'un monde — pur, testé dans
 // `__tests__/WorldPersonasPanel.filters.test.tsx`. Partagé entre le panneau
@@ -56,14 +57,25 @@ export function applyPersonaFilters<
     id: string; name: string | null; user_id: string; username?: string | null;
     narrative_status: PersonaNarrativeStatus; review_status?: unknown; sheet_complete?: boolean | null; is_npc?: boolean | null;
   },
->(list: T[], filters: PersonaFilters, groupByPersona: Map<string, string>): T[] {
+>(
+  list: T[],
+  filters: PersonaFilters,
+  groupByPersona: Map<string, string>,
+  /** Chaque groupe et ses ancêtres (`groupLineages`) : filtrer sur un groupe
+   *  montre aussi les personas de ses sous-groupes (migration 232). Sans
+   *  elle, seule l'affectation directe compte. */
+  groupLineage?: ReadonlyMap<string, ReadonlySet<string>>,
+): T[] {
   const q = normalize(filters.query.trim());
   return list.filter((p) => {
     if (filters.kind === "npc" && !p.is_npc) return false;
     if (filters.kind === "player" && p.is_npc) return false;
     if (filters.player !== ALL && p.user_id !== filters.player) return false;
     if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
-    if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
+    if (filters.group !== ALL && filters.group !== NO_GROUP) {
+      const own = groupByPersona.get(p.id);
+      if (groupLineage ? !isInGroup(groupLineage, own, filters.group) : own !== filters.group) return false;
+    }
     if (filters.status === OFFSTAGE) {
       if (!isRetiredStatus(p.narrative_status)) return false;
     } else if (filters.status !== ALL && p.narrative_status !== filters.status) return false;

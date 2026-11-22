@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -71,6 +71,30 @@ describe("PersonaProfileSheetTrigger", () => {
 
     // Le Drawer est porté dans document.body (portail) — pas dans `container`.
     expect(document.querySelector('img[src="https://x/frame.png"]')).toBeInTheDocument();
+  });
+
+  it("la bordure de groupe vient de `persona_group_tint` (couleur héritée, ou rien si le groupe ne l'applique pas)", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: { id: "p1", user_id: null, name: "Kael", avatar_url: null, banner_url: null, dialogue_color: null, world_id: "w1", frame: null }, error: null },
+        { data: { group_id: "g-cadette" }, error: null }, // persona_group_assignments
+      ],
+    });
+    mock.rpc.mockImplementation((fn: string) =>
+      Promise.resolve({ data: fn === "persona_group_tint" ? "#ff0000" : null, error: null }));
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(
+      <PersonaProfileSheetTrigger personaId="p1" userId={null} label="Kael">
+        <span>ouvrir</span>
+      </PersonaProfileSheetTrigger>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Kael" }));
+    await screen.findByText("Kael", { selector: "p" });
+
+    await waitFor(() => expect(document.querySelector("[data-group-ring]")).toHaveAttribute("data-group-ring", "#ff0000"));
+    expect(mock.rpc).toHaveBeenCalledWith("persona_group_tint", { p_group: "g-cadette" });
+    expect(mock.buildersFor("persona_group_assignments")[0].eq).toHaveBeenCalledWith("persona_id", "p1");
   });
 
   it("n'affiche pas de pastille de couleur de dialogue quand elle n'est pas définie", async () => {
