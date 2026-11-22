@@ -119,6 +119,15 @@ describe("pushHref", () => {
 });
 
 describe("resolvePushImage", () => {
+  it("prend l'icône du monde pour une annonce signée au nom du monde (migration 230)", () => {
+    const signed = { ...base, type: "world_announcement" as const, actor_id: null, actor_name: "Ygg", metadata: { signed_as_world: true } };
+    expect(resolvePushImage(signed, null, "https://ex.test/world.png")).toBe("https://ex.test/world.png");
+    expect(resolvePushImage(signed, null, null)).toBeNull();
+    // Signée par l'auteur : son avatar, comme avant.
+    expect(resolvePushImage({ ...signed, actor_id: "u1", metadata: { signed_as_world: false } }, "https://ex.test/human.png", "https://ex.test/world.png"))
+      .toBe("https://ex.test/human.png");
+  });
+
   it("utilise l'avatar humain pour un type non-persona", () => {
     expect(resolvePushImage({ ...base, type: "mention" }, "https://ex.test/human.png")).toBe("https://ex.test/human.png");
   });

@@ -256,3 +256,33 @@ describe("NotificationInlinePanelContent — préférences", () => {
         expect(mockSetNotifPref).toHaveBeenCalledOnce();
     });
 });
+
+// ── Annonce signée au nom du monde (migration 230) ───────────────────────────
+
+describe("NotificationInlinePanelContent — annonce signée par le monde", () => {
+    it("prend l'icône du monde comme avatar, faute d'auteur", () => {
+        mockNotifications({
+            notifications: [makeNotif({
+                type: "world_announcement", chat_id: null, message_id: null, actor_id: null, actor_name: "Ygg",
+                content: "Fête", metadata: { signed_as_world: true, world_name: "Ygg", body: "Ce soir" },
+                world: { name: "Ygg", icon_url: "https://ex.test/ygg.png" },
+            })],
+        });
+        render(<NotificationInlinePanelContent />);
+        const avatar = screen.getByRole("img", { name: "Ygg" });
+        expect(avatar.getAttribute("src")).toContain("ygg.png");
+    });
+
+    it("garde l'initiale sans icône de monde", () => {
+        mockNotifications({
+            notifications: [makeNotif({
+                type: "world_announcement", chat_id: null, message_id: null, actor_id: null, actor_name: "Ygg",
+                content: "Fête", metadata: { signed_as_world: true, world_name: "Ygg" },
+                world: { name: "Ygg", icon_url: null },
+            })],
+        });
+        render(<NotificationInlinePanelContent />);
+        expect(screen.queryByRole("img", { name: "Ygg" })).not.toBeInTheDocument();
+        expect(screen.getByText("Y")).toBeInTheDocument();
+    });
+});

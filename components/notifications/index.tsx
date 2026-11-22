@@ -387,7 +387,11 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
     const isUnread = !notif.read_at;
     const showWorldHeader = worldInfo && WORLD_HEADER_TYPES.includes(notif.type);
     const isPersonaNotif = PERSONA_NOTIF_TYPES.includes(notif.type) || !!notif.metadata?.persona_name;
-    const avatarUrl = isPersonaNotif ? notif.metadata?.icon_url ?? null : actorAvatarUrl;
+    // Annonce signée au nom du monde (migration 230) : l'icône du monde, faute
+    // d'auteur. Même règle pour la notification push (resolvePushImage).
+    const avatarUrl = notif.metadata?.signed_as_world
+        ? worldInfo?.icon_url ?? null
+        : isPersonaNotif ? notif.metadata?.icon_url ?? null : actorAvatarUrl;
 
     const archiveBtn = (
         <Button

@@ -149,11 +149,21 @@ export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id"> & Par
 
 const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"]);
 
+/** Une annonce signée au nom du monde (migration 230) : pas d'auteur affiché. */
+export function isSignedAsWorld(n: Pick<PushNotifPayload, "metadata">): boolean {
+  return n.metadata?.signed_as_world === true;
+}
+
 // Miroir de la logique de NotifAvatar/isPersonaNotif dans
 // components/notifications/index.tsx : pour les notifications "persona",
 // l'avatar affiché est celui du persona (metadata.icon_url), pas celui du
-// compte humain qui l'incarne.
-export function resolvePushImage(n: PushNotifPayload, actorAvatarUrl: string | null): string | null {
+// compte humain qui l'incarne. Signée au nom du monde : l'icône du monde.
+export function resolvePushImage(
+  n: PushNotifPayload,
+  actorAvatarUrl: string | null,
+  worldIconUrl: string | null = null,
+): string | null {
+  if (isSignedAsWorld(n)) return worldIconUrl;
   const isPersonaNotif = PERSONA_TYPES.has(n.type) || typeof n.metadata?.persona_name === "string";
   if (isPersonaNotif) {
     return typeof n.metadata?.icon_url === "string" ? n.metadata.icon_url : null;
