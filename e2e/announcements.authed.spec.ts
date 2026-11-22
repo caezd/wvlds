@@ -49,6 +49,13 @@ test.describe("Annonces d'un monde", () => {
     await page.getByTestId("announcement-kind-notification").click();
     await expect(page.getByTestId("announcement-kind-notification")).toHaveAttribute("aria-checked", "true");
 
+    // Filtres (migration 229) : le compte se refait avec eux.
+    await page.getByTestId("announcement-filters-toggle").click();
+    await expect(page.getByTestId("announcement-filters")).toBeVisible();
+    await page.locator('[data-testid="announcement-filter-inactive"][data-days="30"]').click();
+    await expect(page.locator('[data-testid="announcement-filter-inactive"][data-days="30"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("announcement-recipient-count")).toHaveAttribute("data-state", "ready", { timeout: 15_000 });
+
     await page.getByTestId("announcement-title").fill("Essai {world}");
     await page.getByTestId("announcement-text").fill("Bonjour {username}, bienvenue dans {world}.");
     await page.getByTestId("announcement-preview-toggle").click();
@@ -63,6 +70,9 @@ test.describe("Annonces d'un monde", () => {
 
     // L'historique se charge (vide ou non).
     await expect(page.getByTestId("announcements-empty").or(page.getByTestId("announcement-row").first())).toBeVisible({ timeout: 15_000 });
+    // Le message de bienvenue se charge, sans être enregistré ici.
+    await expect(page.getByTestId("welcome-section")).toBeVisible();
+    await expect(page.getByTestId("welcome-section").getByRole("switch")).toBeEnabled({ timeout: 15_000 });
     expect(erreurs).toEqual([]);
   });
 });

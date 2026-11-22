@@ -1155,7 +1155,34 @@
       "historyHelp": "Abra un anuncio para releerlo o reutilizarlo. Una lectura es una notificación abierta, o una conversación abierta desde el envío.",
       "readCount": "{count, plural, =0 {Ninguna lectura} one {# lectura} other {# lecturas}} de {total}",
       "reuse": "Reutilizar",
-      "reused": "Anuncio cargado en el formulario."
+      "reused": "Anuncio cargado en el formulario.",
+      "refine": "Afinar",
+      "filterExcept": "Excepto los roles",
+      "filterJoined": "Llegados hace menos de",
+      "filterInactive": "Sin mensajes en el mundo desde hace",
+      "filterAny": "Da igual",
+      "filterDays": "{count, plural, one {# día} other {# días}}",
+      "summaryExcept": "excepto",
+      "summaryJoined": "{count, plural, one {llegados hace menos de un día} other {llegados hace menos de # días}}",
+      "summaryInactive": "{count, plural, one {sin mensajes desde hace un día} other {sin mensajes desde hace # días}}",
+      "retract": "Retirar",
+      "retracted": "Retirado",
+      "retractConfirm": "{count, plural, one {La notificación desaparecerá de la campana del miembro.} other {La notificación desaparecerá de las campanas de los # miembros.}} Las ya mostradas en los teléfonos permanecen.",
+      "retractedToast": "{count, plural, =0 {Anuncio retirado.} one {Anuncio retirado de una campana.} other {Anuncio retirado de # campanas.}}",
+      "welcome": {
+        "title": "Mensaje de bienvenida",
+        "help": "Se envía a cada nuevo miembro, desde la cuenta de la última persona que lo guardó. No se envía nada si esa persona pierde el permiso de enviar anuncios.",
+        "enable": "Dar la bienvenida a los nuevos miembros",
+        "write": "Redactar el mensaje",
+        "sender": "Enviado por {name}",
+        "sentCount": "{count, plural, =0 {nunca enviado} one {enviado una vez} other {enviado # veces}}",
+        "enabledToast": "Mensaje de bienvenida activado.",
+        "disabledToast": "Mensaje de bienvenida desactivado.",
+        "saved": "Mensaje de bienvenida guardado. Se enviará desde su cuenta.",
+        "editorTitle": "Mensaje de bienvenida",
+        "editorDescription": "Se envía a cada nuevo miembro, desde su cuenta una vez guardado.",
+        "titlePlaceholder": "Bienvenido a '{world}'"
+      }
     }
   },
   "auth": {

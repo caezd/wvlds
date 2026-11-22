@@ -1155,7 +1155,34 @@
       "historyHelp": "Open an announcement to read it again or reuse it. A read is a notification opened, or a conversation opened since the announcement was sent.",
       "readCount": "{count, plural, =0 {No reads} one {# read} other {# reads}} of {total}",
       "reuse": "Reuse",
-      "reused": "Announcement loaded into the form."
+      "reused": "Announcement loaded into the form.",
+      "refine": "Refine",
+      "filterExcept": "Except roles",
+      "filterJoined": "Joined less than",
+      "filterInactive": "No message in the world for",
+      "filterAny": "Any time",
+      "filterDays": "{count, plural, one {# day} other {# days}}",
+      "summaryExcept": "except",
+      "summaryJoined": "{count, plural, one {joined less than a day ago} other {joined less than # days ago}}",
+      "summaryInactive": "{count, plural, one {no message for a day} other {no message for # days}}",
+      "retract": "Retract",
+      "retracted": "Retracted",
+      "retractConfirm": "{count, plural, one {The notification will disappear from the member's bell.} other {The notification will disappear from the bells of # members.}} Those already shown on phones stay there.",
+      "retractedToast": "{count, plural, =0 {Announcement retracted.} one {Announcement retracted from one bell.} other {Announcement retracted from # bells.}}",
+      "welcome": {
+        "title": "Welcome message",
+        "help": "Sent to every new member, from the account of the last person who saved it. Nothing is sent if that person loses the permission to send announcements.",
+        "enable": "Welcome new members",
+        "write": "Write the message",
+        "sender": "Sent by {name}",
+        "sentCount": "{count, plural, =0 {never sent} one {sent once} other {sent # times}}",
+        "enabledToast": "Welcome message enabled.",
+        "disabledToast": "Welcome message disabled.",
+        "saved": "Welcome message saved. It will be sent from your account.",
+        "editorTitle": "Welcome message",
+        "editorDescription": "Sent to every new member, from your account once saved.",
+        "titlePlaceholder": "Welcome to '{world}'"
+      }
     }
   },
   "auth": {

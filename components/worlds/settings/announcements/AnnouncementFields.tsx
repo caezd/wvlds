@@ -1,0 +1,276 @@
+"use client";
+
+import * as React from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { Bell, MessageSquare } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { InteractiveCard } from "@/components/ui/interactive-card";
+import { SectionLabel } from "@/components/ui/section-label";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import {
+  ANNOUNCEMENT_BODY_MAX,
+  ANNOUNCEMENT_DAILY_LIMIT,
+  ANNOUNCEMENT_TEST_HOURLY_LIMIT,
+  ANNOUNCEMENT_TITLE_MAX,
+  ANNOUNCEMENT_VARIABLES,
+  renderAnnouncement,
+  sendAnnouncementTest,
+  type AnnouncementErrorReason,
+  type AnnouncementKind,
+} from "@/lib/worldAnnouncements";
+import { FIELD } from "../FeatureLayout";
+
+/**
+ * Les pièces communes à l'onglet « Annonces » et au message de bienvenue :
+ * le choix du mode, l'éditeur du texte (variables, aperçu), l'essai à
+ * soi-même et le libellé des refus de la base.
+ */
+
+/** Titre requis pour une notification, texte requis partout. */
+export function isAnnouncementValid(kind: AnnouncementKind, title: string, body: string): boolean {
+  const titleOk = kind === "message" || (title.trim().length > 0 && title.trim().length <= ANNOUNCEMENT_TITLE_MAX);
+  return titleOk && body.trim().length > 0 && body.length <= ANNOUNCEMENT_BODY_MAX;
+}
+
+/** Le message d'un refus de la base. */
+export function useAnnouncementErrorMessage() {
+  const t = useTranslations("worlds.announcements");
+  const tCommon = useTranslations("common");
+  return React.useCallback(
+    (reason: AnnouncementErrorReason) =>
+      reason === "rate_limit"
+        ? t("errorRateLimit", { count: ANNOUNCEMENT_DAILY_LIMIT })
+        : reason === "test_rate_limit"
+          ? t("errorTestRateLimit", { count: ANNOUNCEMENT_TEST_HOURLY_LIMIT })
+          : reason === "forbidden"
+            ? tCommon("forbidden")
+            : reason === "dms_disabled"
+              ? t("errorDmsDisabled")
+              : t("errorSend"),
+    [t, tCommon],
+  );
+}
+
+/** S'envoyer l'annonce à soi-même (toujours en notification). */
+export function useAnnouncementTest(worldId: string) {
+  const t = useTranslations("worlds.announcements");
+  const errorMessage = useAnnouncementErrorMessage();
+  const supabase = React.useMemo(() => createClient(), []);
+  const [testing, setTesting] = React.useState(false);
+  const sendTest = React.useCallback(
+    async (kind: AnnouncementKind, title: string, body: string) => {
+      setTesting(true);
+      const res = await sendAnnouncementTest(supabase, { worldId, kind, title, body });
+      setTesting(false);
+      if (!res.ok) {
+        toast.error(errorMessage(res.reason));
+        return;
+      }
+      toast.success(kind === "message" ? t("testSentMessage") : t("testSent"));
+    },
+    [supabase, worldId, errorMessage, t],
+  );
+  return { testing, sendTest };
+}
+
+/** Message privé ou notification, en cartes-radios. */
+export function KindPicker({
+  kind,
+  onChange,
+  dmsEnabled,
+  testIdPrefix = "announcement",
+}: {
+  kind: AnnouncementKind;
+  onChange: (kind: AnnouncementKind) => void;
+  dmsEnabled: boolean;
+  testIdPrefix?: string;
+}) {
+  const t = useTranslations("worlds.announcements");
+  return (
+    <div className="grid gap-3 @md:grid-cols-2" role="radiogroup" aria-label={t("kind")}>
+      {dmsEnabled && (
+        <KindCard
+          active={kind === "message"}
+          testId={`${testIdPrefix}-kind-message`}
+          onClick={() => onChange("message")}
+          icon={<MessageSquare className="size-4" aria-hidden />}
+          title={t("kindMessage")}
+          help={t("kindMessageHelp")}
+        />
+      )}
+      <KindCard
+        active={kind === "notification"}
+        testId={`${testIdPrefix}-kind-notification`}
+        onClick={() => onChange("notification")}
+        icon={<Bell className="size-4" aria-hidden />}
+        title={t("kindNotification")}
+        help={t("kindNotificationHelp")}
+      />
+    </div>
+  );
+}
+
+function KindCard({
+  active,
+  testId,
+  onClick,
+  icon,
+  title,
+  help,
+}: {
+  active: boolean;
+  testId: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  help: string;
+}) {
+  return (
+    <InteractiveCard
+      role="radio"
+      aria-checked={active}
+      data-testid={testId}
+      onClick={onClick}
+      className={cn("flex items-start gap-3 p-3", active && "border-foreground bg-background")}
+    >
+      <span
+        className={cn(
+          "grid size-9 shrink-0 place-items-center rounded-full",
+          active ? "bg-muted text-foreground" : "bg-background text-muted-foreground",
+        )}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 space-y-0.5">
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="block text-xs leading-snug text-muted-foreground">{help}</span>
+      </span>
+    </InteractiveCard>
+  );
+}
+
+/**
+ * Les variables, puis le texte ou son aperçu (avec les valeurs de l'auteur).
+ */
+export function BodyEditor({
+  kind,
+  title,
+  body,
+  onBodyChange,
+  preview,
+  sample,
+  worldName,
+  bodyRef,
+  testIdPrefix = "announcement",
+}: {
+  kind: AnnouncementKind;
+  title: string;
+  body: string;
+  onBodyChange: (body: string) => void;
+  preview: boolean;
+  sample: { username: string; world: string };
+  worldName: string;
+  bodyRef?: React.RefObject<HTMLTextAreaElement | null>;
+  testIdPrefix?: string;
+}) {
+  const t = useTranslations("worlds.announcements");
+  const ownRef = React.useRef<HTMLTextAreaElement>(null);
+  const ref = bodyRef ?? ownRef;
+
+  /** Insère une variable à l'emplacement du curseur. */
+  function insertVariable(name: string) {
+    const token = `{${name}}`;
+    const el = ref.current;
+    if (!el) {
+      onBodyChange(body + token);
+      return;
+    }
+    const start = el.selectionStart ?? body.length;
+    const end = el.selectionEnd ?? body.length;
+    onBodyChange(body.slice(0, start) + token + body.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + token.length, start + token.length);
+    });
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <SectionLabel as="span">{t("variables")}</SectionLabel>
+        {ANNOUNCEMENT_VARIABLES.map((v) => (
+          <Button
+            key={v}
+            type="button"
+            variant="outline"
+            size="xs"
+            disabled={preview}
+            onClick={() => insertVariable(v)}
+            title={t(`variable_${v}`, { value: sample[v] })}
+          >
+            <code className="font-mono">{`{${v}}`}</code>
+          </Button>
+        ))}
+      </div>
+      {preview ? (
+        <AnnouncementPreview
+          kind={kind}
+          title={renderAnnouncement(title, sample)}
+          body={renderAnnouncement(body, sample)}
+          worldName={worldName}
+          testId={`${testIdPrefix}-preview`}
+        />
+      ) : (
+        <Textarea
+          ref={ref}
+          value={body}
+          maxLength={ANNOUNCEMENT_BODY_MAX}
+          onChange={(e) => onBodyChange(e.target.value)}
+          placeholder={t("bodyPlaceholder")}
+          aria-label={t("body")}
+          data-testid={`${testIdPrefix}-text`}
+          rows={8}
+          className={cn(FIELD, "min-h-40")}
+        />
+      )}
+    </>
+  );
+}
+
+/** Ce que verra un destinataire. */
+export function AnnouncementPreview({
+  kind,
+  title,
+  body,
+  worldName,
+  testId = "announcement-preview",
+}: {
+  kind: AnnouncementKind;
+  title: string;
+  body: string;
+  worldName: string;
+  testId?: string;
+}) {
+  const t = useTranslations("worlds.announcements");
+  if (kind === "message") {
+    return (
+      <div className="rounded-md border border-border bg-background p-4" data-testid={testId}>
+        <p className="w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl bg-muted px-4 py-2.5 text-sm">
+          {body || t("previewEmpty")}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3 rounded-md border border-border bg-background p-4" data-testid={testId}>
+      <SectionLabel as="div">{worldName}</SectionLabel>
+      <p className="font-semibold">{title || t("previewEmpty")}</p>
+      {body ? <MarkdownRenderer content={body} /> : null}
+    </div>
+  );
+}

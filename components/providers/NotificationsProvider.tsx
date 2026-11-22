@@ -525,6 +525,16 @@ export default function NotificationsProvider({ children }: { children: React.Re
             const surNotification = async (avis: { op?: string; id?: string; chat_id?: string | null; archived?: boolean }) => {
                 if (!avis.id) return;
                 const id = avis.id;
+                if (avis.op === "DELETE") {
+                    // Notification retirée (une annonce, migration 229) : elle
+                    // quitte la cloche sans relecture.
+                    setNotifications(prev => {
+                        if (!prev.some(n => n.id === id)) return prev;
+                        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
+                        return prev.filter(n => n.id !== id);
+                    });
+                    return;
+                }
                 if (avis.op === "INSERT") {
                     // Si la notification concerne le chatroom actuellement ouvert,
                     // on l'archive immédiatement sans l'afficher.
