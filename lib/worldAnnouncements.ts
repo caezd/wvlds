@@ -9,9 +9,19 @@ import { RPC, TABLE } from "@/lib/constants";
  *
  * Migration 228 : essai à soi-même, lectures. Migration 229 : filtres de
  * destinataires, retrait d'une notification, message de bienvenue.
+ * Migration 230 : bandeau (« banner »), signature du monde, envois
+ * programmés.
  */
 
-export type AnnouncementKind = "message" | "notification";
+export type AnnouncementKind = "message" | "notification" | "banner";
+export const ANNOUNCEMENT_KINDS: readonly AnnouncementKind[] = ["message", "notification", "banner"];
+
+/** Durées d'affichage proposées pour un bandeau, en jours (sinon : jusqu'à fermeture). */
+export const BANNER_DAY_OPTIONS = [1, 7, 30] as const;
+/** Miroir de `schedule_world_announcement` : envois en attente par monde. */
+export const ANNOUNCEMENT_SCHEDULE_LIMIT = 20;
+/** Miroir de `schedule_world_announcement` : jours d'avance au plus. */
+export const ANNOUNCEMENT_SCHEDULE_MAX_DAYS = 90;
 
 export const ANNOUNCEMENT_TITLE_MAX = 120;
 export const ANNOUNCEMENT_BODY_MAX = 4000;
@@ -64,9 +74,21 @@ export type SendAnnouncementInput = {
   /** Vide : tous les membres. */
   roleIds: string[];
   filters?: AnnouncementFilters;
+  /** Notification ou bandeau signés par le monde (migration 230). */
+  asWorld?: boolean;
+  /** Bandeau : jours d'affichage ; absent, jusqu'à ce qu'on le ferme. */
+  bannerDays?: number | null;
 };
 
-export type AnnouncementErrorReason = "rate_limit" | "test_rate_limit" | "invalid" | "dms_disabled" | "forbidden" | "error";
+export type AnnouncementErrorReason =
+  | "rate_limit"
+  | "test_rate_limit"
+  | "schedule_limit"
+  | "no_recipients"
+  | "invalid"
+  | "dms_disabled"
+  | "forbidden"
+  | "error";
 
 export type SendAnnouncementResult =
   | { ok: true; recipients: number }
@@ -76,10 +98,13 @@ export type SendAnnouncementResult =
 export function announcementErrorReason(error: { message?: string; code?: string }): AnnouncementErrorReason {
   const msg = error.message ?? "";
   if (msg.includes("announcement_test_rate_limit")) return "test_rate_limit";
+  if (msg.includes("announcement_schedule_limit")) return "schedule_limit";
+  if (msg.includes("announcement_no_recipients")) return "no_recipients";
   if (msg.includes("announcement_rate_limit")) return "rate_limit";
   if (msg.includes("announcement_dms_disabled")) return "dms_disabled";
   if (msg.includes("announcement_invalid")) return "invalid";
-  if (error.code === "42501") return "forbidden";
+  // Un envoi programmé garde le message seul, sans code.
+  if (error.code === "42501" || msg.includes("Permission refusée")) return "forbidden";
   return "error";
 }
 
@@ -90,10 +115,12 @@ export async function sendWorldAnnouncement(
   const { data, error } = await supabase.rpc(RPC.SEND_WORLD_ANNOUNCEMENT, {
     p_world_id: input.worldId,
     p_kind: input.kind,
-    p_title: input.kind === "notification" ? input.title.trim() : null,
+    p_title: input.kind !== "message" ? input.title.trim() : null,
     p_body: input.body.trim(),
     p_role_ids: input.roleIds,
     p_filters: compactFilters(input.filters ?? {}),
+    p_as_world: input.kind !== "message" && !!input.asWorld,
+    p_banner_days: input.kind === "banner" ? (input.bannerDays ?? null) : null,
   });
   if (error) {
     console.error("[worldAnnouncements] envoi", error);
@@ -115,13 +142,14 @@ export const ANNOUNCEMENT_TEST_HOURLY_LIMIT = 10;
  */
 export async function sendAnnouncementTest(
   supabase: Pick<SupabaseClient, "rpc">,
-  input: Omit<SendAnnouncementInput, "roleIds">,
+  input: Omit<SendAnnouncementInput, "roleIds" | "filters" | "bannerDays">,
 ): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
   const { error } = await supabase.rpc(RPC.SEND_WORLD_ANNOUNCEMENT_TEST, {
     p_world_id: input.worldId,
     p_kind: input.kind,
-    p_title: input.kind === "notification" ? input.title.trim() : null,
+    p_title: input.kind !== "message" ? input.title.trim() : null,
     p_body: input.body.trim(),
+    p_as_world: input.kind !== "message" && !!input.asWorld,
   });
   if (error) {
     console.error("[worldAnnouncements] essai", error);
@@ -174,8 +202,12 @@ export type WorldAnnouncement = {
   filters: AnnouncementFilters;
   recipient_count: number;
   created_at: string;
-  /** Notification retirée des cloches (migration 229). */
+  /** Notification retirée des cloches (migration 229), ou bandeau retiré (230). */
   retracted_at: string | null;
+  /** Signée par le monde (migration 230). */
+  signed_as_world: boolean;
+  /** Bandeau : fin d'affichage ; null, jusqu'à fermeture. */
+  banner_until: string | null;
   author: { username: string | null } | null;
 };
 
@@ -187,7 +219,7 @@ export async function fetchWorldAnnouncements(
 ): Promise<WorldAnnouncement[]> {
   const { data, error } = await supabase
     .from(TABLE.WORLD_ANNOUNCEMENTS)
-    .select("id, kind, title, body, role_ids, filters, recipient_count, created_at, retracted_at, author:author_id(username)")
+    .select("id, kind, title, body, role_ids, filters, recipient_count, created_at, retracted_at, signed_as_world, banner_until, author:author_id(username)")
     .eq("world_id", worldId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -219,6 +251,8 @@ export type WorldWelcome = {
   body: string;
   sent_count: number;
   updated_at: string;
+  /** Notification signée par le monde (migration 230). */
+  signed_as_world: boolean;
   /** L'expéditeur : la dernière personne à l'avoir enregistré. */
   author: { username: string | null } | null;
 };
@@ -229,7 +263,7 @@ export async function fetchWorldWelcome(
 ): Promise<WorldWelcome | null> {
   const { data, error } = await supabase
     .from(TABLE.WORLD_WELCOME_MESSAGES)
-    .select("enabled, kind, title, body, sent_count, updated_at, author:author_id(username)")
+    .select("enabled, kind, title, body, sent_count, updated_at, signed_as_world, author:author_id(username)")
     .eq("world_id", worldId)
     .maybeSingle();
   if (error || !data) return null;
@@ -239,18 +273,110 @@ export async function fetchWorldWelcome(
 /** Enregistre le modèle (et l'active), ou le coupe avec `enabled: false`. */
 export async function saveWorldWelcome(
   supabase: Pick<SupabaseClient, "rpc">,
-  input: { worldId: string; enabled: boolean; kind: AnnouncementKind; title: string; body: string },
+  input: { worldId: string; enabled: boolean; kind: AnnouncementKind; title: string; body: string; asWorld?: boolean },
 ): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
   const { error } = await supabase.rpc(RPC.SAVE_WORLD_WELCOME, {
     p_world_id: input.worldId,
     p_enabled: input.enabled,
     p_kind: input.kind,
-    p_title: input.kind === "notification" ? input.title.trim() : null,
+    p_title: input.kind !== "message" ? input.title.trim() : null,
     p_body: input.body.trim(),
+    p_as_world: input.kind !== "message" && !!input.asWorld,
   });
   if (error) {
     console.error("[worldAnnouncements] bienvenue", error);
     return { ok: false, reason: announcementErrorReason(error) };
   }
   return { ok: true };
+}
+
+/** Un envoi programmé (migration 230). */
+export type ScheduledAnnouncement = {
+  id: string;
+  kind: AnnouncementKind;
+  title: string | null;
+  body: string;
+  role_ids: string[];
+  filters: AnnouncementFilters;
+  signed_as_world: boolean;
+  banner_days: number | null;
+  scheduled_for: string;
+  status: "pending" | "sent" | "failed" | "cancelled";
+  error: string | null;
+  author: { username: string | null } | null;
+};
+
+/** Les envois en attente, et ceux qui ont échoué, du plus proche au plus lointain. */
+export async function fetchScheduledAnnouncements(
+  supabase: Pick<SupabaseClient, "from">,
+  worldId: string,
+): Promise<ScheduledAnnouncement[]> {
+  const { data, error } = await supabase
+    .from(TABLE.WORLD_SCHEDULED_ANNOUNCEMENTS)
+    .select("id, kind, title, body, role_ids, filters, signed_as_world, banner_days, scheduled_for, status, error, author:author_id(username)")
+    .eq("world_id", worldId)
+    .in("status", ["pending", "failed"])
+    .order("scheduled_for", { ascending: true })
+    .limit(30);
+  if (error || !data) return [];
+  return data as unknown as ScheduledAnnouncement[];
+}
+
+export async function scheduleWorldAnnouncement(
+  supabase: Pick<SupabaseClient, "rpc">,
+  input: SendAnnouncementInput & { scheduledFor: Date },
+): Promise<{ ok: true; id: string } | { ok: false; reason: AnnouncementErrorReason }> {
+  const { data, error } = await supabase.rpc(RPC.SCHEDULE_WORLD_ANNOUNCEMENT, {
+    p_world_id: input.worldId,
+    p_kind: input.kind,
+    p_title: input.kind !== "message" ? input.title.trim() : null,
+    p_body: input.body.trim(),
+    p_role_ids: input.roleIds,
+    p_filters: compactFilters(input.filters ?? {}),
+    p_as_world: input.kind !== "message" && !!input.asWorld,
+    p_banner_days: input.kind === "banner" ? (input.bannerDays ?? null) : null,
+    p_scheduled_for: input.scheduledFor.toISOString(),
+  });
+  if (error) {
+    console.error("[worldAnnouncements] programmation", error);
+    return { ok: false, reason: announcementErrorReason(error) };
+  }
+  return { ok: true, id: String(data) };
+}
+
+export async function cancelScheduledAnnouncement(
+  supabase: Pick<SupabaseClient, "rpc">,
+  id: string,
+): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
+  const { error } = await supabase.rpc(RPC.CANCEL_SCHEDULED_WORLD_ANNOUNCEMENT, { p_id: id });
+  if (error) {
+    console.error("[worldAnnouncements] annulation", error);
+    return { ok: false, reason: announcementErrorReason(error) };
+  }
+  return { ok: true };
+}
+
+/** Un bandeau affiché à un membre (variables déjà remplacées par la base). */
+export type WorldBanner = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  /** Le monde, ou le pseudo de l'auteur. */
+  signer: string | null;
+  signed_as_world: boolean;
+};
+
+export async function fetchWorldBanners(
+  supabase: Pick<SupabaseClient, "rpc">,
+  worldId: string,
+): Promise<WorldBanner[]> {
+  const { data, error } = await supabase.rpc(RPC.GET_WORLD_BANNERS, { p_world_id: worldId });
+  if (error || !Array.isArray(data)) return [];
+  return data as WorldBanner[];
+}
+
+export async function dismissWorldBanner(supabase: Pick<SupabaseClient, "rpc">, id: string): Promise<boolean> {
+  const { error } = await supabase.rpc(RPC.DISMISS_WORLD_BANNER, { p_announcement_id: id });
+  return !error;
 }

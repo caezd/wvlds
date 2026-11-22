@@ -295,7 +295,11 @@ export type NotificationMeta = {
   world_name?: string | null;
   /** Essai que l'auteur s'est envoyé (migration 228), et le mode essayé. */
   test?: boolean;
-  kind?: "message" | "notification";
+  kind?: "message" | "notification" | "banner";
+  /** Signée par le monde (migration 230) : `actor_id` nul, `actor_name` = le monde. */
+  signed_as_world?: boolean;
+  /** Message de bienvenue (migration 229). */
+  welcome?: boolean;
 };
 
 export type AppNotification = {

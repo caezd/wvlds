@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { FlaskConical, Loader2, Megaphone, Send, SlidersHorizontal, Users } from "lucide-react";
+import { CalendarClock, FlaskConical, Loader2, Megaphone, Send, SlidersHorizontal, Users } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,21 +27,26 @@ import {
   ANNOUNCEMENT_BODY_MAX,
   ANNOUNCEMENT_DAILY_LIMIT,
   ANNOUNCEMENT_TITLE_MAX,
+  BANNER_DAY_OPTIONS,
   compactFilters,
   countAnnouncementRecipients,
   fetchAnnouncementReadCounts,
+  fetchScheduledAnnouncements,
   fetchWorldAnnouncements,
   hasFilters,
+  scheduleWorldAnnouncement,
   sendWorldAnnouncement,
   type AnnouncementFilters,
   type AnnouncementKind,
+  type ScheduledAnnouncement,
   type WorldAnnouncement,
 } from "@/lib/worldAnnouncements";
-import { FIELD, SettingsSection } from "./FeatureLayout";
+import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 import { BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage, useAnnouncementTest } from "./announcements/AnnouncementFields";
 import { AnnouncementFiltersPanel } from "./announcements/AnnouncementFiltersPanel";
 import { AnnouncementDetails, HistoryRow } from "./announcements/AnnouncementHistory";
 import { WorldWelcomeSection } from "./announcements/WorldWelcomeSection";
+import { ScheduleDialog, ScheduledList } from "./announcements/ScheduledAnnouncements";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -50,7 +55,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * certains rôles, par message privé ou par notification (migration 227).
  * Réservé à `members.announce` ; la base fait foi (permission, plafond
  * journalier, blocages). Essai à soi-même et lectures (migration 228) ;
- * filtres, retrait d'une notification et message de bienvenue (229).
+ * filtres, retrait d'une notification et message de bienvenue (229) ;
+ * bandeau, signature du monde et envois programmés (230).
  */
 export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string; worldName: string }) {
   const t = useTranslations("worlds.announcements");
@@ -68,8 +74,13 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
+  const [asWorld, setAsWorld] = React.useState(false);
+  // Bandeau : jours d'affichage ; null, jusqu'à ce qu'on le ferme.
+  const [bannerDays, setBannerDays] = React.useState<number | null>(null);
   const [preview, setPreview] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+  const [scheduled, setScheduled] = React.useState<ScheduledAnnouncement[]>([]);
   const [sending, setSending] = React.useState(false);
   const [recipients, setRecipients] = React.useState<number | null>(null);
   const [history, setHistory] = React.useState<WorldAnnouncement[] | null>(null);
@@ -95,6 +106,14 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
     void loadHistory();
   }, [loadHistory]);
 
+  const loadScheduled = React.useCallback(async () => {
+    setScheduled(await fetchScheduledAnnouncements(supabase, worldId));
+  }, [supabase, worldId]);
+
+  React.useEffect(() => {
+    void loadScheduled();
+  }, [loadScheduled]);
+
   // Le compte suit le type (les blocages ne comptent que pour un message
   // privé), les rôles visés et les filtres.
   const roleKey = roleIds.join(",");
@@ -114,6 +133,9 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   const limitReached = sentToday >= ANNOUNCEMENT_DAILY_LIMIT;
   const valid = isAnnouncementValid(kind, title, body);
   const canSend = valid && !sending && !limitReached && (recipients ?? 0) > 0;
+  // Programmer ne dépend pas du plafond du jour : il se vérifie à l'envoi.
+  const canSchedule = valid && !sending;
+  const signable = kind !== "message";
   const activeFilters = Object.keys(compactFilters(filters)).length;
 
   const roleById = React.useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
@@ -135,6 +157,12 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
     setKind(a.kind === "message" && !dmsEnabled ? "notification" : a.kind);
     setTitle(a.title ?? "");
     setBody(a.body);
+    setAsWorld(!!a.signed_as_world);
+    setBannerDays(
+      a.kind === "banner" && a.banner_until
+        ? Math.max(1, Math.round((new Date(a.banner_until).getTime() - new Date(a.created_at).getTime()) / DAY_MS))
+        : null,
+    );
     // Un rôle supprimé depuis ne se rattrape pas ; sans rôle restant, tous.
     setRoleIds(a.role_ids.filter((id) => roleById.has(id)));
     const reused = {
@@ -152,7 +180,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   async function send() {
     setConfirmOpen(false);
     setSending(true);
-    const res = await sendWorldAnnouncement(supabase, { worldId, kind, title, body, roleIds, filters });
+    const res = await sendWorldAnnouncement(supabase, { worldId, kind, title, body, roleIds, filters, asWorld, bannerDays });
     setSending(false);
     if (!res.ok) {
       toast.error(errorMessage(res.reason));
@@ -163,10 +191,36 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       return;
     }
     toast.success(t("sent", { count: res.recipients }));
+    resetDraft();
+    void loadHistory();
+  }
+
+  function resetDraft() {
     setTitle("");
     setBody("");
     setPreview(false);
-    void loadHistory();
+  }
+
+  async function schedule(when: Date): Promise<boolean> {
+    const res = await scheduleWorldAnnouncement(supabase, {
+      worldId,
+      kind,
+      title,
+      body,
+      roleIds,
+      filters,
+      asWorld,
+      bannerDays,
+      scheduledFor: when,
+    });
+    if (!res.ok) {
+      toast.error(errorMessage(res.reason));
+      return false;
+    }
+    toast.success(t("scheduled"));
+    resetDraft();
+    void loadScheduled();
+    return true;
   }
 
   return (
@@ -226,8 +280,8 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
         {filtersOpen && <AnnouncementFiltersPanel roles={roles} filters={filters} onChange={changeFilters} />}
       </SettingsSection>
 
-      {/* ── Titre (notification seulement) ───────────────── */}
-      {kind === "notification" && (
+      {/* ── Titre (notification, bandeau) ────────────────── */}
+      {kind !== "message" && (
         <SettingsSection title={t("titleLabel")}>
           <Input
             value={title}
@@ -241,10 +295,65 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
         </SettingsSection>
       )}
 
+      {/* ── Options : signature, durée du bandeau ────────── */}
+      {signable && (
+        <SettingsSection title={t("options")}>
+          <ToggleList>
+            <ToggleItem
+              title={t("asWorld")}
+              help={t("asWorldHelp")}
+              checked={asWorld}
+              onCheckedChange={setAsWorld}
+            />
+            {kind === "banner" && (
+              <ToggleItem
+                title={t("bannerDuration")}
+                help={t("bannerDurationHelp")}
+                control={
+                  <div className="flex flex-wrap justify-end gap-1.5" role="group" aria-label={t("bannerDuration")}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      aria-pressed={bannerDays === null}
+                      onClick={() => setBannerDays(null)}
+                      data-testid="banner-days"
+                      data-days="0"
+                    >
+                      {t("bannerUntilDismissed")}
+                    </Button>
+                    {BANNER_DAY_OPTIONS.map((d) => (
+                      <Button
+                        key={d}
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        aria-pressed={bannerDays === d}
+                        onClick={() => setBannerDays(d)}
+                        data-testid="banner-days"
+                        data-days={d}
+                      >
+                        {t("filterDays", { count: d })}
+                      </Button>
+                    ))}
+                  </div>
+                }
+              />
+            )}
+          </ToggleList>
+        </SettingsSection>
+      )}
+
       {/* ── Message ──────────────────────────────────────── */}
       <SettingsSection
         title={t("body")}
-        help={kind === "notification" ? t("bodyHelpNotification") : t("bodyHelpMessage")}
+        help={
+          kind === "notification"
+            ? t("bodyHelpNotification")
+            : kind === "banner"
+              ? t("bodyHelpBanner")
+              : t("bodyHelpMessage")
+        }
         meta={`${body.length} / ${ANNOUNCEMENT_BODY_MAX}`}
       >
         <BodyEditor
@@ -255,6 +364,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
           preview={preview}
           sample={sample}
           worldName={worldName}
+          asWorld={signable && asWorld}
           bodyRef={bodyRef}
         />
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -265,7 +375,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
             type="button"
             variant="outline"
             disabled={!valid || testing}
-            onClick={() => void sendTest(kind, title, body)}
+            onClick={() => void sendTest(kind, title, body, signable && asWorld)}
             title={kind === "message" ? t("sendTestMessageHelp") : t("sendTestHelp")}
             data-testid="announcement-test"
           >
@@ -273,12 +383,29 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
             {t("sendTest")}
           </Button>
           <PreviewToggle preview={preview} onToggle={() => setPreview((p) => !p)} />
-          <Button type="button" disabled={!canSend} onClick={() => setConfirmOpen(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!canSchedule}
+            onClick={() => setScheduleOpen(true)}
+            data-testid="announcement-schedule"
+          >
+            <CalendarClock className="h-4 w-4" />
+            {t("schedule")}
+          </Button>
+          <Button type="button" disabled={!canSend} onClick={() => setConfirmOpen(true)} data-testid="announcement-send">
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {t("send")}
           </Button>
         </div>
       </SettingsSection>
+
+      {/* ── Programmées (rien s'il n'y en a pas) ─────────── */}
+      {scheduled.length > 0 && (
+        <SettingsSection title={t("scheduledTitle")} help={t("scheduledHelp")} meta={String(scheduled.length)}>
+          <ScheduledList items={scheduled} onChanged={() => void loadScheduled()} />
+        </SettingsSection>
+      )}
 
       {/* ── Historique ───────────────────────────────────── */}
       <SettingsSection
@@ -326,6 +453,8 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
         }}
       />
 
+      <ScheduleDialog open={scheduleOpen} onOpenChange={setScheduleOpen} recipients={recipients} onSchedule={schedule} />
+
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -333,7 +462,9 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
             <AlertDialogDescription>
               {kind === "message"
                 ? t("confirmMessage", { count: recipients ?? 0 })
-                : t("confirmNotification", { count: recipients ?? 0 })}
+                : kind === "banner"
+                  ? t("confirmBanner", { count: recipients ?? 0 })
+                  : t("confirmNotification", { count: recipients ?? 0 })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

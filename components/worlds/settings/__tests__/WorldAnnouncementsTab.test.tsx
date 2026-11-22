@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (k: string, v?: Record<string, unknown>) => (v && "count" in v ? `${k}:${v.count}` : k),
+  useLocale: () => "fr",
 }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -32,6 +33,9 @@ const api = vi.hoisted(() => ({
   retract: vi.fn(),
   welcome: vi.fn(),
   saveWelcome: vi.fn(),
+  scheduled: vi.fn(),
+  schedule: vi.fn(),
+  cancel: vi.fn(),
 }));
 vi.mock("@/lib/worldAnnouncements", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/worldAnnouncements")>();
@@ -45,10 +49,16 @@ vi.mock("@/lib/worldAnnouncements", async (importOriginal) => {
     retractWorldAnnouncement: (...a: unknown[]) => api.retract(...a),
     fetchWorldWelcome: (...a: unknown[]) => api.welcome(...a),
     saveWorldWelcome: (...a: unknown[]) => api.saveWelcome(...a),
+    fetchScheduledAnnouncements: (...a: unknown[]) => api.scheduled(...a),
+    scheduleWorldAnnouncement: (...a: unknown[]) => api.schedule(...a),
+    cancelScheduledAnnouncement: (...a: unknown[]) => api.cancel(...a),
   };
 });
 
 import { WorldAnnouncementsTab } from "../WorldAnnouncementsTab";
+import { toLocalInputValue } from "../announcements/ScheduledAnnouncements";
+
+const DAY = 24 * 60 * 60 * 1000;
 
 beforeEach(() => {
   flags.direct_messages = true;
@@ -62,6 +72,9 @@ beforeEach(() => {
   api.retract.mockReset().mockResolvedValue({ ok: true, removed: 11 });
   api.welcome.mockReset().mockResolvedValue(null);
   api.saveWelcome.mockReset().mockResolvedValue({ ok: true });
+  api.scheduled.mockReset().mockResolvedValue([]);
+  api.schedule.mockReset().mockResolvedValue({ ok: true, id: "s1" });
+  api.cancel.mockReset().mockResolvedValue({ ok: true });
 });
 
 describe("WorldAnnouncementsTab", () => {
@@ -111,6 +124,7 @@ describe("WorldAnnouncementsTab", () => {
 
     await waitFor(() => expect(api.send).toHaveBeenCalledWith(expect.anything(), {
       worldId: "w1", kind: "notification", title: "Rentrée", body: "La saison reprend.", roleIds: [], filters: {},
+      asWorld: false, bannerDays: null,
     }));
     expect(toast.success).toHaveBeenCalledWith("sent:4");
     // Le formulaire se vide et l'historique se relit.
@@ -172,7 +186,7 @@ describe("WorldAnnouncementsTab", () => {
     expect(screen.getByRole("button", { name: "send" })).toBeDisabled();
     await user.click(essai);
     await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", kind: "message", title: "", body: "Salut {username}",
+      worldId: "w1", kind: "message", title: "", body: "Salut {username}", asWorld: false,
     }));
     // Un message privé ne s'adresse pas à soi-même : l'essai part en notification.
     expect(toast.success).toHaveBeenCalledWith("testSentMessage");
@@ -355,5 +369,134 @@ describe("WorldAnnouncementsTab", () => {
     await user.click(within(within(details).getByTestId("announcement-retract-confirm")).getByRole("button", { name: "retract" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("forbidden"));
     expect(screen.getByTestId("announcement-details")).toBeInTheDocument();
+  });
+
+  // ── Migration 230 : bandeau, signature du monde, envois programmés ──
+
+  it("un bandeau : titre, durée, signature du monde, et sa propre confirmation", async () => {
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:4");
+    // Un message privé part toujours du compte de l'auteur.
+    expect(screen.queryByRole("switch", { name: "asWorld" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: /kindBanner/ }));
+    await waitFor(() => expect(api.count).toHaveBeenLastCalledWith(expect.anything(), "w1", "banner", [], {}));
+    const until = screen.getByRole("button", { name: "bannerUntilDismissed" });
+    expect(until).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "filterDays:7" }));
+    expect(screen.getByRole("button", { name: "filterDays:7" })).toHaveAttribute("aria-pressed", "true");
+    expect(until).toHaveAttribute("aria-pressed", "false");
+    await user.click(screen.getByRole("switch", { name: "asWorld" }));
+
+    await user.type(screen.getByRole("textbox", { name: "titleLabel" }), "Fête");
+    await user.type(screen.getByRole("textbox", { name: "body" }), "Ce soir.");
+    await user.click(screen.getByRole("button", { name: "preview" }));
+    expect(screen.getByTestId("announcement-preview-banner")).toHaveTextContent("Fête");
+
+    await user.click(screen.getByTestId("announcement-send"));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("confirmBanner:4")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "send" }));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      kind: "banner", title: "Fête", body: "Ce soir.", asWorld: true, bannerDays: 7,
+    })));
+  });
+
+  it("programme une annonce dans le futur, jamais dans le passé", async () => {
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:4");
+    const open = screen.getByTestId("announcement-schedule");
+    expect(open).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: "body" }), "Rendez-vous demain.");
+    await user.click(open);
+
+    const dialog = await screen.findByTestId("announcement-schedule-dialog");
+    const input = within(dialog).getByTestId("announcement-schedule-at");
+    const confirm = within(dialog).getByTestId("announcement-schedule-confirm");
+    // Par défaut : dans une heure environ.
+    expect(confirm).toBeEnabled();
+
+    fireEvent.change(input, { target: { value: toLocalInputValue(new Date(Date.now() - DAY)) } });
+    expect(confirm).toBeDisabled();
+    expect(within(dialog).getByTestId("announcement-schedule-summary")).toHaveTextContent("scheduleInvalid");
+    fireEvent.change(input, { target: { value: toLocalInputValue(new Date(Date.now() + 120 * DAY)) } });
+    expect(confirm).toBeDisabled();
+
+    const when = new Date(Date.now() + 2 * DAY);
+    when.setSeconds(0, 0);
+    fireEvent.change(input, { target: { value: toLocalInputValue(when) } });
+    await user.click(confirm);
+    await waitFor(() => expect(api.schedule).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      worldId: "w1", kind: "message", body: "Rendez-vous demain.", roleIds: [], scheduledFor: when,
+    })));
+    expect(toast.success).toHaveBeenCalledWith("scheduled");
+    await waitFor(() => expect(screen.queryByTestId("announcement-schedule-dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("");
+    expect(api.scheduled).toHaveBeenCalledTimes(2);
+  });
+
+  it("garde le dialogue ouvert si la base refuse la programmation", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    api.schedule.mockResolvedValue({ ok: false, reason: "schedule_limit" });
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:4");
+    await user.type(screen.getByRole("textbox", { name: "body" }), "x");
+    await user.click(screen.getByTestId("announcement-schedule"));
+    await user.click(within(await screen.findByTestId("announcement-schedule-dialog")).getByTestId("announcement-schedule-confirm"));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("errorScheduleLimit:20"));
+    expect(screen.getByTestId("announcement-schedule-dialog")).toBeInTheDocument();
+    // Le formulaire, masqué derrière le dialogue, garde le brouillon.
+    expect(screen.getByTestId("announcement-text")).toHaveValue("x");
+  });
+
+  it("liste les envois programmés : annuler l'un, lire l'échec d'un autre", async () => {
+    const soon = new Date(Date.now() + DAY).toISOString();
+    api.scheduled.mockResolvedValue([
+      { id: "s1", kind: "banner", title: "Fête", body: "x", role_ids: [], filters: {}, signed_as_world: true, banner_days: null, scheduled_for: soon, status: "pending", error: null, author: { username: "mojkkin" } },
+      { id: "s2", kind: "notification", title: "Rentrée", body: "y", role_ids: [], filters: {}, signed_as_world: false, banner_days: null, scheduled_for: soon, status: "failed", error: "announcement_rate_limit", author: null },
+    ]);
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    const rows = await screen.findAllByTestId("scheduled-row");
+    expect(rows).toHaveLength(2);
+    expect(within(rows[1]).getByTestId("scheduled-error")).toHaveTextContent("errorRateLimit:10");
+    expect(within(rows[1]).queryByTestId("scheduled-cancel")).not.toBeInTheDocument();
+
+    await user.click(within(rows[0]).getByTestId("scheduled-cancel"));
+    await waitFor(() => expect(api.cancel).toHaveBeenCalledWith(expect.anything(), "s1"));
+    expect(toast.success).toHaveBeenCalledWith("scheduleCancelled");
+    expect(api.scheduled).toHaveBeenCalledTimes(2);
+  });
+
+  it("retire un bandeau avec sa confirmation, et le reprend avec sa durée et sa signature", async () => {
+    const created = "2026-11-01T10:00:00Z";
+    const until = new Date(new Date(created).getTime() + 7 * DAY).toISOString();
+    api.fetch.mockResolvedValue([
+      { id: "b1", kind: "banner", title: "Fête", body: "x", role_ids: [], filters: {}, recipient_count: 12, created_at: created, retracted_at: null, signed_as_world: true, banner_until: until, author: null },
+    ]);
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    const row = await screen.findByTestId("announcement-row");
+    expect(within(row).getByTestId("announcement-as-world")).toHaveTextContent("signedAsWorld");
+
+    await user.click(within(row).getByRole("button"));
+    let details = await screen.findByTestId("announcement-details");
+    await user.click(within(details).getByTestId("announcement-retract"));
+    const confirm = within(details).getByTestId("announcement-retract-confirm");
+    expect(confirm).toHaveTextContent("retractBannerConfirm:12");
+    await user.click(within(confirm).getByRole("button", { name: "retract" }));
+    await waitFor(() => expect(api.retract).toHaveBeenCalledWith(expect.anything(), "b1"));
+    expect(toast.success).toHaveBeenCalledWith("retractedBannerToast:11");
+    await waitFor(() => expect(screen.queryByTestId("announcement-details")).not.toBeInTheDocument());
+
+    await user.click(within(await screen.findByTestId("announcement-row")).getByRole("button"));
+    details = await screen.findByTestId("announcement-details");
+    await user.click(within(details).getByRole("button", { name: "reuse" }));
+    expect(screen.getByRole("radio", { name: /kindBanner/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "filterDays:7" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("switch", { name: "asWorld" })).toBeChecked();
   });
 });

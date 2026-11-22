@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Bell, MessageSquare } from "lucide-react";
+import { Bell, MessageSquare, PanelTop } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -12,8 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { InteractiveCard } from "@/components/ui/interactive-card";
 import { SectionLabel } from "@/components/ui/section-label";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { BannerCard } from "@/components/worlds/home/WorldAnnouncementBanners";
 import {
   ANNOUNCEMENT_BODY_MAX,
+  ANNOUNCEMENT_KINDS,
+  ANNOUNCEMENT_SCHEDULE_LIMIT,
   ANNOUNCEMENT_DAILY_LIMIT,
   ANNOUNCEMENT_TEST_HOURLY_LIMIT,
   ANNOUNCEMENT_TITLE_MAX,
@@ -31,7 +34,7 @@ import { FIELD } from "../FeatureLayout";
  * soi-même et le libellé des refus de la base.
  */
 
-/** Titre requis pour une notification, texte requis partout. */
+/** Titre requis pour une notification ou un bandeau, texte requis partout. */
 export function isAnnouncementValid(kind: AnnouncementKind, title: string, body: string): boolean {
   const titleOk = kind === "message" || (title.trim().length > 0 && title.trim().length <= ANNOUNCEMENT_TITLE_MAX);
   return titleOk && body.trim().length > 0 && body.length <= ANNOUNCEMENT_BODY_MAX;
@@ -47,11 +50,15 @@ export function useAnnouncementErrorMessage() {
         ? t("errorRateLimit", { count: ANNOUNCEMENT_DAILY_LIMIT })
         : reason === "test_rate_limit"
           ? t("errorTestRateLimit", { count: ANNOUNCEMENT_TEST_HOURLY_LIMIT })
-          : reason === "forbidden"
-            ? tCommon("forbidden")
-            : reason === "dms_disabled"
-              ? t("errorDmsDisabled")
-              : t("errorSend"),
+          : reason === "schedule_limit"
+            ? t("errorScheduleLimit", { count: ANNOUNCEMENT_SCHEDULE_LIMIT })
+            : reason === "no_recipients"
+              ? t("errorNoRecipients")
+              : reason === "forbidden"
+                ? tCommon("forbidden")
+                : reason === "dms_disabled"
+                  ? t("errorDmsDisabled")
+                  : t("errorSend"),
     [t, tCommon],
   );
 }
@@ -63,9 +70,9 @@ export function useAnnouncementTest(worldId: string) {
   const supabase = React.useMemo(() => createClient(), []);
   const [testing, setTesting] = React.useState(false);
   const sendTest = React.useCallback(
-    async (kind: AnnouncementKind, title: string, body: string) => {
+    async (kind: AnnouncementKind, title: string, body: string, asWorld = false) => {
       setTesting(true);
-      const res = await sendAnnouncementTest(supabase, { worldId, kind, title, body });
+      const res = await sendAnnouncementTest(supabase, { worldId, kind, title, body, asWorld });
       setTesting(false);
       if (!res.ok) {
         toast.error(errorMessage(res.reason));
@@ -78,22 +85,30 @@ export function useAnnouncementTest(worldId: string) {
   return { testing, sendTest };
 }
 
-/** Message privé ou notification, en cartes-radios. */
+/** Message privé, notification ou bandeau, en cartes-radios. */
 export function KindPicker({
   kind,
   onChange,
   dmsEnabled,
+  kinds = ANNOUNCEMENT_KINDS,
   testIdPrefix = "announcement",
 }: {
   kind: AnnouncementKind;
   onChange: (kind: AnnouncementKind) => void;
   dmsEnabled: boolean;
+  /** Les modes proposés (la bienvenue n'a pas de bandeau). */
+  kinds?: readonly AnnouncementKind[];
   testIdPrefix?: string;
 }) {
   const t = useTranslations("worlds.announcements");
+  const shown = kinds.filter((k) => k !== "message" || dmsEnabled).length;
   return (
-    <div className="grid gap-3 @md:grid-cols-2" role="radiogroup" aria-label={t("kind")}>
-      {dmsEnabled && (
+    <div
+      className={cn("grid gap-3 @md:grid-cols-2", shown > 2 && "@2xl:grid-cols-3")}
+      role="radiogroup"
+      aria-label={t("kind")}
+    >
+      {dmsEnabled && kinds.includes("message") && (
         <KindCard
           active={kind === "message"}
           testId={`${testIdPrefix}-kind-message`}
@@ -111,6 +126,16 @@ export function KindPicker({
         title={t("kindNotification")}
         help={t("kindNotificationHelp")}
       />
+      {kinds.includes("banner") && (
+        <KindCard
+          active={kind === "banner"}
+          testId={`${testIdPrefix}-kind-banner`}
+          onClick={() => onChange("banner")}
+          icon={<PanelTop className="size-4" aria-hidden />}
+          title={t("kindBanner")}
+          help={t("kindBannerHelp")}
+        />
+      )}
     </div>
   );
 }
@@ -165,6 +190,7 @@ export function BodyEditor({
   preview,
   sample,
   worldName,
+  asWorld = false,
   bodyRef,
   testIdPrefix = "announcement",
 }: {
@@ -175,6 +201,8 @@ export function BodyEditor({
   preview: boolean;
   sample: { username: string; world: string };
   worldName: string;
+  /** Signée par le monde (notification, bandeau). */
+  asWorld?: boolean;
   bodyRef?: React.RefObject<HTMLTextAreaElement | null>;
   testIdPrefix?: string;
 }) {
@@ -223,6 +251,7 @@ export function BodyEditor({
           title={renderAnnouncement(title, sample)}
           body={renderAnnouncement(body, sample)}
           worldName={worldName}
+          signer={asWorld ? worldName : sample.username}
           testId={`${testIdPrefix}-preview`}
         />
       ) : (
@@ -248,15 +277,25 @@ export function AnnouncementPreview({
   title,
   body,
   worldName,
+  signer,
   testId = "announcement-preview",
 }: {
   kind: AnnouncementKind;
   title: string;
   body: string;
   worldName: string;
+  /** Le nom affiché comme expéditeur : le monde ou l'auteur. */
+  signer?: string;
   testId?: string;
 }) {
   const t = useTranslations("worlds.announcements");
+  if (kind === "banner") {
+    return (
+      <div className="rounded-md border border-border bg-background p-4" data-testid={testId}>
+        <BannerCard title={title || t("previewEmpty")} body={body} signer={signer ?? null} testId={`${testId}-banner`} />
+      </div>
+    );
+  }
   if (kind === "message") {
     return (
       <div className="rounded-md border border-border bg-background p-4" data-testid={testId}>
@@ -271,6 +310,7 @@ export function AnnouncementPreview({
       <SectionLabel as="div">{worldName}</SectionLabel>
       <p className="font-semibold">{title || t("previewEmpty")}</p>
       {body ? <MarkdownRenderer content={body} /> : null}
+      {signer ? <p className="text-xs-plus text-muted-foreground">{t("signedBy", { name: signer })}</p> : null}
     </div>
   );
 }

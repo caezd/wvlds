@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Onglet « Annonces » des réglages d'un monde (migration 227).
+// Onglet « Annonces » des réglages d'un monde (migrations 227 à 230).
 //
 // Le compte de test possède « Monde E2E » : il y a donc la permission
 // `members.announce`. Le test monte l'onglet en vrai (providers, next-intl,
@@ -67,6 +67,23 @@ test.describe("Annonces d'un monde", () => {
     // L'essai (migration 228) est prêt, sans être cliqué : il déposerait une
     // vraie notification chez le compte de test.
     await expect(page.getByTestId("announcement-test")).toBeEnabled();
+
+    // Bandeau et signature du monde (migration 230) : le titre reste, la
+    // durée et la signature apparaissent ; l'aperçu montre le bandeau.
+    await page.getByTestId("announcement-kind-banner").click();
+    await expect(page.getByTestId("announcement-kind-banner")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("announcement-preview-banner")).toContainText(`Essai ${MONDE}`);
+    await page.locator('[data-testid="banner-days"][data-days="7"]').click();
+    await expect(page.locator('[data-testid="banner-days"][data-days="7"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("announcements-tab").getByRole("switch").first()).toBeEnabled();
+
+    // La programmation propose une date à venir, sans être confirmée ici.
+    await page.getByTestId("announcement-schedule").click();
+    const programmer = page.getByTestId("announcement-schedule-dialog");
+    await expect(programmer).toBeVisible();
+    await expect(programmer.getByTestId("announcement-schedule-confirm")).toBeEnabled();
+    await page.keyboard.press("Escape");
+    await expect(programmer).toBeHidden();
 
     // L'historique se charge (vide ou non).
     await expect(page.getByTestId("announcements-empty").or(page.getByTestId("announcement-row").first())).toBeVisible({ timeout: 15_000 });

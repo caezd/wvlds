@@ -4,6 +4,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 const replace = vi.fn();
 const refresh = vi.fn();
 
+// Bandeaux d'annonce (migration 230) : lus en base, hors du sujet de ces tests.
+vi.mock("@/components/worlds/home/WorldAnnouncementBanners", () => ({
+  WorldAnnouncementBanners: () => null,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, refresh, push: vi.fn() }),
 }));

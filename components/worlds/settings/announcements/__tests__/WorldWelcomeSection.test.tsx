@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 vi.mock("next-intl", () => ({
   useTranslations: () => (k: string, v?: Record<string, unknown>) =>
     v && "count" in v ? `${k}:${v.count}` : v && "name" in v ? `${k}:${v.name}` : k,
+  useLocale: () => "fr",
 }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -64,7 +65,7 @@ describe("WorldWelcomeSection", () => {
     api.welcome.mockResolvedValue({ ...SAVED, kind: "message", title: null, body: "Salut {username}", sent_count: 0 });
     await user.click(save);
     await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", enabled: true, kind: "message", title: "", body: "Salut {username}",
+      worldId: "w1", enabled: true, kind: "message", title: "", body: "Salut {username}", asWorld: false,
     }));
     expect(toast.success).toHaveBeenCalledWith("saved");
     await waitFor(() => expect(screen.queryByTestId("welcome-editor")).not.toBeInTheDocument());
@@ -105,7 +106,7 @@ describe("WorldWelcomeSection", () => {
     await user.type(title, "Salut");
     await user.click(within(editor).getByTestId("welcome-test"));
     await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.",
+      worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.", asWorld: false,
     }));
     expect(toast.success).toHaveBeenCalledWith("testSent");
   });
@@ -129,5 +130,29 @@ describe("WorldWelcomeSection", () => {
     await waitFor(() => expect(toggle).toBeEnabled());
     await user.click(toggle);
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("errorDmsDisabled"));
+  });
+
+  it("pas de bandeau de bienvenue ; une notification peut être signée par le monde (migration 230)", async () => {
+    api.welcome.mockResolvedValue({ ...SAVED, signed_as_world: true });
+    const user = userEvent.setup();
+    renderSection();
+    // Le résumé nomme le monde comme expéditeur.
+    expect(await screen.findByTestId("welcome-summary")).toHaveTextContent("sender:Ygg");
+
+    await user.click(screen.getByTestId("welcome-edit"));
+    const editor = await screen.findByTestId("welcome-editor");
+    expect(within(editor).queryByTestId("welcome-kind-banner")).not.toBeInTheDocument();
+    const sign = within(editor).getByRole("switch", { name: "asWorld" });
+    expect(sign).toBeChecked();
+
+    // Un message privé part toujours du compte : plus de signature à choisir.
+    await user.click(within(editor).getByTestId("welcome-kind-message"));
+    expect(within(editor).queryByRole("switch", { name: "asWorld" })).not.toBeInTheDocument();
+    await user.click(within(editor).getByTestId("welcome-kind-notification"));
+
+    await user.click(within(editor).getByTestId("welcome-save"));
+    await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      kind: "notification", asWorld: true,
+    })));
   });
 });

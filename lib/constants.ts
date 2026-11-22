@@ -43,6 +43,7 @@ export const TABLE = {
   CHALLENGE_ATTEMPTS: "challenge_attempts",
   WORLD_ANNOUNCEMENTS: "world_announcements",
   WORLD_WELCOME_MESSAGES: "world_welcome_messages",
+  WORLD_SCHEDULED_ANNOUNCEMENTS: "world_scheduled_announcements",
 } as const;
 
 // --- Supabase RPC names -------------------------------------------------------
@@ -85,6 +86,10 @@ export const RPC = {
   WORLD_ANNOUNCEMENT_READ_COUNTS: "world_announcement_read_counts",
   RETRACT_WORLD_ANNOUNCEMENT: "retract_world_announcement",
   SAVE_WORLD_WELCOME: "save_world_welcome",
+  SCHEDULE_WORLD_ANNOUNCEMENT: "schedule_world_announcement",
+  CANCEL_SCHEDULED_WORLD_ANNOUNCEMENT: "cancel_scheduled_world_announcement",
+  GET_WORLD_BANNERS: "get_world_banners",
+  DISMISS_WORLD_BANNER: "dismiss_world_banner",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   announcementErrorReason,
+  cancelScheduledAnnouncement,
+  dismissWorldBanner,
+  fetchScheduledAnnouncements,
+  fetchWorldBanners,
+  scheduleWorldAnnouncement,
   compactFilters,
   fetchWorldWelcome,
   hasFilters,
@@ -34,6 +39,12 @@ describe("announcementErrorReason", () => {
     expect(announcementErrorReason({ message: "Permission refusée.", code: "42501" })).toBe("forbidden");
     expect(announcementErrorReason({ message: "boom" })).toBe("error");
   });
+
+  it("lit aussi l'erreur gardée par un envoi programmé, sans code", () => {
+    expect(announcementErrorReason({ message: "announcement_schedule_limit" })).toBe("schedule_limit");
+    expect(announcementErrorReason({ message: "announcement_no_recipients" })).toBe("no_recipients");
+    expect(announcementErrorReason({ message: "Permission refusée." })).toBe("forbidden");
+  });
 });
 
 describe("sendWorldAnnouncement", () => {
@@ -45,6 +56,7 @@ describe("sendWorldAnnouncement", () => {
     expect(res).toEqual({ ok: true, recipients: 3 });
     expect(rpc).toHaveBeenCalledWith("send_world_announcement", {
       p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou", p_role_ids: ["r1"], p_filters: {},
+      p_as_world: false, p_banner_days: null,
     });
   });
 
@@ -95,7 +107,7 @@ describe("sendAnnouncementTest", () => {
     expect(await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "message", title: "ignoré", body: " Coucou " }))
       .toEqual({ ok: true });
     expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", {
-      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou",
+      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou", p_as_world: false,
     });
   });
 
@@ -183,7 +195,86 @@ describe("message de bienvenue", () => {
     expect(await saveWorldWelcome({ rpc } as never, { worldId: "w1", enabled: true, kind: "message", title: "x", body: " Salut " }))
       .toEqual({ ok: true });
     expect(rpc).toHaveBeenCalledWith("save_world_welcome", {
-      p_world_id: "w1", p_enabled: true, p_kind: "message", p_title: null, p_body: "Salut",
+      p_world_id: "w1", p_enabled: true, p_kind: "message", p_title: null, p_body: "Salut", p_as_world: false,
     });
+  });
+});
+
+describe("bandeau et signature (migration 230)", () => {
+  it("un bandeau porte un titre, sa durée et la signature du monde", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { id: "a1", recipients: 3 }, error: null });
+    await sendWorldAnnouncement({ rpc } as never, {
+      worldId: "w1", kind: "banner", title: " Fête ", body: "Ce soir", roleIds: [], asWorld: true, bannerDays: 7,
+    });
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_kind: "banner", p_title: "Fête", p_as_world: true, p_banner_days: 7 });
+  });
+
+  it("un message privé n'est jamais signé par le monde, ni borné dans le temps", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { id: "a1", recipients: 3 }, error: null });
+    await sendWorldAnnouncement({ rpc } as never, {
+      worldId: "w1", kind: "message", title: "", body: "Salut", roleIds: [], asWorld: true, bannerDays: 7,
+    });
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_as_world: false, p_banner_days: null });
+  });
+
+  it("lit les bandeaux d'un membre et en ferme un", async () => {
+    const banners = [{ id: "b1", title: "Fête", body: "x", created_at: "2026-11-22T10:00:00Z", signer: "Ygg", signed_as_world: true }];
+    const rpc = vi.fn().mockResolvedValue({ data: banners, error: null });
+    expect(await fetchWorldBanners({ rpc } as never, "w1")).toEqual(banners);
+    expect(rpc).toHaveBeenCalledWith("get_world_banners", { p_world_id: "w1" });
+
+    rpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+    expect(await fetchWorldBanners({ rpc } as never, "w1")).toEqual([]);
+
+    rpc.mockResolvedValue({ data: null, error: null });
+    expect(await dismissWorldBanner({ rpc } as never, "b1")).toBe(true);
+    expect(rpc).toHaveBeenLastCalledWith("dismiss_world_banner", { p_announcement_id: "b1" });
+  });
+});
+
+describe("envois programmés (migration 230)", () => {
+  it("programme avec la date en ISO et les mêmes champs qu'un envoi", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: "s1", error: null });
+    const when = new Date("2026-12-01T18:30:00Z");
+    expect(await scheduleWorldAnnouncement({ rpc } as never, {
+      worldId: "w1", kind: "notification", title: "Rentrée", body: " Texte ", roleIds: ["r1"],
+      filters: { inactive_days: 30 }, asWorld: true, scheduledFor: when,
+    })).toEqual({ ok: true, id: "s1" });
+    expect(rpc).toHaveBeenCalledWith("schedule_world_announcement", {
+      p_world_id: "w1", p_kind: "notification", p_title: "Rentrée", p_body: "Texte", p_role_ids: ["r1"],
+      p_filters: { inactive_days: 30 }, p_as_world: true, p_banner_days: null, p_scheduled_for: "2026-12-01T18:30:00.000Z",
+    });
+  });
+
+  it("nomme le plafond des envois en attente", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "announcement_schedule_limit", code: "P0001" } });
+    expect(await scheduleWorldAnnouncement({ rpc } as never, {
+      worldId: "w1", kind: "message", title: "", body: "x", roleIds: [], scheduledFor: new Date(),
+    })).toEqual({ ok: false, reason: "schedule_limit" });
+  });
+
+  it("lit les envois en attente ou en échec, du plus proche au plus lointain", async () => {
+    const chain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [{ id: "s1" }], error: null }),
+    };
+    const from = vi.fn().mockReturnValue(chain);
+    expect(await fetchScheduledAnnouncements({ from } as never, "w1")).toEqual([{ id: "s1" }]);
+    expect(from).toHaveBeenCalledWith("world_scheduled_announcements");
+    expect(chain.in).toHaveBeenCalledWith("status", ["pending", "failed"]);
+    expect(chain.order).toHaveBeenCalledWith("scheduled_for", { ascending: true });
+  });
+
+  it("annule un envoi, ou nomme le refus", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    expect(await cancelScheduledAnnouncement({ rpc } as never, "s1")).toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith("cancel_scheduled_world_announcement", { p_id: "s1" });
+    rpc.mockResolvedValue({ data: null, error: { message: "announcement_invalid", code: "22023" } });
+    expect(await cancelScheduledAnnouncement({ rpc } as never, "s1")).toEqual({ ok: false, reason: "invalid" });
   });
 });

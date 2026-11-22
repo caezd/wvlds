@@ -25,12 +25,16 @@ import {
   type WorldWelcome,
 } from "@/lib/worldAnnouncements";
 import { FIELD, SettingsSection, StatusPill, ToggleItem, ToggleList } from "../FeatureLayout";
+
+/** Pas de bandeau de bienvenue : l'accueil d'un nouveau membre est déjà lu. */
+const WELCOME_KINDS: readonly AnnouncementKind[] = ["message", "notification"];
 import { BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage, useAnnouncementTest } from "./AnnouncementFields";
 
 /**
  * Message de bienvenue (migration 229) : un modèle envoyé à chaque nouveau
  * membre, en message privé ou en notification, depuis le compte de la
- * dernière personne à l'avoir enregistré.
+ * dernière personne à l'avoir enregistré, ou au nom du monde pour une
+ * notification (migration 230).
  */
 export function WorldWelcomeSection({
   worldId,
@@ -78,6 +82,7 @@ export function WorldWelcomeSection({
       kind: welcome.kind,
       title: welcome.title ?? "",
       body: welcome.body,
+      asWorld: welcome.signed_as_world,
     });
     setToggling(false);
     if (!res.ok) {
@@ -118,7 +123,9 @@ export function WorldWelcomeSection({
               </Button>
             </div>
             <p className="text-xs-plus text-muted-foreground">
-              {t("sender", { name: welcome.author?.username ?? tA("unknownAuthor") })}
+              {welcome.signed_as_world
+                ? t("sender", { name: worldName })
+                : t("sender", { name: welcome.author?.username ?? tA("unknownAuthor") })}
               {" · "}
               {t("sentCount", { count: welcome.sent_count })}
             </p>
@@ -178,6 +185,7 @@ function WelcomeEditor({
   const [kind, setKind] = React.useState<AnnouncementKind>(defaultKind);
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
+  const [asWorld, setAsWorld] = React.useState(false);
   const [preview, setPreview] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
@@ -189,6 +197,7 @@ function WelcomeEditor({
       setKind(initial ? (initial.kind === "message" && !dmsEnabled ? "notification" : initial.kind) : defaultKind);
       setTitle(initial?.title ?? "");
       setBody(initial?.body ?? "");
+      setAsWorld(!!initial?.signed_as_world);
       setPreview(false);
     }
   }
@@ -197,7 +206,7 @@ function WelcomeEditor({
 
   async function save() {
     setSaving(true);
-    const res = await saveWorldWelcome(supabase, { worldId, enabled: true, kind, title, body });
+    const res = await saveWorldWelcome(supabase, { worldId, enabled: true, kind, title, body, asWorld });
     setSaving(false);
     if (!res.ok) {
       toast.error(errorMessage(res.reason));
@@ -217,8 +226,13 @@ function WelcomeEditor({
         <div className="@container max-h-[65vh] space-y-4 overflow-y-auto">
           <div className="space-y-2">
             <SectionLabel as="div">{tA("kind")}</SectionLabel>
-            <KindPicker kind={kind} onChange={setKind} dmsEnabled={dmsEnabled} testIdPrefix="welcome" />
+            <KindPicker kind={kind} onChange={setKind} dmsEnabled={dmsEnabled} kinds={WELCOME_KINDS} testIdPrefix="welcome" />
           </div>
+          {kind === "notification" && (
+            <ToggleList>
+              <ToggleItem title={tA("asWorld")} help={tA("asWorldHelp")} checked={asWorld} onCheckedChange={setAsWorld} />
+            </ToggleList>
+          )}
           {kind === "notification" && (
             <div className="space-y-2">
               <SectionLabel as="div">{tA("titleLabel")}</SectionLabel>
@@ -242,6 +256,7 @@ function WelcomeEditor({
               preview={preview}
               sample={sample}
               worldName={worldName}
+              asWorld={kind === "notification" && asWorld}
               testIdPrefix="welcome"
             />
           </div>
@@ -251,7 +266,7 @@ function WelcomeEditor({
             type="button"
             variant="outline"
             disabled={!valid || testing}
-            onClick={() => void sendTest(kind, title, body)}
+            onClick={() => void sendTest(kind, title, body, kind === "notification" && asWorld)}
             title={kind === "message" ? tA("sendTestMessageHelp") : tA("sendTestHelp")}
             data-testid="welcome-test"
           >
