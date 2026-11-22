@@ -320,7 +320,9 @@
     "announcement": {
       "fallbackTitle": "Anuncio",
       "from": "De {actor}",
-      "openWorld": "Abrir el mundo"
+      "openWorld": "Abrir el mundo",
+      "test": "Prueba",
+      "testMessageTitle": "Prueba de un mensaje privado"
     }
   },
   "dms": {
@@ -1143,7 +1145,17 @@
       "sentToday": "{count} de {limit} hoy",
       "historyEmpty": "Todavía no se ha enviado ningún anuncio.",
       "by": "por {name}",
-      "unknownAuthor": "un antiguo miembro"
+      "unknownAuthor": "un antiguo miembro",
+      "sendTest": "Enviarme una prueba",
+      "sendTestHelp": "El anuncio llega a sus notificaciones, tal como lo recibirán los miembros. Las pruebas no cuentan en el límite del mundo.",
+      "sendTestMessageHelp": "No puede enviarse un mensaje privado a sí mismo: la prueba llega a sus notificaciones. Las pruebas no cuentan en el límite del mundo.",
+      "testSent": "Prueba enviada a sus notificaciones.",
+      "testSentMessage": "Prueba enviada a sus notificaciones: no puede enviarse un mensaje privado a sí mismo.",
+      "errorTestRateLimit": "Demasiadas pruebas: {count} por hora como máximo.",
+      "historyHelp": "Abra un anuncio para releerlo o reutilizarlo. Una lectura es una notificación abierta, o una conversación abierta desde el envío.",
+      "readCount": "{count, plural, =0 {Ninguna lectura} one {# lectura} other {# lecturas}} de {total}",
+      "reuse": "Reutilizar",
+      "reused": "Anuncio cargado en el formulario."
     }
   },
   "auth": {

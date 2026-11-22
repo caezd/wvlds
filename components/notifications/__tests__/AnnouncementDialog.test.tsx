@@ -32,6 +32,24 @@ describe("AnnouncementDialog", () => {
     expect(screen.getByTestId("md")).toHaveTextContent("La **saison** reprend.");
   });
 
+  it("marque un essai, et titre l'essai d'un message privé", () => {
+    render(
+      <AnnouncementDialog
+        notif={{ ...notif, content: null, metadata: { ...notif.metadata, announcement_id: undefined, test: true, kind: "message" } }}
+        worldName={null}
+        open
+        onOpenChange={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("announcement-test-badge")).toHaveTextContent("announcement.test");
+    expect(screen.getByRole("dialog", { name: "announcement.testMessageTitle" })).toBeInTheDocument();
+  });
+
+  it("une vraie annonce n'est pas marquée comme essai", () => {
+    render(<AnnouncementDialog notif={notif} worldName={null} open onOpenChange={() => {}} />);
+    expect(screen.queryByTestId("announcement-test-badge")).not.toBeInTheDocument();
+  });
+
   it("le lien vers le monde ferme le dialogue et le panneau", async () => {
     const onOpenChange = vi.fn();
     const onNavigate = vi.fn();

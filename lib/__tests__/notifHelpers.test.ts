@@ -58,6 +58,12 @@ describe("notifText — annonce d'un monde", () => {
     notifText(makeNotif({ type: "world_announcement", world_id: "w1", content: null }), t);
     expect(calls[0].values?.title).toBe("announcement.fallbackTitle");
   });
+
+  it("nomme l'essai d'un message privé, qui n'a pas de titre", () => {
+    calls.length = 0;
+    notifText(makeNotif({ type: "world_announcement", world_id: "w1", content: null, metadata: { test: true, kind: "message" } }), t);
+    expect(calls[0].values?.title).toBe("announcement.testMessageTitle");
+  });
 });
 
 describe("compactTime", () => {

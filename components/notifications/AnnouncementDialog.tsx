@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { SectionLabel } from "@/components/ui/section-label";
+import { Badge } from "@/components/ui/badge";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import DateDisplay from "@/components/date-display";
 import type { AppNotification } from "@/types/db";
@@ -38,18 +39,28 @@ export function AnnouncementDialog({
     const t = useTranslations("notifications");
     const world = worldName ?? notif.metadata?.world_name ?? null;
     const body = notif.metadata?.body ?? "";
+    // Essai que l'auteur s'est envoyé (migration 228) ; un message privé
+    // essayé n'a pas de titre.
+    const isTest = notif.metadata?.test === true;
+    const title = notif.content
+        ?? (isTest && notif.metadata?.kind === "message" ? t("announcement.testMessageTitle") : t("announcement.fallbackTitle"));
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg" data-testid="announcement-dialog">
                 <DialogHeader>
-                    {world && (
-                        <SectionLabel as="div" className="flex items-center gap-1.5">
-                            <Megaphone className="size-3.5" aria-hidden />
-                            <span className="truncate">{world}</span>
-                        </SectionLabel>
+                    {(world || isTest) && (
+                        <div className="flex items-center gap-2">
+                            {world && (
+                                <SectionLabel as="div" className="flex min-w-0 items-center gap-1.5">
+                                    <Megaphone className="size-3.5" aria-hidden />
+                                    <span className="truncate">{world}</span>
+                                </SectionLabel>
+                            )}
+                            {isTest && <Badge data-testid="announcement-test-badge">{t("announcement.test")}</Badge>}
+                        </div>
                     )}
-                    <DialogTitle>{notif.content ?? t("announcement.fallbackTitle")}</DialogTitle>
+                    <DialogTitle>{title}</DialogTitle>
                     <DialogDescription className="flex flex-wrap items-center gap-x-1.5">
                         <span>{t("announcement.from", { actor: notif.actor_name ?? t("text.someone") })}</span>
                         <span>·</span>

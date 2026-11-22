@@ -57,6 +57,9 @@ test.describe("Annonces d'un monde", () => {
     await expect(apercu).toContainText(`Essai ${MONDE}`);
     await expect(apercu).toContainText(`bienvenue dans ${MONDE}`);
     await expect(apercu).not.toContainText("{username}");
+    // L'essai (migration 228) est prêt, sans être cliqué : il déposerait une
+    // vraie notification chez le compte de test.
+    await expect(page.getByTestId("announcement-test")).toBeEnabled();
 
     // L'historique se charge (vide ou non).
     await expect(page.getByTestId("announcements-empty").or(page.getByTestId("announcement-row").first())).toBeVisible({ timeout: 15_000 });

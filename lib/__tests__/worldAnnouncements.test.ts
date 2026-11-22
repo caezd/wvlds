@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   announcementErrorReason,
   countAnnouncementRecipients,
+  fetchAnnouncementReadCounts,
   fetchWorldAnnouncements,
   renderAnnouncement,
+  sendAnnouncementTest,
   sendWorldAnnouncement,
 } from "@/lib/worldAnnouncements";
 
@@ -21,6 +23,7 @@ describe("renderAnnouncement", () => {
 describe("announcementErrorReason", () => {
   it("reconnaît les refus nommés de la RPC", () => {
     expect(announcementErrorReason({ message: "announcement_rate_limit" })).toBe("rate_limit");
+    expect(announcementErrorReason({ message: "announcement_test_rate_limit" })).toBe("test_rate_limit");
     expect(announcementErrorReason({ message: "announcement_dms_disabled" })).toBe("dms_disabled");
     expect(announcementErrorReason({ message: "announcement_invalid" })).toBe("invalid");
     expect(announcementErrorReason({ message: "Permission refusée.", code: "42501" })).toBe("forbidden");
@@ -78,5 +81,40 @@ describe("fetchWorldAnnouncements", () => {
     expect(from).toHaveBeenCalledWith("world_announcements");
     expect(chain.eq).toHaveBeenCalledWith("world_id", "w1");
     expect(chain.order).toHaveBeenCalledWith("created_at", { ascending: false });
+  });
+});
+
+describe("sendAnnouncementTest", () => {
+  it("appelle la RPC d'essai, sans titre pour un message privé", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    expect(await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "message", title: "ignoré", body: " Coucou " }))
+      .toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", {
+      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou",
+    });
+  });
+
+  it("nomme le plafond des essais", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "announcement_test_rate_limit", code: "P0001" } });
+    expect(await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "notification", title: "t", body: "b" }))
+      .toEqual({ ok: false, reason: "test_rate_limit" });
+  });
+});
+
+describe("fetchAnnouncementReadCounts", () => {
+  it("rend les lectures par annonce", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: [{ announcement_id: "a1", read_count: 4 }], error: null });
+    const reads = await fetchAnnouncementReadCounts({ rpc } as never, "w1", ["a1", "a2"]);
+    expect(rpc).toHaveBeenCalledWith("world_announcement_read_counts", { p_world_id: "w1", p_ids: ["a1", "a2"] });
+    expect(reads.get("a1")).toBe(4);
+    expect(reads.has("a2")).toBe(false);
+  });
+
+  it("n'appelle pas la base sans annonce, et rend une carte vide en cas d'échec", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "boom" } });
+    expect((await fetchAnnouncementReadCounts({ rpc } as never, "w1", [])).size).toBe(0);
+    expect(rpc).not.toHaveBeenCalled();
+    expect((await fetchAnnouncementReadCounts({ rpc } as never, "w1", ["a1"])).size).toBe(0);
   });
 });

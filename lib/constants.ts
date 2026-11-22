@@ -80,6 +80,8 @@ export const RPC = {
   GET_WORLD_PERSONA_ACTIVITY: "get_world_persona_activity",
   SEND_WORLD_ANNOUNCEMENT: "send_world_announcement",
   COUNT_WORLD_ANNOUNCEMENT_RECIPIENTS: "count_world_announcement_recipients",
+  SEND_WORLD_ANNOUNCEMENT_TEST: "send_world_announcement_test",
+  WORLD_ANNOUNCEMENT_READ_COUNTS: "world_announcement_read_counts",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

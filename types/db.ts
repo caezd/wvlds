@@ -293,6 +293,9 @@ export type NotificationMeta = {
   announcement_id?: string;
   body?: string;
   world_name?: string | null;
+  /** Essai que l'auteur s'est envoyé (migration 228), et le mode essayé. */
+  test?: boolean;
+  kind?: "message" | "notification";
 };
 
 export type AppNotification = {

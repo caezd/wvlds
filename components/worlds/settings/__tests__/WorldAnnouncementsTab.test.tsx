@@ -27,6 +27,8 @@ const api = vi.hoisted(() => ({
   send: vi.fn(),
   count: vi.fn(),
   fetch: vi.fn(),
+  test: vi.fn(),
+  reads: vi.fn(),
 }));
 vi.mock("@/lib/worldAnnouncements", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/worldAnnouncements")>();
@@ -35,6 +37,8 @@ vi.mock("@/lib/worldAnnouncements", async (importOriginal) => {
     sendWorldAnnouncement: (...a: unknown[]) => api.send(...a),
     countAnnouncementRecipients: (...a: unknown[]) => api.count(...a),
     fetchWorldAnnouncements: (...a: unknown[]) => api.fetch(...a),
+    sendAnnouncementTest: (...a: unknown[]) => api.test(...a),
+    fetchAnnouncementReadCounts: (...a: unknown[]) => api.reads(...a),
   };
 });
 
@@ -47,6 +51,8 @@ beforeEach(() => {
   api.send.mockReset().mockResolvedValue({ ok: true, recipients: 4 });
   api.count.mockReset().mockResolvedValue(4);
   api.fetch.mockReset().mockResolvedValue([]);
+  api.test.mockReset().mockResolvedValue({ ok: true });
+  api.reads.mockReset().mockResolvedValue(new Map());
 });
 
 describe("WorldAnnouncementsTab", () => {
@@ -141,6 +147,84 @@ describe("WorldAnnouncementsTab", () => {
     await user.click(screen.getByRole("button", { name: "send" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "send" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("errorRateLimit:10"));
+    expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("Coucou");
+  });
+
+
+  it("envoie un essai à l'auteur, sans destinataire requis", async () => {
+    api.count.mockResolvedValue(0);
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:0");
+    const essai = screen.getByRole("button", { name: "sendTest" });
+    expect(essai).toBeDisabled();
+
+    await user.type(screen.getByRole("textbox", { name: "body" }), "Salut {{username}");
+    expect(screen.getByRole("button", { name: "send" })).toBeDisabled();
+    await user.click(essai);
+    await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), {
+      worldId: "w1", kind: "message", title: "", body: "Salut {username}",
+    }));
+    // Un message privé ne s'adresse pas à soi-même : l'essai part en notification.
+    expect(toast.success).toHaveBeenCalledWith("testSentMessage");
+    expect(api.send).not.toHaveBeenCalled();
+    // Le formulaire reste tel quel.
+    expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("Salut {username}");
+  });
+
+  it("nomme le plafond des essais", async () => {
+    api.test.mockResolvedValue({ ok: false, reason: "test_rate_limit" });
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:4");
+    await user.type(screen.getByRole("textbox", { name: "body" }), "x");
+    await user.click(screen.getByRole("button", { name: "sendTest" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("errorTestRateLimit:10"));
+  });
+
+  it("montre les lectures, ouvre une annonce et la reprend dans le formulaire", async () => {
+    api.fetch.mockResolvedValue([
+      {
+        id: "a1", kind: "notification", title: "Rentrée {world}", body: "La **saison** reprend, {username}.",
+        role_ids: ["r-mj", "r-supprime"], recipient_count: 12, created_at: "2026-11-01T10:00:00Z", author: { username: "mojkkin" },
+      },
+    ]);
+    api.reads.mockResolvedValue(new Map([["a1", 3]]));
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+
+    const row = await screen.findByTestId("announcement-row");
+    await waitFor(() => expect(within(row).getByTestId("announcement-reads")).toHaveTextContent("readCount:3"));
+    expect(api.reads).toHaveBeenCalledWith(expect.anything(), "w1", ["a1"]);
+
+    await user.click(within(row).getByRole("button"));
+    const details = await screen.findByTestId("announcement-details");
+    expect(within(details).getByRole("heading", { name: "Rentrée {world}" })).toBeInTheDocument();
+    expect(within(details).getByText("La **saison** reprend, {username}.")).toBeInTheDocument();
+
+    await user.click(within(details).getByRole("button", { name: "reuse" }));
+    await waitFor(() => expect(screen.queryByTestId("announcement-details")).not.toBeInTheDocument());
+    expect(toast.success).toHaveBeenCalledWith("reused");
+    expect(screen.getByRole("radio", { name: /kindNotification/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("textbox", { name: "titleLabel" })).toHaveValue("Rentrée {world}");
+    expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("La **saison** reprend, {username}.");
+    // Le rôle supprimé depuis tombe ; celui qui reste est repris.
+    expect(screen.getByRole("button", { name: "MJ" })).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(api.count).toHaveBeenLastCalledWith(expect.anything(), "w1", "notification", ["r-mj"]));
+  });
+
+  it("un message privé repris sans messages privés devient une notification", async () => {
+    flags.direct_messages = false;
+    api.fetch.mockResolvedValue([
+      { id: "a1", kind: "message", title: null, body: "Coucou", role_ids: [], recipient_count: 2, created_at: "2026-11-01T10:00:00Z", author: null },
+    ]);
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    const row = await screen.findByTestId("announcement-row");
+    expect(within(row).getByTestId("announcement-reads")).toHaveTextContent("recipientCount:2");
+    await user.click(within(row).getByRole("button"));
+    await user.click(within(await screen.findByTestId("announcement-details")).getByRole("button", { name: "reuse" }));
+    expect(screen.getByRole("radio", { name: /kindNotification/ })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("Coucou");
   });
 });
