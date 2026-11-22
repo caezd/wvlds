@@ -447,7 +447,9 @@ describe("DmsProvider — pagination de la liste de conversations", () => {
         expect(screen.getByTestId("has-more-convs").textContent).toBe("no");
 
         const call = mock.rpc.mock.calls.find(([name]) => name === "get_dm_conversations");
-        expect(call?.[1]).toMatchObject({ p_cursor: FIRST_PAGE_CONVS[19]!.last_message_at });
+        // Date et identifiant (migration 231) : les conversations à égalité
+        // de date avec la dernière ligne ne se perdent pas.
+        expect(call?.[1]).toMatchObject({ p_cursor: FIRST_PAGE_CONVS[19]!.last_message_at, p_cursor_id: FIRST_PAGE_CONVS[19]!.id });
     });
 });
 

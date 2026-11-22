@@ -48,12 +48,15 @@ function applyNewMessage(convs: DmConversation[], msg: DmMessage): DmConversatio
   );
 }
 
-// Curseur de pagination attendu par get_dm_conversations(p_cursor, …) : le
-// même calcul que sortByLastMessage() côté client, appliqué à la dernière
-// ligne renvoyée par le serveur.
-function lastConvCursor(rows: DmConversation[]): string | null {
+// Curseur de pagination attendu par get_dm_conversations(p_cursor, …,
+// p_cursor_id) : la date du dernier message, départagée par l'identifiant
+// (migration 231). Une annonce en message privé crée des dizaines de
+// conversations à la même date : sans l'identifiant, celles à égalité avec
+// la dernière ligne d'une page n'apparaissaient jamais.
+type ConvCursor = { at: string; id: string };
+function lastConvCursor(rows: DmConversation[]): ConvCursor | null {
   const last = rows[rows.length - 1];
-  return last ? (last.last_message_at ?? last.created_at) : null;
+  return last ? { at: last.last_message_at ?? last.created_at, id: last.id } : null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -171,7 +174,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
   const [commonWorldsCount, setCommonWorldsCount] = useState<number | null>(null);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(false);
-  const convCursorRef = useRef<string | null>(null);
+  const convCursorRef = useRef<ConvCursor | null>(null);
   const isLoadingMoreConvsRef = useRef(false);
 
   // ── Indicateur « en train d'écrire » (broadcast sur le canal de messages
@@ -273,7 +276,8 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     isLoadingMoreConvsRef.current = true;
 
     const { data } = await supabase.rpc(RPC.GET_DM_CONVERSATIONS, {
-      p_cursor: cursor,
+      p_cursor: cursor.at,
+      p_cursor_id: cursor.id,
       p_limit: DM_CONVERSATIONS_PAGE,
     });
 
