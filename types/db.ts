@@ -251,7 +251,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention' | 'persona_submitted' | 'persona_reviewed' | 'sequel_request';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention' | 'persona_submitted' | 'persona_reviewed' | 'sequel_request' | 'world_announcement';
 
 export type WorldInvitation = {
   id: string;
@@ -289,6 +289,10 @@ export type NotificationMeta = {
   sequel_id?: string;
   chatroom_title?: string | null;
   previous_title?: string | null;
+  /** Annonce de l'équipe d'un monde (migration 227) : texte complet, variables remplacées. */
+  announcement_id?: string;
+  body?: string;
+  world_name?: string | null;
 };
 
 export type AppNotification = {

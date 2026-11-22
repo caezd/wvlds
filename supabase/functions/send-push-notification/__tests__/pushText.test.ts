@@ -5,7 +5,7 @@ const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
   "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request",
   "role_mention", "everyone_mention", "persona_submitted", "persona_reviewed",
-  "sequel_request",
+  "sequel_request", "world_announcement",
 ];
 
 const base: PushNotifPayload = {
@@ -28,6 +28,18 @@ describe("buildPushText", () => {
     expect(buildPushText({ ...base, type: "sequel_request", metadata: meta }, "en").body)
       .toBe("Alice proposes “La frontière” as a sequel to “Le départ”");
     expect(pushHref({ chat_id: null, world_id: "w1", type: "sequel_request", metadata: meta })).toBe("/w/w1?view=timeline");
+  });
+
+  it("une annonce porte le monde en titre, puis son titre et le début du texte", () => {
+    const meta = { announcement_id: "a1", world_name: "Cuntissimo", body: "Bonjour\n\nLa saison   reprend lundi." };
+    expect(buildPushText({ ...base, type: "world_announcement", chat_id: null, world_id: "w1", content: "Rentrée", metadata: meta }, "fr"))
+      .toEqual({ title: "Cuntissimo", body: "Rentrée — Bonjour La saison reprend lundi." });
+    const long = buildPushText({ ...base, type: "world_announcement", content: "T", metadata: { body: "x".repeat(500) } }, "en");
+    expect(long.title).toBe("WVLDS");
+    expect(long.body.length).toBeLessThanOrEqual(150);
+    expect(long.body.endsWith("…")).toBe(true);
+    expect(buildPushText({ ...base, type: "world_announcement", content: null, metadata: null }, "es").body).toBe("Nuevo anuncio");
+    expect(pushHref({ chat_id: null, world_id: "w1", type: "world_announcement" })).toBe("/w/w1");
   });
 
   it("nomme le rôle mentionné, et distingue @ici de @tous", () => {

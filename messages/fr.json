@@ -270,7 +270,8 @@
       "everyone_mention": "@tous et @ici",
       "persona_submitted": "Fiches soumises à validation",
       "persona_reviewed": "Relecture de mes fiches",
-      "sequel_request": "Demandes de suite entre salons"
+      "sequel_request": "Demandes de suite entre salons",
+      "world_announcement": "Annonces des mondes"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -305,7 +306,8 @@
       "personaApproved": "<b>{actor}</b> a validé la fiche de <b>{persona}</b>",
       "personaSentBack": "<b>{actor}</b> a renvoyé la fiche de <b>{persona}</b> en brouillon",
       "personaFallback": "un persona",
-      "sequelRequest": "<b>{actor}</b> propose que <b>{chatroom}</b> fasse suite à <b>{previous}</b>"
+      "sequelRequest": "<b>{actor}</b> propose que <b>{chatroom}</b> fasse suite à <b>{previous}</b>",
+      "worldAnnouncement": "<b>{actor}</b> a publié une annonce : <b>{title}</b>"
     },
     "sequelRequest": {
       "accept": "Accepter",
@@ -314,6 +316,11 @@
       "declined": "Suite refusée.",
       "expired": "Cette demande n'est plus valide.",
       "failed": "Impossible de répondre à cette demande."
+    },
+    "announcement": {
+      "fallbackTitle": "Annonce",
+      "from": "De {actor}",
+      "openWorld": "Ouvrir le monde"
     }
   },
   "dms": {
@@ -845,6 +852,10 @@
           "label": "Gérer les membres",
           "help": "Inviter, attribuer des rôles et retirer les membres situés sous son rang."
         },
+        "members_announce": {
+          "label": "Envoyer des annonces",
+          "help": "Écrire à tous les membres, ou aux porteurs de certains rôles, par message privé ou par notification."
+        },
         "messages_post": {
           "label": "Écrire dans les salons",
           "help": "Poster des messages et réagir."
@@ -955,6 +966,7 @@
       "help": "Une nouvelle fiche naît en brouillon ; une fois complète, son joueur la soumet et un membre ayant « Valider les fiches » la valide ou la renvoie. Seules les fiches validées jouent."
     },
     "tabReports": "Signalements",
+    "tabAnnouncements": "Annonces",
     "reportsIntro": "Messages signalés par les membres. Classer un signalement le retire de la file ; supprimer le message règle tous ses signalements.",
     "reportsEmpty": "Aucun signalement en attente.",
     "reportsBy": "Signalé par {name}",
@@ -1094,6 +1106,44 @@
       "lockedHint": "Le monde restreint les salons à la période en cours : {period}.",
       "dayPlaceholder": "Jour (1–{max})",
       "yearOf": "Numéro de l'année ({label})"
+    },
+    "announcements": {
+      "kind": "Envoyer par",
+      "kindHelp": "Un message privé part de votre compte : les réponses arrivent dans vos messages privés. Une notification arrive dans la cloche et sur les appareils des membres.",
+      "kindMessage": "Message privé",
+      "kindMessageHelp": "Depuis votre compte, une conversation par membre.",
+      "kindNotification": "Notification",
+      "kindNotificationHelp": "Un titre et un texte, dans la cloche.",
+      "recipients": "Destinataires",
+      "recipientsHelp": "Sans rôle choisi, tous les membres reçoivent l'annonce. Avec un ou plusieurs rôles, seuls leurs porteurs. Vous n'êtes jamais destinataire, et un message privé ne part pas vers un compte bloqué.",
+      "counting": "Calcul des destinataires…",
+      "recipientCount": "{count, plural, =0 {Aucun destinataire} one {# destinataire} other {# destinataires}}",
+      "allMembers": "Tous les membres",
+      "titleLabel": "Titre",
+      "titlePlaceholder": "Les nouvelles de la saison",
+      "body": "Message",
+      "bodyHelpMessage": "Texte brut, tel qu'il s'affiche dans les messages privés. Les variables se remplacent pour chaque membre.",
+      "bodyHelpNotification": "Le Markdown est accepté. Les variables se remplacent pour chaque membre.",
+      "bodyPlaceholder": "Écrivez votre message…",
+      "variables": "Variables",
+      "variable_username": "Le pseudo du membre ; le vôtre : {value}",
+      "variable_world": "Le nom du monde : {value}",
+      "sampleUsername": "vous",
+      "previewEmpty": "Rien à afficher pour l'instant.",
+      "send": "Envoyer",
+      "confirmTitle": "Envoyer l'annonce ?",
+      "confirmMessage": "{count, plural, one {Un message privé partira de votre compte vers # membre.} other {Un message privé partira de votre compte vers chacun des # membres.}} Il ne pourra pas être retiré.",
+      "confirmNotification": "{count, plural, one {# membre recevra la notification.} other {# membres recevront la notification.}} Elle ne pourra pas être retirée.",
+      "sent": "{count, plural, one {Annonce envoyée à # membre.} other {Annonce envoyée à # membres.}}",
+      "errorRateLimit": "Limite atteinte : {count} annonces par jour et par monde.",
+      "errorDmsDisabled": "Les messages privés sont désactivés pour le moment.",
+      "errorNoRecipients": "Aucun membre ne correspond à ces destinataires.",
+      "errorSend": "L'envoi a échoué. Réessayez dans un instant.",
+      "history": "Envoyées",
+      "sentToday": "{count} sur {limit} aujourd'hui",
+      "historyEmpty": "Aucune annonce envoyée pour l'instant.",
+      "by": "par {name}",
+      "unknownAuthor": "un ancien membre"
     }
   },
   "auth": {

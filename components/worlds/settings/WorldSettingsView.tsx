@@ -85,6 +85,7 @@ import type { World } from "@/types/worlds";
 import { LabelWithHelp } from "./LabelWithHelp";
 import { WorldReportsTab } from "./WorldReportsTab";
 import { WorldRolesTab } from "./WorldRolesTab";
+import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
@@ -125,6 +126,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         community: public_worlds && can("world.settings"),
         // Signalements (migration 209) : « Gérer les salons » — administrateurs inclus.
         reports: can("chatrooms.manage"),
+        // Annonces (migration 227) : écrire à tous les membres.
+        announcements: can("members.announce"),
     };
     const firstTab = (Object.keys(tabs) as (keyof typeof tabs)[]).find((k) => tabs[k]) ?? "appearance";
     // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
@@ -323,6 +326,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 )}
                                 {tabs.reports && (
                                     <TabBarTrigger value="reports">{t("tabReports")}</TabBarTrigger>
+                                )}
+                                {tabs.announcements && (
+                                    <TabBarTrigger value="announcements">{t("tabAnnouncements")}</TabBarTrigger>
                                 )}
                             </TabsPrimitive.List>
                             <ScrollBar orientation="horizontal" />
@@ -584,6 +590,17 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         {tabs.reports && (
                             <TabsContent value="reports" className="mt-0">
                                 <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
+                            </TabsContent>
+                        )}
+
+                        {/* ── Annonces ─────────────────────────────────── */}
+                        {tabs.announcements && (
+                            <TabsContent value="announcements" className="mt-0">
+                                <WorldAnnouncementsTab
+                                    key={`announcements-${world.id}`}
+                                    worldId={world.id}
+                                    worldName={world.name}
+                                />
                             </TabsContent>
                         )}
 

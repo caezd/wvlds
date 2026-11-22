@@ -269,7 +269,8 @@
       "everyone_mention": "@everyone and @here",
       "persona_submitted": "Sheets submitted for review",
       "persona_reviewed": "Reviews of my sheets",
-      "sequel_request": "Sequel requests between chatrooms"
+      "sequel_request": "Sequel requests between chatrooms",
+      "world_announcement": "World announcements"
     },
     "text": {
       "someone": "Someone",
@@ -304,7 +305,8 @@
       "personaApproved": "<b>{actor}</b> approved <b>{persona}</b>'s sheet",
       "personaSentBack": "<b>{actor}</b> sent <b>{persona}</b>'s sheet back to draft",
       "personaFallback": "a persona",
-      "sequelRequest": "<b>{actor}</b> proposes <b>{chatroom}</b> as a sequel to <b>{previous}</b>"
+      "sequelRequest": "<b>{actor}</b> proposes <b>{chatroom}</b> as a sequel to <b>{previous}</b>",
+      "worldAnnouncement": "<b>{actor}</b> posted an announcement: <b>{title}</b>"
     },
     "back": "Back",
     "sequelRequest": {
@@ -314,6 +316,11 @@
       "declined": "Sequel declined.",
       "expired": "This request is no longer valid.",
       "failed": "Could not answer this request."
+    },
+    "announcement": {
+      "fallbackTitle": "Announcement",
+      "from": "From {actor}",
+      "openWorld": "Open the world"
     }
   },
   "dms": {
@@ -845,6 +852,10 @@
           "label": "Manage members",
           "help": "Invite, assign roles and remove members below your rank."
         },
+        "members_announce": {
+          "label": "Send announcements",
+          "help": "Write to every member, or to holders of certain roles, by private message or by notification."
+        },
         "messages_post": {
           "label": "Post in chatrooms",
           "help": "Send messages and react."
@@ -955,6 +966,7 @@
       "help": "A new sheet starts as a draft; once complete, its player submits it and a member with “Review sheets” approves it or sends it back. Only approved sheets play."
     },
     "tabReports": "Reports",
+    "tabAnnouncements": "Announcements",
     "reportsIntro": "Messages reported by members. Dismissing a report removes it from the queue; deleting the message settles all its reports.",
     "reportsEmpty": "No pending reports.",
     "reportsBy": "Reported by {name}",
@@ -1094,6 +1106,44 @@
       "lockedHint": "This world restricts chatrooms to the current period: {period}.",
       "dayPlaceholder": "Day (1–{max})",
       "yearOf": "Year number ({label})"
+    },
+    "announcements": {
+      "kind": "Send as",
+      "kindHelp": "A private message is sent from your account: replies arrive in your private messages. A notification lands in the bell and on members' devices.",
+      "kindMessage": "Private message",
+      "kindMessageHelp": "From your account, one conversation per member.",
+      "kindNotification": "Notification",
+      "kindNotificationHelp": "A title and a text, in the bell.",
+      "recipients": "Recipients",
+      "recipientsHelp": "With no role selected, every member receives the announcement. With one or more roles, only their holders do. You are never a recipient, and a private message is never sent to a blocked account.",
+      "counting": "Counting recipients…",
+      "recipientCount": "{count, plural, =0 {No recipients} one {# recipient} other {# recipients}}",
+      "allMembers": "All members",
+      "titleLabel": "Title",
+      "titlePlaceholder": "News for the season",
+      "body": "Message",
+      "bodyHelpMessage": "Plain text, as shown in private messages. Variables are replaced for each member.",
+      "bodyHelpNotification": "Markdown is supported. Variables are replaced for each member.",
+      "bodyPlaceholder": "Write your message…",
+      "variables": "Variables",
+      "variable_username": "The member's username; yours: {value}",
+      "variable_world": "The world's name: {value}",
+      "sampleUsername": "you",
+      "previewEmpty": "Nothing to show yet.",
+      "send": "Send",
+      "confirmTitle": "Send the announcement?",
+      "confirmMessage": "{count, plural, one {A private message will be sent from your account to # member.} other {A private message will be sent from your account to each of the # members.}} It cannot be withdrawn.",
+      "confirmNotification": "{count, plural, one {# member will receive the notification.} other {# members will receive the notification.}} It cannot be withdrawn.",
+      "sent": "{count, plural, one {Announcement sent to # member.} other {Announcement sent to # members.}}",
+      "errorRateLimit": "Limit reached: {count} announcements per day per world.",
+      "errorDmsDisabled": "Private messages are turned off for now.",
+      "errorNoRecipients": "No member matches these recipients.",
+      "errorSend": "Sending failed. Try again in a moment.",
+      "history": "Sent",
+      "sentToday": "{count} of {limit} today",
+      "historyEmpty": "No announcement sent yet.",
+      "by": "by {name}",
+      "unknownAuthor": "a former member"
     }
   },
   "auth": {

@@ -44,6 +44,12 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-22",
+    category: "Fonctionnalité",
+    area: "Membres",
+    text: "Annonces aux membres d’un monde : écrire à tous, ou aux seuls porteurs de certains rôles, depuis l’onglet « Annonces » des réglages :\n- par message privé, envoyé depuis votre compte (les réponses arrivent dans vos messages privés)\n- ou par notification : un titre et un texte, dans la cloche et sur les appareils\n\nVariables `{username}` et `{world}` remplacées pour chaque membre, aperçu avant l’envoi, historique des annonces envoyées, dix par jour au plus. Réservé à la nouvelle permission « Envoyer des annonces ».",
+  },
+  {
     date: "2026-11-21",
     category: "Correctif",
     area: "Monde",

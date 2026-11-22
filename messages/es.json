@@ -269,7 +269,8 @@
       "everyone_mention": "@todos y @aquí",
       "persona_submitted": "Fichas enviadas a validación",
       "persona_reviewed": "Revisión de mis fichas",
-      "sequel_request": "Solicitudes de continuación entre salas"
+      "sequel_request": "Solicitudes de continuación entre salas",
+      "world_announcement": "Anuncios de los mundos"
     },
     "text": {
       "someone": "Alguien",
@@ -304,7 +305,8 @@
       "personaApproved": "<b>{actor}</b> validó la ficha de <b>{persona}</b>",
       "personaSentBack": "<b>{actor}</b> devolvió la ficha de <b>{persona}</b> a borrador",
       "personaFallback": "un persona",
-      "sequelRequest": "<b>{actor}</b> propone que <b>{chatroom}</b> continúe <b>{previous}</b>"
+      "sequelRequest": "<b>{actor}</b> propone que <b>{chatroom}</b> continúe <b>{previous}</b>",
+      "worldAnnouncement": "<b>{actor}</b> publicó un anuncio: <b>{title}</b>"
     },
     "back": "Volver",
     "sequelRequest": {
@@ -314,6 +316,11 @@
       "declined": "Continuación rechazada.",
       "expired": "Esta solicitud ya no es válida.",
       "failed": "No se pudo responder a esta solicitud."
+    },
+    "announcement": {
+      "fallbackTitle": "Anuncio",
+      "from": "De {actor}",
+      "openWorld": "Abrir el mundo"
     }
   },
   "dms": {
@@ -845,6 +852,10 @@
           "label": "Gestionar los miembros",
           "help": "Invitar, asignar roles y retirar a los miembros por debajo de su rango."
         },
+        "members_announce": {
+          "label": "Enviar anuncios",
+          "help": "Escribir a todos los miembros, o a quienes tengan ciertos roles, por mensaje privado o por notificación."
+        },
         "messages_post": {
           "label": "Escribir en las salas",
           "help": "Publicar mensajes y reaccionar."
@@ -955,6 +966,7 @@
       "help": "Una ficha nueva nace como borrador; una vez completa, su jugador la envía y un miembro con «Validar las fichas» la valida o la devuelve. Solo las fichas validadas juegan."
     },
     "tabReports": "Denuncias",
+    "tabAnnouncements": "Anuncios",
     "reportsIntro": "Mensajes denunciados por los miembros. Archivar una denuncia la quita de la cola; eliminar el mensaje resuelve todas sus denuncias.",
     "reportsEmpty": "No hay denuncias pendientes.",
     "reportsBy": "Denunciado por {name}",
@@ -1094,6 +1106,44 @@
       "lockedHint": "El mundo limita las salas al periodo en curso: {period}.",
       "dayPlaceholder": "Día (1–{max})",
       "yearOf": "Número del año ({label})"
+    },
+    "announcements": {
+      "kind": "Enviar por",
+      "kindHelp": "Un mensaje privado sale de su cuenta: las respuestas llegan a sus mensajes privados. Una notificación llega a la campana y a los dispositivos de los miembros.",
+      "kindMessage": "Mensaje privado",
+      "kindMessageHelp": "Desde su cuenta, una conversación por miembro.",
+      "kindNotification": "Notificación",
+      "kindNotificationHelp": "Un título y un texto, en la campana.",
+      "recipients": "Destinatarios",
+      "recipientsHelp": "Sin ningún rol elegido, todos los miembros reciben el anuncio. Con uno o varios roles, solo quienes los tengan. Usted nunca es destinatario, y un mensaje privado no se envía a una cuenta bloqueada.",
+      "counting": "Calculando destinatarios…",
+      "recipientCount": "{count, plural, =0 {Ningún destinatario} one {# destinatario} other {# destinatarios}}",
+      "allMembers": "Todos los miembros",
+      "titleLabel": "Título",
+      "titlePlaceholder": "Las novedades de la temporada",
+      "body": "Mensaje",
+      "bodyHelpMessage": "Texto sin formato, tal como se muestra en los mensajes privados. Las variables se sustituyen para cada miembro.",
+      "bodyHelpNotification": "Se admite Markdown. Las variables se sustituyen para cada miembro.",
+      "bodyPlaceholder": "Escriba su mensaje…",
+      "variables": "Variables",
+      "variable_username": "El nombre de usuario del miembro; el suyo: {value}",
+      "variable_world": "El nombre del mundo: {value}",
+      "sampleUsername": "usted",
+      "previewEmpty": "Nada que mostrar por ahora.",
+      "send": "Enviar",
+      "confirmTitle": "¿Enviar el anuncio?",
+      "confirmMessage": "{count, plural, one {Se enviará un mensaje privado desde su cuenta a # miembro.} other {Se enviará un mensaje privado desde su cuenta a cada uno de los # miembros.}} No se podrá retirar.",
+      "confirmNotification": "{count, plural, one {# miembro recibirá la notificación.} other {# miembros recibirán la notificación.}} No se podrá retirar.",
+      "sent": "{count, plural, one {Anuncio enviado a # miembro.} other {Anuncio enviado a # miembros.}}",
+      "errorRateLimit": "Límite alcanzado: {count} anuncios por día y por mundo.",
+      "errorDmsDisabled": "Los mensajes privados están desactivados por ahora.",
+      "errorNoRecipients": "Ningún miembro corresponde a estos destinatarios.",
+      "errorSend": "El envío falló. Inténtelo de nuevo en un momento.",
+      "history": "Enviados",
+      "sentToday": "{count} de {limit} hoy",
+      "historyEmpty": "Todavía no se ha enviado ningún anuncio.",
+      "by": "por {name}",
+      "unknownAuthor": "un antiguo miembro"
     }
   },
   "auth": {

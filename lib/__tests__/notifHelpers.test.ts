@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { notifHref, compactTime } from "@/lib/notifHelpers";
+import { notifHref, notifText, compactTime, type NotifT } from "@/lib/notifHelpers";
 import type { AppNotification } from "@/types/db";
 
 function makeNotif(overrides: Partial<AppNotification> = {}): AppNotification {
@@ -34,6 +34,29 @@ describe("notifHref", () => {
 
   it("renvoie null si ni chat_id ni world_id", () => {
     expect(notifHref(makeNotif({ chat_id: null, world_id: null }))).toBeNull();
+  });
+});
+
+describe("notifText — annonce d'un monde", () => {
+  // Un `t` minimal : la clé et ses valeurs, pour voir ce qui est demandé.
+  const calls: { key: string; values?: Record<string, unknown> }[] = [];
+  const t = Object.assign((key: string) => key, {
+    rich: (key: string, values?: Record<string, unknown>) => {
+      calls.push({ key, values });
+      return key;
+    },
+  }) as unknown as NotifT;
+
+  it("nomme l'auteur et le titre de l'annonce", () => {
+    calls.length = 0;
+    notifText(makeNotif({ type: "world_announcement", world_id: "w1", content: "Rentrée" }), t);
+    expect(calls[0]).toMatchObject({ key: "text.worldAnnouncement", values: { actor: "Alice", title: "Rentrée" } });
+  });
+
+  it("retombe sur un titre générique sans contenu", () => {
+    calls.length = 0;
+    notifText(makeNotif({ type: "world_announcement", world_id: "w1", content: null }), t);
+    expect(calls[0].values?.title).toBe("announcement.fallbackTitle");
   });
 });
 

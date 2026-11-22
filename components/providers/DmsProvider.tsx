@@ -596,6 +596,18 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     // suivantes sont des retours de coupure (re-jonction de supabase-js) :
     // les avis manqués ne reviendront pas, on relit la liste.
     let convJoint = false;
+    // Une annonce de monde envoyée en messages privés (migration 227) arrive
+    // en rafale : un avis par destinataire, chez l'auteur, presque tous pour
+    // des conversations encore inconnues. Une seule relecture pour la rafale
+    // au lieu d'un get_dm_conversations() par avis.
+    let relectureEnAttente: ReturnType<typeof setTimeout> | null = null;
+    const relireBientot = () => {
+      if (relectureEnAttente) return;
+      relectureEnAttente = setTimeout(() => {
+        relectureEnAttente = null;
+        if (mounted) void loadConversations();
+      }, 200);
+    };
     const fermerConvCanal = subscribeTopic(topic.user(userId), {
       onSubscribed: () => {
         if (convJoint) void loadConversations();
@@ -607,7 +619,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         // Édition/suppression d'un message (pas d'UI aujourd'hui, mais possible
         // via modération ou correctif direct) : resynchronise l'aperçu et le tri.
         if (avis.op !== "INSERT" || !avis.record) {
-          void loadConversations();
+          relireBientot();
           return;
         }
         const msg = avis.record;
@@ -616,7 +628,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         // interlocuteur) : son profil n'est pas encore en mémoire, seul un
         // aller-retour serveur peut le récupérer.
         if (!conversationsRef.current.some(c => c.id === msg.conversation_id)) {
-          void loadConversations();
+          relireBientot();
           return;
         }
 
@@ -640,6 +652,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
 
     return () => {
       mounted = false;
+      if (relectureEnAttente) clearTimeout(relectureEnAttente);
       fermerConvCanal();
     };
     // reconnectEpoch : force la recréation du canal après une coupure réseau
