@@ -43,9 +43,12 @@ async function envoyerImage(userId: string, blob: Blob): Promise<string> {
 export function AnnouncementExtrasFields({
   value,
   onChange,
+  onUploaded,
 }: {
   value: AnnouncementExtrasValue;
   onChange: (next: AnnouncementExtrasValue) => void;
+  /** Une image vient d'être téléversée (voir `useAnnouncementImageDrafts`). */
+  onUploaded?: (url: string) => void;
 }) {
   const t = useTranslations("worlds.announcements");
   const tLabels = useTranslations("worlds.announcements.labels");
@@ -58,7 +61,9 @@ export function AnnouncementExtrasFields({
     if (!userId) return;
     setUploading(true);
     try {
-      set({ imageUrl: await envoyerImage(userId, blob) });
+      const url = await envoyerImage(userId, blob);
+      onUploaded?.(url);
+      set({ imageUrl: url });
     } catch (e) {
       console.error("[AnnouncementExtrasFields] image", e);
       toast.error(tCommon("uploadError"));

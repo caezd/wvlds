@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-23",
+    category: "Technique",
+    area: "Membres",
+    text: "Annonces : une image d’en-tête remplacée, retirée ou laissée dans un brouillon abandonné est aussitôt effacée du stockage ; un ménage quotidien rattrape celles qui auraient échappé (onglet fermé avant l’envoi, image changée sur l’annonce d’un autre membre de l’équipe).",
+  },
+  {
+    date: "2026-11-23",
     category: "Fonctionnalité",
     area: "Monde",
     text: "Widget « Dernières annonces » pour l’accueil d’un monde : il montre à tous les membres les annonces que l’équipe a choisi d’y afficher, les épinglées en tête, et se met à jour en direct. Chaque annonce s’ouvre en entier d’un clic.",

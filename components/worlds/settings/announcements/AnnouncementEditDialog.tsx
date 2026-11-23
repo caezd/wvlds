@@ -29,6 +29,7 @@ import {
   AnnouncementExtrasFields,
   type AnnouncementExtrasValue,
 } from "@/components/worlds/announcements/AnnouncementExtrasFields";
+import { useAnnouncementImageDrafts } from "@/components/worlds/announcements/useAnnouncementImageDrafts";
 import { useAnnouncementErrorMessage } from "./AnnouncementFields";
 
 function extrasDe(a: WorldAnnouncement): AnnouncementExtrasValue {
@@ -64,14 +65,20 @@ export function AnnouncementEditDialog({
   const [body, setBody] = React.useState(a.body);
   const [extras, setExtras] = React.useState<AnnouncementExtrasValue>(() => extrasDe(a));
   const [saving, setSaving] = React.useState(false);
+  const images = useAnnouncementImageDrafts(extras.imageUrl);
+  const { discardAll } = images;
 
   // Rouvert sur une autre annonce (ou la même, rechargée) : on repart d'elle.
+  // Fermé sans enregistrer : les images téléversées entre-temps partent.
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      discardAll();
+      return;
+    }
     setTitle(a.title ?? "");
     setBody(a.body);
     setExtras(extrasDe(a));
-  }, [open, a]);
+  }, [open, a, discardAll]);
 
   const contentEditable = !a.retracted_at;
   const hasTitle = a.kind !== "message";
@@ -99,6 +106,7 @@ export function AnnouncementEditDialog({
       return;
     }
     toast.success(t("editSaved"));
+    images.keep(extras.imageUrl);
     onSaved();
     onOpenChange(false);
   }
@@ -130,7 +138,7 @@ export function AnnouncementEditDialog({
             rows={6}
             data-testid="announcement-edit-body"
           />
-          <AnnouncementExtrasFields value={extras} onChange={setExtras} />
+          <AnnouncementExtrasFields value={extras} onChange={setExtras} onUploaded={images.track} />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

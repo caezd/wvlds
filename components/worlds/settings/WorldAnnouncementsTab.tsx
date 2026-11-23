@@ -52,6 +52,7 @@ import {
   EMPTY_EXTRAS,
   type AnnouncementExtrasValue,
 } from "@/components/worlds/announcements/AnnouncementExtrasFields";
+import { useAnnouncementImageDrafts } from "@/components/worlds/announcements/useAnnouncementImageDrafts";
 import { isAnnouncementLabel } from "@/lib/worldAnnouncements";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -84,6 +85,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   const [bannerDays, setBannerDays] = React.useState<number | null>(null);
   // Étiquette, image, accueil, épingle (migration 235).
   const [extras, setExtras] = React.useState<AnnouncementExtrasValue>(EMPTY_EXTRAS);
+  const images = useAnnouncementImageDrafts(extras.imageUrl);
   const [preview, setPreview] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
@@ -204,6 +206,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       return;
     }
     toast.success(t("sent", { count: res.recipients }));
+    images.keep(extras.imageUrl);
     resetDraft();
     void loadHistory();
   }
@@ -233,6 +236,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       return false;
     }
     toast.success(t("scheduled"));
+    images.keep(extras.imageUrl);
     resetDraft();
     void loadScheduled();
     return true;
@@ -361,7 +365,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
 
       {/* ── Présentation : étiquette, image, accueil ───────── */}
       <SettingsSection title={t("presentation")} help={t("presentationHelp")}>
-        <AnnouncementExtrasFields value={extras} onChange={setExtras} />
+        <AnnouncementExtrasFields value={extras} onChange={setExtras} onUploaded={images.track} />
       </SettingsSection>
 
       {/* ── Message ──────────────────────────────────────── */}
