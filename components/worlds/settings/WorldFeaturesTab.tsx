@@ -43,7 +43,7 @@ import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FIELD, FeaturePage, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
  * Les pages « Fonctions » des réglages d'un monde : catalogue (inventaire,
@@ -233,22 +233,22 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             disabled={togglingEnable}
                             onCheckedChange={v => void handleEnableToggle("inventory", v)}
                         />
-                        {enableInventory && (
-                            <ToggleItem
-                                indent
-                                title={t("restrictToCatalogue")}
-                                help={tSettings("restrictInventoryHelp")}
-                                control={
-                                    <Switch
-                                        checked={restrictInventory}
-                                        disabled={togglingRestriction}
-                                        onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
-                                        aria-label={`${tSettings("inventoryItems")} : ${t("restrictToCatalogue")}`}
-                                        className="shrink-0"
-                                    />
-                                }
-                            />
-                        )}
+                        {/* Toujours visible : grisée tant que la fonction du dessus est coupée. */}
+                        <ToggleItem
+                            indent
+                            dimmed={!enableInventory}
+                            title={t("restrictToCatalogue")}
+                            help={tSettings("restrictInventoryHelp")}
+                            control={
+                                <Switch
+                                    checked={restrictInventory}
+                                    disabled={!enableInventory || togglingRestriction}
+                                    onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
+                                    aria-label={`${tSettings("inventoryItems")} : ${t("restrictToCatalogue")}`}
+                                    className="shrink-0"
+                                />
+                            }
+                        />
                         <ToggleItem
                             title={t("tabSkills")}
                             help={tSettings("skillsHelp")}
@@ -256,22 +256,21 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             disabled={togglingEnable}
                             onCheckedChange={v => void handleEnableToggle("skills", v)}
                         />
-                        {enableSkills && (
-                            <ToggleItem
-                                indent
-                                title={t("restrictToCatalogue")}
-                                help={tSettings("restrictSkillsHelp")}
-                                control={
-                                    <Switch
-                                        checked={restrictSkills}
-                                        disabled={togglingRestriction}
-                                        onCheckedChange={v => void handleRestrictionToggle("skills", v)}
-                                        aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
-                                        className="shrink-0"
-                                    />
-                                }
-                            />
-                        )}
+                        <ToggleItem
+                            indent
+                            dimmed={!enableSkills}
+                            title={t("restrictToCatalogue")}
+                            help={tSettings("restrictSkillsHelp")}
+                            control={
+                                <Switch
+                                    checked={restrictSkills}
+                                    disabled={!enableSkills || togglingRestriction}
+                                    onCheckedChange={v => void handleRestrictionToggle("skills", v)}
+                                    aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
+                                    className="shrink-0"
+                                />
+                            }
+                        />
                         <ToggleItem
                             title={tCatalogue("faceclaims")}
                             help={tSettings("faceclaimsHelp")}
@@ -279,16 +278,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             disabled={togglingFaceclaims}
                             onCheckedChange={v => void handleFaceclaimsToggle(v)}
                         />
-                        {enableFaceclaims && (
-                            <ToggleItem
-                                indent
-                                title={tSettings("requireFaceclaim")}
-                                help={tSettings("requireFaceclaimHelp")}
-                                checked={requireFaceclaim}
-                                disabled={togglingRequireFaceclaim}
-                                onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
-                            />
-                        )}
+                        <ToggleItem
+                            indent
+                            dimmed={!enableFaceclaims}
+                            title={tSettings("requireFaceclaim")}
+                            help={tSettings("requireFaceclaimHelp")}
+                            checked={requireFaceclaim}
+                            disabled={!enableFaceclaims || togglingRequireFaceclaim}
+                            onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
+                        />
                     </ToggleList>
                 </FeaturePage>
             ),
@@ -329,8 +327,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         onCheckedChange: v => void handleWikiToggle(v),
                     }}
                 >
-                    {/* Le nom du lien : sans wiki, il n'a pas lieu d'être. */}
-                    {enableWiki && (
+                    {/* Le nom du lien : visible même sans wiki, grisé jusqu'à son activation. */}
+                    <InactiveOptions inactive={!enableWiki} hint={tSettings("inactiveHint")}>
                         <SettingsSection title={tSettings("wikiLinkName")} help={t("wikiLabelHelp")}>
                             <FormField
                                 control={form.control}
@@ -354,7 +352,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                                 )}
                             />
                         </SettingsSection>
-                    )}
+                    </InactiveOptions>
                 </FeaturePage>
             ),
         },
@@ -394,13 +392,14 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             onCheckedChange: v => void handleTimelineToggle(v),
                         }}
                     >
-                        {timelineEnabled && (
+                        {/* Visibles même désactivée : on voit ce que la chronologie règle. */}
+                        <InactiveOptions inactive={!timelineEnabled} hint={tSettings("inactiveHint")}>
                             <TimelineSettings
                                 config={timelineConfig}
                                 onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}
                                 onPersist={(patch) => void persistTimelineConfig(patch)}
                             />
-                        )}
+                        </InactiveOptions>
                     </FeaturePage>
                 ),
             }]

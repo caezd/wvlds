@@ -1112,7 +1112,8 @@
           "rooms": "Salas y personajes",
           "members": "Miembros"
         }
-      }
+      },
+      "inactiveHint": "Función desactivada: sus ajustes siguen visibles y se pueden cambiar una vez activada."
     },
     "timelinePicker": {
       "year": "Año",

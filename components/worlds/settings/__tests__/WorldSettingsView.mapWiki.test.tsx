@@ -149,4 +149,15 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(carte).getByText("Activée")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
   });
+
+  it("catalogue : les options d'une fonction coupée restent visibles, grisées et inertes", async () => {
+    monter({ enable_inventory: false, enable_skills: true, enable_faceclaims: false } as Partial<World>);
+    await userEvent.click(screen.getByRole("button", { name: "Catalogue" }));
+    const page = screen.getByRole("region", { name: "Catalogue" });
+    // Inventaire coupé : sa restriction reste en vue, inerte ; compétences actives : la leur non.
+    expect(within(page).getByRole("switch", { name: "Objets d'inventaire : Restreindre au catalogue du monde" })).toBeDisabled();
+    expect(within(page).getByRole("switch", { name: "Compétences : Restreindre au catalogue du monde" })).toBeEnabled();
+    // Faceclaims coupés : « Faceclaim obligatoire » visible, inerte.
+    expect(within(page).getByRole("switch", { name: "Faceclaim obligatoire" })).toBeDisabled();
+  });
 });

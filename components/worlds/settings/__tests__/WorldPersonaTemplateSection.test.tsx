@@ -90,11 +90,15 @@ describe("WorldPersonaTemplateSection — validation des fiches (migration 184)"
     expect(setWorldReviewActiveCache).toHaveBeenCalledWith("w1", true);
   });
 
-  it("sans fiche par défaut, pas de bascule : l'option n'aurait aucun effet", async () => {
+  it("sans fiche par défaut, ses options restent visibles mais inertes : elles n'auraient aucun effet", async () => {
     vi.mocked(getWorldPersonaTemplate).mockResolvedValue({ ok: true, templateId: null });
     setup();
     render(<WorldPersonaTemplateSection worldId="w1" reviewEnabled />);
     await screen.findByText("Fiche par défaut");
-    expect(screen.queryByRole("switch", { name: "Validation des fiches" })).toBeNull();
+    const validation = screen.getByRole("switch", { name: "Validation des fiches" });
+    expect(validation).toBeDisabled();
+    // Éteinte : sans fiche, la validation ne s'applique pas, même réglée en base.
+    expect(validation).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "Éditer la fiche" })).toBeDisabled();
   });
 });

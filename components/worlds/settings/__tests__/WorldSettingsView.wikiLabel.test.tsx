@@ -91,7 +91,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     expect(screen.getByPlaceholderText("Annexes")).toHaveValue("");
   });
 
-  it("une section de la page du wiki ; absente quand le wiki est désactivé", async () => {
+  it("une section de la page du wiki ; visible mais inerte quand le wiki est désactivé", async () => {
     setup();
     const user = userEvent.setup();
     const { unmount } = render(<WorldSettingsView world={BASE_WORLD} />);
@@ -106,7 +106,11 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
 
     render(<WorldSettingsView world={{ ...BASE_WORLD, enable_wiki: false }} />);
     await user.click(screen.getByRole("button", { name: "Wiki" }));
-    expect(screen.queryByPlaceholderText("Annexes")).toBeNull();
+    // Le réglage reste en vue, pour qu'on sache ce que le wiki offre, mais ne
+    // se modifie qu'une fois le wiki activé.
+    const champ = screen.getByPlaceholderText("Annexes");
+    expect(champ).toBeDisabled();
+    expect(screen.getByTestId("inactive-options")).toHaveTextContent("Fonction désactivée");
   });
 
   it("préremplit le champ avec le libellé déjà enregistré", async () => {

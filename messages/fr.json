@@ -1112,7 +1112,8 @@
           "rooms": "Salons & personas",
           "members": "Membres"
         }
-      }
+      },
+      "inactiveHint": "Fonction désactivée : ses réglages restent visibles, et se modifient une fois activée."
     },
     "timelinePicker": {
       "year": "Année",

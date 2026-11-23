@@ -155,25 +155,26 @@ export function WorldPersonaTemplateSection({
           disabled={!loaded || toggling}
           onCheckedChange={(v) => void handleToggle(v)}
         />
-        {templateId && (
+        {/* Les options de la fiche restent visibles sans elle, grisées : on voit
+            ce qu'elle permet avant de l'activer. */}
           <ToggleItem
             indent
+            dimmed={!templateId}
             title={t("personaReview.label")}
             help={t("personaReview.help")}
             control={
               <Switch
-                checked={reviewEnabled}
-                disabled={togglingReview}
+                checked={!!templateId && reviewEnabled}
+                disabled={!templateId || togglingReview}
                 onCheckedChange={(v) => void handleReviewToggle(v)}
                 aria-label={t("personaReview.label")}
                 className="shrink-0"
               />
             }
           />
-        )}
-        {templateId && (
           <ToggleItem
             indent
+            dimmed={!templateId}
             title={tSettings("editSheet")}
             help={tSettings("editSheetHelp")}
             control={
@@ -182,6 +183,7 @@ export function WorldPersonaTemplateSection({
                 variant="outline"
                 size="sm"
                 className="shrink-0"
+                disabled={!templateId}
                 onClick={() => void openEditor()}
               >
                 <Pencil className="mr-1 h-3.5 w-3.5" />
@@ -189,7 +191,6 @@ export function WorldPersonaTemplateSection({
               </Button>
             }
           />
-        )}
       </ToggleList>
 
       {/* Confirmation de désactivation */}

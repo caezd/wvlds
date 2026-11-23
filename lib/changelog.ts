@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-23",
     category: "Interface",
+    area: "Monde",
+    text: "Paramètres › Fonctions : les réglages d’une fonction désactivée restent affichés, grisés, pour voir ce qu’elle offre avant de l’activer — restrictions du catalogue, faceclaim obligatoire, nom du lien du wiki, validation et édition de la fiche modèle, réglages de la chronologie. Leur aide reste consultable au survol.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Interface",
     area: "Membres",
     text: "Message de bienvenue : même aperçu que les annonces — un bouton « Aperçu » qui le montre tel que le nouveau membre le recevra, et, sur grand écran, l’aperçu en direct à côté de l’éditeur.",
   },
