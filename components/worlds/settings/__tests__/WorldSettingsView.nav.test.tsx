@@ -114,6 +114,16 @@ describe("WorldSettingsView — menu de gauche", () => {
     expect(pushState).toHaveBeenCalledWith(null, "", "/w/w1?view=settings&section=announcements");
   });
 
+  it("Groupes et Relations portent leur propre titre : pas de doublon", async () => {
+    monter();
+    await userEvent.click(within(nav()).getByRole("button", { name: "Groupes" }));
+    expect(screen.getByTestId("groups-tab")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Groupes" })).toBeNull();
+    await userEvent.click(within(nav()).getByRole("button", { name: "Relations" }));
+    expect(screen.getByTestId("relations-tab")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Relations" })).toBeNull();
+  });
+
   it("l'adresse ouvre directement sa section", () => {
     params = new URLSearchParams("view=settings&section=relations");
     monter();

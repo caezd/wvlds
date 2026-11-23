@@ -341,10 +341,11 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const bannerUrl = form.watch("banner_url");
 
     /** Une page de réglages : titre, puis son contenu, à sa largeur — calée
-     *  contre le menu, pour que le titre ne saute pas d'une section à l'autre. */
-    const page = (id: SettingsSectionId, width: string, children: React.ReactNode) => (
+     *  contre le menu, pour que le titre ne saute pas d'une section à l'autre.
+     *  `ownTitle` : la page porte déjà le sien (FeaturePage), pas de doublon. */
+    const page = (id: SettingsSectionId, width: string, children: React.ReactNode, ownTitle = false) => (
         <div className={cn("w-full", width)} data-settings-page={id}>
-            <h3 className="mb-6 text-xl font-semibold tracking-tight">{sectionLabel(id)}</h3>
+            {!ownTitle && <h3 className="mb-6 text-xl font-semibold tracking-tight">{sectionLabel(id)}</h3>}
             {children}
         </div>
     );
@@ -665,12 +666,12 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         {/* ── Groupes ──────────────────────────────────── */}
                         {shown === "groups" && page("groups", "max-w-4xl", (
                             <WorldGroupsSettings worldId={world.id} />
-                        ))}
+                        ), true)}
 
                         {/* ── Relations ────────────────────────────────── */}
                         {shown === "relations" && page("relations", "max-w-4xl", (
                             <WorldRelationsSettings worldId={world.id} />
-                        ))}
+                        ), true)}
 
                         {/* ── Rôles ────────────────────────────────────── */}
                         {shown === "roles" && page("roles", "max-w-5xl", (
