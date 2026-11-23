@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-23",
+    category: "Interface",
+    area: "Monde",
+    text: "Paramètres d’un monde : les onglets laissent place à un menu à gauche, rangé en groupes (Monde, Fonctions, Salons & personas, Membres). Catalogue, carte, wiki, personas et chronologie y ont chacun leur entrée, avec leur état. La section ouverte est dans l’adresse, et le bouton Précédent y revient. Sur mobile, le menu s’affiche en liste, puis la section choisie en plein écran. La suppression du monde passe dans « Général », sous « Zone de danger ».",
+  },
+  {
+    date: "2026-11-23",
     category: "Technique",
     area: "Membres",
     text: "Annonces : une image d’en-tête remplacée, retirée ou laissée dans un brouillon abandonné est aussitôt effacée du stockage ; un ménage quotidien rattrape celles qui auraient échappé (onglet fermé avant l’envoi, image changée sur l’annonce d’un autre membre de l’équipe).",

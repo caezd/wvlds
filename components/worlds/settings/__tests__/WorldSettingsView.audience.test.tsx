@@ -23,6 +23,7 @@ vi.mock("@/components/worlds/settings/WorldRolesTab", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 // `public_worlds` ouvre l'onglet Communauté.
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
@@ -85,7 +86,7 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
   it("un monde tout public : la première carte est retenue, la seconde non", async () => {
     const { user } = await ouvrirCommunaute();
     render(<WorldSettingsView world={BASE_WORLD} />);
-    await user.click(screen.getByRole("tab", { name: "Communauté" }));
+    await user.click(screen.getByRole("button", { name: "Communauté" }));
 
     expect(screen.getByRole("button", { name: "Tout public" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "18 ans et plus" })).toHaveAttribute("aria-pressed", "false");
@@ -94,7 +95,7 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
   it("choisir « 18 ans et plus » enregistre la restriction", async () => {
     const { user } = await ouvrirCommunaute();
     render(<WorldSettingsView world={BASE_WORLD} />);
-    await user.click(screen.getByRole("tab", { name: "Communauté" }));
+    await user.click(screen.getByRole("button", { name: "Communauté" }));
 
     await user.click(screen.getByRole("button", { name: "18 ans et plus" }));
 
@@ -105,7 +106,7 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
   it("revenir à « Tout public » lève la restriction", async () => {
     const { user } = await ouvrirCommunaute();
     render(<WorldSettingsView world={{ ...BASE_WORLD, is_age_restricted: true }} />);
-    await user.click(screen.getByRole("tab", { name: "Communauté" }));
+    await user.click(screen.getByRole("button", { name: "Communauté" }));
 
     expect(screen.getByRole("button", { name: "18 ans et plus" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "Tout public" }));

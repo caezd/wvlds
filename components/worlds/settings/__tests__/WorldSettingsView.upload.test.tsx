@@ -32,6 +32,7 @@ vi.mock("@/components/worlds/settings/WorldRolesTab", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ public_worlds: false, world_timeline: false }),

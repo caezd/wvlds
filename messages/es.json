@@ -1101,7 +1101,18 @@
       "newMonthName": "Mes {n}",
       "holidayDate": "Fecha de {name}",
       "daysWord": "días",
-      "dormantDaysInput": "Pausa, en días"
+      "dormantDaysInput": "Pausa, en días",
+      "menu": {
+        "label": "Secciones de ajustes",
+        "general": "General",
+        "dangerZone": "Zona de peligro",
+        "groups": {
+          "world": "Mundo",
+          "features": "Funciones",
+          "rooms": "Salas y personajes",
+          "members": "Miembros"
+        }
+      }
     },
     "timelinePicker": {
       "year": "Año",

@@ -4,7 +4,8 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 
@@ -19,13 +20,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { TabBarTrigger } from "@/components/ui/tab-bar";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 // Popover + HsvColorPicker : utilisés par HomeColorField, désactivé
 // temporairement (voir plus bas) — imports retirés en attendant.
 import {
+    ChevronLeft,
     Loader2,
     Settings,
 } from "lucide-react";
@@ -45,9 +43,14 @@ import { WorldCommunityTab } from "./WorldCommunityTab";
 import type { World } from "@/types/worlds";
 
 /**
- * Vue plein-écran des paramètres d'un « monde », organisée en onglets
- * (Apparence / Catégories / Fonctions). Remplace l'ancien WorldEditDialog
- * (Sheet) — la visibilité est pilotée par le parent via le système `?view=`.
+ * Vue plein-écran des paramètres d'un « monde » : un menu à gauche, rangé en
+ * groupes (Monde, Fonctions, Salons & personas, Membres — voir
+ * worldSettingsSections.ts), et la page de la section choisie à droite. La
+ * visibilité de la vue est pilotée par le parent (`?view=settings`) ; la
+ * section ouverte, par `&section=…`.
+ *
+ * Sur mobile : le menu seul tant qu'aucune section n'est demandée, puis la
+ * page seule avec un retour vers le menu.
  */
 
 // Sélecteur de couleur désactivé temporairement (voir onglet Apparence) — conservé pour restauration future.
@@ -60,33 +63,24 @@ import type { World } from "@/types/worlds";
 //     { name: "Rose", value: "#f94b5f" },
 // ];
 
-/** Onglets en soulignement plutôt qu'en pastille pleine (style shadcn par
- *  défaut) — la liste Radix directement, et les `TabBarTrigger` de
- *  components/ui/tab-bar.tsx, plus lisibles à 6 onglets et mieux espacés.
- *
- *  Le trait actif est une ombre `inset`, pas un `border-b` : une ombre reste
- *  DANS la boîte de l'élément (jamais comptée dans le « scrollable overflow »
- *  qu'utilise ScrollArea pour décider d'afficher sa scrollbar), contrairement
- *  à un `border`, une marge négative ou un `transform` — les trois essais
- *  précédents ajoutaient chacun 1px à la hauteur mesurée par ScrollArea et
- *  faisaient apparaître une scrollbar verticale parasite plus haut dans
- *  l'arbre.
- *
- *  Le conteneur parent trace lui aussi sa ligne de base en `shadow-[inset…]`
- *  plutôt qu'en `border-b` (voir plus bas) : un vrai `border` occupe sa
- *  propre tranche de boîte, 1px EN DEHORS de la boîte du trigger — même
- *  parfaitement alignés, les deux traits restent deux éléments distincts,
- *  perceptiblement séparés par une micro-teinte différente. Deux ombres
- *  posées sur le MÊME bord bas, elles, se superposent au pixel près (le
- *  trigger, enfant, se peint après son parent) : celle du trigger actif
- *  recouvre entièrement celle du conteneur à cet endroit, comme un seul
- *  trait continu. */
+
 
 
 import { LabelWithHelp } from "./LabelWithHelp";
 import { WorldReportsTab } from "./WorldReportsTab";
 import { WorldRolesTab } from "./WorldRolesTab";
 import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
+import { SettingsSection } from "./FeatureLayout";
+import { WorldSettingsNav, useSettingsSectionLabel } from "./WorldSettingsNav";
+import {
+  SECTION_PARAM,
+  isFeatureSection,
+  requestedSection,
+  urlWithSection,
+  visibleSettingsGroups,
+  type FeatureSectionId,
+  type SettingsSectionId,
+} from "./worldSettingsSections";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
@@ -113,27 +107,84 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
   const schema = React.useMemo(() => buildWorldSettingsSchema(tSettings), [tSettings]);
     const supabase = createClient();
     const router = useRouter();
-    const { public_worlds } = useFeatureFlags();
-    // Chaque onglet répond à une permission : un membre qui n'a que
-    // `roles.manage` voit l'onglet Rôles et rien d'autre.
+    const { public_worlds, world_timeline } = useFeatureFlags();
+    // Chaque section répond à une permission : un membre qui n'a que
+    // `roles.manage` voit « Membres › Rôles » et rien d'autre.
     const { can, membership } = useWorldMembership();
-    const tabs = {
-        appearance: can("world.settings"),
-        categories: can("world.settings") || can("categories.manage"),
-        home: can("world.settings"),
-        features: can("world.settings"),
-        // Les groupes de personas s'écrivent sous `relations.manage` (RLS de
-        // `world_persona_groups`) : même permission que l'onglet Relations.
-        groups: can("world.settings") || can("relations.manage"),
-        relations: can("world.settings") || can("relations.manage"),
-        roles: can("world.settings") || can("roles.manage"),
-        community: public_worlds && can("world.settings"),
-        // Signalements (migration 209) : « Gérer les salons » — administrateurs inclus.
-        reports: can("chatrooms.manage"),
-        // Annonces (migration 227) : écrire à tous les membres.
-        announcements: can("members.announce"),
+    const settings = can("world.settings");
+    const allowed = (id: SettingsSectionId): boolean => {
+        switch (id) {
+            case "general":
+            case "home":
+            case "catalogue":
+            case "map":
+            case "wiki":
+            case "personas":
+                return settings;
+            case "timeline":
+                return settings && world_timeline;
+            case "community":
+                return public_worlds && settings;
+            case "categories":
+                return settings || can("categories.manage");
+            // Les groupes de personas s'écrivent sous `relations.manage` (RLS de
+            // `world_persona_groups`) : même permission que les relations.
+            case "groups":
+            case "relations":
+                return settings || can("relations.manage");
+            case "roles":
+                return settings || can("roles.manage");
+            // Signalements (migration 209) : « Gérer les salons » — administrateurs inclus.
+            case "reports":
+                return can("chatrooms.manage");
+            // Annonces (migration 227) : écrire à tous les membres.
+            case "announcements":
+                return can("members.announce");
+        }
     };
-    const firstTab = (Object.keys(tabs) as (keyof typeof tabs)[]).find((k) => tabs[k]) ?? "appearance";
+    const groups = visibleSettingsGroups(allowed);
+    const sectionLabel = useSettingsSectionLabel();
+
+    // La section ouverte suit l'adresse (lien direct, Précédent / Suivant).
+    // L'état local répond tout de suite au clic ; l'adresse le rattrape.
+    const searchParams = useSearchParams();
+    const param = searchParams?.get(SECTION_PARAM) ?? null;
+    const [current, setCurrent] = React.useState<string | null>(param);
+    const [prevParam, setPrevParam] = React.useState(param);
+    if (param !== prevParam) {
+        setPrevParam(param);
+        setCurrent(param);
+    }
+    React.useEffect(() => {
+        const onPop = () => setCurrent(new URL(window.location.href).searchParams.get(SECTION_PARAM));
+        window.addEventListener("popstate", onPop);
+        return () => window.removeEventListener("popstate", onPop);
+    }, []);
+    // Ouverte depuis le menu (et non arrivée par un lien) : le retour mobile
+    // revient en arrière dans l'historique plutôt que d'y ajouter une entrée.
+    const openedFromMenu = React.useRef(false);
+    const requested = requestedSection(current, allowed);
+    const shown: SettingsSectionId | null = requested ?? groups[0]?.sections[0] ?? null;
+
+    function openSection(id: SettingsSectionId) {
+        if (id === requested) return;
+        setCurrent(id);
+        openedFromMenu.current = true;
+        window.history.pushState(null, "", urlWithSection(window.location.href, id));
+    }
+
+    function backToMenu() {
+        if (openedFromMenu.current) {
+            openedFromMenu.current = false;
+            window.history.back();
+            return;
+        }
+        setCurrent(null);
+        window.history.replaceState(null, "", urlWithSection(window.location.href, null));
+    }
+
+    // L'état des pages « Fonctions », pour les pastilles du menu.
+    const [featureStatus, setFeatureStatus] = React.useState<Partial<Record<FeatureSectionId, boolean>>>({});
     // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
     // dans le contexte plutôt que par `auth.getUser()` : cet appel passait par
     // le verrou de session de supabase-js (navigator.locks), qu'un autre onglet
@@ -289,6 +340,15 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const iconUrl = form.watch("icon_url");
     const bannerUrl = form.watch("banner_url");
 
+    /** Une page de réglages : titre, puis son contenu, à sa largeur — calée
+     *  contre le menu, pour que le titre ne saute pas d'une section à l'autre. */
+    const page = (id: SettingsSectionId, width: string, children: React.ReactNode) => (
+        <div className={cn("w-full", width)} data-settings-page={id}>
+            <h3 className="mb-6 text-xl font-semibold tracking-tight">{sectionLabel(id)}</h3>
+            {children}
+        </div>
+    );
+
     return (
         <div className="flex h-full w-full flex-col">
             <WorldPanelHeader
@@ -297,57 +357,47 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             />
 
             <Form {...form}>
-                <Tabs defaultValue={firstTab} className="flex min-h-0 flex-1 flex-col">
-                    <div className="shrink-0 shadow-[inset_0_-1px_0_0_var(--color-border)]">
-                        {/* ScrollArea plutôt qu'un simple `overflow-x-auto` : la
-                            barre de défilement native (toujours visible sur
-                            certains systèmes/navigateurs) est remplacée par le
-                            style fin de l'appli, et n'apparaît que si les
-                            onglets débordent réellement du conteneur — utile
-                            sur un écran étroit avec les 6 onglets. */}
-                        <ScrollArea className="w-full">
-                            <TabsPrimitive.List className="flex w-max items-center gap-6 px-4">
-                                {tabs.appearance && (
-                                    <TabBarTrigger value="appearance">{t("tabAppearance")}</TabBarTrigger>
-                                )}
-                                {tabs.categories && (
-                                    <TabBarTrigger value="categories">{t("tabCategories")}</TabBarTrigger>
-                                )}
-                                {tabs.home && (
-                                    <TabBarTrigger value="home">{t("tabHome")}</TabBarTrigger>
-                                )}
-                                {tabs.features && (
-                                    <TabBarTrigger value="features">{t("tabFeatures")}</TabBarTrigger>
-                                )}
-                                {tabs.groups && (
-                                    <TabBarTrigger value="groups">{t("tabGroups")}</TabBarTrigger>
-                                )}
-                                {tabs.relations && (
-                                    <TabBarTrigger value="relations">{t("tabRelations")}</TabBarTrigger>
-                                )}
-                                {tabs.roles && (
-                                    <TabBarTrigger value="roles">{t("tabRoles")}</TabBarTrigger>
-                                )}
-                                {tabs.community && (
-                                    <TabBarTrigger value="community">{t("tabCommunity")}</TabBarTrigger>
-                                )}
-                                {tabs.reports && (
-                                    <TabBarTrigger value="reports">{t("tabReports")}</TabBarTrigger>
-                                )}
-                                {tabs.announcements && (
-                                    <TabBarTrigger value="announcements">{t("tabAnnouncements")}</TabBarTrigger>
-                                )}
-                            </TabsPrimitive.List>
-                            <ScrollBar orientation="horizontal" />
-                        </ScrollArea>
+                <div className="flex min-h-0 flex-1">
+                    {/* Le menu : toute la largeur sur mobile tant qu'aucune
+                        section n'est ouverte ; colonne fixe sur desktop. */}
+                    <div
+                        className={cn(
+                            "min-h-0 shrink-0 overflow-y-auto md:block md:w-60 md:border-r md:border-border",
+                            requested ? "hidden" : "w-full",
+                        )}
+                    >
+                        <WorldSettingsNav
+                            groups={groups}
+                            selected={shown}
+                            // Liste mobile sans section ouverte : la section
+                            // montrée par défaut n'est surlignée que sur desktop.
+                            selectedOnDesktopOnly={!requested}
+                            featureStatus={featureStatus}
+                            onSelect={openSection}
+                        />
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4">
-                        {/* ── Apparence ────────────────────────────────── */}
-                        <TabsContent value="appearance" className="mt-0">
+                    <div
+                        className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:block md:p-6", !requested && "hidden")}
+                        data-testid="settings-content"
+                    >
+                        {requested && (
+                            <button
+                                type="button"
+                                onClick={backToMenu}
+                                className="-ml-1 mb-4 flex items-center gap-1 rounded-md px-1 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground md:hidden"
+                            >
+                                <ChevronLeft className="size-4" aria-hidden />
+                                {t("tabSettings")}
+                            </button>
+                        )}
+
+                        {/* ── Général ──────────────────────────────────── */}
+                        {shown === "general" && page("general", "max-w-xl", (
+                            <>
                             <form
                                 onSubmit={(e) => e.preventDefault()}
-                                className="mx-auto max-w-xl space-y-6"
+                                className="space-y-6"
                             >
                                 {/* -- Nom ------------------------------------ */}
                                 <FormField
@@ -547,79 +597,38 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                      (voir HomeColorField plus haut) — WorldHome applique
                                      toujours les couleurs par défaut du thème. */}
                             </form>
-                        </TabsContent>
 
-                        {/* ── Catégories ───────────────────────────────── */}
-                        <TabsContent value="categories" className="mt-0">
-                            <div className="mx-auto max-w-xl">
-                                <WorldCategoryManager worldId={world.id} canEdit />
-                            </div>
-                        </TabsContent>
+                            {/* Supprimer le monde reste au propriétaire : `world.settings`
+                                permet de régler le monde, pas d'en disposer. */}
+                            {membership?.isOwner && (
+                                <SettingsSection title={tSettings("menu.dangerZone")} className="mt-10">
+                                    <div>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => void handleDelete()}
+                                            disabled={deleting}
+                                        >
+                                            {deleting ? (
+                                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                            ) : null}
+                                            {confirmDelete ? t("deleteConfirmShort") : t("delete")}
+                                        </Button>
+                                    </div>
+                                </SettingsSection>
+                            )}
+                            </>
+                        ))}
 
                         {/* ── Page d'accueil ───────────────────────────── */}
-                        {/* max-w-2xl plutôt que max-w-xl (comme les autres onglets) :
-                            un éditeur de grille 12 colonnes a besoin de plus de place. */}
-                        <TabsContent value="home" className="mt-0">
-                            <div className="mx-auto max-w-2xl">
-                                <WorldHomeGridSettings world={world} onUpdated={onUpdated} />
-                            </div>
-                        </TabsContent>
-
-                        {/* ── Fonctions ────────────────────────────────── */}
-                        <WorldFeaturesTab
-                            // La clé sert à REMONTER l'onglet quand on change de
-                            // monde. Elle doit rester unique entre frères : les
-                            // deux onglets partageaient `world.id`, ce que React
-                            // signale par « two children with the same key », et
-                            // qui l'autorise à confondre ou omettre l'un des deux.
-                            key={`features-${world.id}`}
-                            world={world}
-                            form={form}
-                            persistField={persistField}
-                            onUpdated={onUpdated}
-                        />
-
-                        {/* ── Groupes ──────────────────────────────────── */}
-                        <TabsContent value="groups" className="mt-0">
-                            <div className="mx-auto max-w-4xl">
-                                <WorldGroupsSettings worldId={world.id} />
-                            </div>
-                        </TabsContent>
-
-                        {/* ── Relations ────────────────────────────────── */}
-                        <TabsContent value="relations" className="mt-0">
-                            <div className="mx-auto max-w-4xl">
-                                <WorldRelationsSettings worldId={world.id} />
-                            </div>
-                        </TabsContent>
-
-                        {/* ── Rôles ────────────────────────────────────── */}
-                        {tabs.roles && (
-                            <TabsContent value="roles" className="mt-0">
-                                <WorldRolesTab key={`roles-${world.id}`} worldId={world.id} />
-                            </TabsContent>
-                        )}
-
-                        {/* ── Signalements ─────────────────────────────── */}
-                        {tabs.reports && (
-                            <TabsContent value="reports" className="mt-0">
-                                <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
-                            </TabsContent>
-                        )}
-
-                        {/* ── Annonces ─────────────────────────────────── */}
-                        {tabs.announcements && (
-                            <TabsContent value="announcements" className="mt-0">
-                                <WorldAnnouncementsTab
-                                    key={`announcements-${world.id}`}
-                                    worldId={world.id}
-                                    worldName={world.name}
-                                />
-                            </TabsContent>
-                        )}
+                        {/* Plus large : un éditeur de grille 12 colonnes a besoin de place. */}
+                        {shown === "home" && page("home", "max-w-2xl", (
+                            <WorldHomeGridSettings world={world} onUpdated={onUpdated} />
+                        ))}
 
                         {/* ── Communauté ───────────────────────────────── */}
-                        {tabs.community && (
+                        {shown === "community" && page("community", "max-w-xl", (
                             <WorldCommunityTab
                                 key={`community-${world.id}`}
                                 world={world}
@@ -627,30 +636,63 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 persistField={persistField}
                                 onUpdated={onUpdated}
                             />
+                        ))}
+
+                        {/* ── Fonctions ────────────────────────────────── */}
+                        {/* Toujours monté pour qui règle le monde : les pages gardent
+                            leur état, et le menu connaît l'état de chacune. Elles
+                            portent leur propre titre (FeaturePage). */}
+                        {settings && (
+                            <div className={cn("w-full max-w-3xl", !isFeatureSection(shown) && "hidden")}>
+                                <WorldFeaturesTab
+                                    // La clé REMONTE les pages quand on change de monde.
+                                    key={`features-${world.id}`}
+                                    world={world}
+                                    form={form}
+                                    persistField={persistField}
+                                    onUpdated={onUpdated}
+                                    section={isFeatureSection(shown) ? shown : null}
+                                    onStatusChange={setFeatureStatus}
+                                />
+                            </div>
                         )}
+
+                        {/* ── Catégories ───────────────────────────────── */}
+                        {shown === "categories" && page("categories", "max-w-xl", (
+                            <WorldCategoryManager worldId={world.id} canEdit />
+                        ))}
+
+                        {/* ── Groupes ──────────────────────────────────── */}
+                        {shown === "groups" && page("groups", "max-w-4xl", (
+                            <WorldGroupsSettings worldId={world.id} />
+                        ))}
+
+                        {/* ── Relations ────────────────────────────────── */}
+                        {shown === "relations" && page("relations", "max-w-4xl", (
+                            <WorldRelationsSettings worldId={world.id} />
+                        ))}
+
+                        {/* ── Rôles ────────────────────────────────────── */}
+                        {shown === "roles" && page("roles", "max-w-5xl", (
+                            <WorldRolesTab key={`roles-${world.id}`} worldId={world.id} />
+                        ))}
+
+                        {/* ── Annonces ─────────────────────────────────── */}
+                        {shown === "announcements" && page("announcements", "max-w-3xl", (
+                            <WorldAnnouncementsTab
+                                key={`announcements-${world.id}`}
+                                worldId={world.id}
+                                worldName={world.name}
+                            />
+                        ))}
+
+                        {/* ── Signalements ─────────────────────────────── */}
+                        {shown === "reports" && page("reports", "max-w-3xl", (
+                            <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
+                        ))}
                     </div>
-                </Tabs>
+                </div>
             </Form>
-
-
-            {/* Supprimer le monde reste au propriétaire : `world.settings`
-                permet de régler le monde, pas d'en disposer. */}
-            {membership?.isOwner && (
-            <div className="flex shrink-0 justify-start border-t border-border px-4 py-3">
-                <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => void handleDelete()}
-                    disabled={deleting}
-                >
-                    {deleting ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : null}
-                    {confirmDelete ? t("deleteConfirmShort") : t("delete")}
-                </Button>
-            </div>
-            )}
         </div>
     );
 }

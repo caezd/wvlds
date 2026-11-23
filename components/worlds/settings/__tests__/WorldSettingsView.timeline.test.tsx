@@ -23,6 +23,7 @@ vi.mock("@/components/worlds/settings/WorldRolesTab", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ public_worlds: false, world_timeline: true }),
@@ -101,7 +102,6 @@ function setup() {
 async function openTimelineSection(config: WorldTimelineConfig) {
   const user = userEvent.setup();
   render(<WorldSettingsView world={baseWorld(config)} />);
-  await user.click(screen.getByRole("tab", { name: "Fonctions" }));
   await user.click(screen.getByRole("button", { name: "Chronologie" }));
   return user;
 }

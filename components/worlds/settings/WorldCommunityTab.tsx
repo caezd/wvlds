@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
-import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -194,7 +193,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
     }, []);
 
   return (
-                            <TabsContent value="community" className="mt-0">
+                            <>
                                 <div className="mx-auto max-w-xl space-y-6">
                                     {/* -- Visibilité ----------------------------- */}
                                     <FormField
@@ -374,6 +373,6 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         )}
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </>
   );
 }

@@ -21,7 +21,10 @@ vi.mock("@/components/worlds/settings/WorldRolesTab", () => ({
   WorldRolesTab: () => <div data-testid="roles-tab" />,
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ public_worlds: false, world_timeline: false, world_map: true }),
 }));
@@ -73,9 +76,8 @@ beforeEach(() => vi.clearAllMocks());
 // donc par `!== false`, et c'est ce que ces tests fixent.
 // ──────────────────────────────────────────────────────────────────────────
 
-/** Ouvre l'onglet Fonctions, puis une catégorie de la colonne de gauche. */
+/** Ouvre une page « Fonctions » depuis le menu de gauche. */
 async function ouvrir(categorie: "Carte" | "Wiki") {
-  await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
   await userEvent.click(screen.getByRole("button", { name: categorie }));
 }
 
@@ -120,18 +122,22 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(screen.getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "false");
   });
 
-  it("les catégories à gauche, chacune avec son état ; la page de la catégorie choisie à droite", async () => {
+  it("les pages « Fonctions » dans le menu de gauche, chacune avec son état ; une seule page visible", async () => {
     monter({ enable_map: true, enable_wiki: false });
-    await userEvent.click(screen.getByRole("tab", { name: "Fonctions" }));
-    const nav = screen.getByRole("navigation", { name: "Catégories de fonctions" });
-    expect(within(nav).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      expect.arrayContaining(["Catalogue", "Carte", "Wiki", "Personas"]),
+    const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
+    const fonctions = within(nav).getByRole("group", { name: "Fonctions" });
+    expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
+      ["Catalogue", "Carte", "Wiki", "Personas"],
     );
     // L'état se lit en description : « Actif » ou « Off ».
     expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAccessibleDescription("Actif");
     expect(within(nav).getByRole("button", { name: "Wiki" })).toHaveAccessibleDescription("Off");
 
-    // Le catalogue d'emblée ; une seule page visible à la fois.
+    // « Général » d'emblée : aucune page « Fonctions » visible.
+    expect(within(nav).getByRole("button", { name: "Général" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
+
+    await userEvent.click(within(nav).getByRole("button", { name: "Catalogue" }));
     expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("region", { name: "Catalogue" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "Carte" })).toBeNull();

@@ -5,15 +5,13 @@ import { useTranslations } from "next-intl";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
-import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { World } from "@/types/worlds";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
 
-/** Les catégories de fonctions, dans la colonne de gauche. */
-type FeatureSectionId = "catalogue" | "map" | "wiki" | "personas" | "timeline";
+import type { FeatureSectionId } from "./worldSettingsSections";
 
 type ProprietesOnglet = {
   world: World;
@@ -45,12 +43,18 @@ import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SectionLabel } from "@/components/ui/section-label";
-import { FIELD, FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, FeaturePage, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
- * Onglet « Fonctions » des réglages d'un monde : inventaire et compétences,
- * faceclaims, restriction d'âge, chronologie, fiche modèle.
+ * Les pages « Fonctions » des réglages d'un monde : catalogue (inventaire,
+ * compétences, faceclaims), carte, wiki, fiche modèle des personas,
+ * chronologie. Le menu de gauche de WorldSettingsView choisit la page
+ * (`section`) ; ce composant lui rend l'état de chacune (`onStatusChange`)
+ * pour les pastilles Actif / Off.
+ *
+ * Toujours monté (pour qui peut régler le monde), pages cachées : chacune
+ * garde son état d'une visite à l'autre, et l'état des personas, que sa
+ * section charge elle-même, est connu du menu dès l'ouverture.
  *
  * Chaque groupe porte lui-même son état et son appel serveur. C'est ce qui
  * permet de le sortir du composant parent sans défilé de props : seuls le
@@ -61,8 +65,12 @@ import { FIELD, FeaturePage, SettingsSection, StatusPill, ToggleItem, ToggleList
  * un — un oubli dans cette liste et un réglage restait affiché à la valeur du
  * monde précédent.
  */
-export function WorldFeaturesTab({ world, form, persistField, onUpdated }: ProprietesOnglet & {
+export function WorldFeaturesTab({ world, form, persistField, onUpdated, section, onStatusChange }: ProprietesOnglet & {
   onUpdated?: (world: World) => void;
+  /** La page affichée ; `null` : une autre section des paramètres est ouverte. */
+  section: FeatureSectionId | null;
+  /** L'état (actif ou non) de chaque page, à chaque changement. */
+  onStatusChange?: (status: Record<FeatureSectionId, boolean>) => void;
 }) {
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
@@ -104,9 +112,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         world.timeline_config ?? defaultConfig,
     );
     const [togglingTimeline, setTogglingTimeline] = React.useState(false);
-    // La catégorie affichée, et l'état de celle des personas (sa section le
-    // charge elle-même).
-    const [sectionId, setSectionId] = React.useState<FeatureSectionId>("catalogue");
+    // L'état de la fiche modèle des personas : sa section le charge elle-même.
     const [personasActive, setPersonasActive] = React.useState(false);
 
     async function handleEnableToggle(field: "inventory" | "skills", enabled: boolean) {
@@ -210,14 +216,13 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         else onUpdated?.({ ...world, timeline_config: next } as World);
     }
 
-    const on = tSettings("statusOn");
-    const off = tSettings("statusOff");
+    const catalogueActive = enableInventory || enableSkills || enableFaceclaims;
     const sections: { id: FeatureSectionId; icon: LucideIcon; label: string; active: boolean; page: React.ReactNode }[] = [
         {
             id: "catalogue",
             icon: Package,
             label: t("nav.catalogue"),
-            active: enableInventory || enableSkills || enableFaceclaims,
+            active: catalogueActive,
             page: (
                 <FeaturePage title={t("nav.catalogue")} help={tSettings("catalogueHelp")}>
                     <ToggleList>
@@ -402,66 +407,32 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
             : []),
     ];
 
+    // Les pastilles du menu de gauche (WorldSettingsView).
+    React.useEffect(() => {
+        onStatusChange?.({
+            catalogue: catalogueActive,
+            map: enableMap,
+            wiki: enableWiki,
+            personas: personasActive,
+            timeline: timelineEnabled,
+        });
+    }, [onStatusChange, catalogueActive, enableMap, enableWiki, personasActive, timelineEnabled]);
 
   return (
     <>
-                        <TabsContent value="features" className="mt-0">
-                            {/* Les catégories à gauche, avec leur état ; la page de
-                                celle choisie à droite. Toutes restent montées (seule
-                                la choisie paraît) : chacune garde son état, et
-                                celui des personas, chargé par sa section, reste juste
-                                dans la colonne. */}
-                            <div className="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:gap-10">
-                                <nav
-                                    aria-label={tSettings("featuresNav")}
-                                    className="shrink-0 md:w-52 md:border-r md:border-border md:pr-4"
-                                >
-                                    <SectionLabel as="p" className="px-2.5 pb-2" aria-hidden>
-                                        {tSettings("featuresTitle")}
-                                    </SectionLabel>
-                                    <ul className="space-y-0.5">
-                                        {sections.map((section) => {
-                                            const selected = section.id === sectionId;
-                                            const Icon = section.icon;
-                                            return (
-                                                <li key={section.id}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSectionId(section.id)}
-                                                        aria-current={selected ? "page" : undefined}
-                                                        // Nommé par sa catégorie ; son état se lit en description.
-                                                        aria-label={section.label}
-                                                        aria-describedby={`feature-status-${section.id}`}
-                                                        className={cn(
-                                                            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
-                                                            selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                                                        )}
-                                                    >
-                                                        <Icon className="size-4 shrink-0" aria-hidden />
-                                                        <span className="min-w-0 flex-1 truncate">{section.label}</span>
-                                                        <StatusPill id={`feature-status-${section.id}`} active={section.active} onLabel={on} offLabel={off} />
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </nav>
-
-                                <div className="min-w-0 flex-1">
-                                    {sections.map((section) => (
-                                        <div
-                                            key={section.id}
-                                            hidden={section.id !== sectionId}
-                                            role="region"
-                                            aria-label={section.label}
-                                            data-feature-page={section.id}
-                                        >
-                                            {section.page}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </TabsContent>
+            <div hidden={section === null} data-testid="feature-pages">
+                {sections.map((s) => (
+                    <div
+                        key={s.id}
+                        hidden={s.id !== section}
+                        role="region"
+                        aria-label={s.label}
+                        data-feature-page={s.id}
+                    >
+                        {s.page}
+                    </div>
+                ))}
+            </div>
 
             {/* Confirmation purge */}
             <AlertDialog open={!!pendingRestriction} onOpenChange={open => { if (!open) setPendingRestriction(null); }}>

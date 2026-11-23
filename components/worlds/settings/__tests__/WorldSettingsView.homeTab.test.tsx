@@ -23,6 +23,7 @@ vi.mock("@/components/worlds/settings/WorldRolesTab", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 // `public_worlds` pilotable : l'onglet « Communauté » n'existe que s'il est
 // levé, et le contrôle des clés dupliquées a besoin des DEUX onglets montés.
@@ -88,7 +89,7 @@ describe("WorldSettingsView — onglet « Page d'accueil »", () => {
     const user = userEvent.setup();
     render(<WorldSettingsView world={BASE_WORLD} />);
 
-    await user.click(screen.getByRole("tab", { name: "Page d'accueil" }));
+    await user.click(screen.getByRole("button", { name: "Page d'accueil" }));
 
     expect(screen.getByTestId("home-grid-settings-stub")).toHaveTextContent("w1");
   });
@@ -109,7 +110,7 @@ describe("WorldSettingsView — onglet « Page d'accueil »", () => {
     try {
       setup();
       render(<WorldSettingsView world={BASE_WORLD} />);
-      await screen.findByRole("tab", { name: "Page d'accueil" });
+      await screen.findByRole("button", { name: "Page d'accueil" });
     } finally {
       espion.mockRestore();
       drapeaux.public_worlds = false;
