@@ -169,7 +169,7 @@ export function RelationsLegend({
             title={off ? t("showGroup", { name: g.name }) : t("hideGroup", { name: g.name })}
             className={cn(ITEM, off ? "text-muted-foreground line-through" : "text-foreground")}
           >
-            <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", off && "opacity-30")} style={{ boxShadow: `inset 0 0 0 2px ${g.color}` }} />
+            <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", off && "opacity-30")} style={{ boxShadow: `inset 0 0 0 2px ${g.color ?? "var(--border)"}` }} />
             {g.name}
           </button>
         );

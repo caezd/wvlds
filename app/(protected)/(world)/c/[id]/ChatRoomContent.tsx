@@ -10,6 +10,7 @@ import { fetchTurn } from "@/lib/chatroomTurns";
 import { fetchPostAccess, isChatroomVisibility } from "@/lib/chatroomAccess";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
+import { PERSONA_GROUP_COLUMNS, normalizeGroupRow, personaTints, resolvePersonaGroups, type PersonaGroupRow } from "@/lib/personaGroups";
 
 export default async function ChatRoomContent({
   id,
@@ -53,21 +54,16 @@ export default async function ChatRoomContent({
     // l'hydratation, pour une donnée que le serveur pouvait joindre au rendu.
     (async (): Promise<Record<string, string>> => {
       if (!chatroom.world_id) return {};
-      type AssignRow = { persona_id: string; group: { color: string } | null };
-      const [{ data: worldRow }, { data }] = await Promise.all([
-        // Le monde peut couper la couleur de groupe (migration 201).
-        supabase.from("worlds").select("persona_group_color").eq("id", chatroom.world_id).maybeSingle(),
-        supabase
-          .from("persona_group_assignments")
-          .select("persona_id, group:group_id(color)")
-          .eq("world_id", chatroom.world_id),
+      // Chaque groupe décide s'il teinte ses personas, et un sous-groupe sans
+      // couleur prend celle de son parent (migration 232) : il faut l'arbre.
+      const [{ data: groupRows }, { data: assignRows }] = await Promise.all([
+        supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", chatroom.world_id),
+        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", chatroom.world_id),
       ]);
-      if ((worldRow as { persona_group_color?: boolean } | null)?.persona_group_color === false) return {};
-      const out: Record<string, string> = {};
-      for (const row of ((data ?? []) as unknown as AssignRow[])) {
-        if (row.group?.color) out[row.persona_id] = row.group.color;
-      }
-      return out;
+      return personaTints(
+        resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)),
+        (assignRows ?? []) as { persona_id: string; group_id: string }[],
+      );
     })(),
     // Ordre de passage du salon (migration 211), s'il en a un.
     fetchTurn(supabase, id),

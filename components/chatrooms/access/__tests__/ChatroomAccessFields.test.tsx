@@ -53,6 +53,32 @@ describe("ChatroomInviteesField", () => {
     expect(mock.buildersFor("world_persona_groups")[0].eq).toHaveBeenCalledWith("world_id", "w1");
   });
 
+  it("les sous-groupes, sous leur parent et sous leur chemin ; la recherche trouve le parent dans le chemin", async () => {
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        { data: PERSONAS },
+        {
+          data: [
+            { id: "g-eclaireurs", name: "Éclaireurs", color: null, parent_id: "g-garde", sort_index: 0, apply_color: true },
+            { id: "g-garde", name: "La Garde", color: "#336699", parent_id: null, sort_index: 0, apply_color: true },
+            { id: "g-cour", name: "La Cour", color: "#aa0000", parent_id: null, sort_index: 1, apply_color: true },
+          ],
+        },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<Invitees />);
+    await screen.findByRole("button", { name: "Ada" });
+    const groupes = screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent);
+    expect(groupes.filter((n) => n && /Garde|Cour|Éclaireurs/.test(n)))
+      .toEqual(["La Garde", "La Garde › Éclaireurs", "La Cour"]);
+    await user.type(screen.getByRole("textbox"), "garde");
+    expect(screen.getByRole("button", { name: "La Garde › Éclaireurs" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "La Cour" })).toBeNull();
+  });
+
   it("la recherche ignore accents et casse", async () => {
     setup();
     const user = userEvent.setup();

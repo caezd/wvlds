@@ -7,8 +7,8 @@ const userList = [
   { member: { user_id: "u2" }, ps: [p("c", "u2"), p("d", "u2")] },
 ];
 const groups = [
-  { id: "g2", name: "Ordre", color: "#00f", sort_index: 1 },
-  { id: "g1", name: "Maison", color: "#f00", sort_index: 0 },
+  { id: "g2", name: "Ordre", color: "#00f", sort_index: 1, parent_id: null },
+  { id: "g1", name: "Maison", color: "#f00", sort_index: 0, parent_id: null },
 ];
 const groupByPersona = new Map([["a", "g1"], ["d", "g1"], ["c", "g2"]]);
 

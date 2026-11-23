@@ -13,6 +13,7 @@ import { fetchWorldMemberActivity, fetchWorldMembers, type WorldMemberActivity, 
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { MaritalStatus, PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
 import type { PersonaActivity } from "@/components/personas/shelves/buildShelves";
+import { PERSONA_GROUP_COLUMNS, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupRow, type ResolvedPersonaGroup } from "@/lib/personaGroups";
 
 /** Un persona du monde tel que la page des membres l'affiche et le filtre. */
 export type CommunityPersona = {
@@ -43,7 +44,8 @@ export type CommunityMemberRow = WorldMemberRow & {
   former?: boolean;
 };
 
-export type PersonaGroup = { id: string; name: string; color: string };
+/** Un groupe de personas résolu dans l'arbre (migration 232). */
+export type PersonaGroup = ResolvedPersonaGroup;
 
 type RawPersona = {
   id: string; name: string | null; avatar_url: string | null; user_id: string; created_at: string | null;
@@ -104,7 +106,7 @@ export function useCommunityData({
           .eq("world_id", worldId)
           .eq("is_template", false)
           .is("deleted_at", null),
-        supabase.from("world_persona_groups").select("id, name, color").eq("world_id", worldId).order("sort_index"),
+        supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
         supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
       ]);
 
@@ -159,7 +161,7 @@ export function useCommunityData({
       setPersonas(raw.filter((r) => !r.is_npc).map(toPersona));
       setNpcs(npcRows.map(toPersona));
       setNpcSections(sectionsByNpc);
-      setGroups((groupRows ?? []) as PersonaGroup[]);
+      setGroups(resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)));
       setGroupByPersona(new Map(((assignRows ?? []) as { persona_id: string; group_id: string }[]).map((a) => [a.persona_id, a.group_id])));
       setLoading(false);
 

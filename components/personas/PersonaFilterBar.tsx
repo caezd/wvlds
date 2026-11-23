@@ -51,7 +51,8 @@ export function PersonaFilterBar({
   filters: PersonaFilters;
   onFiltersChange: (next: PersonaFilters) => void;
   players: { id: string; label: string }[];
-  groups: { id: string; name: string; color: string }[];
+  /** Dans l'ordre de l'arbre ; `name` est le chemin (« Parent › Enfant »). */
+  groups: { id: string; name: string; color: string | null }[];
   /** Le monde a des PNJ (ou l'utilisateur en gère) : le type se filtre. */
   showKind: boolean;
   /** Le monde relit ses fiches : les états de relecture se filtrent. */
@@ -75,7 +76,7 @@ export function PersonaFilterBar({
     ...(groups.length > 0
       ? [{
           key: "group" as const, label: t("filterGroup"), allLabel: t("allGroups"),
-          options: [...groups.map((g) => ({ value: g.id, label: g.name, color: g.color })), { value: NO_GROUP, label: t("noGroup") }],
+          options: [...groups.map((g) => ({ value: g.id, label: g.name, color: g.color ?? undefined })), { value: NO_GROUP, label: t("noGroup") }],
         }]
       : []),
     { key: "status" as const, label: t("filterStatus"), allLabel: t("allStatuses"), options: [...NARRATIVE_STATUSES.map((s) => ({ value: s, label: tStatus(s) })), { value: OFFSTAGE, label: t("shelves.stats.offstage") }] },

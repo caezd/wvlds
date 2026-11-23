@@ -13,6 +13,25 @@ import {
   updatePersonaRelation,
 } from "@/app/actions/personaRelations";
 import type { CGroup, CMember, CPersona, CRelType, CRelation } from "./types";
+import {
+  PERSONA_GROUP_COLUMNS,
+  groupPathLabel,
+  normalizeGroupRow,
+  resolvePersonaGroups,
+  type PersonaGroupRow,
+} from "@/lib/personaGroups";
+
+/** Les groupes du monde pour le canevas : dans l'ordre de l'arbre, sous leur chemin. */
+export function toCanvasGroups(rows: PersonaGroupRow[]): CGroup[] {
+  return resolvePersonaGroups(rows).map((g, i) => ({
+    id: g.id,
+    name: groupPathLabel(g),
+    color: g.swatch,
+    sort_index: i,
+    parent_id: g.parent_id,
+    tint: g.tint,
+  }));
+}
 
 // Les données du canevas de relations, et tout ce qu'on peut y écrire.
 //
@@ -59,7 +78,7 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
         supabase.from("personas").select("id, name, avatar_url, user_id, narrative_status").eq("world_id", worldId).eq("is_template", false).is("deleted_at", null),
         supabase.from("world_members").select("user_id").eq("world_id", worldId),
         supabase.from("worlds").select("owner_id").eq("id", worldId).single(),
-        supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),
+        supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
         supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
         supabase.from("persona_relations").select(RELATION_COLUMNS).eq("world_id", worldId),
         supabase.from("world_relation_types").select(TYPE_COLUMNS).eq("world_id", worldId).order("sort_index"),
@@ -67,7 +86,7 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
 
       const allPersonas = (pRows ?? []) as CPersona[];
       setPersonas(allPersonas);
-      setGroups((gRows ?? []) as CGroup[]);
+      setGroups(toCanvasGroups(((gRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)));
       setRelations((rRows ?? []) as CRelation[]);
 
       // Un monde sans type reçoit deux types par défaut à sa première visite

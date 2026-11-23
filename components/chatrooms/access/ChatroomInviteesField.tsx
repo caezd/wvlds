@@ -15,6 +15,7 @@ import { avatarThumbWidth } from "@/lib/storage";
 import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
 import { inviteeKey, type ChatroomInvitee } from "@/lib/chatroomAccess";
+import { PERSONA_GROUP_COLUMNS, groupChoices, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupRow } from "@/lib/personaGroups";
 
 type PersonaOption = { id: string; name: string; avatar_url: string | null };
 type GroupOption = { id: string; name: string; color: string | null };
@@ -106,13 +107,15 @@ export function ChatroomInviteesField({
         .order("name"),
       supabase
         .from("world_persona_groups")
-        .select("id, name, color")
+        .select(PERSONA_GROUP_COLUMNS)
         .eq("world_id", worldId)
         .order("sort_index"),
     ]).then(([p, g]) => {
       if (cancelled) return;
       setPersonas((p.data ?? []) as PersonaOption[]);
-      setGroups((g.data ?? []) as GroupOption[]);
+      // En arbre (migration 232) : chaque groupe sous son chemin ; inviter un
+      // groupe invite aussi ses sous-groupes.
+      setGroups(groupChoices(resolvePersonaGroups(((g.data ?? []) as PersonaGroupRow[]).map(normalizeGroupRow))));
       setLoaded(true);
     });
     return () => {

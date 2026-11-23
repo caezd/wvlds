@@ -36,6 +36,7 @@ import { GROUPLESS_KEY, groupIdOfKey, parseGroupBy, ringArcsInput, type RingGrou
 import { ConstellationView } from "./ConstellationView";
 import type { ConstellationInput } from "./constellationLayout";
 import { ViewOptions } from "./ViewOptions";
+import { groupLineages } from "@/lib/personaGroups";
 
 type View = "ring" | "constellations" | "focus";
 
@@ -110,11 +111,13 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   };
+  // Masquer un groupe masque aussi ses sous-groupes (migration 232).
+  const lineage = React.useMemo(() => groupLineages(groups), [groups]);
   const personaHidden = React.useCallback((pid: string) => {
     const gid = groupByPersona.get(pid);
-    if (!!gid && hiddenGroups.has(gid)) return true;
+    if (gid && [...(lineage.get(gid) ?? [gid])].some((id) => hiddenGroups.has(id))) return true;
     return hideRetired && isRetiredStatus(personaMap.get(pid)?.narrative_status);
-  }, [groupByPersona, hiddenGroups, hideRetired, personaMap]);
+  }, [groupByPersona, lineage, hiddenGroups, hideRetired, personaMap]);
   const hasRetired = React.useMemo(() => personas.some((p) => isRetiredStatus(p.narrative_status)), [personas]);
   const relationVisible = React.useCallback(
     (r: CRelation) => !hiddenTypes.has(r.type) && !personaHidden(r.from_persona_id) && !personaHidden(r.to_persona_id),
@@ -193,7 +196,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   // ── Couleur de groupe ──
   const groupColor = React.useMemo(() => {
     const m = new Map<string, string>();
-    const gMap = new Map(groups.map((g) => [g.id, g.color]));
+    // La teinte, et non la pastille : un groupe peut ne pas appliquer sa couleur.
+    const gMap = new Map(groups.map((g) => [g.id, g.tint]));
     for (const [pid, gid] of groupByPersona) {
       const c = gMap.get(gid);
       if (c) m.set(pid, c);
@@ -274,7 +278,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
       },
       colorOf: (key: string) => {
         const gid = groupIdOfKey(key);
-        return gid ? byId.get(gid)?.color : undefined;
+        return gid ? byId.get(gid)?.color ?? undefined : undefined;
       },
     };
   }, [effectiveGroupBy, groups, t]);
