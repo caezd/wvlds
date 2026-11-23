@@ -53,7 +53,8 @@ export type WorldFeatureField =
   | "enable_inventory"
   | "enable_skills"
   | "enable_map"
-  | "enable_wiki";
+  | "enable_wiki"
+  | "enable_live_chat";
 
 export async function setWorldFeature(
   worldId: string,

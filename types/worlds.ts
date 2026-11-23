@@ -158,6 +158,8 @@ export type World = {
   enable_map?: boolean | null;
   /** Wiki du monde. Absent = activé (défaut en base). */
   enable_wiki?: boolean | null;
+  /** Chatbox du monde (migration 237). Éteinte par défaut : activée ici seulement. */
+  enable_live_chat?: boolean | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;

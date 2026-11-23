@@ -24,14 +24,20 @@ export default async function ChatRoomLayout({
 
   // Le chat en direct du monde n'est proposé qu'à ses membres : un salon
   // public peut être lu par un visiteur, le chat du monde non (RLS, migration 202).
-  const world = chatroom?.worlds as { owner_id?: string; world_members?: { user_id: string }[] } | null | undefined;
+  const world = chatroom?.worlds as
+    | { owner_id?: string; enable_live_chat?: boolean | null; world_members?: { user_id: string }[] }
+    | null
+    | undefined;
   const isWorldMember =
     !!userId && !!world && (world.owner_id === userId || (world.world_members ?? []).some((m) => m.user_id === userId));
 
   return (
     <>
       <SidebarWorldGuard worldId={chatroom?.world_id ?? null} />
-      {chatroom?.world_id && isWorldMember && <WorldLiveChatAnchor worldId={chatroom.world_id} />}
+      {/* Et seulement si le monde a activé sa chatbox (migration 237). */}
+      {chatroom?.world_id && isWorldMember && world?.enable_live_chat === true && (
+        <WorldLiveChatAnchor worldId={chatroom.world_id} />
+      )}
       {children}
     </>
   );

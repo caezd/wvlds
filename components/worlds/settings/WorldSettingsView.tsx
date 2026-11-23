@@ -107,7 +107,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
   const schema = React.useMemo(() => buildWorldSettingsSchema(tSettings), [tSettings]);
     const supabase = createClient();
     const router = useRouter();
-    const { public_worlds, world_timeline } = useFeatureFlags();
+    const { public_worlds, world_timeline, world_live_chat } = useFeatureFlags();
     // Chaque section répond à une permission : un membre qui n'a que
     // `roles.manage` voit « Membres › Rôles » et rien d'autre.
     const { can, membership } = useWorldMembership();
@@ -123,6 +123,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                 return settings;
             case "timeline":
                 return settings && world_timeline;
+            // La chatbox : proposée aux mondes une fois ouverte au site.
+            case "chatbox":
+                return settings && world_live_chat;
             case "community":
                 return public_worlds && settings;
             case "categories":

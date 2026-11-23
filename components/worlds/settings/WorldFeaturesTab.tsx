@@ -41,7 +41,7 @@ import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldP
 import { TimelineSettings } from "./TimelineSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BookOpen, Clock, Map as MapIcon, Package, UserRound, type LucideIcon } from "lucide-react";
+import { BookOpen, Clock, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
@@ -76,7 +76,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
   const tSettings = useTranslations("worlds.settings");
   const tCatalogue = useTranslations("catalogue");
   const tCommon = useTranslations("common");
-  const { world_timeline } = useFeatureFlags();
+  const { world_timeline, world_live_chat } = useFeatureFlags();
 
     const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
     const [enableSkills, setEnableSkills] = React.useState(world.enable_skills !== false);
@@ -186,6 +186,19 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableMap(enabled);
         onUpdated?.({ ...world, enable_map: enabled } as World);
+    }
+
+    // Éteinte par défaut en base : seul `true` l'active.
+    const [enableLiveChat, setEnableLiveChat] = React.useState(world.enable_live_chat === true);
+    const [togglingLiveChat, setTogglingLiveChat] = React.useState(false);
+
+    async function handleLiveChatToggle(enabled: boolean) {
+        setTogglingLiveChat(true);
+        const res = await setWorldFeature(world.id, "enable_live_chat", enabled);
+        setTogglingLiveChat(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setEnableLiveChat(enabled);
+        onUpdated?.({ ...world, enable_live_chat: enabled } as World);
     }
 
     async function handleWikiToggle(enabled: boolean) {
@@ -404,6 +417,29 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 ),
             }]
             : []),
+        // La chatbox (chat en direct hors-jeu, migrations 202 et 237) : une
+        // fois ouverte au site par le drapeau, chaque monde l'active ou non.
+        ...(world_live_chat
+            ? [{
+                id: "chatbox" as const,
+                icon: MessagesSquare,
+                label: tSettings("chatbox"),
+                active: enableLiveChat,
+                page: (
+                    <FeaturePage
+                        title={tSettings("chatbox")}
+                        help={tSettings("chatboxHelp")}
+                        toggle={{
+                            label: tSettings(enableLiveChat ? "enabledF" : "disabledF"),
+                            ariaLabel: tSettings("enableChatbox"),
+                            checked: enableLiveChat,
+                            disabled: togglingLiveChat,
+                            onCheckedChange: v => void handleLiveChatToggle(v),
+                        }}
+                    />
+                ),
+            }]
+            : []),
     ];
 
     // Les pastilles du menu de gauche (WorldSettingsView).
@@ -414,8 +450,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             wiki: enableWiki,
             personas: personasActive,
             timeline: timelineEnabled,
+            chatbox: enableLiveChat,
         });
-    }, [onStatusChange, catalogueActive, enableMap, enableWiki, personasActive, timelineEnabled]);
+    }, [onStatusChange, catalogueActive, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat]);
 
   return (
     <>

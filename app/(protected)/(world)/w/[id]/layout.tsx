@@ -94,7 +94,8 @@ export default async function WorldLayout({
         <SidebarWorldGuard worldId={world.id} />
         <main className="composer-parent flex h-full min-w-0 flex-1 flex-col focus-visible:outline-0">
           <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
-          <WorldLiveChatAnchor worldId={world.id} />
+          {/* La chatbox, si le monde l'a activée (migration 237). */}
+          {world.enable_live_chat === true && <WorldLiveChatAnchor worldId={world.id} />}
           <div className="flex min-h-0 w-full flex-1 flex-row">
             {children}
           </div>

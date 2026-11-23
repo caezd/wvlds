@@ -1112,7 +1112,10 @@
           "rooms": "Salas y personajes",
           "members": "Miembros"
         }
-      }
+      },
+      "chatbox": "Chatbox",
+      "chatboxHelp": "Una charla fuera de rol entre los miembros, en una barra al pie de todas las páginas del mundo: mensajes cortos, firmados por la cuenta, no por un personaje. Desactivada, la barra desaparece; los mensajes se conservan y vuelven al reactivarla.",
+      "enableChatbox": "Activar la chatbox"
     },
     "timelinePicker": {
       "year": "Año",

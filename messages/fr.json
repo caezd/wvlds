@@ -1112,7 +1112,10 @@
           "rooms": "Salons & personas",
           "members": "Membres"
         }
-      }
+      },
+      "chatbox": "Chatbox",
+      "chatboxHelp": "Une discussion hors-jeu entre les membres, en barre au bas de toutes les pages du monde : messages courts, signés par le compte, pas par un persona. Désactivée, la barre disparaît ; les messages sont gardés et reviennent à la réactivation.",
+      "enableChatbox": "Activer la chatbox"
     },
     "timelinePicker": {
       "year": "Année",

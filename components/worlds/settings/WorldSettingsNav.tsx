@@ -12,6 +12,7 @@ import {
   House,
   Map as MapIcon,
   Megaphone,
+  MessagesSquare,
   Package,
   Shield,
   SlidersHorizontal,
@@ -40,6 +41,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   wiki: BookOpen,
   personas: UserRound,
   timeline: Clock,
+  chatbox: MessagesSquare,
   categories: FolderTree,
   groups: UsersRound,
   relations: Waypoints,
@@ -63,6 +65,7 @@ export function useSettingsSectionLabel() {
         case "wiki": return tSettings("wiki");
         case "personas": return t("nav.personas");
         case "timeline": return t("nav.timeline");
+        case "chatbox": return tSettings("chatbox");
         case "categories": return t("tabCategories");
         case "groups": return t("tabGroups");
         case "relations": return t("tabRelations");

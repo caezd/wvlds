@@ -1112,7 +1112,10 @@
           "rooms": "Rooms & personas",
           "members": "Members"
         }
-      }
+      },
+      "chatbox": "Chatbox",
+      "chatboxHelp": "An out-of-character chat between members, as a bar at the bottom of every page of the world: short messages, signed by the account, not by a persona. When off, the bar disappears; messages are kept and come back when it's turned on again.",
+      "enableChatbox": "Enable the chatbox"
     },
     "timelinePicker": {
       "year": "Year",

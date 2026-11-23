@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Paramètres › Fonctions : nouvelle entrée « Chatbox ». Chaque monde choisit d’activer ou non sa discussion hors-jeu en barre au bas de ses pages ; elle est désactivée par défaut. Désactivée, la barre disparaît et les messages sont mis de côté, puis reviennent à la réactivation.",
+  },
+  {
+    date: "2026-11-23",
     category: "Interface",
     area: "Monde",
     text: "Paramètres › Fonctions : les réglages d’une fonction désactivée restent affichés, grisés, pour voir ce qu’elle offre avant de l’activer — restrictions du catalogue, faceclaim obligatoire, nom du lien du wiki, validation et édition de la fiche modèle, réglages de la chronologie. Leur aide reste consultable au survol.",
