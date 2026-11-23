@@ -1253,7 +1253,17 @@
       "edited": "editado",
       "onHome": "En la portada",
       "pinnedOnHome": "Fijado en la portada",
-      "justNow": "ahora mismo"
+      "justNow": "ahora mismo",
+      "previewOpen": "Vista previa",
+      "previewTitle": "Vista previa del anuncio",
+      "previewHelp": "Lo que verán los destinatarios, con sus valores en lugar de las variables.",
+      "previewLive": "Vista previa en directo",
+      "previewInBell": "En las notificaciones",
+      "previewOpened": "Notificación abierta",
+      "previewBanner": "Banner en la portada del mundo",
+      "previewMessage": "Mensaje privado",
+      "previewHome": "Widget «Últimos anuncios»",
+      "previewMessageExtras": "La etiqueta y la imagen no aparecen en el mensaje privado: solo en la portada y en el historial."
     }
   },
   "auth": {

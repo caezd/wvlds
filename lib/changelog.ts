@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-23",
     category: "Interface",
+    area: "Membres",
+    text: "Annonces : un bouton « Aperçu » montre l’annonce telle que les destinataires la verront — dans la cloche puis ouverte, en bandeau, en message privé, et dans le widget de l’accueil si elle y est — sans avoir à s’envoyer un essai. Sur grand écran, cet aperçu reste affiché à droite du formulaire et suit chaque modification. Les étiquettes ont désormais leur icône, et se choisissent sous leur vraie apparence.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Interface",
     area: "Monde",
     text: "Paramètres d’un monde : les onglets laissent place à un menu à gauche, rangé en groupes (Monde, Fonctions, Salons & personas, Membres). Catalogue, carte, wiki, personas et chronologie y ont chacun leur entrée, avec leur état. La section ouverte est dans l’adresse, et le bouton Précédent y revient. Sur mobile, le menu s’affiche en liste, puis la section choisie en plein écran. La suppression du monde passe dans « Général », sous « Zone de danger ».",
   },

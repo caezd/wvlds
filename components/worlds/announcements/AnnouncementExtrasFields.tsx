@@ -12,6 +12,19 @@ import { toWebP } from "@/lib/imageUtils";
 import { STORAGE_CACHE_CONTROL, nomDeFichierUnique } from "@/lib/storagePaths";
 import { ANNOUNCEMENT_LABELS, announcementImagePath, type AnnouncementLabel } from "@/lib/worldAnnouncements";
 import { ToggleItem, ToggleList } from "@/components/worlds/settings/FeatureLayout";
+import type { VariantProps } from "class-variance-authority";
+import { badgeVariants } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { ANNOUNCEMENT_LABEL_ICON, ANNOUNCEMENT_LABEL_TONE } from "./AnnouncementLabelBadge";
+
+/** Un choix d'étiquette : la pastille, en plus grand ; la choisie est cerclée. */
+function labelOption(selected: boolean, tone: VariantProps<typeof badgeVariants>["tone"]) {
+  return cn(
+    badgeVariants({ tone }),
+    "h-7 cursor-pointer px-2.5 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    selected ? "ring-2 ring-ring ring-offset-1 ring-offset-background" : "opacity-55 hover:opacity-100",
+  );
+}
 
 /** Les options d'une annonce telles que le formulaire les tient (migration 235). */
 export type AnnouncementExtrasValue = {
@@ -77,32 +90,35 @@ export function AnnouncementExtrasFields({
     <div className="space-y-4" data-testid="announcement-extras">
       <div className="space-y-2">
         <p className="text-sm font-medium">{t("labelTitle")}</p>
+        {/* Les choix ont l'allure de l'étiquette elle-même : icône et ton. */}
         <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("labelTitle")}>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="xs"
             aria-pressed={value.label === null}
             onClick={() => set({ label: null })}
             data-testid="announcement-label-option"
             data-label="none"
+            className={labelOption(value.label === null, "outline")}
           >
             {t("labelNone")}
-          </Button>
-          {ANNOUNCEMENT_LABELS.map((l) => (
-            <Button
-              key={l}
-              type="button"
-              variant="outline"
-              size="xs"
-              aria-pressed={value.label === l}
-              onClick={() => set({ label: l })}
-              data-testid="announcement-label-option"
-              data-label={l}
-            >
-              {tLabels(l)}
-            </Button>
-          ))}
+          </button>
+          {ANNOUNCEMENT_LABELS.map((l) => {
+            const Icon = ANNOUNCEMENT_LABEL_ICON[l];
+            return (
+              <button
+                key={l}
+                type="button"
+                aria-pressed={value.label === l}
+                onClick={() => set({ label: l })}
+                data-testid="announcement-label-option"
+                data-label={l}
+                className={labelOption(value.label === l, ANNOUNCEMENT_LABEL_TONE[l])}
+              >
+                <Icon aria-hidden />
+                {tLabels(l)}
+              </button>
+            );
+          })}
         </div>
       </div>
 

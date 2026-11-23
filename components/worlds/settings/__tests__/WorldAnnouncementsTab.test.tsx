@@ -2,15 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (k: string, v?: Record<string, unknown>) => (v && "count" in v ? `${k}:${v.count}` : k),
-  useLocale: () => "fr",
-}));
+vi.mock("next-intl", () => {
+  const t = Object.assign(
+    (k: string, v?: Record<string, unknown>) => (v && "count" in v ? `${k}:${v.count}` : k),
+    // La ligne de la cloche, dans l'aperçu : la clé, puis le titre.
+    { rich: (k: string, v?: Record<string, unknown>) => `${k}:${String(v?.title ?? "")}` },
+  );
+  return { useTranslations: () => t, useLocale: () => "fr" };
+});
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({}) }));
 vi.mock("@/components/date-display", () => ({ default: () => <span>date</span> }));
-vi.mock("@/components/MarkdownRenderer", () => ({ default: ({ content }: { content: string }) => <div>{content}</div> }));
+vi.mock("@/components/MarkdownRenderer", async (orig) => ({
+  ...(await orig<typeof import("@/components/MarkdownRenderer")>()),
+  default: ({ content }: { content: string }) => <div>{content}</div>,
+}));
 
 const flags = vi.hoisted(() => ({ direct_messages: true }));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({ useFeatureFlags: () => flags }));
@@ -144,8 +151,9 @@ describe("WorldAnnouncementsTab", () => {
     await user.click(screen.getByRole("button", { name: "{username}" }));
     expect(body).toHaveValue("Salut {username} !");
 
-    await user.click(screen.getByRole("button", { name: "preview" }));
-    expect(screen.getByTestId("announcement-preview")).toHaveTextContent("Salut mojkkin !");
+    await user.click(screen.getByRole("button", { name: "previewOpen" }));
+    const fenetre = screen.getByTestId("announcement-preview-dialog");
+    expect(within(fenetre).getByTestId("announcement-preview")).toHaveTextContent("Salut mojkkin !");
   });
 
   it("annonce le plafond journalier atteint et bloque l'envoi", async () => {
@@ -409,8 +417,10 @@ describe("WorldAnnouncementsTab", () => {
 
     await user.type(screen.getByRole("textbox", { name: "titleLabel" }), "Fête");
     await user.type(screen.getByRole("textbox", { name: "body" }), "Ce soir.");
-    await user.click(screen.getByRole("button", { name: "preview" }));
+    await user.click(screen.getByRole("button", { name: "previewOpen" }));
     expect(screen.getByTestId("announcement-preview-banner")).toHaveTextContent("Fête");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByTestId("announcement-preview-dialog")).toBeNull());
 
     await user.click(screen.getByTestId("announcement-send"));
     const dialog = await screen.findByRole("alertdialog");
@@ -516,5 +526,48 @@ describe("WorldAnnouncementsTab", () => {
     expect(screen.getByRole("radio", { name: /kindBanner/ })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("button", { name: "filterDays:7" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("switch", { name: "asWorld" })).toBeChecked();
+  });
+
+  it("aperçu en direct : la notification avec son étiquette, et l'entrée de l'accueil quand elle y est", async () => {
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:4");
+    await user.click(screen.getByRole("radio", { name: /kindNotification/ }));
+    await user.type(screen.getByRole("textbox", { name: "titleLabel" }), "Soirée {{world}");
+    await user.type(screen.getByRole("textbox", { name: "body" }), "Rendez-vous ce soir.");
+
+    const direct = screen.getByTestId("announcement-live-preview");
+    expect(direct).toHaveAttribute("data-kind", "notification");
+    // La cloche et la notification ouverte, variables remplacées.
+    expect(within(direct).getByTestId("announcement-live-preview-bell")).toHaveTextContent("Soirée Ygg");
+    const ouverte = within(direct).getByTestId("announcement-live-preview-opened");
+    expect(ouverte).toHaveTextContent("Rendez-vous ce soir.");
+    expect(within(direct).queryByTestId("announcement-live-preview-home")).toBeNull();
+
+    // L'étiquette choisie paraît, avec son icône.
+    await user.click(screen.getByRole("button", { name: "event" }));
+    const etiquette = within(ouverte).getByTestId("announcement-label");
+    expect(etiquette).toHaveAttribute("data-label", "event");
+    expect(etiquette.querySelector("svg")).not.toBeNull();
+
+    // Sur l'accueil, épinglée : l'entrée du widget suit.
+    await user.click(screen.getByRole("switch", { name: "showOnHome" }));
+    await user.click(screen.getByRole("switch", { name: "pinned" }));
+    const accueil = within(direct).getByTestId("announcement-live-preview-home");
+    expect(accueil).toHaveTextContent("Soirée Ygg");
+    expect(within(accueil).getByLabelText("pinned")).toBeInTheDocument();
+  });
+
+  it("aperçu d'un message privé : la bulle, et l'étiquette dite absente du message", async () => {
+    const user = userEvent.setup();
+    render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
+    await screen.findByText("recipientCount:4");
+    await user.type(screen.getByRole("textbox", { name: "body" }), "Coucou");
+    const direct = screen.getByTestId("announcement-live-preview");
+    expect(direct).toHaveAttribute("data-kind", "message");
+    expect(within(direct).getByTestId("announcement-live-preview-message")).toHaveTextContent("Coucou");
+    expect(direct).not.toHaveTextContent("previewMessageExtras");
+    await user.click(screen.getByRole("button", { name: "important" }));
+    expect(direct).toHaveTextContent("previewMessageExtras");
   });
 });

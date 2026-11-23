@@ -3,12 +3,13 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CalendarClock, Loader2, Megaphone, Send, SlidersHorizontal, Users } from "lucide-react";
+import { CalendarClock, Eye, Loader2, Megaphone, Send, SlidersHorizontal, Users } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CountPip } from "@/components/ui/count-pip";
+import { SectionLabel } from "@/components/ui/section-label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, us
 import { AnnouncementFiltersPanel } from "./announcements/AnnouncementFiltersPanel";
 import { AnnouncementDetails, HistoryRow } from "./announcements/AnnouncementHistory";
 import { WorldWelcomeSection } from "./announcements/WorldWelcomeSection";
+import { AnnouncementLivePreview, AnnouncementPreviewButton } from "./announcements/AnnouncementLivePreview";
 import { ScheduleDialog, ScheduledList } from "./announcements/ScheduledAnnouncements";
 import {
   AnnouncementExtrasFields,
@@ -86,7 +88,6 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   // Étiquette, image, accueil, épingle (migration 235).
   const [extras, setExtras] = React.useState<AnnouncementExtrasValue>(EMPTY_EXTRAS);
   const images = useAnnouncementImageDrafts(extras.imageUrl);
-  const [preview, setPreview] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
   const [scheduled, setScheduled] = React.useState<ScheduledAnnouncement[]>([]);
@@ -149,6 +150,8 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
 
   const roleById = React.useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const sample = { username: username ?? t("sampleUsername"), world: worldName };
+  // L'aperçu (fenêtre et colonne en direct) : ce que verront les destinataires.
+  const previewProps = { kind, title, body, sample, worldName, asWorld: signable && asWorld, extras };
 
   // Un rôle visé ne peut pas être exclu en même temps, et inversement.
   function toggleRole(id: string) {
@@ -186,7 +189,6 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       showOnHome: !!a.show_on_home,
       pinned: !!a.pinned_at,
     });
-    setPreview(false);
     focusFormOnClose.current = true;
     setOpened(null);
     toast.success(t("reused"));
@@ -215,7 +217,6 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
     setTitle("");
     setBody("");
     setExtras(EMPTY_EXTRAS);
-    setPreview(false);
   }
 
   async function schedule(when: Date): Promise<boolean> {
@@ -243,7 +244,11 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   }
 
   return (
-    <div className="@container mx-auto max-w-3xl space-y-6" data-testid="announcements-tab">
+    <div className="@container/announcements space-y-6" data-testid="announcements-tab">
+      {/* Le formulaire ; à sa droite, quand la place le permet, l'aperçu en
+          direct, qui reste visible pendant qu'on descend dans le formulaire. */}
+      <div className="grid gap-10 @5xl/announcements:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="@container min-w-0 max-w-3xl space-y-6">
       <div ref={formRef} className="scroll-mt-6" />
       {/* ── Type ─────────────────────────────────────────── */}
       <SettingsSection title={t("kind")} help={t("kindHelp")} className="border-t-0 pt-0">
@@ -385,7 +390,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
           title={title}
           body={body}
           onBodyChange={setBody}
-          preview={preview}
+          preview={false}
           sample={sample}
           worldName={worldName}
           asWorld={signable && asWorld}
@@ -403,7 +408,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
             asWorld={signable && asWorld}
             disabled={!valid}
           />
-          <PreviewToggle preview={preview} onToggle={() => setPreview((p) => !p)} />
+          <AnnouncementPreviewButton {...previewProps} />
           <Button
             type="button"
             variant="outline"
@@ -420,7 +425,20 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
           </Button>
         </div>
       </SettingsSection>
+      </div>
 
+      <aside className="hidden @5xl/announcements:block" aria-label={t("previewLive")} data-testid="announcement-live-preview-aside">
+        <div className="sticky top-0 space-y-3">
+          <SectionLabel as="p" className="flex items-center gap-1.5">
+            <Eye className="size-3.5" aria-hidden />
+            {t("previewLive")}
+          </SectionLabel>
+          <AnnouncementLivePreview {...previewProps} testId="announcement-live-preview" />
+        </div>
+      </aside>
+      </div>
+
+      <div className="@container max-w-3xl space-y-6">
       {/* ── Programmées (rien s'il n'y en a pas) ─────────── */}
       {scheduled.length > 0 && (
         <SettingsSection title={t("scheduledTitle")} help={t("scheduledHelp")} meta={String(scheduled.length)}>
@@ -454,6 +472,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
 
       {/* ── Bienvenue ────────────────────────────────────── */}
       <WorldWelcomeSection worldId={worldId} worldName={worldName} dmsEnabled={dmsEnabled} sample={sample} />
+      </div>
 
       <AnnouncementDetails
         announcement={opened}
@@ -502,14 +521,5 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-function PreviewToggle({ preview, onToggle }: { preview: boolean; onToggle: () => void }) {
-  const tCommon = useTranslations("common");
-  return (
-    <Button type="button" variant="outline" onClick={onToggle} aria-pressed={preview} data-testid="announcement-preview-toggle">
-      {preview ? tCommon("edit") : tCommon("preview")}
-    </Button>
   );
 }

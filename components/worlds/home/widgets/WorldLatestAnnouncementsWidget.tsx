@@ -23,6 +23,55 @@ import { AnnouncementImage, AnnouncementLabelBadge } from "@/components/worlds/a
 const DEFAULT_LIMIT = 3;
 
 /**
+ * Une annonce dans la liste du widget : épingle, titre, étiquette, début du
+ * texte, signature. Cliquable dans le widget ; inerte dans l'aperçu du
+ * formulaire d'annonce (sans `onOpen`).
+ */
+export function HomeAnnouncementRow({
+  announcement: a,
+  onOpen,
+}: {
+  announcement: Pick<HomeAnnouncement, "title" | "body" | "label" | "pinned" | "signer" | "created_at" | "edited_at">;
+  onOpen?: () => void;
+}) {
+  const t = useTranslations("worlds.announcements");
+  const locale = useLocale();
+  const inner = (
+    <>
+      <span className="flex items-center gap-2">
+        {a.pinned && <Pin className="size-3.5 shrink-0 text-muted-foreground" aria-label={t("pinned")} />}
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{a.title ?? markdownToPlainText(a.body)}</span>
+        <AnnouncementLabelBadge label={a.label} />
+      </span>
+      {a.title && <span className="line-clamp-2 text-xs-plus text-muted-foreground">{markdownToPlainText(a.body)}</span>}
+      <span className="block text-xs text-muted-foreground">
+        {[a.signer, relativeTime(a.created_at, locale, t("justNow")), a.edited_at ? t("edited") : null]
+          .filter(Boolean)
+          .join(" · ")}
+      </span>
+    </>
+  );
+  const className = "block w-full space-y-1 rounded-md px-2.5 py-2 text-left";
+  if (!onOpen) {
+    return (
+      <div className={className} data-testid="latest-announcement">
+        {inner}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`${className} transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none`}
+      data-testid="latest-announcement"
+    >
+      {inner}
+    </button>
+  );
+}
+
+/**
  * « Dernières annonces » sur l'accueil d'un monde (migration 235) : les
  * annonces que l'équipe a choisi d'y afficher, épinglées d'abord. Visible de
  * tous les membres, quel que soit le ciblage de l'envoi — c'est le sens de la
@@ -42,7 +91,6 @@ export function WorldLatestAnnouncementsWidget({
 }) {
   const t = useTranslations("worlds.announcements");
   const tHome = useTranslations("worlds.home");
-  const locale = useLocale();
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<HomeAnnouncement[]>(initialAnnouncements ?? []);
   const [opened, setOpened] = useState<HomeAnnouncement | null>(null);
@@ -72,26 +120,7 @@ export function WorldLatestAnnouncementsWidget({
       <ul className="space-y-1">
         {items.map((a) => (
           <li key={a.id}>
-            <button
-              type="button"
-              onClick={() => setOpened(a)}
-              className="block w-full space-y-1 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-              data-testid="latest-announcement"
-            >
-              <span className="flex items-center gap-2">
-                {a.pinned && <Pin className="size-3.5 shrink-0 text-muted-foreground" aria-label={t("pinned")} />}
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{a.title ?? markdownToPlainText(a.body)}</span>
-                <AnnouncementLabelBadge label={a.label} />
-              </span>
-              {a.title && (
-                <span className="line-clamp-2 text-xs-plus text-muted-foreground">{markdownToPlainText(a.body)}</span>
-              )}
-              <span className="block text-xs text-muted-foreground">
-                {[a.signer, relativeTime(a.created_at, locale, t("justNow")), a.edited_at ? t("edited") : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </button>
+            <HomeAnnouncementRow announcement={a} onOpen={() => setOpened(a)} />
           </li>
         ))}
       </ul>

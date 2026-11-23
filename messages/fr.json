@@ -1253,7 +1253,17 @@
       "edited": "modifiée",
       "onHome": "Sur l’accueil",
       "pinnedOnHome": "Épinglée sur l’accueil",
-      "justNow": "à l’instant"
+      "justNow": "à l’instant",
+      "previewOpen": "Aperçu",
+      "previewTitle": "Aperçu de l’annonce",
+      "previewHelp": "Ce que verront les destinataires, avec vos valeurs à la place des variables.",
+      "previewLive": "Aperçu en direct",
+      "previewInBell": "Dans les notifications",
+      "previewOpened": "Notification ouverte",
+      "previewBanner": "Bandeau sur l’accueil du monde",
+      "previewMessage": "Message privé",
+      "previewHome": "Widget « Dernières annonces »",
+      "previewMessageExtras": "L’étiquette et l’image ne paraissent pas dans le message privé : seulement sur l’accueil et dans l’historique."
     }
   },
   "auth": {

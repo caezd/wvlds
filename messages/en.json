@@ -1253,7 +1253,17 @@
       "edited": "edited",
       "onHome": "On the home page",
       "pinnedOnHome": "Pinned on the home page",
-      "justNow": "just now"
+      "justNow": "just now",
+      "previewOpen": "Preview",
+      "previewTitle": "Announcement preview",
+      "previewHelp": "What recipients will see, with your values in place of the variables.",
+      "previewLive": "Live preview",
+      "previewInBell": "In notifications",
+      "previewOpened": "Opened notification",
+      "previewBanner": "Banner on the world home",
+      "previewMessage": "Direct message",
+      "previewHome": "“Latest announcements” widget",
+      "previewMessageExtras": "The label and image don’t appear in the direct message — only on the home page and in the history."
     }
   },
   "auth": {

@@ -679,7 +679,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         ))}
 
                         {/* ── Annonces ─────────────────────────────────── */}
-                        {shown === "announcements" && page("announcements", "max-w-3xl", (
+                        {/* Plus large : l'aperçu en direct se range à droite du formulaire. */}
+                        {shown === "announcements" && page("announcements", "max-w-6xl", (
                             <WorldAnnouncementsTab
                                 key={`announcements-${world.id}`}
                                 worldId={world.id}
