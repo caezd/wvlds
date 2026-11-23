@@ -1130,6 +1130,11 @@
         "delete": "Supprimer la salle {name}",
         "deleteTitle": "Supprimer la salle « {name} » ?",
         "deleteBody": "La salle disparaît de la chatbox, avec tous ses messages. Cette action est définitive."
+      },
+      "liveChatRetention": {
+        "title": "Messages conservés",
+        "help": "Chaque salle de la chatbox garde ce nombre de messages, 100 au plus : la salle principale, les salles personnalisées et le fil de chaque salon comptent à part. Tout ce qui est gardé se relit en remontant le fil ; au-delà, les plus anciens sont effacés automatiquement. Baisser le réglage efface le surplus tout de suite.",
+        "option": "{count} messages par salle"
       }
     },
     "timelinePicker": {
@@ -2674,6 +2679,8 @@
     "cancelReply": "Annuler la réponse",
     "replyDeleted": "Message supprimé",
     "jumpTo": "Voir le message cité",
-    "newActivity": "Nouveaux messages"
+    "newActivity": "Nouveaux messages",
+    "loadOlder": "Messages précédents",
+    "loadOlderFailed": "Chargement des messages précédents impossible."
   }
 }

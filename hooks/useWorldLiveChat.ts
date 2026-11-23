@@ -36,7 +36,10 @@ type Row = Omit<LiveChatMessage, "author" | "reply"> & {
   reply?: ReplyRow | ReplyRow[] | null;
 };
 
-/** Messages chargés à l'ouverture ; la base en garde 500 par monde (migration 202). */
+/**
+ * Messages chargés à l'ouverture, puis à chaque remontée de l'historique. La
+ * base en garde 100 au plus par salle (migration 240) : deux pages au plus.
+ */
 export const LIVE_CHAT_PAGE = 50;
 /** Messages gardés en mémoire : au-delà, les plus anciens sortent du fil. */
 const LIVE_CHAT_MEMORY = 200;
@@ -46,6 +49,24 @@ const SELECT =
   "reply:world_live_messages!reply_to_id(id, content, user_id, profiles(username))";
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
+
+/** Les derniers messages d'une salle, du plus récent au plus ancien ; avant `before` s'il est donné. */
+function pageQuery(
+  supabase: ReturnType<typeof createClient>,
+  worldId: string,
+  place: LiveChatPlace,
+  before?: string,
+) {
+  let query = supabase.from(TABLE.WORLD_LIVE_MESSAGES).select(SELECT).eq("world_id", worldId);
+  query =
+    place.kind === "channel"
+      ? query.eq("channel_id", place.id)
+      : place.kind === "chatroom"
+        ? query.eq("chatroom_id", place.id)
+        : query.is("channel_id", null).is("chatroom_id", null);
+  if (before) query = query.lt("created_at", before);
+  return query.order("created_at", { ascending: false }).limit(LIVE_CHAT_PAGE);
+}
 
 function toMessage(row: Row): LiveChatMessage {
   const { profiles, reply, ...rest } = row;
@@ -96,6 +117,11 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
   messagesRef.current = messages;
   const [unread, setUnread] = useState<ReadonlySet<string>>(() => new Set());
   const [loading, setLoading] = useState(false);
+  // Remontée de l'historique : reste-t-il des messages plus anciens en base ?
+  // Une page pleine laisse supposer que oui ; une page incomplète, que non.
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const loadingOlderRef = useRef(false);
   const [presentCount, setPresentCount] = useState(0);
 
   // Auteurs déjà connus : un INSERT temps réel n'apporte que `user_id`.
@@ -127,6 +153,7 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
   // Changer de monde vide le fil : jamais un message d'un autre monde affiché.
   useEffect(() => {
     setMessages([]);
+    setHasOlder(false);
     setPresentCount(0);
     setUnread(new Set());
   }, [worldId]);
@@ -134,6 +161,7 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
   // Changer de salle : son fil, et elle n'est plus « non lue ».
   useEffect(() => {
     setMessages([]);
+    setHasOlder(false);
     setUnread((prev) => {
       if (!prev.has(key)) return prev;
       const next = new Set(prev);
@@ -171,21 +199,16 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
     let cancelled = false;
     setLoading(true);
     async function load() {
-      const here = placeRef.current;
-      let query = supabase.from(TABLE.WORLD_LIVE_MESSAGES).select(SELECT).eq("world_id", worldId);
-      query =
-        here.kind === "channel"
-          ? query.eq("channel_id", here.id)
-          : here.kind === "chatroom"
-            ? query.eq("chatroom_id", here.id)
-            : query.is("channel_id", null).is("chatroom_id", null);
-      const { data } = await query.order("created_at", { ascending: false }).limit(LIVE_CHAT_PAGE);
+      const { data } = await pageQuery(supabase, worldId!, placeRef.current);
       if (cancelled) return;
       const rows = ((data ?? []) as Row[]).map(toMessage).reverse();
       for (const m of rows) if (m.author) authorsRef.current.set(m.user_id, m.author);
       setMessages((prev) =>
         rows.reduce(mergeMessage, prev.filter((m) => m.world_id === worldId && placeKey(placeOf(m)) === key)),
       );
+      // Après une reconnexion, des pages anciennes peuvent déjà être là : on
+      // ne retire pas le bouton qu'elles auraient laissé.
+      setHasOlder((prev) => prev || rows.length === LIVE_CHAT_PAGE);
       setLoading(false);
     }
     void load();
@@ -325,5 +348,29 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
     [supabase],
   );
 
-  return { messages, loading, presentCount, send, remove, userId, unread };
+  /**
+   * Remonte l'historique d'une page, avant le plus ancien message affiché.
+   * Rend le nombre de messages lus, `null` si la lecture a échoué. Pas de
+   * doublon d'appel en vol.
+   */
+  const loadOlder = useCallback(async (): Promise<number | null> => {
+    const oldest = messagesRef.current[0];
+    if (!worldId || !oldest || loadingOlderRef.current) return 0;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    const startKey = key;
+    const { data, error } = await pageQuery(supabase, worldId, placeRef.current, oldest.created_at);
+    loadingOlderRef.current = false;
+    setLoadingOlder(false);
+    // La salle a changé entre-temps : ces messages ne sont plus les siens.
+    if (placeKey(placeRef.current) !== startKey) return 0;
+    if (error) return null;
+    const rows = ((data ?? []) as Row[]).map(toMessage);
+    for (const m of rows) if (m.author) authorsRef.current.set(m.user_id, m.author);
+    setMessages((prev) => rows.reduce(mergeMessage, prev));
+    setHasOlder(rows.length === LIVE_CHAT_PAGE);
+    return rows.length;
+  }, [supabase, worldId, key]);
+
+  return { messages, loading, presentCount, send, remove, userId, unread, hasOlder, loadingOlder, loadOlder };
 }

@@ -40,6 +40,7 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { TimelineSettings } from "./TimelineSettings";
 import { WorldLiveChannelsSettings } from "./WorldLiveChannelsSettings";
+import { WorldLiveChatRetentionSetting } from "./WorldLiveChatRetentionSetting";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
@@ -441,6 +442,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         {/* Les salles : visibles même chatbox coupée, grisées. */}
                         <InactiveOptions inactive={!enableLiveChat}>
                             <WorldLiveChannelsSettings worldId={world.id} />
+                            <WorldLiveChatRetentionSetting
+                                worldId={world.id}
+                                value={world.live_chat_retention}
+                                onSaved={(retention) => onUpdated?.({ ...world, live_chat_retention: retention } as World)}
+                            />
                         </InactiveOptions>
                     </FeaturePage>
                 ),

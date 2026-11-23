@@ -31,6 +31,9 @@ const chat = vi.hoisted(() => ({
   remove: vi.fn(async () => true),
   userId: "me",
   unread: new Set<string>() as ReadonlySet<string>,
+  hasOlder: false,
+  loadingOlder: false,
+  loadOlder: vi.fn(async (): Promise<number | null> => 0),
 }));
 // La salle demandée au hook, pour vérifier l'ouverture du fil d'un salon.
 const placeSeen = vi.hoisted(() => ({ last: null as unknown }));
@@ -65,6 +68,9 @@ beforeEach(() => {
   chat.messages = [];
   chat.presentCount = 3;
   chat.send.mockResolvedValue("ok");
+  chat.hasOlder = false;
+  chat.loadingOlder = false;
+  chat.loadOlder.mockResolvedValue(0);
 });
 
 describe("WorldLiveChatDock", () => {
@@ -147,6 +153,47 @@ describe("WorldLiveChatDock", () => {
     await user.click(screen.getByTestId("world-live-chat-bar"));
     await user.type(screen.getByRole("textbox"), "{Escape}");
     expect(screen.getByTestId("world-live-chat-bar")).toBeInTheDocument();
+  });
+});
+
+describe("WorldLiveChatDock — remontée de l'historique (migration 240)", () => {
+  it("pas de bouton quand tout le fil est déjà là", async () => {
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    render(<WorldLiveChatDock />);
+    await userEvent.setup().click(screen.getByTestId("world-live-chat-bar"));
+    expect(screen.queryByRole("button", { name: "Messages précédents" })).toBeNull();
+  });
+
+  it("« Messages précédents » remonte d'une page", async () => {
+    const user = userEvent.setup();
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    chat.hasOlder = true;
+    chat.loadOlder.mockResolvedValue(50);
+    render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    await user.click(screen.getByRole("button", { name: "Messages précédents" }));
+    expect(chat.loadOlder).toHaveBeenCalledTimes(1);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("un échec de lecture se signale", async () => {
+    const user = userEvent.setup();
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    chat.hasOlder = true;
+    chat.loadOlder.mockResolvedValue(null);
+    render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    await user.click(screen.getByRole("button", { name: "Messages précédents" }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Chargement des messages précédents impossible."));
+  });
+
+  it("pendant la lecture, le bouton attend", async () => {
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    chat.hasOlder = true;
+    chat.loadingOlder = true;
+    render(<WorldLiveChatDock />);
+    await userEvent.setup().click(screen.getByTestId("world-live-chat-bar"));
+    expect(screen.getByRole("button", { name: "Chargement…" })).toBeDisabled();
   });
 });
 

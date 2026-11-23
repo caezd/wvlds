@@ -160,6 +160,8 @@ export type World = {
   enable_wiki?: boolean | null;
   /** Chatbox du monde (migration 237). Éteinte par défaut : activée ici seulement. */
   enable_live_chat?: boolean | null;
+  /** Chatbox : messages gardés par salle, 25 à 100 (migrations 239 et 240). Absent = 100. */
+  live_chat_retention?: number | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;

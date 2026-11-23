@@ -24,6 +24,7 @@ import {
 } from "@/components/worlds/home/worldHomeGrid";
 import type { WorldCatalogItem, WorldCatalogCategory, WorldCatalogProperty, WorldCatalogRarity, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
+import { isLiveChatRetention, type LiveChatRetention } from "@/lib/worldLiveChatRetention";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
@@ -107,6 +108,15 @@ export async function setWorldHomeGridGap(worldId: string, gap: WorldHomeGridGap
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_grid_gap: gap }).eq("id", worldId);
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldHomeGridGap", error) };
+  return { ok: true as const };
+}
+
+/** Délestage de la chatbox : messages gardés par salle (migration 239). */
+export async function setWorldLiveChatRetention(worldId: string, retention: LiveChatRetention) {
+  if (!isLiveChatRetention(retention)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ live_chat_retention: retention }).eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldLiveChatRetention", error) };
   return { ok: true as const };
 }
 

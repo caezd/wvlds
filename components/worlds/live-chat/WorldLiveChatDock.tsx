@@ -62,7 +62,8 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   const t = useTranslations("worldLiveChat");
   const { channels } = useLiveChannels(worldId);
   const [place, setPlace] = usePlace(chatroom, channels);
-  const { messages, loading, presentCount, send, remove, userId, unread } = useWorldLiveChat(worldId, place);
+  const { messages, loading, presentCount, send, remove, userId, unread, hasOlder, loadingOlder, loadOlder } =
+    useWorldLiveChat(worldId, place);
   const [open, setOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<LiveChatMessage | null>(null);
   const last = messages[messages.length - 1] ?? null;
@@ -163,6 +164,13 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
         key={`list-${key}`}
         messages={messages}
         loading={loading}
+        hasOlder={hasOlder}
+        loadingOlder={loadingOlder}
+        onLoadOlder={async () => {
+          const read = await loadOlder();
+          if (read === null) toast.error(t("loadOlderFailed"));
+          return read ?? 0;
+        }}
         selfId={userId}
         onReply={setReplyTo}
         onDelete={async (id) => {
@@ -239,12 +247,19 @@ function PlaceLabel({ entry, className }: { entry: PlaceEntry; className?: strin
 function MessageList({
   messages,
   loading,
+  hasOlder,
+  loadingOlder,
+  onLoadOlder,
   selfId,
   onReply,
   onDelete,
 }: {
   messages: LiveChatMessage[];
   loading: boolean;
+  hasOlder: boolean;
+  loadingOlder: boolean;
+  /** Rend le nombre de messages lus (0 en cas d'échec). */
+  onLoadOlder: () => Promise<number>;
   selfId: string | null;
   onReply: (message: LiveChatMessage) => void;
   onDelete: (id: string) => void;
@@ -253,13 +268,29 @@ function MessageList({
   const tCommon = useTranslations("common");
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
+  // Distance au bas avant une remontée : les messages ajoutés au-dessus ne
+  // doivent pas déplacer ce que le lecteur a sous les yeux.
+  const fromBottomRef = useRef<number | null>(null);
 
   // Suit le bas tant que le lecteur y est ; s'il remonte lire l'historique,
   // un nouveau message ne le ramène pas de force.
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    if (fromBottomRef.current !== null) {
+      el.scrollTop = el.scrollHeight - fromBottomRef.current;
+      fromBottomRef.current = null;
+    } else if (stickRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [messages]);
+
+  async function loadOlder() {
+    const el = scrollRef.current;
+    if (el) fromBottomRef.current = el.scrollHeight - el.scrollTop;
+    // Rien de lu : aucun rendu ne viendra consommer la position gardée.
+    if ((await onLoadOlder()) === 0) fromBottomRef.current = null;
+  }
 
   return (
     <div
@@ -267,6 +298,9 @@ function MessageList({
       onScroll={(e) => {
         const el = e.currentTarget;
         stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD;
+        // Le lecteur a bougé : une position gardée et jamais rendue (messages
+        // tous déjà là) ne doit pas le déplacer au prochain message.
+        if (!loadingOlder) fromBottomRef.current = null;
       }}
       className="min-h-0 flex-1 overflow-y-auto py-2"
     >
@@ -275,6 +309,14 @@ function MessageList({
           {loading ? tCommon("loading") : t("empty")}
         </p>
       ) : (
+        <>
+        {hasOlder && (
+          <div className="flex justify-center px-4 pb-1">
+            <Button variant="ghost" size="sm" disabled={loadingOlder} onClick={() => void loadOlder()}>
+              {loadingOlder ? tCommon("loading") : t("loadOlder")}
+            </Button>
+          </div>
+        )}
         <ol role="log" aria-live="polite" className="flex flex-col">
           {messages.map((m, i) => (
             <MessageRow
@@ -288,6 +330,7 @@ function MessageList({
             />
           ))}
         </ol>
+        </>
       )}
     </div>
   );

@@ -35,6 +35,7 @@ vi.mock("@/app/actions/worldCatalog", () => ({
   setWorldFaceclaims: vi.fn().mockResolvedValue({ ok: true }),
   setWorldRequireFaceclaim: vi.fn().mockResolvedValue({ ok: true }),
   setWorldTimeline: vi.fn().mockResolvedValue({ ok: true }),
+  setWorldLiveChatRetention: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 import { WorldSettingsView } from "@/components/worlds/settings/WorldSettingsView";
@@ -78,6 +79,13 @@ describe("WorldSettingsView — Chatbox (migration 237)", () => {
     expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_live_chat", true);
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ enable_live_chat: true }));
     expect(within(nav()).getByRole("button", { name: "Chatbox" })).toHaveAccessibleDescription("Actif");
+  });
+
+  it("la page porte le réglage des messages conservés, à la valeur du monde (migration 239)", async () => {
+    monter({ enable_live_chat: true, live_chat_retention: 50 });
+    await userEvent.click(within(nav()).getByRole("button", { name: "Chatbox" }));
+    const page = screen.getByRole("region", { name: "Chatbox" });
+    expect(within(page).getByRole("combobox", { name: "Messages conservés" })).toHaveTextContent("50 messages par salle");
   });
 
   it("un monde qui l'a activée la montre active", () => {

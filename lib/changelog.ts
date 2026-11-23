@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-23",
     category: "Fonctionnalité",
     area: "Monde",
+    text: "Chatbox : nombre de messages conservés par salle réglable dans Paramètres › Fonctions › Chatbox — 25, 50 ou 100 (le maximum, et le défaut). Au-delà, les plus anciens sont effacés automatiquement ; baisser le réglage efface le surplus tout de suite. Tout ce qui est conservé se relit avec « Messages précédents », en haut du fil.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Monde",
     text: "Chatbox : des salles, réglables dans Paramètres › Fonctions › Chatbox — nom, couleur, icône (« # » par défaut), ordre. Dans un salon de jeu, la chatbox ouvre d’elle-même le fil de ce salon, qui réunit les discussions à son sujet, en plus des autres salles. Un clic sur un message permet d’y répondre ; la réponse affiche le message cité. Une pastille signale les salles où de nouveaux messages sont arrivés.",
   },
   {

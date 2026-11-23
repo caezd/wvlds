@@ -1130,6 +1130,11 @@
         "delete": "Delete the {name} room",
         "deleteTitle": "Delete the “{name}” room?",
         "deleteBody": "The room disappears from the chatbox, with all its messages. This can't be undone."
+      },
+      "liveChatRetention": {
+        "title": "Messages kept",
+        "help": "Each chatbox room keeps this many messages, 100 at most: the main room, custom rooms and each game room's thread count separately. Everything kept can be read by scrolling back; beyond that, the oldest are deleted automatically. Lowering the setting deletes the excess right away.",
+        "option": "{count} messages per room"
       }
     },
     "timelinePicker": {
@@ -2674,6 +2679,8 @@
     "cancelReply": "Cancel reply",
     "replyDeleted": "Deleted message",
     "jumpTo": "Show the quoted message",
-    "newActivity": "New messages"
+    "newActivity": "New messages",
+    "loadOlder": "Earlier messages",
+    "loadOlderFailed": "Couldn't load earlier messages."
   }
 }

@@ -19,7 +19,8 @@ vi.mock("@/components/providers/PresenceProvider", () => ({
   useGlobalPresence: () => ({ appearOffline: presenceMock.appearOffline }),
 }));
 
-import { useWorldLiveChat, mergeMessage, type LiveChatMessage } from "@/hooks/useWorldLiveChat";
+import { useWorldLiveChat, mergeMessage, LIVE_CHAT_PAGE, type LiveChatMessage } from "@/hooks/useWorldLiveChat";
+import { LIVE_CHAT_RETENTION_MAX } from "@/lib/worldLiveChatRetention";
 import { createClient } from "@/lib/supabase/client";
 import { __resetRealtimeChannels } from "@/lib/realtimeChannel";
 import { __resetRealtimeHub } from "@/lib/realtimeHub";
@@ -205,6 +206,59 @@ describe("useWorldLiveChat — salles et fils de salon (migration 238)", () => {
     act(() => mock.channelNamed("world:w1")!.emit(isLive, { event: "live", payload: { op: "DELETE", id: "m1" } }));
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
     expect(result.current.messages[0].reply).toBeNull();
+  });
+});
+
+describe("useWorldLiveChat — remontée de l'historique (migration 240)", () => {
+  /** `n` messages, du plus récent au plus ancien, comme les rend la requête. */
+  const page = (n: number, offset = 0) =>
+    Array.from({ length: n }, (_, i) => {
+      const k = offset + i;
+      return row(`m${k}`, "u1", new Date(Date.UTC(2026, 10, 9, 12, 0, 0) - k * 60_000).toISOString());
+    });
+
+  it("une page incomplète : rien de plus ancien à chercher", async () => {
+    const { result } = setup([{ data: page(10) }]);
+    await waitFor(() => expect(result.current.messages).toHaveLength(10));
+    expect(result.current.hasOlder).toBe(false);
+  });
+
+  it("une page pleine laisse remonter ; la page suivante se lit avant le plus ancien", async () => {
+    const { result, mock } = setup([{ data: page(LIVE_CHAT_PAGE) }, { data: page(20, LIVE_CHAT_PAGE) }]);
+    await waitFor(() => expect(result.current.messages).toHaveLength(LIVE_CHAT_PAGE));
+    expect(result.current.hasOlder).toBe(true);
+    const oldest = result.current.messages[0];
+
+    let read: number | null = -1;
+    await act(async () => {
+      read = await result.current.loadOlder();
+    });
+    expect(read).toBe(20);
+    const b = mock.buildersFor("world_live_messages")[1];
+    expect(b.lt).toHaveBeenCalledWith("created_at", oldest.created_at);
+    expect(b.limit).toHaveBeenCalledWith(LIVE_CHAT_PAGE);
+    expect(b.is).toHaveBeenCalledWith("channel_id", null);
+    expect(result.current.messages).toHaveLength(LIVE_CHAT_PAGE + 20);
+    // Toujours dans l'ordre chronologique, les anciens en tête.
+    expect(result.current.messages[0].id).toBe(`m${LIVE_CHAT_PAGE + 19}`);
+    expect(result.current.hasOlder).toBe(false);
+  });
+
+  it("jamais plus d'une page par lecture : le plafond de 100 tient en deux", () => {
+    expect(LIVE_CHAT_PAGE * 2).toBeGreaterThanOrEqual(LIVE_CHAT_RETENTION_MAX);
+    expect(LIVE_CHAT_PAGE).toBeLessThanOrEqual(LIVE_CHAT_RETENTION_MAX);
+  });
+
+  it("un échec de lecture se signale sans toucher au fil", async () => {
+    const { result } = setup([{ data: page(LIVE_CHAT_PAGE) }, { data: null, error: { message: "boom" } }]);
+    await waitFor(() => expect(result.current.messages).toHaveLength(LIVE_CHAT_PAGE));
+    let read: number | null = -1;
+    await act(async () => {
+      read = await result.current.loadOlder();
+    });
+    expect(read).toBeNull();
+    expect(result.current.messages).toHaveLength(LIVE_CHAT_PAGE);
+    expect(result.current.hasOlder).toBe(true);
   });
 });
 

@@ -10,6 +10,7 @@ import {
     setWorldFaceclaims,
     setWorldHomeShowStats,
     setWorldHomeGridGap,
+    setWorldLiveChatRetention,
     setWorldAgeRestricted,
     setWorldTimeline,
     setWorldPersonaTemplate,
@@ -132,6 +133,31 @@ describe("setWorldHomeShowStats", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "saveFailed" });
+    });
+});
+
+// ── setWorldLiveChatRetention ─────────────────────────────────────────────────
+
+describe("setWorldLiveChatRetention", () => {
+    it("enregistre un palier proposé", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await setWorldLiveChatRetention("w1", 100)).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ live_chat_retention: 100 });
+    });
+
+    it("refuse une valeur hors paliers, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        // @ts-expect-error — valeur hors du type, comme un appel forgé.
+        const res = await setWorldLiveChatRetention("w1", 5000);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldLiveChatRetention("w1", 50)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
