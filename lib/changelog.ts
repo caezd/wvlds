@@ -44,6 +44,11 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-23",
+    category: "Correctif",
+    text: "Sécurité : il n’est plus possible de diffuser de faux avis en temps réel (faux message privé, faux message du chat en direct, liste des salons faussée) en appelant directement une fonction interne de la base.",
+  },
+  {
     date: "2026-11-19",
     category: "Correctif",
     area: "Wiki",
