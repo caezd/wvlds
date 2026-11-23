@@ -328,7 +328,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                     }}
                 >
                     {/* Le nom du lien : visible même sans wiki, grisé jusqu'à son activation. */}
-                    <InactiveOptions inactive={!enableWiki} hint={tSettings("inactiveHint")}>
+                    <InactiveOptions inactive={!enableWiki}>
                         <SettingsSection title={tSettings("wikiLinkName")} help={t("wikiLabelHelp")}>
                             <FormField
                                 control={form.control}
@@ -393,7 +393,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         }}
                     >
                         {/* Visibles même désactivée : on voit ce que la chronologie règle. */}
-                        <InactiveOptions inactive={!timelineEnabled} hint={tSettings("inactiveHint")}>
+                        <InactiveOptions inactive={!timelineEnabled}>
                             <TimelineSettings
                                 config={timelineConfig}
                                 onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}

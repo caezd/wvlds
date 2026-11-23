@@ -110,7 +110,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     // se modifie qu'une fois le wiki activé.
     const champ = screen.getByPlaceholderText("Annexes");
     expect(champ).toBeDisabled();
-    expect(screen.getByTestId("inactive-options")).toHaveTextContent("Fonction désactivée");
+    expect(screen.getByTestId("inactive-options")).toBeDisabled();
   });
 
   it("préremplit le champ avec le libellé déjà enregistré", async () => {

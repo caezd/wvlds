@@ -1112,8 +1112,7 @@
           "rooms": "Rooms & personas",
           "members": "Members"
         }
-      },
-      "inactiveHint": "This feature is off: its settings stay visible and can be changed once it's on."
+      }
     },
     "timelinePicker": {
       "year": "Year",

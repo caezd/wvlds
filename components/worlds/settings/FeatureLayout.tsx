@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { HelpHint } from "@/components/ui/help-hint";
-import { Lock } from "lucide-react";
 
 /**
  * La mise en page des réglages de fonctions (onglet Fonctions) : une page
@@ -186,30 +185,19 @@ export function ToggleItem({
  * Les réglages d'une fonction désactivée : toujours affichés, pour qu'on voie
  * ce que la fonction offre, mais grisés et inertes jusqu'à son activation.
  * Un `fieldset` désactivé : ses champs et boutons le sont aussi (et restent
- * lus par les lecteurs d'écran, contrairement à `inert`).
+ * lus par les lecteurs d'écran, contrairement à `inert`). Pas de mention :
+ * l'interrupteur « Désactivé » et le grisé suffisent. L'aide reste au survol.
  */
-export function InactiveOptions({
-  inactive,
-  hint,
-  children,
-}: {
-  inactive: boolean;
-  /** « Activez la chronologie pour modifier ces réglages. » */
-  hint: string;
-  children: React.ReactNode;
-}) {
-  const id = React.useId();
+export function InactiveOptions({ inactive, children }: { inactive: boolean; children: React.ReactNode }) {
   if (!inactive) return <>{children}</>;
   return (
-    <div className="space-y-3" data-testid="inactive-options">
-      <p id={id} className="flex items-center gap-1.5 text-xs-plus text-muted-foreground">
-        <Lock className="size-3.5 shrink-0" aria-hidden />
-        {hint}
-      </p>
-      <fieldset disabled aria-describedby={id} className="pointer-events-none m-0 min-w-0 border-0 p-0 opacity-60 select-none [&_[data-testid=help-hint]]:pointer-events-auto">
-        {children}
-      </fieldset>
-    </div>
+    <fieldset
+      disabled
+      data-testid="inactive-options"
+      className="pointer-events-none m-0 min-w-0 border-0 p-0 opacity-60 select-none [&_[data-testid=help-hint]]:pointer-events-auto"
+    >
+      {children}
+    </fieldset>
   );
 }
 
