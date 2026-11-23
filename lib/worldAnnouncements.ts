@@ -365,6 +365,8 @@ export type WorldBanner = {
   /** Le monde, ou le pseudo de l'auteur. */
   signer: string | null;
   signed_as_world: boolean;
+  /** L'essai de son auteur (migration 233), visible de lui seul. */
+  is_test?: boolean;
 };
 
 export async function fetchWorldBanners(

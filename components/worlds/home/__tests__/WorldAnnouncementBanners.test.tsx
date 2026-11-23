@@ -56,6 +56,15 @@ describe("WorldAnnouncementBanners", () => {
     expect(rt.topic).toBe("msgs:u1");
   });
 
+  it("marque l'essai de l'auteur", async () => {
+    api.fetch.mockResolvedValue([{ ...BANNER, id: "t1", is_test: true }, { ...BANNER, id: "b2" }]);
+    render(<WorldAnnouncementBanners worldId="w1" userId="u1" />);
+    const [essai, vrai] = await screen.findAllByTestId("world-banner");
+    expect(essai).toContainElement(screen.getByTestId("world-banner-test"));
+    expect(screen.getByTestId("world-banner-test")).toHaveTextContent("announcement.test");
+    expect(vrai).not.toHaveTextContent("announcement.test");
+  });
+
   it("rien sans bandeau, ni sans compte", async () => {
     api.fetch.mockResolvedValue([]);
     const { container, rerender } = render(<WorldAnnouncementBanners worldId="w1" userId="u1" />);

@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { topic, useTopic } from "@/lib/realtimeHub";
 import { dismissWorldBanner, fetchWorldBanners, type WorldBanner } from "@/lib/worldAnnouncements";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 /**
@@ -57,7 +58,14 @@ export function WorldAnnouncementBanners({
   return (
     <div className={cn("space-y-2", className)} data-testid="world-banners">
       {banners.map((b) => (
-        <BannerCard key={b.id} title={b.title} body={b.body} signer={b.signer} onDismiss={() => dismiss(b.id)} />
+        <BannerCard
+          key={b.id}
+          title={b.title}
+          body={b.body}
+          signer={b.signer}
+          isTest={b.is_test}
+          onDismiss={() => dismiss(b.id)}
+        />
       ))}
     </div>
   );
@@ -68,16 +76,20 @@ export function BannerCard({
   title,
   body,
   signer,
+  isTest = false,
   onDismiss,
   testId = "world-banner",
 }: {
   title: string;
   body: string;
   signer: string | null;
+  /** L'essai de l'auteur (migration 233) : lui seul le voit. */
+  isTest?: boolean;
   onDismiss?: () => void;
   testId?: string;
 }) {
   const t = useTranslations("worlds.announcements");
+  const tNotif = useTranslations("notifications");
   return (
     <section
       role="status"
@@ -89,7 +101,14 @@ export function BannerCard({
         <Megaphone className="size-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm font-semibold">{title}</p>
+        <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+          {title}
+          {isTest && (
+            <Badge tone="outline" data-testid="world-banner-test">
+              {tNotif("announcement.test")}
+            </Badge>
+          )}
+        </p>
         {body ? (
           <div className="text-sm text-muted-foreground">
             <MarkdownRenderer content={body} />

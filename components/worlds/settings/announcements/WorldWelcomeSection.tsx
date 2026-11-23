@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Bell, FlaskConical, Loader2, MessageSquare, PenLine } from "lucide-react";
+import { Bell, Loader2, MessageSquare, PenLine } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import { FIELD, SettingsSection, StatusPill, ToggleItem, ToggleList } from "../F
 
 /** Pas de bandeau de bienvenue : l'accueil d'un nouveau membre est déjà lu. */
 const WELCOME_KINDS: readonly AnnouncementKind[] = ["message", "notification"];
-import { BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage, useAnnouncementTest } from "./AnnouncementFields";
+import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage } from "./AnnouncementFields";
 
 /**
  * Message de bienvenue (migration 229) : un modèle envoyé à chaque nouveau
@@ -179,7 +179,6 @@ function WelcomeEditor({
   const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const errorMessage = useAnnouncementErrorMessage();
-  const { testing, sendTest } = useAnnouncementTest(worldId);
 
   const defaultKind: AnnouncementKind = dmsEnabled ? "message" : "notification";
   const [kind, setKind] = React.useState<AnnouncementKind>(defaultKind);
@@ -262,17 +261,15 @@ function WelcomeEditor({
           </div>
         </div>
         <DialogFooter className="flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!valid || testing}
-            onClick={() => void sendTest(kind, title, body, kind === "notification" && asWorld)}
-            title={kind === "message" ? tA("sendTestMessageHelp") : tA("sendTestHelp")}
-            data-testid="welcome-test"
-          >
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
-            {tA("sendTest")}
-          </Button>
+          <AnnouncementTestButton
+            worldId={worldId}
+            kind={kind}
+            title={title}
+            body={body}
+            asWorld={kind === "notification" && asWorld}
+            disabled={!valid}
+            testId="welcome-test"
+          />
           <Button type="button" variant="outline" onClick={() => setPreview((p) => !p)} aria-pressed={preview}>
             {preview ? tCommon("edit") : tCommon("preview")}
           </Button>

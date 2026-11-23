@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Bell, MessageSquare, PanelTop } from "lucide-react";
+import { Bell, FlaskConical, Loader2, MessageSquare, PanelTop } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -63,8 +63,11 @@ export function useAnnouncementErrorMessage() {
   );
 }
 
-/** S'envoyer l'annonce à soi-même (toujours en notification). */
-export function useAnnouncementTest(worldId: string) {
+/**
+ * S'essayer l'annonce : une notification arrive dans les siennes, un bandeau
+ * s'affiche en tête de l'accueil du monde (migration 233).
+ */
+function useAnnouncementTest(worldId: string) {
   const t = useTranslations("worlds.announcements");
   const errorMessage = useAnnouncementErrorMessage();
   const supabase = React.useMemo(() => createClient(), []);
@@ -78,11 +81,51 @@ export function useAnnouncementTest(worldId: string) {
         toast.error(errorMessage(res.reason));
         return;
       }
-      toast.success(kind === "message" ? t("testSentMessage") : t("testSent"));
+      toast.success(kind === "banner" ? t("testSentBanner") : t("testSent"));
     },
     [supabase, worldId, errorMessage, t],
   );
   return { testing, sendTest };
+}
+
+/**
+ * Le bouton d'essai, selon le type : notification ou bandeau. Un message
+ * privé ne peut pas s'adresser à son auteur : pas d'essai, l'aperçu suffit.
+ */
+export function AnnouncementTestButton({
+  worldId,
+  kind,
+  title,
+  body,
+  asWorld,
+  disabled,
+  testId = "announcement-test",
+}: {
+  worldId: string;
+  kind: AnnouncementKind;
+  title: string;
+  body: string;
+  asWorld: boolean;
+  disabled: boolean;
+  testId?: string;
+}) {
+  const t = useTranslations("worlds.announcements");
+  const { testing, sendTest } = useAnnouncementTest(worldId);
+  if (kind === "message") return null;
+  const banner = kind === "banner";
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={disabled || testing}
+      onClick={() => void sendTest(kind, title, body, asWorld)}
+      title={banner ? t("sendTestBannerHelp") : t("sendTestHelp")}
+      data-testid={testId}
+    >
+      {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+      {banner ? t("sendTestBanner") : t("sendTest")}
+    </Button>
+  );
 }
 
 /** Message privé, notification ou bandeau, en cartes-radios. */

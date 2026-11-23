@@ -174,25 +174,39 @@ describe("WorldAnnouncementsTab", () => {
   });
 
 
-  it("envoie un essai à l'auteur, sans destinataire requis", async () => {
+  it("l'essai suit le type : aucun pour un message privé, une notification, puis un bandeau", async () => {
     api.count.mockResolvedValue(0);
     const user = userEvent.setup();
     render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
     await screen.findByText("recipientCount:0");
-    const essai = screen.getByRole("button", { name: "sendTest" });
-    expect(essai).toBeDisabled();
+    // Un message privé ne peut pas s'adresser à son auteur : l'aperçu suffit.
+    expect(screen.queryByTestId("announcement-test")).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole("textbox", { name: "body" }), "Salut {{username}");
+    await user.click(screen.getByRole("radio", { name: /kindNotification/ }));
+    const essai = screen.getByRole("button", { name: "sendTest" });
+    expect(essai).toHaveAttribute("title", "sendTestHelp");
+    expect(essai).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: "titleLabel" }), "Salut");
+    await user.type(screen.getByRole("textbox", { name: "body" }), "Bonjour {{username}");
+    // Sans destinataire, l'envoi reste fermé ; l'essai, non.
     expect(screen.getByRole("button", { name: "send" })).toBeDisabled();
     await user.click(essai);
     await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", kind: "message", title: "", body: "Salut {username}", asWorld: false,
+      worldId: "w1", kind: "notification", title: "Salut", body: "Bonjour {username}", asWorld: false,
     }));
-    // Un message privé ne s'adresse pas à soi-même : l'essai part en notification.
-    expect(toast.success).toHaveBeenCalledWith("testSentMessage");
+    expect(toast.success).toHaveBeenLastCalledWith("testSent");
+
+    await user.click(screen.getByRole("radio", { name: /kindBanner/ }));
+    const bandeau = screen.getByRole("button", { name: "sendTestBanner" });
+    expect(bandeau).toHaveAttribute("title", "sendTestBannerHelp");
+    await user.click(bandeau);
+    await waitFor(() => expect(api.test).toHaveBeenLastCalledWith(expect.anything(), {
+      worldId: "w1", kind: "banner", title: "Salut", body: "Bonjour {username}", asWorld: false,
+    }));
+    expect(toast.success).toHaveBeenLastCalledWith("testSentBanner");
     expect(api.send).not.toHaveBeenCalled();
     // Le formulaire reste tel quel.
-    expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("Salut {username}");
+    expect(screen.getByRole("textbox", { name: "body" })).toHaveValue("Bonjour {username}");
   });
 
   it("nomme le plafond des essais", async () => {
@@ -200,6 +214,8 @@ describe("WorldAnnouncementsTab", () => {
     const user = userEvent.setup();
     render(<WorldAnnouncementsTab worldId="w1" worldName="Ygg" />);
     await screen.findByText("recipientCount:4");
+    await user.click(screen.getByRole("radio", { name: /kindNotification/ }));
+    await user.type(screen.getByRole("textbox", { name: "titleLabel" }), "x");
     await user.type(screen.getByRole("textbox", { name: "body" }), "x");
     await user.click(screen.getByRole("button", { name: "sendTest" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("errorTestRateLimit:10"));

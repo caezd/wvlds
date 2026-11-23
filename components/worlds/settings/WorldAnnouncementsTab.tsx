@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CalendarClock, FlaskConical, Loader2, Megaphone, Send, SlidersHorizontal, Users } from "lucide-react";
+import { CalendarClock, Loader2, Megaphone, Send, SlidersHorizontal, Users } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ import {
   type WorldAnnouncement,
 } from "@/lib/worldAnnouncements";
 import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
-import { BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage, useAnnouncementTest } from "./announcements/AnnouncementFields";
+import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage } from "./announcements/AnnouncementFields";
 import { AnnouncementFiltersPanel } from "./announcements/AnnouncementFiltersPanel";
 import { AnnouncementDetails, HistoryRow } from "./announcements/AnnouncementHistory";
 import { WorldWelcomeSection } from "./announcements/WorldWelcomeSection";
@@ -66,7 +66,6 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   const { roles } = useWorldMembership();
   const { username } = useCurrentUser();
   const errorMessage = useAnnouncementErrorMessage();
-  const { testing, sendTest } = useAnnouncementTest(worldId);
 
   const [kind, setKind] = React.useState<AnnouncementKind>(dmsEnabled ? "message" : "notification");
   const [roleIds, setRoleIds] = React.useState<string[]>([]);
@@ -371,17 +370,14 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
           {limitReached && (
             <span className="mr-auto text-sm text-muted-foreground">{t("errorRateLimit", { count: ANNOUNCEMENT_DAILY_LIMIT })}</span>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!valid || testing}
-            onClick={() => void sendTest(kind, title, body, signable && asWorld)}
-            title={kind === "message" ? t("sendTestMessageHelp") : t("sendTestHelp")}
-            data-testid="announcement-test"
-          >
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
-            {t("sendTest")}
-          </Button>
+          <AnnouncementTestButton
+            worldId={worldId}
+            kind={kind}
+            title={title}
+            body={body}
+            asWorld={signable && asWorld}
+            disabled={!valid}
+          />
           <PreviewToggle preview={preview} onToggle={() => setPreview((p) => !p)} />
           <Button
             type="button"
