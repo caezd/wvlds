@@ -32,6 +32,7 @@ export const TABLE = {
   CHATROOM_PARTICIPANTS: "chatroom_participants",
   WORLD_WIKI_PAGES: "world_wiki_pages",
   WORLD_LIVE_MESSAGES: "world_live_messages",
+  WORLD_LIVE_CHANNELS: "world_live_channels",
   WORLD_CATALOG_ITEM_PAGES: "world_catalog_item_pages",
   WORLD_CATALOG_ITEM_RELATIONS: "world_catalog_item_relations",
   CHAT_PINS: "chat_pins",

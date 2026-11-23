@@ -1115,7 +1115,22 @@
       },
       "chatbox": "Chatbox",
       "chatboxHelp": "An out-of-character chat between members, as a bar at the bottom of every page of the world: short messages, signed by the account, not by a persona. When off, the bar disappears; messages are kept and come back when it's turned on again.",
-      "enableChatbox": "Enable the chatbox"
+      "enableChatbox": "Enable the chatbox",
+      "liveChannels": {
+        "title": "Rooms",
+        "help": "Like folders to sort the chatbox's discussions. The main room is always there; each game room also has its own thread, which opens by itself when you're in it. A room can have its own color and icon (“#” without one).",
+        "count": "{count, plural, one {# room} other {# rooms}}",
+        "main": "General",
+        "mainHint": "Main room",
+        "name": "Room name",
+        "namePlaceholder": "New room…",
+        "add": "Add the room",
+        "icon": "Icon of the {name} room",
+        "resetIcon": "Back to # for the {name} room",
+        "delete": "Delete the {name} room",
+        "deleteTitle": "Delete the “{name}” room?",
+        "deleteBody": "The room disappears from the chatbox, with all its messages. This can't be undone."
+      }
     },
     "timelinePicker": {
       "year": "Year",
@@ -2649,6 +2664,16 @@
     "deleteMessage": "Delete message",
     "sendFailed": "Message not sent.",
     "tooFast": "Too many messages: please wait a moment.",
-    "deleteFailed": "Could not delete the message."
+    "deleteFailed": "Could not delete the message.",
+    "channels": "Chat rooms",
+    "mainChannel": "General",
+    "chatroomThread": "“{title}” room thread",
+    "chatroomThreadFallback": "This room",
+    "replyTo": "Reply to {name}",
+    "replyingTo": "Replying to {name}",
+    "cancelReply": "Cancel reply",
+    "replyDeleted": "Deleted message",
+    "jumpTo": "Show the quoted message",
+    "newActivity": "New messages"
   }
 }

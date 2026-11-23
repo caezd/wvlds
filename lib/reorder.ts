@@ -13,7 +13,8 @@ export type ReorderFn =
   | "reorder_chatroom_categories"
   | "reorder_persona_sections"
   | "reorder_wiki_note_categories"
-  | "reorder_wiki_notes";
+  | "reorder_wiki_notes"
+  | "reorder_world_live_channels";
 
 type RpcClient = {
   rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;

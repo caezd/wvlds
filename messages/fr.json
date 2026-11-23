@@ -1115,7 +1115,22 @@
       },
       "chatbox": "Chatbox",
       "chatboxHelp": "Une discussion hors-jeu entre les membres, en barre au bas de toutes les pages du monde : messages courts, signés par le compte, pas par un persona. Désactivée, la barre disparaît ; les messages sont gardés et reviennent à la réactivation.",
-      "enableChatbox": "Activer la chatbox"
+      "enableChatbox": "Activer la chatbox",
+      "liveChannels": {
+        "title": "Salles",
+        "help": "Comme des dossiers pour ranger les discussions de la chatbox. La salle principale est toujours là ; chaque salon de jeu a en plus son propre fil, qui s’ouvre de lui-même quand on y est. Une salle peut avoir sa couleur et son icône (« # » sans icône).",
+        "count": "{count, plural, one {# salle} other {# salles}}",
+        "main": "Général",
+        "mainHint": "Salle principale",
+        "name": "Nom de la salle",
+        "namePlaceholder": "Nouvelle salle…",
+        "add": "Ajouter la salle",
+        "icon": "Icône de la salle {name}",
+        "resetIcon": "Revenir au # pour la salle {name}",
+        "delete": "Supprimer la salle {name}",
+        "deleteTitle": "Supprimer la salle « {name} » ?",
+        "deleteBody": "La salle disparaît de la chatbox, avec tous ses messages. Cette action est définitive."
+      }
     },
     "timelinePicker": {
       "year": "Année",
@@ -2649,6 +2664,16 @@
     "deleteMessage": "Supprimer le message",
     "sendFailed": "Message non envoyé.",
     "tooFast": "Trop de messages : patientez un instant.",
-    "deleteFailed": "Suppression impossible."
+    "deleteFailed": "Suppression impossible.",
+    "channels": "Salles du chat",
+    "mainChannel": "Général",
+    "chatroomThread": "Fil du salon « {title} »",
+    "chatroomThreadFallback": "Ce salon",
+    "replyTo": "Répondre à {name}",
+    "replyingTo": "Réponse à {name}",
+    "cancelReply": "Annuler la réponse",
+    "replyDeleted": "Message supprimé",
+    "jumpTo": "Voir le message cité",
+    "newActivity": "Nouveaux messages"
   }
 }

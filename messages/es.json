@@ -1115,7 +1115,22 @@
       },
       "chatbox": "Chatbox",
       "chatboxHelp": "Una charla fuera de rol entre los miembros, en una barra al pie de todas las páginas del mundo: mensajes cortos, firmados por la cuenta, no por un personaje. Desactivada, la barra desaparece; los mensajes se conservan y vuelven al reactivarla.",
-      "enableChatbox": "Activar la chatbox"
+      "enableChatbox": "Activar la chatbox",
+      "liveChannels": {
+        "title": "Salas",
+        "help": "Como carpetas para ordenar las conversaciones de la chatbox. La sala principal siempre está; cada sala de juego tiene además su propio hilo, que se abre solo cuando estás en ella. Una sala puede tener su color y su icono («#» sin icono).",
+        "count": "{count, plural, one {# sala} other {# salas}}",
+        "main": "General",
+        "mainHint": "Sala principal",
+        "name": "Nombre de la sala",
+        "namePlaceholder": "Nueva sala…",
+        "add": "Añadir la sala",
+        "icon": "Icono de la sala {name}",
+        "resetIcon": "Volver al # para la sala {name}",
+        "delete": "Eliminar la sala {name}",
+        "deleteTitle": "¿Eliminar la sala «{name}»?",
+        "deleteBody": "La sala desaparece de la chatbox, con todos sus mensajes. Esta acción es definitiva."
+      }
     },
     "timelinePicker": {
       "year": "Año",
@@ -2649,6 +2664,16 @@
     "deleteMessage": "Eliminar el mensaje",
     "sendFailed": "Mensaje no enviado.",
     "tooFast": "Demasiados mensajes: espere un momento.",
-    "deleteFailed": "No se pudo eliminar el mensaje."
+    "deleteFailed": "No se pudo eliminar el mensaje.",
+    "channels": "Salas del chat",
+    "mainChannel": "General",
+    "chatroomThread": "Hilo de la sala «{title}»",
+    "chatroomThreadFallback": "Esta sala",
+    "replyTo": "Responder a {name}",
+    "replyingTo": "Respondiendo a {name}",
+    "cancelReply": "Cancelar la respuesta",
+    "replyDeleted": "Mensaje eliminado",
+    "jumpTo": "Ver el mensaje citado",
+    "newActivity": "Mensajes nuevos"
   }
 }

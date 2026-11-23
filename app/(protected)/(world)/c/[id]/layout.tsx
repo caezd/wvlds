@@ -36,7 +36,11 @@ export default async function ChatRoomLayout({
       <SidebarWorldGuard worldId={chatroom?.world_id ?? null} />
       {/* Et seulement si le monde a activé sa chatbox (migration 237). */}
       {chatroom?.world_id && isWorldMember && world?.enable_live_chat === true && (
-        <WorldLiveChatAnchor worldId={chatroom.world_id} />
+        <WorldLiveChatAnchor
+          worldId={chatroom.world_id}
+          // Le fil de ce salon s'ouvre dans la chatbox (migration 238).
+          chatroom={{ id: chatroom.id, title: chatroom.title || chatroom.name || "" }}
+        />
       )}
       {children}
     </>

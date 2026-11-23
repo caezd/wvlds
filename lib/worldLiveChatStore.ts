@@ -17,21 +17,37 @@ import { useSyncExternalStore } from "react";
  * layout se démonte puis le nouveau s'inscrit dans le même passage d'effets ;
  * les abonnés ne voient alors que l'état final, sans passage par « aucun
  * monde » qui fermerait le canal pour le rouvrir aussitôt.
+ *
+ * Un salon déclare aussi son id et son titre (migration 238) : la chatbox y
+ * ouvre le fil de ce salon.
  */
 
-type Entry = { token: number; worldId: string };
+export type LiveChatRoom = { id: string; title: string };
+export type LiveChatContext = { worldId: string; chatroom: LiveChatRoom | null };
+
+type Entry = { token: number; worldId: string; chatroom: LiveChatRoom | null };
 
 let entries: Entry[] = [];
 let nextToken = 1;
 let snapshot: string | null = null;
+let context: LiveChatContext | null = null;
 let pending = false;
 const listeners = new Set<() => void>();
 
 function recompute() {
   pending = false;
-  const next = entries.length ? entries[entries.length - 1].worldId : null;
-  if (next === snapshot) return;
-  snapshot = next;
+  const top = entries.length ? entries[entries.length - 1] : null;
+  const nextContext: LiveChatContext | null = top ? { worldId: top.worldId, chatroom: top.chatroom } : null;
+  const same =
+    (context === null && nextContext === null) ||
+    (context !== null &&
+      nextContext !== null &&
+      context.worldId === nextContext.worldId &&
+      context.chatroom?.id === nextContext.chatroom?.id &&
+      context.chatroom?.title === nextContext.chatroom?.title);
+  if (same) return;
+  context = nextContext;
+  snapshot = nextContext?.worldId ?? null;
   for (const l of listeners) l();
 }
 
@@ -41,10 +57,10 @@ function schedule() {
   queueMicrotask(recompute);
 }
 
-/** Déclare le monde courant ; rend la fonction de retrait. */
-export function registerLiveChatWorld(worldId: string): () => void {
+/** Déclare le monde courant (et le salon, s'il y en a un) ; rend la fonction de retrait. */
+export function registerLiveChatWorld(worldId: string, chatroom: LiveChatRoom | null = null): () => void {
   const token = nextToken++;
-  entries = [...entries, { token, worldId }];
+  entries = [...entries, { token, worldId, chatroom }];
   schedule();
   return () => {
     entries = entries.filter((e) => e.token !== token);
@@ -61,16 +77,23 @@ function subscribe(listener: () => void) {
 
 const getSnapshot = () => snapshot;
 const getServerSnapshot = () => null;
+const getContext = () => context;
 
 /** Id du monde dont la barre de chat doit s'afficher, ou `null`. */
 export function useLiveChatWorldId(): string | null {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
+/** Le monde et le salon courants, ou `null` hors d'un monde. */
+export function useLiveChatContext(): LiveChatContext | null {
+  return useSyncExternalStore(subscribe, getContext, getServerSnapshot);
+}
+
 /** Remise à zéro entre deux tests. */
 export function __resetLiveChatWorlds() {
   entries = [];
   snapshot = null;
+  context = null;
   pending = false;
   listeners.clear();
 }

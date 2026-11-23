@@ -145,6 +145,69 @@ describe("useWorldLiveChat", () => {
   });
 });
 
+describe("useWorldLiveChat — salles et fils de salon (migration 238)", () => {
+  function setupAt(results: QueryResult[], place: Parameters<typeof useWorldLiveChat>[1]) {
+    const mock = createSupabaseMock({ user: { id: "me" }, results });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const view = renderHook(() => useWorldLiveChat("w1", place));
+    return { mock, ...view };
+  }
+
+  it("la salle principale ne lit que les messages sans salle ni salon", async () => {
+    const { mock } = setupAt([{ data: [] }], { kind: "main" });
+    await waitFor(() => expect(mock.buildersFor("world_live_messages")).toHaveLength(1));
+    const b = mock.buildersFor("world_live_messages")[0];
+    expect(b.is).toHaveBeenCalledWith("channel_id", null);
+    expect(b.is).toHaveBeenCalledWith("chatroom_id", null);
+  });
+
+  it("une salle ne lit que les siens ; un message d'ailleurs la laisse intacte et se signale", async () => {
+    const { result, mock } = setupAt([{ data: [] }], { kind: "channel", id: "c1" });
+    await waitFor(() => expect(mock.channelNamed("world:w1")).toBeDefined());
+    expect(mock.buildersFor("world_live_messages")[0].eq).toHaveBeenCalledWith("channel_id", "c1");
+    const ch = mock.channelNamed("world:w1")!;
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", record: { ...row("x", "u2", "2026-11-09T10:00:00Z"), channel_id: null, chatroom_id: null } } }));
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", record: { ...row("y", "u2", "2026-11-09T10:00:01Z"), channel_id: "c2", chatroom_id: null } } }));
+    await waitFor(() => expect(result.current.unread.has("main")).toBe(true));
+    expect(result.current.unread.has("c:c2")).toBe(true);
+    expect(result.current.messages).toHaveLength(0);
+  });
+
+  it("le fil d'un salon : l'avis arrive sans contenu, le message est relu", async () => {
+    const relu = { ...row("r", "u2", "2026-11-09T10:00:00Z", "bob"), chatroom_id: "r1", channel_id: null, reply_to_id: null, reply: null };
+    const { result, mock } = setupAt([{ data: [] }, { data: relu }], { kind: "chatroom", id: "r1" });
+    await waitFor(() => expect(mock.channelNamed("world:w1")).toBeDefined());
+    expect(mock.buildersFor("world_live_messages")[0].eq).toHaveBeenCalledWith("chatroom_id", "r1");
+    const ch = mock.channelNamed("world:w1")!;
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", id: "r", chatroom_id: "r1" } }));
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    expect(mock.buildersFor("world_live_messages")[1].eq).toHaveBeenCalledWith("id", "r");
+    expect(result.current.messages[0].author?.username).toBe("bob");
+  });
+
+  it("envoie dans la salle choisie, avec la réponse", async () => {
+    const sent = { ...row("n", "me", "2026-11-09T10:00:00Z", "moi"), channel_id: "c1", chatroom_id: null, reply_to_id: "m1", reply: null };
+    const { result, mock } = setupAt([{ data: [] }, { data: sent }], { kind: "channel", id: "c1" });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect(await result.current.send("coucou", "m1")).toBe("ok");
+    });
+    const insertBuilder = mock.buildersFor("world_live_messages")[1];
+    expect(insertBuilder.insert).toHaveBeenCalledWith({ world_id: "w1", user_id: "me", content: "coucou", channel_id: "c1", reply_to_id: "m1" });
+  });
+
+  it("un message cité qui disparaît : la citation le dit", async () => {
+    const m1 = { ...row("m1", "u2", "2026-11-09T10:00:00Z"), channel_id: null, chatroom_id: null, reply_to_id: null, reply: null };
+    const m2 = { ...row("m2", "u3", "2026-11-09T10:01:00Z"), channel_id: null, chatroom_id: null, reply_to_id: "m1", reply: { id: "m1", content: "msg m1", user_id: "u2", profiles: { username: "u2" } } };
+    const { result, mock } = setupAt([{ data: [m2, m1] }], { kind: "main" });
+    await waitFor(() => expect(result.current.messages).toHaveLength(2));
+    expect(result.current.messages[1].reply?.username).toBe("u2");
+    act(() => mock.channelNamed("world:w1")!.emit(isLive, { event: "live", payload: { op: "DELETE", id: "m1" } }));
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    expect(result.current.messages[0].reply).toBeNull();
+  });
+});
+
 describe("mergeMessage", () => {
   const m = (id: string, created_at: string): LiveChatMessage => ({
     id, world_id: "w1", user_id: "u", content: id, created_at, author: null,

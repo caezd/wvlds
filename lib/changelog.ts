@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-23",
     category: "Fonctionnalité",
     area: "Monde",
+    text: "Chatbox : des salles, réglables dans Paramètres › Fonctions › Chatbox — nom, couleur, icône (« # » par défaut), ordre. Dans un salon de jeu, la chatbox ouvre d’elle-même le fil de ce salon, qui réunit les discussions à son sujet, en plus des autres salles. Un clic sur un message permet d’y répondre ; la réponse affiche le message cité. Une pastille signale les salles où de nouveaux messages sont arrivés.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Monde",
     text: "Paramètres › Fonctions : nouvelle entrée « Chatbox ». Chaque monde choisit d’activer ou non sa discussion hors-jeu en barre au bas de ses pages ; elle est désactivée par défaut. Désactivée, la barre disparaît et les messages sont mis de côté, puis reviennent à la réactivation.",
   },
   {

@@ -39,6 +39,7 @@ import {
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { TimelineSettings } from "./TimelineSettings";
+import { WorldLiveChannelsSettings } from "./WorldLiveChannelsSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
@@ -436,7 +437,12 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             disabled: togglingLiveChat,
                             onCheckedChange: v => void handleLiveChatToggle(v),
                         }}
-                    />
+                    >
+                        {/* Les salles : visibles même chatbox coupée, grisées. */}
+                        <InactiveOptions inactive={!enableLiveChat}>
+                            <WorldLiveChannelsSettings worldId={world.id} />
+                        </InactiveOptions>
+                    </FeaturePage>
                 ),
             }]
             : []),
