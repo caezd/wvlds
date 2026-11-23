@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-23",
     category: "Interface",
     area: "Membres",
+    text: "Message de bienvenue : même aperçu que les annonces — un bouton « Aperçu » qui le montre tel que le nouveau membre le recevra, et, sur grand écran, l’aperçu en direct à côté de l’éditeur.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Interface",
+    area: "Membres",
     text: "Annonces : un bouton « Aperçu » montre l’annonce telle que les destinataires la verront — dans la cloche puis ouverte, en bandeau, en message privé, et dans le widget de l’accueil si elle y est — sans avoir à s’envoyer un essai. Sur grand écran, cet aperçu reste affiché à droite du formulaire et suit chaque modification. Les étiquettes ont désormais leur icône, et se choisissent sous leur vraie apparence.",
   },
   {

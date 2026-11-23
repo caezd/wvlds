@@ -2,15 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (k: string, v?: Record<string, unknown>) =>
-    v && "count" in v ? `${k}:${v.count}` : v && "name" in v ? `${k}:${v.name}` : k,
-  useLocale: () => "fr",
-}));
+vi.mock("next-intl", () => {
+  const t = Object.assign(
+    (k: string, v?: Record<string, unknown>) =>
+      v && "count" in v ? `${k}:${v.count}` : v && "name" in v ? `${k}:${v.name}` : k,
+    // La ligne de la cloche, dans l'aperçu : la clé, puis le titre.
+    { rich: (k: string, v?: Record<string, unknown>) => `${k}:${String(v?.title ?? "")}` },
+  );
+  return { useTranslations: () => t, useLocale: () => "fr" };
+});
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({}) }));
-vi.mock("@/components/MarkdownRenderer", () => ({ default: ({ content }: { content: string }) => <div>{content}</div> }));
+vi.mock("@/components/MarkdownRenderer", async (orig) => ({
+  ...(await orig<typeof import("@/components/MarkdownRenderer")>()),
+  default: ({ content }: { content: string }) => <div>{content}</div>,
+}));
 
 const api = vi.hoisted(() => ({ welcome: vi.fn(), save: vi.fn(), test: vi.fn() }));
 vi.mock("@/lib/worldAnnouncements", async (importOriginal) => {
@@ -109,6 +116,26 @@ describe("WorldWelcomeSection", () => {
       worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.", asWorld: false,
     }));
     expect(toast.success).toHaveBeenCalledWith("testSent");
+  });
+
+  it("l'aperçu : en direct à côté de l'éditeur, et dans sa fenêtre, variables remplacées", async () => {
+    api.welcome.mockResolvedValue(SAVED);
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(await screen.findByTestId("welcome-edit"));
+    const editor = await screen.findByTestId("welcome-editor");
+    // Plus de bascule texte / aperçu : le champ reste là.
+    expect(within(editor).getByTestId("welcome-text")).toBeInTheDocument();
+
+    const direct = within(editor).getByTestId("welcome-live-preview");
+    expect(direct).toHaveAttribute("data-kind", "notification");
+    expect(within(direct).getByTestId("welcome-live-preview-opened")).toHaveTextContent("Ravi de vous voir dans Ygg.");
+    // Pas d'accueil pour un message de bienvenue.
+    expect(within(direct).queryByTestId("welcome-live-preview-home")).toBeNull();
+
+    await user.click(within(editor).getByRole("button", { name: "previewOpen" }));
+    const fenetre = await screen.findByTestId("announcement-preview-dialog");
+    expect(within(fenetre).getByTestId("announcement-preview-opened")).toHaveTextContent("Ravi de vous voir dans Ygg.");
   });
 
   it("sans messages privés, un modèle en message privé se rouvre en notification", async () => {

@@ -29,6 +29,8 @@ import { FIELD, SettingsSection, StatusPill, ToggleItem, ToggleList } from "../F
 /** Pas de bandeau de bienvenue : l'accueil d'un nouveau membre est déjà lu. */
 const WELCOME_KINDS: readonly AnnouncementKind[] = ["message", "notification"];
 import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage } from "./AnnouncementFields";
+import { AnnouncementLivePreview, AnnouncementPreviewButton } from "./AnnouncementLivePreview";
+import { EMPTY_EXTRAS } from "@/components/worlds/announcements/AnnouncementExtrasFields";
 
 /**
  * Message de bienvenue (migration 229) : un modèle envoyé à chaque nouveau
@@ -185,7 +187,6 @@ function WelcomeEditor({
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
   const [asWorld, setAsWorld] = React.useState(false);
-  const [preview, setPreview] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
   // Le brouillon repart du modèle enregistré à chaque ouverture.
@@ -197,11 +198,21 @@ function WelcomeEditor({
       setTitle(initial?.title ?? "");
       setBody(initial?.body ?? "");
       setAsWorld(!!initial?.signed_as_world);
-      setPreview(false);
     }
   }
 
   const valid = isAnnouncementValid(kind, title, body);
+  // L'aperçu (fenêtre, et colonne en direct sur grand écran). Le message de
+  // bienvenue n'a ni étiquette, ni image, ni place sur l'accueil.
+  const previewProps = {
+    kind,
+    title,
+    body,
+    sample,
+    worldName,
+    asWorld: kind === "notification" && asWorld,
+    extras: EMPTY_EXTRAS,
+  };
 
   async function save() {
     setSaving(true);
@@ -217,12 +228,13 @@ function WelcomeEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" data-testid="welcome-editor">
+      <DialogContent className="max-w-2xl lg:max-w-5xl" data-testid="welcome-editor">
         <DialogHeader>
           <DialogTitle>{t("editorTitle")}</DialogTitle>
           <DialogDescription>{t("editorDescription")}</DialogDescription>
         </DialogHeader>
-        <div className="@container max-h-[65vh] space-y-4 overflow-y-auto">
+        <div className="grid max-h-[65vh] gap-6 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="@container min-w-0 space-y-4">
           <div className="space-y-2">
             <SectionLabel as="div">{tA("kind")}</SectionLabel>
             <KindPicker kind={kind} onChange={setKind} dmsEnabled={dmsEnabled} kinds={WELCOME_KINDS} testIdPrefix="welcome" />
@@ -252,13 +264,21 @@ function WelcomeEditor({
               title={title}
               body={body}
               onBodyChange={setBody}
-              preview={preview}
+              preview={false}
               sample={sample}
               worldName={worldName}
               asWorld={kind === "notification" && asWorld}
               testIdPrefix="welcome"
             />
           </div>
+        </div>
+        {/* Sur grand écran, l'aperçu en direct à droite, qui reste en vue. */}
+        <aside className="hidden lg:block" aria-label={tA("previewLive")} data-testid="welcome-live-preview-aside">
+          <div className="sticky top-0 space-y-3">
+            <SectionLabel as="p">{tA("previewLive")}</SectionLabel>
+            <AnnouncementLivePreview {...previewProps} testId="welcome-live-preview" />
+          </div>
+        </aside>
         </div>
         <DialogFooter className="flex-wrap gap-2">
           <AnnouncementTestButton
@@ -270,9 +290,7 @@ function WelcomeEditor({
             disabled={!valid}
             testId="welcome-test"
           />
-          <Button type="button" variant="outline" onClick={() => setPreview((p) => !p)} aria-pressed={preview}>
-            {preview ? tCommon("edit") : tCommon("preview")}
-          </Button>
+          <AnnouncementPreviewButton {...previewProps} />
           <Button type="button" disabled={!valid || saving} onClick={() => void save()} data-testid="welcome-save">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {tCommon("save")}
