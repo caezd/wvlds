@@ -48,6 +48,7 @@ import { ShelfGroupingToggle } from "./shelves/ShelfGroupingToggle";
 import { AlphaIndex } from "./shelves/AlphaIndex";
 import type { MiniFace } from "./shelves/MiniAvatarStack";
 import { usePersonasChangedVersion } from "@/hooks/usePersonasChanged";
+import { PERSONA_GROUP_COLUMNS, groupChoices, groupLineages, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupRow, type ResolvedPersonaGroup } from "@/lib/personaGroups";
 
 type OtherPersona = {
   id: string;
@@ -69,7 +70,7 @@ type OtherPersona = {
 /** Un PNJ avec tout ce que l'éditeur demande — pour qui le gère. */
 type NpcPersona = OtherPersona & Omit<AsidePersona, "sections" | "id" | "name" | "avatar_url" | "narrative_status" | "review_status" | "sheet_complete" | "created_at">;
 
-type Group = { id: string; name: string; color: string };
+
 
 // Les filtres et le tri vivent dans `personaFilters.ts` ; ré-exportés pour les tests.
 export { applyPersonaFilters, sortPersonas, PERSONA_FILTER_ALL, PERSONA_FILTER_NO_GROUP, PERSONA_FILTER_OFFSTAGE, SHEET_FILTERS } from "./personaFilters";
@@ -181,7 +182,10 @@ export function WorldPersonasPanel({
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
   const [npcs, setNpcs] = useState<NpcPersona[]>([]);
   const [npcSections, setNpcSections] = useState<Map<string, PersonaSectionWithFields[]>>(new Map());
-  const [groups, setGroups] = useState<Group[]>([]);
+  // En arbre (migration 232) : chacun avec sa teinte et son chemin.
+  const [groups, setGroups] = useState<ResolvedPersonaGroup[]>([]);
+  const choices = useMemo(() => groupChoices(groups), [groups]);
+  const lineage = useMemo(() => groupLineages(groups), [groups]);
   const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
   const [avatarByUser, setAvatarByUser] = useState<Map<string, string | null>>(new Map());
   // L'activité récente de chaque persona : elle choisit la vedette de chaque étagère.
@@ -237,7 +241,7 @@ export function WorldPersonasPanel({
           .eq("world_id", worldId)
           .eq("is_template", false)
           .is("deleted_at", null),
-        supabase.from("world_persona_groups").select("id, name, color").eq("world_id", worldId).order("sort_index"),
+        supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
         supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
       ]);
 
@@ -273,7 +277,7 @@ export function WorldPersonasPanel({
       }
 
       if (cancelled) return;
-      setGroups(((groupRows ?? []) as Group[]));
+      setGroups(resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)));
       setGroupByPersona(
         new Map(((assignRows ?? []) as { persona_id: string; group_id: string }[]).map((a) => [a.persona_id, a.group_id])),
       );
@@ -333,17 +337,17 @@ export function WorldPersonasPanel({
       narrative_status: narrativeStatusOf(p.narrative_status),
       is_npc: false,
     }));
-    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupByPersona), "name");
-  }, [myPersonas, meId, myUsername, effectiveFilters, groupByPersona]);
+    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupByPersona, lineage), "name");
+  }, [myPersonas, meId, myUsername, effectiveFilters, groupByPersona, lineage]);
 
   const filteredOthers = useMemo(
-    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupByPersona), "name"),
-    [others, effectiveFilters, groupByPersona],
+    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupByPersona, lineage), "name"),
+    [others, effectiveFilters, groupByPersona, lineage],
   );
 
   const filteredNpcs = useMemo(
-    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupByPersona), "name"),
-    [npcs, effectiveFilters, groupByPersona],
+    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupByPersona, lineage), "name"),
+    [npcs, effectiveFilters, groupByPersona, lineage],
   );
 
   // Les fiches des autres qui attendent un relecteur — un raccourci vers le filtre.
@@ -374,7 +378,7 @@ export function WorldPersonasPanel({
       mine: showPlayers ? mine.map((p) => ({ ...p, source: "mine" as const })) : [],
       others: showPlayers ? filteredOthers.map((p) => ({ ...p, source: "other" as const })) : [],
       npcs: showNpcs ? filteredNpcs.map((p) => ({ ...p, source: "npc" as const })) : [],
-      groups,
+      groups: choices,
       groupByPersona,
       mode: effectiveMode,
       sort: "name",
@@ -384,7 +388,7 @@ export function WorldPersonasPanel({
       keepNpcs: showNpcs && canManageNpc && !filtering,
       canCreateNpc: canManageNpc,
     }),
-    [mine, filteredOthers, filteredNpcs, showPlayers, showNpcs, groups, groupByPersona, effectiveMode, meId, myUsername, filtering, canManageNpc],
+    [mine, filteredOthers, filteredNpcs, showPlayers, showNpcs, choices, groupByPersona, effectiveMode, meId, myUsername, filtering, canManageNpc],
   );
 
   // ── Cartes de tête : chacune bascule un filtre existant ──
@@ -460,7 +464,7 @@ export function WorldPersonasPanel({
       return (
         <OtherPersonaCard
           persona={p}
-          groupColor={group?.color}
+          groupColor={group?.tint}
           line2={line2}
           lineSwatch={lineSwatch}
           featured={featured}
@@ -501,7 +505,7 @@ export function WorldPersonasPanel({
               name={name}
               avatarUrl={p.avatar_url}
               narrativeStatus={p.narrative_status}
-              groupColor={group?.color}
+              groupColor={group?.tint}
               line2={line2}
               lineSwatch={lineSwatch}
               featured={featured}
@@ -617,7 +621,7 @@ export function WorldPersonasPanel({
                 filters={filters}
                 onFiltersChange={setFilters}
                 players={players}
-                groups={groups}
+                groups={choices}
                 showKind={npcs.length > 0 || canManageNpc}
                 reviewActive={reviewActive}
                 leading={<ShelfGroupingToggle mode={effectiveMode} onModeChange={setMode} modes={modes} />}

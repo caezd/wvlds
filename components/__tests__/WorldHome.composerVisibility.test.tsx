@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 
+// Bandeaux d'annonce (migration 230) : lus en base, hors du sujet de ces tests.
+vi.mock("@/components/worlds/home/WorldAnnouncementBanners", () => ({
+  WorldAnnouncementBanners: () => null,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }),
 }));
@@ -26,8 +30,8 @@ vi.mock("@/components/worlds/home/WorldHeroCard", () => ({
   WorldHeroCard: () => <div>hero</div>,
 }));
 
-vi.mock("@/components/worlds/chatrooms/WorldChatComposer", () => ({
-  WorldChatComposer: () => <div data-testid="composer" />,
+vi.mock("@/components/worlds/chatrooms/NewChatroomDialog", () => ({
+  NewChatroomDialog: () => <div data-testid="composer" />,
 }));
 vi.mock("@/components/worlds/chatrooms/WorldChatroomsGrid", () => ({
   WorldChatroomsGrid: () => <div data-testid="chatrooms" />,

@@ -73,7 +73,8 @@ export function WorldChatroomsGrid({
       return;
     }
     if (event !== "summary") return;
-    const s = payload as { op?: string; chat_id?: string; last_message_at?: string | null; last_message_persona_avatar_url?: string | null };
+    // `private` (migration 225) : ni auteur ni avatar, seule l'heure change.
+    const s = payload as { op?: string; chat_id?: string; last_message_at?: string | null; last_message_persona_avatar_url?: string | null; private?: boolean };
     if (!s.chat_id) return;
     setRooms((prev) =>
       prev.map((r) =>
@@ -81,7 +82,9 @@ export function WorldChatroomsGrid({
           ? r
           : s.op === "DELETE"
             ? { ...r, last_poster_avatar_url: null, last_message_at: null }
-            : { ...r, last_message_at: s.last_message_at ?? null, last_poster_avatar_url: s.last_message_persona_avatar_url ?? null },
+            : s.private
+              ? { ...r, last_message_at: s.last_message_at ?? null }
+              : { ...r, last_message_at: s.last_message_at ?? null, last_poster_avatar_url: s.last_message_persona_avatar_url ?? null },
       ),
     );
     // Retour d'une coupure (onglet en veille, réseau perdu) : l'ordre et les

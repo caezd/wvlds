@@ -7,8 +7,10 @@ import type { ChatroomWithWorld } from "./getChatroom";
 import { getChatroomMessages } from "./getChatroomMessages";
 import { decorateMessagePage } from "@/lib/chatMessagePage";
 import { fetchTurn } from "@/lib/chatroomTurns";
+import { fetchPostAccess, isChatroomVisibility } from "@/lib/chatroomAccess";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
+import { PERSONA_GROUP_COLUMNS, normalizeGroupRow, personaTints, resolvePersonaGroups, type PersonaGroupRow } from "@/lib/personaGroups";
 
 export default async function ChatRoomContent({
   id,
@@ -32,7 +34,9 @@ export default async function ChatRoomContent({
   const rawWorld = chatroom.worlds as unknown;
   const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
 
-  const [messagesData, navRooms, worldMembership, followedIds, personaGroupColors, initialTurn] = await Promise.all([
+  const visibility = isChatroomVisibility(chatroom.visibility) ? chatroom.visibility : "open";
+
+  const [messagesData, navRooms, worldMembership, followedIds, personaGroupColors, initialTurn, postAccess] = await Promise.all([
     getChatroomMessages(id, userId),
     // Mémoïsé pour la requête et partagé avec `WorldSidebar` (monté par le
     // layout) : c'est la requête la plus lourde du chemin chaud, elle était
@@ -50,24 +54,22 @@ export default async function ChatRoomContent({
     // l'hydratation, pour une donnée que le serveur pouvait joindre au rendu.
     (async (): Promise<Record<string, string>> => {
       if (!chatroom.world_id) return {};
-      type AssignRow = { persona_id: string; group: { color: string } | null };
-      const [{ data: worldRow }, { data }] = await Promise.all([
-        // Le monde peut couper la couleur de groupe (migration 201).
-        supabase.from("worlds").select("persona_group_color").eq("id", chatroom.world_id).maybeSingle(),
-        supabase
-          .from("persona_group_assignments")
-          .select("persona_id, group:group_id(color)")
-          .eq("world_id", chatroom.world_id),
+      // Chaque groupe décide s'il teinte ses personas, et un sous-groupe sans
+      // couleur prend celle de son parent (migration 232) : il faut l'arbre.
+      const [{ data: groupRows }, { data: assignRows }] = await Promise.all([
+        supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", chatroom.world_id),
+        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", chatroom.world_id),
       ]);
-      if ((worldRow as { persona_group_color?: boolean } | null)?.persona_group_color === false) return {};
-      const out: Record<string, string> = {};
-      for (const row of ((data ?? []) as unknown as AssignRow[])) {
-        if (row.group?.color) out[row.persona_id] = row.group.color;
-      }
-      return out;
+      return personaTints(
+        resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)),
+        (assignRows ?? []) as { persona_id: string; group_id: string }[],
+      );
     })(),
     // Ordre de passage du salon (migration 211), s'il en a un.
     fetchTurn(supabase, id),
+    // Qui écrit dans un salon public ou privé (migration 225) ; un salon
+    // ouvert ne coûte pas de requête.
+    fetchPostAccess(supabase, id, visibility),
   ]);
 
   const {
@@ -125,6 +127,8 @@ export default async function ChatRoomContent({
         timeline_date: (chatroom.timeline_date as { year: number; month: number | null; day: number | null } | null) ?? null,
         map_pin_id: (chatroom.map_pin_id as string | null) ?? null,
         category_id: (chatroom.category_id as string | null) ?? null,
+        visibility,
+        synopsis: chatroom.synopsis ?? null,
         worlds: (() => {
           const w = worldData;
           if (!w?.id) return null;
@@ -145,6 +149,7 @@ export default async function ChatRoomContent({
       canEdit={canEdit}
       canWorldAdmin={canWorldAdmin}
       canPost={canPost}
+      initialPostAccess={postAccess}
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
       initialIsFollowed={followedIds.has(id)}

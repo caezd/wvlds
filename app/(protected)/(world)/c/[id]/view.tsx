@@ -76,6 +76,14 @@ import { useChatPins } from "@/hooks/useChatPins";
 import { useMessagesEpingles } from "@/hooks/useMessagesEpingles";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
+import { ChatroomReadOnlyNotice, ChatroomSynopsis } from "@/components/chatrooms/access/ChatroomSynopsis";
+import {
+  OPEN_POST_ACCESS,
+  fetchPostAccess,
+  isChatroomVisibility,
+  type ChatroomPostAccess,
+  type ChatroomVisibility,
+} from "@/lib/chatroomAccess";
 const SearchCenter = dynamic(() =>
   import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
 );
@@ -188,6 +196,7 @@ export default function ChatRoomView({
   canEdit,
   canWorldAdmin: _canWorldAdmin,
   canPost,
+  initialPostAccess = OPEN_POST_ACCESS,
   initialChatrooms,
   chatroomKey: initialChatroomKey,
   initialIsFollowed,
@@ -205,6 +214,8 @@ export default function ChatRoomView({
     timeline_date: import("@/types/worlds").WorldTimelineDate | null;
     map_pin_id: string | null;
     category_id: string | null;
+    visibility: ChatroomVisibility;
+    synopsis: string | null;
     worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null;
   };
   initialMessages: ChatMessageWithPersona[];
@@ -214,6 +225,8 @@ export default function ChatRoomView({
   canEdit: boolean;
   canWorldAdmin: boolean;
   canPost: boolean;
+  /** Qui écrit dans un salon public ou privé (migration 225), résolu côté serveur. */
+  initialPostAccess?: ChatroomPostAccess;
   initialChatrooms: ChatroomNavItem[];
   chatroomKey: string | null;
   initialIsFollowed: boolean;
@@ -271,6 +284,14 @@ export default function ChatRoomView({
   const roomKeyRef = useRef<string | null>(initialChatroomKey);
 
   const [chat, setChat] = useState(initialChat);
+  // Les personas qui peuvent écrire ici : tous dans un salon ouvert, sinon
+  // les seuls invités. Relu quand la visibilité ou les invités changent.
+  const [postAccess, setPostAccess] = useState(initialPostAccess);
+  const allowedPersonaIds = useMemo(
+    () => (postAccess.open ? null : new Set(postAccess.personaIds)),
+    [postAccess],
+  );
+  const readOnly = !postAccess.open && postAccess.personaIds.length === 0;
   const [messages, setMessages] = useState(initialMessages);
   const [challengeBadges, setChallengeBadges] = useState<Map<number, ChallengeBadge>>(
     () => new Map(initialChallengeBadges),
@@ -406,6 +427,7 @@ export default function ChatRoomView({
 
   useEffect(() => {
     setChat(initialChat);
+    setPostAccess(initialPostAccess);
     setMessages(initialMessages);
     setSelectedPersona(initialPersona);
     setHasMore(initialHasMore);
@@ -861,6 +883,7 @@ export default function ChatRoomView({
           ...("icon_url" in patch ? { icon_url: patch.icon_url ?? null } : {}),
         });
       }
+      const nextVisibility = isChatroomVisibility(patch.visibility) ? patch.visibility : chat.visibility;
       setChat((prev) => {
         if (!prev) return prev;
         return {
@@ -868,8 +891,14 @@ export default function ChatRoomView({
           title: (patch.title ?? patch.name ?? prev.title) as string,
           banner_url: patch.banner_url ?? prev.banner_url,
           icon_url: patch.icon_url ?? prev.icon_url,
+          ...("synopsis" in patch ? { synopsis: patch.synopsis ?? null } : {}),
+          visibility: nextVisibility,
         };
       });
+      // Visibilité ou invités changés : ce que l'on peut écrire aussi.
+      if (patch.participants || nextVisibility !== chat.visibility) {
+        void fetchPostAccess(supabase, chatId, nextVisibility).then(setPostAccess);
+      }
     },
     onReactionChange: (mid, emoji, delta) => {
       setMessages((prev) =>
@@ -958,7 +987,7 @@ export default function ChatRoomView({
   // « Répondre » sur un message : le composeur affiche « Réponse à X » et
   // l'envoi porte reply_to_id (migration 207). Callbacks stables (reçoivent
   // l'id) pour ne pas défaire le `memo` de ChatroomMessage.
-  const canReply = !!post_message && canPost;
+  const canReply = !!post_message && canPost && !readOnly;
   const [replyToId, setReplyToId] = useState<number | null>(null);
   const handleReply = useCallback((id: number) => setReplyToId(id), []);
   const cancelReply = useCallback(() => setReplyToId(null), []);
@@ -1165,6 +1194,8 @@ export default function ChatRoomView({
                   timeline_date: chat.timeline_date ?? null,
                   map_pin_id: chat.map_pin_id ?? null,
                   category_id: chat.category_id ?? null,
+                  visibility: chat.visibility,
+                  synopsis: chat.synopsis ?? null,
                 }}
                 worldTimelineConfig={chat.worlds?.timeline_config ?? null}
                 worldId={chat.worlds?.id ?? null}
@@ -1204,6 +1235,9 @@ export default function ChatRoomView({
                     Chargement de l’historique…
                   </div>
                 )}
+                {!hasMore && !loadingOlder && (
+                  <ChatroomSynopsis synopsis={chat.synopsis} visibility={chat.visibility} />
+                )}
                 {renderGroups.map((g) =>
                   g.kind === "sms" ? (
                     <div key={`sms-${g.messages[0].id}`} className="py-8">
@@ -1224,13 +1258,15 @@ export default function ChatRoomView({
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                {post_message && canPost && <ChatroomComposer
+                {post_message && canPost && readOnly && <ChatroomReadOnlyNotice />}
+                {post_message && canPost && !readOnly && <ChatroomComposer
                   chatId={chatId}
                   worldId={chat?.worlds?.id ?? null}
                   presetPersona={selectedPersona}
                   onTyping={emitTyping}
                   onPersonaChange={setSelectedPersona}
                   chatroomKey={roomKey}
+                  allowedPersonaIds={allowedPersonaIds}
                   typingLine={typingLine}
                   onEditLastMessage={() => {
                     const last = [...messages].reverse().find((m) => isMyMessage(m, userId));

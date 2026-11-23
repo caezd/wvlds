@@ -1,4 +1,4 @@
--- 225 — `wvlds_notify` n'est plus appelable par les clients.
+-- 234 — `wvlds_notify` n'est plus appelable par les clients.
 --
 -- Migration 214 : `wvlds_notify(topic, event, payload)` envoie un avis sur un
 -- canal PRIVÉ (`realtime.send`). Elle est SECURITY DEFINER — c'est ce qui lui

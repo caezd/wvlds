@@ -94,6 +94,14 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                 previous: n.metadata?.previous_title ?? t("text.someone"),
                 ...r,
             });
+        // Une annonce de l'équipe d'un monde (migration 227) : son titre.
+        case "world_announcement":
+            return t.rich("text.worldAnnouncement", {
+                actor,
+                title: n.content
+                    ?? (n.metadata?.test && n.metadata.kind === "message" ? t("announcement.testMessageTitle") : t("announcement.fallbackTitle")),
+                ...r,
+            });
         case "relation_request": {
             const target = n.content ?? t("text.someone");
             if (n.metadata?.marital_status === "married") return t.rich("text.maritalRequestMarried", { actor, target, ...r });

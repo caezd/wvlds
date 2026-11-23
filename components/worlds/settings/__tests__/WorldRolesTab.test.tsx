@@ -209,8 +209,8 @@ describe("WorldRolesTab — fiche", () => {
     const admin = await screen.findByRole("region", { name: "Administrateur" });
     expect(within(admin).getByRole("region", { name: "Affichage" })).toBeInTheDocument();
     const general = within(admin).getByRole("region", { name: "Général" });
-    expect(general).toHaveTextContent("4 sur 4");
-    expect(within(general).getAllByText("Inclus")).toHaveLength(3);
+    expect(general).toHaveTextContent("5 sur 5");
+    expect(within(general).getAllByText("Inclus")).toHaveLength(4);
     // Rien à désactiver là où tout vient d'`administrator`.
     const contenu = within(admin).getByRole("region", { name: "Contenu" });
     expect(within(contenu).getByRole("button", { name: "Tout désactiver" })).toBeDisabled();

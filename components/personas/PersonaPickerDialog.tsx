@@ -138,6 +138,8 @@ export function PersonaPickerDialog({
   userId,
   worldId,
   variant = "dialog",
+  allowedIds = null,
+  notAllowedHint,
 }: {
   selected: Persona | null;
   onSelect: (persona: Persona | null) => void;
@@ -151,6 +153,13 @@ export function PersonaPickerDialog({
   /** "drawer" : rendu comme drawer — se nest automatiquement si monté sous
    *  un `<Drawer>` ancêtre déjà ouvert (ex: composer mobile). */
   variant?: "dialog" | "drawer";
+  /**
+   * Les seuls personas permis ici (les invités d'un salon public ou privé,
+   * migration 225) ; les autres s'affichent verrouillés avec `notAllowedHint`.
+   * `null` : pas de restriction.
+   */
+  allowedIds?: ReadonlySet<string> | null;
+  notAllowedHint?: string;
 }) {
   const t = useTranslations("personas");
   const tCommon = useTranslations("common");
@@ -319,8 +328,12 @@ export function PersonaPickerDialog({
       persona={p}
       selected={value === p.id}
       favorite={favorites.has(p.id)}
-      locked={!usableIds.has(p.id)}
-      lockedHint={t(LOCK_REASON_KEYS[lockReasonById.get(p.id) ?? "quota"])}
+      locked={!usableIds.has(p.id) || (!!allowedIds && !allowedIds.has(p.id))}
+      lockedHint={
+        allowedIds && !allowedIds.has(p.id) && notAllowedHint
+          ? notAllowedHint
+          : t(LOCK_REASON_KEYS[lockReasonById.get(p.id) ?? "quota"])
+      }
       onSelect={() => setValue(p.id)}
       onToggleFavorite={() => toggleFavorite(p.id)}
       favoriteLabel={t("toggleFavorite")}

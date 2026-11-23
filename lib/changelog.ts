@@ -49,16 +49,40 @@ export const CHANGELOG: ChangelogEntry[] = [
     text: "Sécurité : il n’est plus possible de diffuser de faux avis en temps réel (faux message privé, faux message du chat en direct, liste des salons faussée) en appelant directement une fonction interne de la base.",
   },
   {
+    date: "2026-11-22",
+    category: "Fonctionnalité",
+    area: "Membres",
+    text: "Annonces aux membres d’un monde : écrire à tous, ou aux seuls porteurs de certains rôles, depuis l’onglet « Annonces » des réglages :\n- par message privé, envoyé depuis votre compte (les réponses arrivent dans vos messages privés)\n- par notification : un titre et un texte, dans la cloche et sur les appareils\n- ou par bandeau, en tête de l’accueil du monde, jusqu’à ce que le membre le ferme ou pour 1, 7 ou 30 jours\n\nNotification et bandeau peuvent être signés au nom du monde, avec son icône. Envoi immédiat ou programmé à une date et une heure, jusqu’à 90 jours à l’avance.\n\nDestinataires affinables : sauf certains rôles, nouveaux arrivants, membres sans message dans le monde depuis 7, 30 ou 90 jours. Variables `{username}` et `{world}` remplacées pour chaque membre, aperçu avant l’envoi, dix par jour au plus. Essai à soi-même selon le type : la notification dans les vôtres, le bandeau en tête de votre accueil du monde.\n\nHistorique des annonces envoyées : nombre de lectures, texte complet, reprise d’une annonce dans le formulaire, retrait d’une notification ou d’un bandeau.\n\nMessage de bienvenue : envoyé automatiquement à chaque nouveau membre, en message privé ou en notification, signée au besoin au nom du monde.\n\nRéservé à la nouvelle permission « Envoyer des annonces ».",
+  },
+  {
+    date: "2026-11-22",
+    category: "Correctif",
+    area: "Messagerie",
+    text: "Messages privés : conversations classées par dernier message, et plus aucune conversation sautée en faisant défiler la liste quand plusieurs ont reçu un message au même instant.",
+  },
+  {
+    date: "2026-11-22",
+    category: "Fonctionnalité",
+    area: "Personas",
+    text: "Groupes de personas : un onglet « Groupes » dans les réglages du monde, et des sous-groupes sur autant de niveaux que voulu :\n- créer, renommer, réordonner, ranger un groupe dans un autre ou l’en sortir\n- un sous-groupe sans couleur propre prend celle de son parent\n- les personas d’un sous-groupe comptent dans ses parents : inviter un groupe à un salon invite ses sous-groupes, filtrer sur un groupe les montre aussi\n- supprimer un groupe fait remonter ses sous-groupes d’un niveau\n- « Couleur appliquée », groupe par groupe : la couleur teinte ou non le nom des personas dans les salons, l’anneau de leur avatar, leurs tuiles, la chronologie et la toile des relations",
+  },
+  {
+    date: "2026-11-21",
+    category: "Correctif",
+    area: "Monde",
+    text: "Chronologie : nombre de salons de la période sélectionnée plus lisible (contraste suffisant).",
+  },
+  {
+    date: "2026-11-20",
+    category: "Fonctionnalité",
+    area: "Salons",
+    text: "Nouveau salon : il s’ouvre vide, sans premier message à écrire. À la création :\n- titre, lieu de la carte, catégorie ;\n- date et « Suite de… » dans la chronologie ;\n- visibilité : ouvert (tout le monde lit et écrit), public (tout le monde lit, les invités écrivent), privé (seuls les invités lisent et écrivent) ;\n- invités : des personas ou des groupes de personas ;\n- synopsis, affiché en tête du salon.\n\nVisibilité, invités et synopsis se changent aussi dans les réglages de la salle.",
+  },
+  {
     date: "2026-11-19",
     category: "Correctif",
     area: "Wiki",
     text: "En revenant sur un onglet resté en veille ou après une coupure réseau, le wiki (arbre des pages, lexique, notes et annotations) et la carte (lieux, régions, liens) se remettent à jour avec ce qui a changé entre-temps, comme la liste des salons.",
-  },
-  {
-    date: "2026-11-18",
-    category: "Correctif",
-    area: "Salons",
-    text: "Un salon ouvert depuis le composeur d’un monde garde les options cochées au moment de l’ouvrir : dialogue en bulles, sa couleur et mode SMS. Elles apparaissaient décochées une fois dans le salon.",
   },
   {
     date: "2026-11-18",

@@ -335,6 +335,24 @@ describe("DmsProvider — canal des conversations (mise à jour incrémentale)",
         await waitFor(() => expect(mock.rpc.mock.calls.some(([name]) => name === "get_dm_conversations")).toBe(true));
     });
 
+    it("relit la liste une seule fois pour une rafale de conversations inconnues (annonce en messages privés)", async () => {
+        const mock = setupWithConv1();
+
+        await waitFor(() => expect(screen.getByTestId("conv1-unread").textContent).toBe("2"));
+        mock.rpc.mockClear();
+
+        await act(async () => {
+            for (let i = 0; i < 12; i++) {
+                emitDmInsert(mock, { id: 2000 + i, conversation_id: `conv-burst-${i}`, author_id: "u1", content: "Annonce", created_at: "2026-01-02T00:00:00.000Z" });
+            }
+        });
+
+        await waitFor(() => expect(mock.rpc.mock.calls.some(([name]) => name === "get_dm_conversations")).toBe(true));
+        // Laisse passer une éventuelle seconde relecture avant de compter.
+        await new Promise((r) => setTimeout(r, 300));
+        expect(mock.rpc.mock.calls.filter(([name]) => name === "get_dm_conversations")).toHaveLength(1);
+    });
+
     it("ne recrédite pas les non-lus si le message reçu concerne la conversation active", async () => {
         const mock = setupWithConv1();
 
@@ -429,7 +447,9 @@ describe("DmsProvider — pagination de la liste de conversations", () => {
         expect(screen.getByTestId("has-more-convs").textContent).toBe("no");
 
         const call = mock.rpc.mock.calls.find(([name]) => name === "get_dm_conversations");
-        expect(call?.[1]).toMatchObject({ p_cursor: FIRST_PAGE_CONVS[19]!.last_message_at });
+        // Date et identifiant (migration 231) : les conversations à égalité
+        // de date avec la dernière ligne ne se perdent pas.
+        expect(call?.[1]).toMatchObject({ p_cursor: FIRST_PAGE_CONVS[19]!.last_message_at, p_cursor_id: FIRST_PAGE_CONVS[19]!.id });
     });
 });
 

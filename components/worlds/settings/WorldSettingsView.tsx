@@ -36,6 +36,7 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
+import { WorldGroupsSettings } from "@/components/worlds/settings/WorldGroupsSettings";
 import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGridSettings";
 // Les onglets « Fonctions » et « Communauté » portent leur propre état et
 // leurs propres appels serveur — voir l'en-tête de chacun.
@@ -85,6 +86,7 @@ import type { World } from "@/types/worlds";
 import { LabelWithHelp } from "./LabelWithHelp";
 import { WorldReportsTab } from "./WorldReportsTab";
 import { WorldRolesTab } from "./WorldRolesTab";
+import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
@@ -120,11 +122,16 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         categories: can("world.settings") || can("categories.manage"),
         home: can("world.settings"),
         features: can("world.settings"),
+        // Les groupes de personas s'écrivent sous `relations.manage` (RLS de
+        // `world_persona_groups`) : même permission que l'onglet Relations.
+        groups: can("world.settings") || can("relations.manage"),
         relations: can("world.settings") || can("relations.manage"),
         roles: can("world.settings") || can("roles.manage"),
         community: public_worlds && can("world.settings"),
         // Signalements (migration 209) : « Gérer les salons » — administrateurs inclus.
         reports: can("chatrooms.manage"),
+        // Annonces (migration 227) : écrire à tous les membres.
+        announcements: can("members.announce"),
     };
     const firstTab = (Object.keys(tabs) as (keyof typeof tabs)[]).find((k) => tabs[k]) ?? "appearance";
     // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
@@ -312,6 +319,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 {tabs.features && (
                                     <TabBarTrigger value="features">{t("tabFeatures")}</TabBarTrigger>
                                 )}
+                                {tabs.groups && (
+                                    <TabBarTrigger value="groups">{t("tabGroups")}</TabBarTrigger>
+                                )}
                                 {tabs.relations && (
                                     <TabBarTrigger value="relations">{t("tabRelations")}</TabBarTrigger>
                                 )}
@@ -323,6 +333,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 )}
                                 {tabs.reports && (
                                     <TabBarTrigger value="reports">{t("tabReports")}</TabBarTrigger>
+                                )}
+                                {tabs.announcements && (
+                                    <TabBarTrigger value="announcements">{t("tabAnnouncements")}</TabBarTrigger>
                                 )}
                             </TabsPrimitive.List>
                             <ScrollBar orientation="horizontal" />
@@ -566,6 +579,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             onUpdated={onUpdated}
                         />
 
+                        {/* ── Groupes ──────────────────────────────────── */}
+                        <TabsContent value="groups" className="mt-0">
+                            <div className="mx-auto max-w-4xl">
+                                <WorldGroupsSettings worldId={world.id} />
+                            </div>
+                        </TabsContent>
+
                         {/* ── Relations ────────────────────────────────── */}
                         <TabsContent value="relations" className="mt-0">
                             <div className="mx-auto max-w-4xl">
@@ -584,6 +604,17 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         {tabs.reports && (
                             <TabsContent value="reports" className="mt-0">
                                 <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
+                            </TabsContent>
+                        )}
+
+                        {/* ── Annonces ─────────────────────────────────── */}
+                        {tabs.announcements && (
+                            <TabsContent value="announcements" className="mt-0">
+                                <WorldAnnouncementsTab
+                                    key={`announcements-${world.id}`}
+                                    worldId={world.id}
+                                    worldName={world.name}
+                                />
                             </TabsContent>
                         )}
 

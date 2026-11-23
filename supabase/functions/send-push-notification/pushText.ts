@@ -4,7 +4,7 @@
 // l'équivalent riche côté client. Toute évolution des libellés doit être
 // répercutée ICI aussi (un test de non-régression liste les 9 types, voir
 // __tests__/pushText.test.ts, pour limiter le risque de dérive silencieuse).
-// 14 types depuis la migration 194 (demandes de suite entre salons).
+// 15 types depuis la migration 227 (annonces d'un monde).
 
 export type PushLocale = "fr" | "en" | "es";
 
@@ -12,7 +12,8 @@ export type PushNotifPayload = {
   type:
     | "mention" | "reaction" | "new_member" | "new_chatroom" | "world_invite"
     | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request"
-    | "role_mention" | "everyone_mention" | "persona_submitted" | "persona_reviewed" | "sequel_request";
+    | "role_mention" | "everyone_mention" | "persona_submitted" | "persona_reviewed" | "sequel_request"
+    | "world_announcement";
   world_id: string | null;
   chat_id: string | null;
   actor_id: string | null;
@@ -22,6 +23,12 @@ export type PushNotifPayload = {
 };
 
 const SOMEONE: Record<PushLocale, string> = { fr: "Quelqu'un", en: "Someone", es: "Alguien" };
+
+/** Début d'un texte, sur une ligne : une notification push n'en montre que peu. */
+function excerpt(text: string, max = 140): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+}
 
 function T(locale: PushLocale, fr: string, en: string, es: string): string {
   return locale === "en" ? en : locale === "es" ? es : fr;
@@ -102,6 +109,14 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
       const prec = typeof n.metadata?.previous_title === "string" ? n.metadata.previous_title : T(locale, "votre salon", "your chatroom", "su sala");
       return { title, body: T(locale, `${actor} propose que « ${suite} » fasse suite à « ${prec} »`, `${actor} proposes “${suite}” as a sequel to “${prec}”`, `${actor} propone que «${suite}» continúe «${prec}»`) };
     }
+    // Une annonce de l'équipe d'un monde (migration 227) : le monde en titre,
+    // puis le titre de l'annonce et le début de son texte.
+    case "world_announcement": {
+      const world = typeof n.metadata?.world_name === "string" ? n.metadata.world_name : title;
+      const head = n.content ?? T(locale, "Nouvelle annonce", "New announcement", "Nuevo anuncio");
+      const text = typeof n.metadata?.body === "string" ? excerpt(n.metadata.body) : "";
+      return { title: world, body: text ? `${head} — ${text}` : head };
+    }
     // Une demande de relation réciproque (migration 173). Un type marital
     // garde la phrase du mariage ; les autres nomment le type.
     case "relation_request": {
@@ -134,11 +149,21 @@ export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id"> & Par
 
 const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"]);
 
+/** Une annonce signée au nom du monde (migration 230) : pas d'auteur affiché. */
+export function isSignedAsWorld(n: Pick<PushNotifPayload, "metadata">): boolean {
+  return n.metadata?.signed_as_world === true;
+}
+
 // Miroir de la logique de NotifAvatar/isPersonaNotif dans
 // components/notifications/index.tsx : pour les notifications "persona",
 // l'avatar affiché est celui du persona (metadata.icon_url), pas celui du
-// compte humain qui l'incarne.
-export function resolvePushImage(n: PushNotifPayload, actorAvatarUrl: string | null): string | null {
+// compte humain qui l'incarne. Signée au nom du monde : l'icône du monde.
+export function resolvePushImage(
+  n: PushNotifPayload,
+  actorAvatarUrl: string | null,
+  worldIconUrl: string | null = null,
+): string | null {
+  if (isSignedAsWorld(n)) return worldIconUrl;
   const isPersonaNotif = PERSONA_TYPES.has(n.type) || typeof n.metadata?.persona_name === "string";
   if (isPersonaNotif) {
     return typeof n.metadata?.icon_url === "string" ? n.metadata.icon_url : null;

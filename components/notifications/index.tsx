@@ -19,6 +19,7 @@ import { useNotifications, useNotificationsActions } from "@/components/provider
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
 import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
+import { AnnouncementDialog } from "./AnnouncementDialog";
 import { TABLE, RPC } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types/db";
 import { notifText, notifHref, compactTime } from "@/lib/notifHelpers";
@@ -46,10 +47,11 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     persona_submitted: <ClipboardCheck size={13} />,
     persona_reviewed: <ClipboardCheck size={13} />,
     sequel_request: <Spline size={13} />,
+    world_announcement: <Megaphone size={13} />,
 };
 
 const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request", "world_announcement"];
 const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
 const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request", "sequel_request"];
 
@@ -377,12 +379,19 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
     const isInvite = notif.type === "world_invite";
     const isRelationRequest = notif.type === "relation_request";
     const isSequelRequest = notif.type === "sequel_request";
+    // Une annonce s'ouvre en entier dans un dialogue plutôt que de naviguer.
+    const isAnnouncement = notif.type === "world_announcement";
+    const [announcementOpen, setAnnouncementOpen] = useState(false);
     const isActionable = ACTIONABLE_TYPES.includes(notif.type);
-    const href = isActionable ? null : notifHref(notif);
+    const href = isActionable || isAnnouncement ? null : notifHref(notif);
     const isUnread = !notif.read_at;
     const showWorldHeader = worldInfo && WORLD_HEADER_TYPES.includes(notif.type);
     const isPersonaNotif = PERSONA_NOTIF_TYPES.includes(notif.type) || !!notif.metadata?.persona_name;
-    const avatarUrl = isPersonaNotif ? notif.metadata?.icon_url ?? null : actorAvatarUrl;
+    // Annonce signée au nom du monde (migration 230) : l'icône du monde, faute
+    // d'auteur. Même règle pour la notification push (resolvePushImage).
+    const avatarUrl = notif.metadata?.signed_as_world
+        ? worldInfo?.icon_url ?? null
+        : isPersonaNotif ? notif.metadata?.icon_url ?? null : actorAvatarUrl;
 
     const archiveBtn = (
         <Button
@@ -424,6 +433,33 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
             <Link href={href} className="block" onClick={() => { onRead(notif.id); onClose(); }}>
                 {content}
             </Link>
+        );
+    }
+    if (isAnnouncement) {
+        return (
+            <>
+                <div
+                    role="button"
+                    tabIndex={0}
+                    className="block cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => { setAnnouncementOpen(true); if (isUnread) onRead(notif.id); }}
+                    onKeyDown={e => {
+                        if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+                        e.preventDefault();
+                        setAnnouncementOpen(true);
+                        if (isUnread) onRead(notif.id);
+                    }}
+                >
+                    {content}
+                </div>
+                <AnnouncementDialog
+                    notif={notif}
+                    worldName={worldInfo?.name ?? null}
+                    open={announcementOpen}
+                    onOpenChange={setAnnouncementOpen}
+                    onNavigate={onClose}
+                />
+            </>
         );
     }
     return <div>{content}</div>;
@@ -490,6 +526,7 @@ export function NotificationInlinePanelContent() {
         persona_submitted: t("prefs.persona_submitted"),
         persona_reviewed: t("prefs.persona_reviewed"),
         sequel_request: t("prefs.sequel_request"),
+        world_announcement: t("prefs.world_announcement"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

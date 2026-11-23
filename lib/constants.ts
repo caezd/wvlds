@@ -29,6 +29,7 @@ export const TABLE = {
   WORLD_TIMELINE_EVENTS: "world_timeline_events",
   WORLD_TIMELINE_ARCS: "world_timeline_arcs",
   CHATROOM_SEQUELS: "chatroom_sequels",
+  CHATROOM_PARTICIPANTS: "chatroom_participants",
   WORLD_WIKI_PAGES: "world_wiki_pages",
   WORLD_LIVE_MESSAGES: "world_live_messages",
   WORLD_CATALOG_ITEM_PAGES: "world_catalog_item_pages",
@@ -40,6 +41,9 @@ export const TABLE = {
   USER_BLOCKS: "user_blocks",
   CHALLENGES: "challenges",
   CHALLENGE_ATTEMPTS: "challenge_attempts",
+  WORLD_ANNOUNCEMENTS: "world_announcements",
+  WORLD_WELCOME_MESSAGES: "world_welcome_messages",
+  WORLD_SCHEDULED_ANNOUNCEMENTS: "world_scheduled_announcements",
 } as const;
 
 // --- Supabase RPC names -------------------------------------------------------
@@ -48,6 +52,7 @@ export const RPC = {
   GET_CHATROOM_UNREADS: "get_chatroom_unreads",
   GET_WORLD_TIMELINE: "get_world_timeline",
   GET_LINKABLE_CHATROOMS: "get_linkable_chatrooms",
+  GET_CHATROOM_POST_ACCESS: "get_chatroom_post_access",
   MARK_CHATROOM_READ: "mark_chatroom_read",
   MARK_WORLD_READ: "mark_world_read",
   AWARD_EVENT: "award_event",
@@ -75,6 +80,16 @@ export const RPC = {
   PERSONA_REQUIRED_FIELDS: "persona_required_fields",
   WORLD_PERSONA_REVIEW_ACTIVE: "world_persona_review_active",
   GET_WORLD_PERSONA_ACTIVITY: "get_world_persona_activity",
+  SEND_WORLD_ANNOUNCEMENT: "send_world_announcement",
+  COUNT_WORLD_ANNOUNCEMENT_RECIPIENTS: "count_world_announcement_recipients",
+  SEND_WORLD_ANNOUNCEMENT_TEST: "send_world_announcement_test",
+  WORLD_ANNOUNCEMENT_READ_COUNTS: "world_announcement_read_counts",
+  RETRACT_WORLD_ANNOUNCEMENT: "retract_world_announcement",
+  SAVE_WORLD_WELCOME: "save_world_welcome",
+  SCHEDULE_WORLD_ANNOUNCEMENT: "schedule_world_announcement",
+  CANCEL_SCHEDULED_WORLD_ANNOUNCEMENT: "cancel_scheduled_world_announcement",
+  GET_WORLD_BANNERS: "get_world_banners",
+  DISMISS_WORLD_BANNER: "dismiss_world_banner",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

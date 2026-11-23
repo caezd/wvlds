@@ -10,7 +10,7 @@
  */
 
 export const WORLD_PERMISSION_GROUPS = {
-  general: ["administrator", "world.settings", "roles.manage", "members.manage"],
+  general: ["administrator", "world.settings", "roles.manage", "members.manage", "members.announce"],
   chatrooms: ["messages.post", "chatrooms.create", "chatrooms.manage", "chatrooms.link", "categories.manage"],
   content: ["wiki.edit", "wiki.comment", "lexicon.edit", "tags.manage", "map.edit", "catalog.edit", "timeline.manage"],
   personas: ["relations.manage", "personas.review", "npc.manage", "npc.play"],
@@ -157,6 +157,8 @@ export function canOpenWorldSettings(m: WorldMembership | null): boolean {
     hasWorldPermission(m, "relations.manage") ||
     hasWorldPermission(m, "personas.review") ||
     // Onglet Signalements (migration 209).
-    hasWorldPermission(m, "chatrooms.manage")
+    hasWorldPermission(m, "chatrooms.manage") ||
+    // Onglet Annonces (migration 227).
+    hasWorldPermission(m, "members.announce")
   );
 }

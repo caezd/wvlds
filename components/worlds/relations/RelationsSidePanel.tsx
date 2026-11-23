@@ -270,7 +270,8 @@ function PersonaSheet({
   const tCommon = useTranslations("common");
   const groupId = groupByPersona.get(persona.id);
   const group = groupId ? groups.find((g) => g.id === groupId) : undefined;
-  const color = group?.color;
+  // La teinte du persona : la couleur de son groupe, si ce groupe l'applique.
+  const color = group?.tint;
   const rows = React.useMemo(
     () => personaRows(persona, relations, personaMap, typeOf, userId),
     [persona, relations, personaMap, typeOf, userId],
@@ -315,7 +316,7 @@ function PersonaSheet({
             <DropdownMenuContent align="center" className="min-w-40">
               {groups.map((g) => (
                 <DropdownMenuItem key={g.id} onSelect={() => onAssignGroup(persona.id, g.id)}>
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: g.color }} />
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: g.color ?? undefined }} />
                   {g.name}
                 </DropdownMenuItem>
               ))}
@@ -327,7 +328,7 @@ function PersonaSheet({
           </DropdownMenu>
         ) : group ? (
           <Badge>
-            <BadgeDot color={group.color} />
+            <BadgeDot color={group.color ?? undefined} />
             {group.name}
           </Badge>
         ) : null}

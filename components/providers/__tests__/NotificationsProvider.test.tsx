@@ -221,6 +221,30 @@ describe("NotificationsProvider — markAllNotifsRead", () => {
 
 // ── Realtime UPDATE ───────────────────────────────────────────────────────────
 
+describe("NotificationsProvider — realtime DELETE", () => {
+    it("une notification retirée (migration 229) quitte la cloche sans relecture", async () => {
+        const mock = setup();
+        await waitFor(() => {
+            expect(screen.getByTestId("notif-n1")).toBeInTheDocument();
+        });
+        const notifChannel = mock.channels.find((c) => c.name === "msgs:u1");
+        expect(notifChannel).toBeDefined();
+        const lectures = mock.from.mock.calls.length;
+
+        act(() => {
+            notifChannel!.emit(
+                h => h.type === "broadcast",
+                { event: "notification", payload: avisNotif("DELETE", BASE_NOTIF) },
+            );
+        });
+
+        await waitFor(() => {
+            expect(screen.queryByTestId("notif-n1")).not.toBeInTheDocument();
+        });
+        expect(mock.from.mock.calls.length).toBe(lectures);
+    });
+});
+
 describe("NotificationsProvider — realtime UPDATE", () => {
     it("ignore un UPDATE avec archived_at → ne réinsère pas la notification", async () => {
         const mock = setup();

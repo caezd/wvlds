@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WORLD_HOME_HEADER_HEIGHT, WorldHomeHeader, WorldHomeIcon } from "./WorldHomeHeader";
 import { WorldHomeGridView } from "./WorldHomeGridView";
+import { WorldAnnouncementBanners } from "./WorldAnnouncementBanners";
 import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
@@ -328,6 +329,13 @@ export function WorldHome({
                 {world.home_show_stats && <WorldStatsWidget worldId={worldId} />}
               </div>
             )}
+
+            {/* Bandeaux d'annonce (migration 230) : rien tant qu'il n'y en a pas. */}
+            <WorldAnnouncementBanners
+              worldId={worldId}
+              userId={userId}
+              className="w-full shrink-0 px-3 pt-3 sm:px-6 md:px-8 lg:px-12"
+            />
 
             {/* Panel de contenu : accueille la grille de blocs configurée par
                 l'admin (voir WorldHomeGridView / WorldHomeGridEditor).
