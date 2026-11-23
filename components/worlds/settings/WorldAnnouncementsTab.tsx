@@ -47,6 +47,12 @@ import { AnnouncementFiltersPanel } from "./announcements/AnnouncementFiltersPan
 import { AnnouncementDetails, HistoryRow } from "./announcements/AnnouncementHistory";
 import { WorldWelcomeSection } from "./announcements/WorldWelcomeSection";
 import { ScheduleDialog, ScheduledList } from "./announcements/ScheduledAnnouncements";
+import {
+  AnnouncementExtrasFields,
+  EMPTY_EXTRAS,
+  type AnnouncementExtrasValue,
+} from "@/components/worlds/announcements/AnnouncementExtrasFields";
+import { isAnnouncementLabel } from "@/lib/worldAnnouncements";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -76,6 +82,8 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   const [asWorld, setAsWorld] = React.useState(false);
   // Bandeau : jours d'affichage ; null, jusqu'à ce qu'on le ferme.
   const [bannerDays, setBannerDays] = React.useState<number | null>(null);
+  // Étiquette, image, accueil, épingle (migration 235).
+  const [extras, setExtras] = React.useState<AnnouncementExtrasValue>(EMPTY_EXTRAS);
   const [preview, setPreview] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
@@ -170,6 +178,12 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
     };
     setFilters(reused);
     setFiltersOpen(hasFilters(reused));
+    setExtras({
+      label: isAnnouncementLabel(a.label) ? a.label : null,
+      imageUrl: a.image_url ?? null,
+      showOnHome: !!a.show_on_home,
+      pinned: !!a.pinned_at,
+    });
     setPreview(false);
     focusFormOnClose.current = true;
     setOpened(null);
@@ -179,7 +193,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   async function send() {
     setConfirmOpen(false);
     setSending(true);
-    const res = await sendWorldAnnouncement(supabase, { worldId, kind, title, body, roleIds, filters, asWorld, bannerDays });
+    const res = await sendWorldAnnouncement(supabase, { worldId, kind, title, body, roleIds, filters, asWorld, bannerDays, extras });
     setSending(false);
     if (!res.ok) {
       toast.error(errorMessage(res.reason));
@@ -197,6 +211,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
   function resetDraft() {
     setTitle("");
     setBody("");
+    setExtras(EMPTY_EXTRAS);
     setPreview(false);
   }
 
@@ -210,6 +225,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       filters,
       asWorld,
       bannerDays,
+      extras,
       scheduledFor: when,
     });
     if (!res.ok) {
@@ -343,6 +359,11 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
         </SettingsSection>
       )}
 
+      {/* ── Présentation : étiquette, image, accueil ───────── */}
+      <SettingsSection title={t("presentation")} help={t("presentationHelp")}>
+        <AnnouncementExtrasFields value={extras} onChange={setExtras} />
+      </SettingsSection>
+
       {/* ── Message ──────────────────────────────────────── */}
       <SettingsSection
         title={t("body")}
@@ -439,6 +460,13 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
         onRetracted={() => {
           setOpened(null);
           void loadHistory();
+        }}
+        onEdited={() => {
+          // La fiche ouverte suit la version modifiée.
+          void fetchWorldAnnouncements(supabase, worldId).then((list) => {
+            setHistory(list);
+            setOpened((o) => (o ? list.find((x) => x.id === o.id) ?? null : o));
+          });
         }}
         onCloseAutoFocus={(e) => {
           if (!focusFormOnClose.current) return;

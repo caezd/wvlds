@@ -322,7 +322,8 @@
       "from": "De {actor}",
       "openWorld": "Abrir el mundo",
       "test": "Prueba",
-      "testMessageTitle": "Prueba de un mensaje privado"
+      "testMessageTitle": "Prueba de un mensaje privado",
+      "edited": "editado"
     }
   },
   "dms": {
@@ -547,7 +548,8 @@
         "timeline_shortcuts": "Accesos directos de la línea de tiempo",
         "map": "Mapa",
         "birthdays": "Cumpleaños",
-        "holidays": "Próximas fiestas"
+        "holidays": "Próximas fiestas",
+        "latest_announcements": "Últimos anuncios"
       },
       "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
       "noneOnline": "Nadie en línea por ahora",
@@ -1213,7 +1215,34 @@
       "scheduledFor": "el {date}",
       "scheduleFailed": "Error",
       "scheduleCancelled": "Envío programado cancelado.",
-      "errorScheduleLimit": "Límite alcanzado: {count} anuncios programados por mundo."
+      "errorScheduleLimit": "Límite alcanzado: {count} anuncios programados por mundo.",
+      "labels": {
+        "info": "Info",
+        "event": "Evento",
+        "rules": "Normas",
+        "maintenance": "Mantenimiento",
+        "important": "Importante"
+      },
+      "labelTitle": "Etiqueta",
+      "labelNone": "Ninguna",
+      "imageTitle": "Imagen de cabecera",
+      "imageChange": "Cambiar la imagen",
+      "imageRemove": "Quitar la imagen",
+      "showOnHome": "Mostrar en la portada",
+      "showOnHomeHelp": "El anuncio aparece en el widget «Últimos anuncios» de la portada del mundo, para todos los miembros, sea cual sea el público del envío.",
+      "pinned": "Fijar",
+      "pinnedHelp": "Mantiene el anuncio arriba del widget, por encima de los más recientes, hasta que se desfije.",
+      "presentation": "Presentación",
+      "presentationHelp": "Etiqueta, imagen de cabecera y lugar en la portada del mundo. Todo se puede cambiar después del envío.",
+      "edit": "Editar",
+      "editTitle": "Editar el anuncio",
+      "editHelp": "Las notificaciones, los mensajes privados y los banners ya enviados siguen el cambio. El anuncio lleva la mención «editado».",
+      "editRetractedHelp": "Este anuncio fue retirado: solo su presentación y su lugar en la portada se pueden cambiar todavía.",
+      "editSaved": "Anuncio editado.",
+      "edited": "editado",
+      "onHome": "En la portada",
+      "pinnedOnHome": "Fijado en la portada",
+      "justNow": "ahora mismo"
     }
   },
   "auth": {

@@ -89,6 +89,8 @@ export const RPC = {
   SCHEDULE_WORLD_ANNOUNCEMENT: "schedule_world_announcement",
   CANCEL_SCHEDULED_WORLD_ANNOUNCEMENT: "cancel_scheduled_world_announcement",
   GET_WORLD_BANNERS: "get_world_banners",
+  UPDATE_WORLD_ANNOUNCEMENT: "update_world_announcement",
+  GET_WORLD_HOME_ANNOUNCEMENTS: "get_world_home_announcements",
   DISMISS_WORLD_BANNER: "dismiss_world_banner",
 } as const;
 

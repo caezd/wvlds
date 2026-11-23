@@ -11,6 +11,7 @@ import { dismissWorldBanner, fetchWorldBanners, type WorldBanner } from "@/lib/w
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { AnnouncementImage, AnnouncementLabelBadge } from "@/components/worlds/announcements/AnnouncementLabelBadge";
 
 /**
  * Les bandeaux d'annonce du monde (migration 230), en tête de l'accueil :
@@ -64,6 +65,9 @@ export function WorldAnnouncementBanners({
           body={b.body}
           signer={b.signer}
           isTest={b.is_test}
+          label={b.label}
+          imageUrl={b.image_url}
+          edited={!!b.edited_at}
           onDismiss={() => dismiss(b.id)}
         />
       ))}
@@ -77,6 +81,9 @@ export function BannerCard({
   body,
   signer,
   isTest = false,
+  label = null,
+  imageUrl = null,
+  edited = false,
   onDismiss,
   testId = "world-banner",
 }: {
@@ -85,6 +92,10 @@ export function BannerCard({
   signer: string | null;
   /** L'essai de l'auteur (migration 233) : lui seul le voit. */
   isTest?: boolean;
+  /** Migration 235 : étiquette, image d'en-tête, modifié après envoi. */
+  label?: string | null;
+  imageUrl?: string | null;
+  edited?: boolean;
   onDismiss?: () => void;
   testId?: string;
 }) {
@@ -108,13 +119,21 @@ export function BannerCard({
               {tNotif("announcement.test")}
             </Badge>
           )}
+          <AnnouncementLabelBadge label={label} />
         </p>
+        <AnnouncementImage src={imageUrl} className="my-1.5" />
         {body ? (
           <div className="text-sm text-muted-foreground">
             <MarkdownRenderer content={body} />
           </div>
         ) : null}
-        {signer ? <p className="text-xs-plus text-muted-foreground">{t("signedBy", { name: signer })}</p> : null}
+        {signer || edited ? (
+          <p className="text-xs-plus text-muted-foreground">
+            {signer ? t("signedBy", { name: signer }) : null}
+            {signer && edited ? " · " : null}
+            {edited ? t("edited") : null}
+          </p>
+        ) : null}
       </div>
       {onDismiss && (
         <Button

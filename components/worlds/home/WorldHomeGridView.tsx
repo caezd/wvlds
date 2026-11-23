@@ -7,6 +7,8 @@ import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
 import { WorldHolidaysWidget } from "./widgets/WorldHolidaysWidget";
+import { WorldLatestAnnouncementsWidget } from "./widgets/WorldLatestAnnouncementsWidget";
+import type { HomeAnnouncement } from "@/lib/worldAnnouncements";
 import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
@@ -93,7 +95,7 @@ export function WorldHomeGridView({
    *  « non fourni » de « aucune catégorie ». */
   categories?: ChatroomCategory[];
   /** Données des widgets résolues côté serveur. */
-  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] };
+  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[]; announcements?: HomeAnnouncement[] };
   /** Lieu sur lequel ouvrir le composeur d'emblée (« Jouer ici » depuis la carte). */
   initialComposerPinId?: string | null;
   selectedCategoryId: string | null;
@@ -146,7 +148,7 @@ function renderBlock(
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
     categories: ChatroomCategory[] | undefined;
-    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] };
+    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[]; announcements?: HomeAnnouncement[] };
     initialComposerPinId?: string | null;
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
@@ -253,6 +255,14 @@ function renderBlock(
           worldId={ctx.worldId}
           days={widgetOptionValue("birthdays", "days", item.options)}
           initialMembers={ctx.widgetData.birthdays}
+        />
+      );
+    case "latest_announcements":
+      return (
+        <WorldLatestAnnouncementsWidget
+          worldId={ctx.worldId}
+          limit={widgetOptionValue("latest_announcements", "limit", item.options)}
+          initialAnnouncements={ctx.widgetData.announcements}
         />
       );
     case "holidays":

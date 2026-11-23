@@ -125,6 +125,8 @@ describe("WorldAnnouncementsTab", () => {
     await waitFor(() => expect(api.send).toHaveBeenCalledWith(expect.anything(), {
       worldId: "w1", kind: "notification", title: "Rentrée", body: "La saison reprend.", roleIds: [], filters: {},
       asWorld: false, bannerDays: null,
+      // Présentation (migration 235) : rien de choisi.
+      extras: { label: null, imageUrl: null, showOnHome: false, pinned: false },
     }));
     expect(toast.success).toHaveBeenCalledWith("sent:4");
     // Le formulaire se vide et l'historique se relit.

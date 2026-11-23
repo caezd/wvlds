@@ -66,6 +66,46 @@ export function hasFilters(f: AnnouncementFilters | null | undefined): boolean {
   return !!f && Object.keys(compactFilters(f)).length > 0;
 }
 
+/**
+ * Étiquettes d'annonce (migration 235) — miroir de la contrainte
+ * `world_announcements_label_check`.
+ */
+export const ANNOUNCEMENT_LABELS = ["info", "event", "rules", "maintenance", "important"] as const;
+export type AnnouncementLabel = (typeof ANNOUNCEMENT_LABELS)[number];
+
+export function isAnnouncementLabel(v: unknown): v is AnnouncementLabel {
+  return typeof v === "string" && (ANNOUNCEMENT_LABELS as readonly string[]).includes(v);
+}
+
+/**
+ * Options d'une annonce (migration 235), à l'envoi comme après : afficher
+ * dans le widget de l'accueil (pour tous les membres), épingler en tête,
+ * étiquette, image d'en-tête. Une clé absente n'est pas touchée.
+ */
+export type AnnouncementExtras = {
+  showOnHome?: boolean;
+  pinned?: boolean;
+  label?: AnnouncementLabel | null;
+  imageUrl?: string | null;
+};
+
+/** Au format de la base (`p_extras`) ; seules les clés présentes partent. */
+export function extrasToRpc(extras: AnnouncementExtras | undefined): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!extras) return out;
+  if (extras.showOnHome !== undefined) out.show_on_home = extras.showOnHome;
+  if (extras.pinned !== undefined) out.pinned = extras.pinned;
+  if (extras.label !== undefined) out.label = extras.label;
+  if (extras.imageUrl !== undefined) out.image_url = extras.imageUrl;
+  return out;
+}
+
+/** `p_extras` seulement s'il y a des options : sans elles, l'appel reste celui d'avant. */
+function extrasParam(extras: AnnouncementExtras | undefined): { p_extras?: Record<string, unknown> } {
+  const x = extrasToRpc(extras);
+  return Object.keys(x).length > 0 ? { p_extras: x } : {};
+}
+
 export type SendAnnouncementInput = {
   worldId: string;
   kind: AnnouncementKind;
@@ -78,6 +118,8 @@ export type SendAnnouncementInput = {
   asWorld?: boolean;
   /** Bandeau : jours d'affichage ; absent, jusqu'à ce qu'on le ferme. */
   bannerDays?: number | null;
+  /** Accueil, épingle, étiquette, image (migration 235). */
+  extras?: AnnouncementExtras;
 };
 
 export type AnnouncementErrorReason =
@@ -121,6 +163,7 @@ export async function sendWorldAnnouncement(
     p_filters: compactFilters(input.filters ?? {}),
     p_as_world: input.kind !== "message" && !!input.asWorld,
     p_banner_days: input.kind === "banner" ? (input.bannerDays ?? null) : null,
+    ...extrasParam(input.extras),
   });
   if (error) {
     console.error("[worldAnnouncements] envoi", error);
@@ -208,6 +251,12 @@ export type WorldAnnouncement = {
   signed_as_world: boolean;
   /** Bandeau : fin d'affichage ; null, jusqu'à fermeture. */
   banner_until: string | null;
+  /** Migration 235 : widget de l'accueil, épingle, étiquette, image, modification. */
+  show_on_home?: boolean;
+  pinned_at?: string | null;
+  label?: AnnouncementLabel | null;
+  image_url?: string | null;
+  edited_at?: string | null;
   author: { username: string | null } | null;
 };
 
@@ -219,7 +268,7 @@ export async function fetchWorldAnnouncements(
 ): Promise<WorldAnnouncement[]> {
   const { data, error } = await supabase
     .from(TABLE.WORLD_ANNOUNCEMENTS)
-    .select("id, kind, title, body, role_ids, filters, recipient_count, created_at, retracted_at, signed_as_world, banner_until, author:author_id(username)")
+    .select("id, kind, title, body, role_ids, filters, recipient_count, created_at, retracted_at, signed_as_world, banner_until, show_on_home, pinned_at, label, image_url, edited_at, author:author_id(username)")
     .eq("world_id", worldId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -336,6 +385,7 @@ export async function scheduleWorldAnnouncement(
     p_as_world: input.kind !== "message" && !!input.asWorld,
     p_banner_days: input.kind === "banner" ? (input.bannerDays ?? null) : null,
     p_scheduled_for: input.scheduledFor.toISOString(),
+    ...extrasParam(input.extras),
   });
   if (error) {
     console.error("[worldAnnouncements] programmation", error);
@@ -367,6 +417,10 @@ export type WorldBanner = {
   signed_as_world: boolean;
   /** L'essai de son auteur (migration 233), visible de lui seul. */
   is_test?: boolean;
+  /** Migration 235. */
+  label?: AnnouncementLabel | null;
+  image_url?: string | null;
+  edited_at?: string | null;
 };
 
 export async function fetchWorldBanners(
@@ -381,4 +435,70 @@ export async function fetchWorldBanners(
 export async function dismissWorldBanner(supabase: Pick<SupabaseClient, "rpc">, id: string): Promise<boolean> {
   const { error } = await supabase.rpc(RPC.DISMISS_WORLD_BANNER, { p_announcement_id: id });
   return !error;
+}
+
+/**
+ * Modifier une annonce envoyée (migration 235) : titre et texte (absents :
+ * inchangés), et options. Notifications, messages privés et bandeaux suivent.
+ */
+export async function updateWorldAnnouncement(
+  supabase: Pick<SupabaseClient, "rpc">,
+  id: string,
+  change: { title?: string; body?: string; extras?: AnnouncementExtras },
+): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
+  const extras = extrasToRpc(change.extras);
+  const { error } = await supabase.rpc(RPC.UPDATE_WORLD_ANNOUNCEMENT, {
+    p_id: id,
+    p_title: change.title !== undefined ? change.title.trim() : null,
+    p_body: change.body !== undefined ? change.body.trim() : null,
+    p_extras: Object.keys(extras).length > 0 ? extras : null,
+  });
+  if (error) {
+    console.error("[worldAnnouncements] modification", error);
+    return { ok: false, reason: announcementErrorReason(error) };
+  }
+  return { ok: true };
+}
+
+/** Une annonce du widget de l'accueil (variables déjà remplacées par la base). */
+export type HomeAnnouncement = {
+  id: string;
+  kind: AnnouncementKind;
+  /** Absent pour un message privé. */
+  title: string | null;
+  body: string;
+  label: AnnouncementLabel | null;
+  image_url: string | null;
+  pinned: boolean;
+  created_at: string;
+  edited_at: string | null;
+  signed_as_world: boolean;
+  /** Le monde, ou le pseudo de l'auteur. */
+  signer: string | null;
+  signer_avatar_url: string | null;
+};
+
+/** Nombre d'annonces que le widget peut montrer (miroir de la base). */
+export const HOME_ANNOUNCEMENTS_MAX = 20;
+
+export async function fetchHomeAnnouncements(
+  supabase: Pick<SupabaseClient, "rpc">,
+  worldId: string,
+  limit = 5,
+): Promise<HomeAnnouncement[]> {
+  const { data, error } = await supabase.rpc(RPC.GET_WORLD_HOME_ANNOUNCEMENTS, {
+    p_world_id: worldId,
+    p_limit: Math.min(Math.max(limit, 1), HOME_ANNOUNCEMENTS_MAX),
+  });
+  if (error || !Array.isArray(data)) return [];
+  return (data as HomeAnnouncement[]).map((a) => ({ ...a, label: isAnnouncementLabel(a.label) ? a.label : null }));
+}
+
+/**
+ * Chemin de l'image d'en-tête d'une annonce, dans le bucket `worlds` : sous
+ * le préfixe de son auteur (`user-<id>/`), le seul où la policy l'autorise à
+ * écrire sans droit sur la carte ou le catalogue.
+ */
+export function announcementImagePath(userId: string, fileName: string): string {
+  return `user-${userId}/announcements/${fileName}`;
 }

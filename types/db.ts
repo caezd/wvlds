@@ -300,6 +300,10 @@ export type NotificationMeta = {
   signed_as_world?: boolean;
   /** Message de bienvenue (migration 229). */
   welcome?: boolean;
+  /** Annonce (migration 235) : étiquette, image d'en-tête, modifiée après envoi. */
+  label?: string | null;
+  image_url?: string | null;
+  edited?: boolean;
 };
 
 export type AppNotification = {

@@ -26,7 +26,8 @@ export type WorldHomeWidgetId =
   | "timeline_shortcuts"
   | "map"
   | "birthdays"
-  | "holidays";
+  | "holidays"
+  | "latest_announcements";
 
 export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "categories",
@@ -40,6 +41,7 @@ export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "map",
   "birthdays",
   "holidays",
+  "latest_announcements",
 ];
 
 /** Ordre affiché avant que l'admin n'ait jamais personnalisé la page. */

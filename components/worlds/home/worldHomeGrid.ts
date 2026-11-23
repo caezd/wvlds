@@ -201,6 +201,8 @@ export const WORLD_HOME_WIDGET_OPTIONS: Partial<Record<WorldHomeWidgetId, WorldH
   // Fenêtre, en jours, des anniversaires annoncés.
   birthdays: [{ kind: "number", key: "days", min: 1, max: 90, default: 30 }],
   holidays: [{ kind: "number", key: "limit", min: 1, max: 12, default: 3 }],
+  // Annonces affichées sur l'accueil (migration 235).
+  latest_announcements: [{ kind: "number", key: "limit", min: 1, max: 10, default: 3 }],
 };
 
 function findOptionDef(widgetId: WorldHomeWidgetId | undefined, key: string): WorldHomeWidgetOption | undefined {

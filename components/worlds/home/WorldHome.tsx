@@ -1,5 +1,6 @@
 "use client";
 
+import type { HomeAnnouncement } from "@/lib/worldAnnouncements";
 import { resolveWorldPanel, SETTINGS_PERMISSIONS } from "./worldView";
 import { useState } from "react";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
@@ -79,7 +80,7 @@ export function WorldHome({
   initialCategories?: ChatroomCategory[];
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
-  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] };
+  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[]; announcements?: HomeAnnouncement[] };
   /** Cartes et épingles résolues côté serveur quand `view === "map"`. */
   initialMap?: InitialWorldMap | null;
   initialPersonas: AsidePersona[];

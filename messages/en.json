@@ -322,7 +322,8 @@
       "from": "From {actor}",
       "openWorld": "Open the world",
       "test": "Test",
-      "testMessageTitle": "Direct message test"
+      "testMessageTitle": "Direct message test",
+      "edited": "edited"
     }
   },
   "dms": {
@@ -547,7 +548,8 @@
         "timeline_shortcuts": "Timeline shortcuts",
         "map": "Map",
         "birthdays": "Birthdays",
-        "holidays": "Upcoming holidays"
+        "holidays": "Upcoming holidays",
+        "latest_announcements": "Latest announcements"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
@@ -1213,7 +1215,34 @@
       "scheduledFor": "on {date}",
       "scheduleFailed": "Failed",
       "scheduleCancelled": "Scheduled send cancelled.",
-      "errorScheduleLimit": "Limit reached: {count} scheduled announcements per world."
+      "errorScheduleLimit": "Limit reached: {count} scheduled announcements per world.",
+      "labels": {
+        "info": "Info",
+        "event": "Event",
+        "rules": "Rules",
+        "maintenance": "Maintenance",
+        "important": "Important"
+      },
+      "labelTitle": "Label",
+      "labelNone": "None",
+      "imageTitle": "Header image",
+      "imageChange": "Change image",
+      "imageRemove": "Remove image",
+      "showOnHome": "Show on the home page",
+      "showOnHomeHelp": "The announcement appears in the world home’s “Latest announcements” widget, for all members, whatever the targeting of the send.",
+      "pinned": "Pin",
+      "pinnedHelp": "Keeps the announcement at the top of the widget, above the most recent ones, until it is unpinned.",
+      "presentation": "Presentation",
+      "presentationHelp": "Label, header image and place on the world’s home page. Everything can be changed after sending.",
+      "edit": "Edit",
+      "editTitle": "Edit announcement",
+      "editHelp": "Notifications, direct messages and banners already sent follow the change. The announcement is marked “edited”.",
+      "editRetractedHelp": "This announcement was retracted: only its presentation and its place on the home page can still be changed.",
+      "editSaved": "Announcement updated.",
+      "edited": "edited",
+      "onHome": "On the home page",
+      "pinnedOnHome": "Pinned on the home page",
+      "justNow": "just now"
     }
   },
   "auth": {

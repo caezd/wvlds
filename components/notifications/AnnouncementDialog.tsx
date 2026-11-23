@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import DateDisplay from "@/components/date-display";
 import type { AppNotification } from "@/types/db";
+import { AnnouncementImage, AnnouncementLabelBadge } from "@/components/worlds/announcements/AnnouncementLabelBadge";
 
 /**
  * Une annonce de l'équipe d'un monde (migration 227), lue en entier : la
@@ -60,13 +61,23 @@ export function AnnouncementDialog({
                             {isTest && <Badge data-testid="announcement-test-badge">{t("announcement.test")}</Badge>}
                         </div>
                     )}
-                    <DialogTitle>{title}</DialogTitle>
+                    <DialogTitle className="flex flex-wrap items-center gap-2">
+                        {title}
+                        <AnnouncementLabelBadge label={notif.metadata?.label} />
+                    </DialogTitle>
                     <DialogDescription className="flex flex-wrap items-center gap-x-1.5">
                         <span>{t("announcement.from", { actor: notif.actor_name ?? t("text.someone") })}</span>
                         <span>·</span>
                         <DateDisplay value={notif.created_at} />
+                        {notif.metadata?.edited && (
+                            <>
+                                <span>·</span>
+                                <span data-testid="announcement-dialog-edited">{t("announcement.edited")}</span>
+                            </>
+                        )}
                     </DialogDescription>
                 </DialogHeader>
+                <AnnouncementImage src={notif.metadata?.image_url} />
                 {body && (
                     <div className="max-h-[60vh] overflow-y-auto">
                         <MarkdownRenderer content={body} />

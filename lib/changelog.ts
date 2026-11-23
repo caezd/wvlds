@@ -45,6 +45,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Widget « Dernières annonces » pour l’accueil d’un monde : il montre à tous les membres les annonces que l’équipe a choisi d’y afficher, les épinglées en tête, et se met à jour en direct. Chaque annonce s’ouvre en entier d’un clic.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Membres",
+    text: "Annonces : une étiquette (Info, Événement, Règles, Maintenance, Important), une image d’en-tête, et deux nouvelles options, « Afficher sur l’accueil » et « Épingler ». Une annonce envoyée se modifie ensuite depuis l’historique : notifications, messages privés et bandeaux suivent, avec la mention « modifiée ».",
+  },
+  {
+    date: "2026-11-23",
     category: "Correctif",
     text: "Sécurité : il n’est plus possible de diffuser de faux avis en temps réel (faux message privé, faux message du chat en direct, liste des salons faussée) en appelant directement une fonction interne de la base.",
   },

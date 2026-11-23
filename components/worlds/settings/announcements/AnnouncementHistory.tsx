@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Bell, CopyPlus, Landmark, Loader2, MessageSquare, PanelTop, Undo2 } from "lucide-react";
+import { Bell, CopyPlus, House, Landmark, Loader2, MessageSquare, PanelTop, Pencil, Pin, Undo2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ import { RoleChip } from "@/components/worlds/members/RoleChip";
 import { retractWorldAnnouncement, type AnnouncementKind, type WorldAnnouncement } from "@/lib/worldAnnouncements";
 import { FiltersSummary, type RoleLike } from "./AnnouncementFiltersPanel";
 import { useAnnouncementErrorMessage } from "./AnnouncementFields";
+import { AnnouncementEditDialog } from "./AnnouncementEditDialog";
+import { AnnouncementImage, AnnouncementLabelBadge } from "@/components/worlds/announcements/AnnouncementLabelBadge";
 
 const KIND_ICON = { message: MessageSquare, notification: Bell, banner: PanelTop } as const;
 const KIND_LABEL = { message: "kindMessage", notification: "kindNotification", banner: "kindBanner" } as const;
@@ -69,6 +71,13 @@ function AnnouncementMeta({ announcement: a, roleById }: { announcement: WorldAn
       {a.kind === "banner" && (
         <span>{a.banner_until ? t("bannerUntil", { date: new Date(a.banner_until) }) : t("bannerUntilDismissed")}</span>
       )}
+      {a.show_on_home && (
+        <span className="inline-flex items-center gap-1" data-testid="announcement-on-home">
+          {a.pinned_at ? <Pin className="size-3" aria-hidden /> : <House className="size-3" aria-hidden />}
+          {a.pinned_at ? t("pinnedOnHome") : t("onHome")}
+        </span>
+      )}
+      {a.edited_at && <span data-testid="announcement-edited">{t("edited")}</span>}
       <span>·</span>
       {targetRoles.length === 0 ? (
         <span>{t("allMembers")}</span>
@@ -105,6 +114,7 @@ export function HistoryRow({
         <span className="flex items-center gap-2 text-sm">
           <KindIcon kind={a.kind} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate font-medium">{a.title ?? a.body}</span>
+          <AnnouncementLabelBadge label={a.label} />
           <ReadBadge announcement={a} reads={reads} />
         </span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs-plus text-muted-foreground">
@@ -127,6 +137,7 @@ export function AnnouncementDetails({
   onOpenChange,
   onReuse,
   onRetracted,
+  onEdited,
   onCloseAutoFocus,
 }: {
   announcement: WorldAnnouncement | null;
@@ -135,6 +146,8 @@ export function AnnouncementDetails({
   onOpenChange: (open: boolean) => void;
   onReuse: (a: WorldAnnouncement) => void;
   onRetracted: () => void;
+  /** Modifiée (migration 235) : l'historique se relit. */
+  onEdited?: () => void;
   onCloseAutoFocus: (e: Event) => void;
 }) {
   const t = useTranslations("worlds.announcements");
@@ -145,6 +158,7 @@ export function AnnouncementDetails({
   const [shown, setShown] = React.useState(a);
   const [confirmRetract, setConfirmRetract] = React.useState(false);
   const [retracting, setRetracting] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
   if (a && a !== shown) {
     setShown(a);
     setConfirmRetract(false);
@@ -180,14 +194,18 @@ export function AnnouncementDetails({
                 })()}
                 {t(KIND_LABEL[current.kind] ?? "kindNotification")}
               </SectionLabel>
-              <DialogTitle>{current.title ?? t("kindMessage")}</DialogTitle>
+              <DialogTitle className="flex flex-wrap items-center gap-2">
+                {current.title ?? t("kindMessage")}
+                <AnnouncementLabelBadge label={current.label} />
+              </DialogTitle>
               <DialogDescription asChild>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <AnnouncementMeta announcement={current} roleById={roleById} />
                 </div>
               </DialogDescription>
             </DialogHeader>
-            <div className="max-h-[50vh] overflow-y-auto rounded-md border border-border bg-background p-4">
+            <div className="max-h-[50vh] space-y-3 overflow-y-auto rounded-md border border-border bg-background p-4">
+              <AnnouncementImage src={current.image_url} />
               {current.kind !== "message" ? (
                 <MarkdownRenderer content={current.body} />
               ) : (
@@ -221,6 +239,10 @@ export function AnnouncementDetails({
                       {t("retract")}
                     </Button>
                   )}
+                  <Button type="button" variant="outline" onClick={() => setEditing(true)} data-testid="announcement-edit-open">
+                    <Pencil className="h-4 w-4" />
+                    {t("edit")}
+                  </Button>
                   <Button type="button" onClick={() => onReuse(current)} data-testid="announcement-reuse">
                     <CopyPlus className="h-4 w-4" />
                     {t("reuse")}
@@ -231,6 +253,14 @@ export function AnnouncementDetails({
           </>
         )}
       </DialogContent>
+      {current && (
+        <AnnouncementEditDialog
+          announcement={current}
+          open={editing}
+          onOpenChange={setEditing}
+          onSaved={() => onEdited?.()}
+        />
+      )}
     </Dialog>
   );
 }

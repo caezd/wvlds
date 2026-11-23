@@ -322,7 +322,8 @@
       "from": "De {actor}",
       "openWorld": "Ouvrir le monde",
       "test": "Essai",
-      "testMessageTitle": "Essai d'un message privé"
+      "testMessageTitle": "Essai d'un message privé",
+      "edited": "modifiée"
     }
   },
   "dms": {
@@ -547,7 +548,8 @@
         "timeline_shortcuts": "Raccourcis chronologie",
         "map": "Carte",
         "birthdays": "Anniversaires",
-        "holidays": "Prochaines fêtes"
+        "holidays": "Prochaines fêtes",
+        "latest_announcements": "Dernières annonces"
       },
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
       "noneOnline": "Personne en ligne pour le moment",
@@ -1213,7 +1215,34 @@
       "scheduledFor": "le {date}",
       "scheduleFailed": "Échec",
       "scheduleCancelled": "Envoi programmé annulé.",
-      "errorScheduleLimit": "Limite atteinte : {count} annonces programmées par monde."
+      "errorScheduleLimit": "Limite atteinte : {count} annonces programmées par monde.",
+      "labels": {
+        "info": "Info",
+        "event": "Événement",
+        "rules": "Règles",
+        "maintenance": "Maintenance",
+        "important": "Important"
+      },
+      "labelTitle": "Étiquette",
+      "labelNone": "Aucune",
+      "imageTitle": "Image d’en-tête",
+      "imageChange": "Changer l’image",
+      "imageRemove": "Retirer l’image",
+      "showOnHome": "Afficher sur l’accueil",
+      "showOnHomeHelp": "L’annonce apparaît dans le widget « Dernières annonces » de l’accueil du monde, pour tous les membres, quel que soit le ciblage de l’envoi.",
+      "pinned": "Épingler",
+      "pinnedHelp": "Garde l’annonce en tête du widget, au-dessus des plus récentes, jusqu’à ce qu’on la désépingle.",
+      "presentation": "Présentation",
+      "presentationHelp": "Étiquette, image d’en-tête et place sur l’accueil du monde. Tout se modifie après l’envoi.",
+      "edit": "Modifier",
+      "editTitle": "Modifier l’annonce",
+      "editHelp": "Les notifications, les messages privés et les bandeaux déjà envoyés suivent la modification. L’annonce porte la mention « modifiée ».",
+      "editRetractedHelp": "Cette annonce a été retirée : seules sa présentation et sa place sur l’accueil se modifient encore.",
+      "editSaved": "Annonce modifiée.",
+      "edited": "modifiée",
+      "onHome": "Sur l’accueil",
+      "pinnedOnHome": "Épinglée sur l’accueil",
+      "justNow": "à l’instant"
     }
   },
   "auth": {
