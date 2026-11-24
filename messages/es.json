@@ -1164,6 +1164,35 @@
           "invalid": "Cada escalón debe tener un nombre y valer al menos 2 del escalón siguiente."
         }
       },
+      "inventory": {
+        "title": "Inventario de las personas",
+        "mode": {
+          "title": "Entrada de objetos",
+          "help": "Quién hace entrar objetos en el inventario de una persona. Quien gestiona la economía siempre puede dar o quitar un objeto del catálogo.",
+          "free": "Libre",
+          "freeHint": "El jugador crea y modifica sus objetos",
+          "catalog": "Catálogo",
+          "catalogHint": "El jugador elige en el catálogo",
+          "held": "Controlado",
+          "heldHint": "Objetos dados, comprados o intercambiados"
+        },
+        "slotsDefault": {
+          "title": "Espacios iniciales",
+          "help": "El número de espacios del inventario de cada persona. 0: ilimitado."
+        },
+        "slotsMax": {
+          "title": "Límite de espacios",
+          "help": "El mayor número de espacios que un inventario puede alcanzar al ampliarse. Vacío: sin límite propio del mundo."
+        },
+        "slotCost": {
+          "title": "Precio de un espacio",
+          "help": "Lo que paga una persona, en {unit}, por cada espacio añadido a su inventario. Vacío: sin ampliación.",
+          "needsEconomy": "Ampliar un inventario se paga en la moneda del mundo: active la economía para fijar un precio."
+        },
+        "save": "Guardar los espacios",
+        "saved": "Espacios guardados.",
+        "invalid": "El límite no puede ser inferior al número inicial."
+      },
       "liveChatConnection": {
         "title": "Conexión de los jugadores",
         "joinMode": {

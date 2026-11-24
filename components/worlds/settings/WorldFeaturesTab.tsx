@@ -44,6 +44,7 @@ import { WorldLiveChatRetentionSetting } from "./WorldLiveChatRetentionSetting";
 import { WorldLiveChatOptionsSettings } from "./WorldLiveChatOptionsSettings";
 import { WorldLiveChatConnectionSettings } from "./WorldLiveChatConnectionSettings";
 import { WorldCurrencySettings } from "./WorldCurrencySettings";
+import { WorldInventorySettings } from "./WorldInventorySettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
@@ -264,22 +265,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             disabled={togglingEnable}
                             onCheckedChange={v => void handleEnableToggle("inventory", v)}
                         />
-                        {/* Toujours visible : grisée tant que la fonction du dessus est coupée. */}
-                        <ToggleItem
-                            indent
-                            dimmed={!enableInventory}
-                            title={t("restrictToCatalogue")}
-                            help={tSettings("restrictInventoryHelp")}
-                            control={
-                                <Switch
-                                    checked={restrictInventory}
-                                    disabled={!enableInventory || togglingRestriction}
-                                    onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
-                                    aria-label={`${tSettings("inventoryItems")} : ${t("restrictToCatalogue")}`}
-                                    className="shrink-0"
-                                />
-                            }
-                        />
                         <ToggleItem
                             title={t("tabSkills")}
                             help={tSettings("skillsHelp")}
@@ -319,6 +304,16 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
                         />
                     </ToggleList>
+                    {/* L'inventaire des personas (migration 247) : grisé tant que les objets sont coupés. */}
+                    <InactiveOptions inactive={!enableInventory}>
+                        <WorldInventorySettings
+                            world={world}
+                            onUpdated={(patch) => {
+                                if (patch.restrict_inventory !== undefined) setRestrictInventory(!!patch.restrict_inventory);
+                                onUpdated?.({ ...world, ...patch } as World);
+                            }}
+                        />
+                    </InactiveOptions>
                 </FeaturePage>
             ),
         },

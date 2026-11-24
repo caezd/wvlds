@@ -1164,6 +1164,35 @@
           "invalid": "Chaque palier doit porter un nom et valoir au moins 2 du palier suivant."
         }
       },
+      "inventory": {
+        "title": "Inventaire des personas",
+        "mode": {
+          "title": "Ajout d'objets",
+          "help": "Qui fait entrer des objets dans l'inventaire d'un persona. Qui gère l'économie peut toujours donner ou retirer un objet du catalogue.",
+          "free": "Libre",
+          "freeHint": "Le joueur crée et modifie ses objets",
+          "catalog": "Catalogue",
+          "catalogHint": "Le joueur pioche dans le catalogue",
+          "held": "Tenu",
+          "heldHint": "Objets donnés, achetés ou échangés"
+        },
+        "slotsDefault": {
+          "title": "Emplacements de départ",
+          "help": "Le nombre d'emplacements de l'inventaire de chaque persona. 0 : illimité."
+        },
+        "slotsMax": {
+          "title": "Plafond d'emplacements",
+          "help": "Le plus grand nombre d'emplacements qu'un inventaire peut atteindre en s'agrandissant. Vide : pas de plafond propre au monde."
+        },
+        "slotCost": {
+          "title": "Prix d'un emplacement",
+          "help": "Ce que paie un persona, en {unit}, pour chaque emplacement ajouté à son inventaire. Vide : pas d'agrandissement.",
+          "needsEconomy": "Agrandir un inventaire se paie dans la monnaie du monde : activez l'économie pour fixer un prix."
+        },
+        "save": "Enregistrer les emplacements",
+        "saved": "Emplacements enregistrés.",
+        "invalid": "Le plafond ne peut pas être inférieur au nombre de départ."
+      },
       "liveChatConnection": {
         "title": "Connexion des joueurs",
         "joinMode": {

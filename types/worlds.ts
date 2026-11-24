@@ -174,6 +174,11 @@ export type World = {
   /** Économie (migration 246) : la monnaie et ses paliers, voir lib/worldCurrency. */
   enable_economy?: boolean | null;
   currency_units?: unknown;
+  /** Inventaire des personas (migration 247), voir lib/personaInventory. */
+  inventory_mode?: "free" | "catalog" | "held" | null;
+  inventory_slots_default?: number | null;
+  inventory_slots_max?: number | null;
+  inventory_slot_cost?: number | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;

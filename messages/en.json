@@ -1164,6 +1164,35 @@
           "invalid": "Each tier needs a name and must be worth at least 2 of the next tier."
         }
       },
+      "inventory": {
+        "title": "Persona inventory",
+        "mode": {
+          "title": "Adding items",
+          "help": "Who brings items into a persona's inventory. Whoever manages the economy can always give or take a catalogue item.",
+          "free": "Free",
+          "freeHint": "The player creates and edits their items",
+          "catalog": "Catalogue",
+          "catalogHint": "The player picks from the catalogue",
+          "held": "Held",
+          "heldHint": "Items given, bought or traded"
+        },
+        "slotsDefault": {
+          "title": "Starting slots",
+          "help": "The number of inventory slots each persona has. 0: unlimited."
+        },
+        "slotsMax": {
+          "title": "Slot cap",
+          "help": "The largest number of slots an inventory can reach by expanding. Empty: no cap of the world's own."
+        },
+        "slotCost": {
+          "title": "Price of a slot",
+          "help": "What a persona pays, in {unit}, for each slot added to their inventory. Empty: no expansion.",
+          "needsEconomy": "Expanding an inventory is paid in the world's currency: enable the economy to set a price."
+        },
+        "save": "Save the slots",
+        "saved": "Slots saved.",
+        "invalid": "The cap can't be lower than the starting number."
+      },
       "liveChatConnection": {
         "title": "Player connection",
         "joinMode": {

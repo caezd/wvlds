@@ -31,6 +31,8 @@ import {
     getWorldCatalogUsage,
     importWorldCatalogItems,
     setWorldCurrency,
+    setWorldInventoryMode,
+    setWorldInventorySlots,
     setWorldHomeGrid,
     addWorldTag,
 } from "@/app/actions/worldCatalog";
@@ -228,6 +230,45 @@ describe("setWorldCurrency", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldCurrency(id, OR)).toEqual({ ok: false, error: "saveFailed" });
+    });
+});
+
+// ── setWorldInventoryMode / setWorldInventorySlots ──────────────────────────────
+
+describe("setWorldInventoryMode", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+
+    it("enregistre le mode ; la restriction au catalogue suit", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await setWorldInventoryMode(id, "held")).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ inventory_mode: "held", restrict_inventory: true });
+    });
+
+    it("refuse un mode inconnu sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect((await setWorldInventoryMode(id, "x" as never)).ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+});
+
+describe("setWorldInventorySlots", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+
+    it("enregistre départ, plafond et prix", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const patch = { inventory_slots_default: 10, inventory_slots_max: 20, inventory_slot_cost: 50 };
+        expect(await setWorldInventorySlots(id, patch)).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith(patch);
+    });
+
+    it("refuse un plafond sous le départ sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect((await setWorldInventorySlots(id, { inventory_slots_default: 10, inventory_slots_max: 5, inventory_slot_cost: null })).ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
     });
 });
 

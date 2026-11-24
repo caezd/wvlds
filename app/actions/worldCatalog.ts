@@ -27,6 +27,7 @@ import { clampDaysPerMonth } from "@/lib/worldTimeline";
 import { isLiveChatRetention, type LiveChatRetention } from "@/lib/worldLiveChatRetention";
 import { liveChatConnectionPatchSchema, type LiveChatConnectionPatch } from "@/lib/worldLiveChatConnection";
 import { currencyUnitsSchema, type CurrencyUnit } from "@/lib/worldCurrency";
+import { INVENTORY_MODES, inventorySettingsSchema, type InventoryMode, type InventorySettingsPatch } from "@/lib/personaInventory";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
@@ -147,6 +148,32 @@ export async function setWorldCurrency(worldId: string, units: CurrencyUnit[]) {
     .update({ currency_units: [...input.data.units].sort((a, b) => b.value - a.value) })
     .eq("id", worldId);
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldCurrency", error) };
+  return { ok: true as const };
+}
+
+/**
+ * Qui fait entrer des objets dans l'inventaire des personas (migration 247).
+ * `restrict_inventory` suit, pour ce qui le lit encore.
+ */
+export async function setWorldInventoryMode(worldId: string, mode: InventoryMode) {
+  const input = parseInput(z.strictObject({ worldId: idSchema, mode: z.enum(INVENTORY_MODES) }), { worldId, mode });
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("worlds")
+    .update({ inventory_mode: input.data.mode, restrict_inventory: input.data.mode !== "free" })
+    .eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldInventoryMode", error) };
+  return { ok: true as const };
+}
+
+/** Les emplacements d'inventaire : départ, plafond, prix (migration 247). */
+export async function setWorldInventorySlots(worldId: string, patch: InventorySettingsPatch) {
+  const input = parseInput(z.strictObject({ worldId: idSchema, patch: inventorySettingsSchema }), { worldId, patch });
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update(input.data.patch).eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldInventorySlots", error) };
   return { ok: true as const };
 }
 
