@@ -36,13 +36,32 @@ const chat = vi.hoisted(() => ({
   loadOlder: vi.fn(async (): Promise<number | null> => 0),
 }));
 // La salle demandée au hook, pour vérifier l'ouverture du fil d'un salon.
-const placeSeen = vi.hoisted(() => ({ last: null as unknown }));
+const placeSeen = vi.hoisted(() => ({ last: null as unknown, opts: undefined as unknown }));
 vi.mock("@/hooks/useWorldLiveChat", () => ({
-  useWorldLiveChat: (_w: string, place: unknown) => {
+  useWorldLiveChat: (_w: string, place: unknown, opts?: unknown) => {
     placeSeen.last = place;
+    placeSeen.opts = opts;
     return chat;
   },
 }));
+
+// La connexion à la chatbox (migration 244) : non tenue sauf mention.
+const sessionMock = vi.hoisted(() => ({
+  value: {
+    status: "off" as "loading" | "off" | "joined" | "away",
+    connection: { joinMode: "auto", idleMinutes: null, offlineView: "none" } as {
+      joinMode: "auto" | "button";
+      idleMinutes: number | null;
+      offlineView: "none" | "read";
+    } | null,
+    join: vi.fn(async () => "ok"),
+    leave: vi.fn(async () => "ok"),
+    activity: vi.fn(),
+    sent: vi.fn(),
+    refresh: vi.fn(),
+  },
+}));
+vi.mock("@/hooks/useLiveChatSession", () => ({ useLiveChatSession: () => sessionMock.value }));
 
 // Le profil et la fiche s'ouvrent dans un tiroir : hors sujet ici. Un repère
 // dit seulement ce qu'ouvre chaque nom.
@@ -112,6 +131,10 @@ beforeEach(() => {
   chat.loadOlder.mockResolvedValue(0);
   optionsMock.value = { colors: false, bubbles: false, personas: false, actions: false };
   tintsMock.value = {};
+  sessionMock.value.status = "off";
+  sessionMock.value.connection = { joinMode: "auto", idleMinutes: null, offlineView: "none" };
+  sessionMock.value.join.mockResolvedValue("ok");
+  sessionMock.value.leave.mockResolvedValue("ok");
   localStorage.clear();
   __resetLiveChatLayout();
 });
@@ -831,5 +854,132 @@ describe("isGrouped", () => {
       expect(citations[0]).toHaveTextContent("bobOn joue ?");
       expect(citations[1]).toHaveTextContent("Message supprimé");
     });
+  });
+});
+
+describe("WorldLiveChatDock — connexion (migration 244)", () => {
+  const tenue = (status: "joined" | "away" | "loading", offlineView: "none" | "read" = "none") => {
+    sessionMock.value.status = status;
+    sessionMock.value.connection = { joinMode: "button", idleMinutes: 15, offlineView };
+  };
+  const ouvrir = async () => {
+    const user = userEvent.setup();
+    render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    return user;
+  };
+  const systeme = (id: string, user_id: string, username: string, system: "join" | "leave" | "idle", at = "2026-11-09T10:05:00Z"): LiveChatMessage => ({
+    ...msg(id, user_id, username, system, at), system,
+  });
+
+  it("non connecté, « Rien » : ni messages ni champ, un bouton Rejoindre ; la barre tait le dernier message", async () => {
+    tenue("away");
+    chat.messages = [msg("a", "u1", "alice", "secret")];
+    render(<WorldLiveChatDock />);
+    expect(screen.getByTestId("world-live-chat-bar")).not.toHaveTextContent("secret");
+    expect(screen.getByTestId("world-live-chat-present")).toHaveTextContent("3");
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    expect(screen.queryByText("secret")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Rejoindre la chatbox" }));
+    expect(sessionMock.value.join).toHaveBeenCalled();
+  });
+
+  it("non connecté, « Lecture seule » : les messages restent, Rejoindre remplace le champ", async () => {
+    tenue("away", "read");
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    await ouvrir();
+    expect(screen.getByText("bonjour")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "Rejoindre la chatbox" })).toBeInTheDocument();
+    // Lire n'est pas répondre.
+    expect(screen.queryByRole("button", { name: "Répondre à alice" })).toBeNull();
+  });
+
+  it("rejoindre trop vite : le dit", async () => {
+    tenue("away");
+    sessionMock.value.join.mockResolvedValue("too_fast");
+    const user = await ouvrir();
+    await user.click(screen.getByRole("button", { name: "Rejoindre la chatbox" }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Trop de messages : patientez un instant."));
+  });
+
+  it("connecté : le champ, et Quitter dans l'en-tête", async () => {
+    tenue("joined");
+    const user = await ouvrir();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Quitter la chatbox" }));
+    expect(sessionMock.value.leave).toHaveBeenCalled();
+  });
+
+  it("la présence suit la connexion", () => {
+    tenue("away");
+    const { unmount } = render(<WorldLiveChatDock />);
+    expect(placeSeen.opts).toEqual({ present: false });
+    unmount();
+    tenue("joined");
+    render(<WorldLiveChatDock />);
+    expect(placeSeen.opts).toEqual({ present: true });
+  });
+
+  it("connexion non tenue : présent d'office, le champ ouvert", async () => {
+    await ouvrir();
+    expect(placeSeen.opts).toEqual({ present: true });
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("la frappe est une activité ; un envoi réussi aussi", async () => {
+    tenue("joined");
+    const user = await ouvrir();
+    await user.type(screen.getByRole("textbox"), "salut{Enter}");
+    expect(sessionMock.value.activity).toHaveBeenCalled();
+    await waitFor(() => expect(sessionMock.value.sent).toHaveBeenCalled());
+  });
+
+  it("un envoi refusé faute de connexion relit l'état et le dit", async () => {
+    tenue("joined");
+    chat.send.mockResolvedValue("not_joined");
+    const user = await ouvrir();
+    await user.type(screen.getByRole("textbox"), "salut{Enter}");
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Rejoignez la chatbox pour écrire."));
+    expect(sessionMock.value.refresh).toHaveBeenCalled();
+  });
+
+  it("messages système : arrivée, départ, inactivité, en une ligne sans répondre ni supprimer", async () => {
+    tenue("joined");
+    chat.messages = [
+      msg("a", "me", "moi", "bonjour", "2026-11-09T10:00:00Z"),
+      systeme("j", "u2", "bob", "join", "2026-11-09T10:01:00Z"),
+      systeme("l", "me", "moi", "leave", "2026-11-09T10:02:00Z"),
+      systeme("i", "u3", "carole", "idle", "2026-11-09T10:03:00Z"),
+      msg("b", "me", "moi", "re", "2026-11-09T10:04:00Z"),
+    ];
+    await ouvrir();
+    const lignes = screen.getAllByTestId("world-live-chat-system");
+    // Le texte de la ligne, sans son heure.
+    expect(lignes.map((l) => l.textContent!.replace(l.querySelector("time")!.textContent!, "").trim())).toEqual([
+      "bob a rejoint la chatbox",
+      "moi a quitté la chatbox",
+      "carole a quitté la chatbox (inactivité)",
+    ]);
+    for (const l of lignes) {
+      expect(within(l.closest("[data-live-message]") as HTMLElement).queryByRole("button")).toBeNull();
+    }
+    // Le message qui suit rouvre un en-tête.
+    const row = screen.getByRole("log").querySelector<HTMLElement>("[data-live-message='b']")!;
+    expect(within(row).getByTestId("world-live-chat-author")).toHaveTextContent("moi");
+  });
+
+  it("la barre résume un message système en clair", () => {
+    chat.messages = [systeme("j", "u2", "bob", "join")];
+    render(<WorldLiveChatDock />);
+    expect(screen.getByTestId("world-live-chat-bar")).toHaveTextContent("bob a rejoint la chatbox");
+  });
+
+  it("isGrouped : un message système ne se regroupe jamais", () => {
+    const a = msg("a", "u1", "alice", "x", "2026-11-09T10:00:00Z");
+    expect(isGrouped(systeme("s", "u1", "alice", "join", "2026-11-09T09:59:00Z"), a)).toBe(false);
+    expect(isGrouped(a, systeme("s", "u1", "alice", "leave", "2026-11-09T10:01:00Z"))).toBe(false);
   });
 });

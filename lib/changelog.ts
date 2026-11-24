@@ -53,6 +53,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
+    text: "Chatbox : connexion des joueurs, dans Paramètres › Fonctions › Chatbox.\n- connexion dès l’arrivée dans le monde, ou en cliquant sur **Rejoindre**\n- déconnexion pour inactivité au choix, de 5 minutes à 2 heures : seuls l’écriture et l’envoi de messages comptent\n- sans connexion : rien, ou les messages en lecture seule\n- **Quitter** dans l’en-tête ; arrivées et départs annoncés dans **Général**",
+  },
+  {
+    date: "2026-11-24",
+    category: "Fonctionnalité",
+    area: "Monde",
     text: "Chatbox : une salle peut être réservée à un groupe de personas, à sa création ou ensuite (Paramètres › Chatbox › Salles).\n- seuls la voient les joueurs qui ont un persona dans ce groupe ou l’un de ses sous-groupes, et les gérants du monde\n- supprimer le groupe supprime la salle et ses messages, après confirmation",
   },
   {

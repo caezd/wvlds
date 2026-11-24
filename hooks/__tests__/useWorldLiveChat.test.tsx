@@ -114,6 +114,30 @@ describe("useWorldLiveChat", () => {
     expect(mock.channelNamed("world-live:w1")!.track).not.toHaveBeenCalled();
   });
 
+  it("non connecté à la chatbox (migration 244), lit sans se compter ; connecté, s'inscrit", async () => {
+    const mock = createSupabaseMock({ user: { id: "me" }, results: [{ data: [] }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const { rerender } = renderHook(({ present }) => useWorldLiveChat("w1", undefined, { present }), {
+      initialProps: { present: false },
+    });
+    await waitFor(() => expect(mock.channelNamed("world-live:w1")?.subscribe).toHaveBeenCalled());
+    expect(mock.channelNamed("world-live:w1")!.track).not.toHaveBeenCalled();
+    rerender({ present: true });
+    await waitFor(() => expect(mock.channelNamed("world-live:w1")!.track).toHaveBeenCalledWith({ user_id: "me" }));
+    rerender({ present: false });
+    await waitFor(() => expect(mock.channelNamed("world-live:w1")!.untrack).toHaveBeenCalled());
+  });
+
+  it("signale l'envoi refusé faute d'avoir rejoint la chatbox", async () => {
+    const { result } = setup([
+      { data: [] },
+      { data: null, error: { code: "42501", message: "Rejoignez la chatbox pour écrire." } },
+    ]);
+    let res: string | undefined;
+    await act(async () => { res = await result.current.send("coucou"); });
+    expect(res).toBe("not_joined");
+  });
+
   it("envoie un message et ne le double pas quand le temps réel le renvoie", async () => {
     const sent = row("s", "me", "2026-11-09T10:03:00Z", "moi");
     const { result, mock } = setup([{ data: [] }, { data: sent }]);

@@ -35,6 +35,8 @@ export type LiveChatMessage = {
   persona_id?: string | null;
   persona?: LiveChatPersona | null;
   is_action?: boolean;
+  /** Message écrit par la base (migration 244) : arrivée, départ, inactivité. */
+  system?: "join" | "leave" | "idle" | null;
   author: LiveChatAuthor | null;
 };
 
@@ -54,7 +56,7 @@ export const LIVE_CHAT_PAGE = 50;
 const LIVE_CHAT_MEMORY = 200;
 
 const SELECT =
-  "id, world_id, user_id, content, created_at, channel_id, chatroom_id, reply_to_id, color, persona_id, is_action, " +
+  "id, world_id, user_id, content, created_at, channel_id, chatroom_id, reply_to_id, color, persona_id, is_action, system, " +
   "profiles(username, avatar_url), persona:personas(id, name, avatar_url), " +
   "reply:world_live_messages!reply_to_id(id, content, user_id, profiles(username))";
 
@@ -101,7 +103,7 @@ export function mergeMessage(list: LiveChatMessage[], msg: LiveChatMessage): Liv
   return next.length > LIVE_CHAT_MEMORY ? next.slice(next.length - LIVE_CHAT_MEMORY) : next;
 }
 
-export type SendResult = "ok" | "too_fast" | "persona" | "error";
+export type SendResult = "ok" | "too_fast" | "persona" | "not_joined" | "error";
 
 /** Ce qu'un message porte en plus de son texte (migration 241). */
 export type SendExtras = { color?: string | null; personaId?: string | null; isAction?: boolean };
@@ -115,9 +117,14 @@ export type SendExtras = { color?: string | null; personaId?: string | null; isA
  * `world-live:<id>`, dont le nom est le point de rendez-vous de tous les
  * navigateurs — il reste donc stable (cf. lib/realtimeChannel.ts).
  *
- * `worldId` nul : rien n'est chargé ni ouvert.
+ * `worldId` nul : rien n'est chargé ni ouvert. `present` faux (pas connecté
+ * à la chatbox, migration 244) : on lit sans se compter parmi les présents.
  */
-export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = MAIN_PLACE) {
+export function useWorldLiveChat(
+  worldId: string | null,
+  place: LiveChatPlace = MAIN_PLACE,
+  { present = true }: { present?: boolean } = {},
+) {
   const supabase = useMemo(() => createClient(), []);
   const { userId, username, avatarUrl } = useCurrentUser();
   const { appearOffline } = useGlobalPresence();
@@ -144,7 +151,9 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
   // De même pour les personas : l'avis n'apporte que `persona_id`.
   const personasRef = useRef(new Map<string, LiveChatPersona | null>());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const appearOfflineRef = useRef(appearOffline);
+  // Se compter parmi les présents : ni invisible, ni hors de la chatbox.
+  const tracked = present && !appearOffline;
+  const trackedRef = useRef(tracked);
 
   useEffect(() => {
     if (userId) authorsRef.current.set(userId, { username, avatar_url: avatarUrl });
@@ -320,7 +329,7 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
         channel.subscribe(async (status: string) => {
           if (status !== "SUBSCRIBED") return;
           // Mode invisible : on lit sans se compter parmi les présents.
-          if (!appearOfflineRef.current) await channel.track({ user_id: userId });
+          if (trackedRef.current) await channel.track({ user_id: userId });
           setPresentCount(Object.keys(channel.presenceState()).length);
         });
         channelRef.current = channel;
@@ -337,16 +346,17 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
     };
   }, [supabase, worldId, userId, reconnectEpoch]);
 
-  // Passer en invisible (ou en revenir) sans rouvrir le canal. Seul un
-  // CHANGEMENT agit : au montage, c'est l'abonnement qui décide de `track`.
+  // Passer en invisible, rejoindre ou quitter la chatbox, sans rouvrir le
+  // canal. Seul un CHANGEMENT agit : au montage, c'est l'abonnement qui
+  // décide de `track`.
   useEffect(() => {
-    if (appearOfflineRef.current === appearOffline) return;
-    appearOfflineRef.current = appearOffline;
+    if (trackedRef.current === tracked) return;
+    trackedRef.current = tracked;
     const ch = channelRef.current;
     if (!ch || !userId) return;
-    if (appearOffline) void ch.untrack();
-    else void ch.track({ user_id: userId });
-  }, [appearOffline, userId]);
+    if (tracked) void ch.track({ user_id: userId });
+    else void ch.untrack();
+  }, [tracked, userId]);
 
   const send = useCallback(
     async (raw: string, replyToId: string | null = null, extras: SendExtras = {}): Promise<SendResult> => {
@@ -372,6 +382,7 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
         .single();
       if (error || !data) {
         if (error?.message?.includes("Trop de messages")) return "too_fast";
+        if (error?.message?.includes("Rejoignez")) return "not_joined";
         if (error?.message?.includes("persona")) return "persona";
         return "error";
       }

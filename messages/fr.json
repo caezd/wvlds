@@ -1139,6 +1139,28 @@
         "help": "Nombre de messages gardés, 100 au plus. Toutes les salles, y compris celle d’un salon de jeu, fonctionnent avec cette limite de conservation. Tout ce qui est gardé se relit en remontant le fil ; au-delà, les plus anciens sont effacés automatiquement. Baisser le réglage efface le surplus tout de suite.",
         "option": "{count} messages par salle"
       },
+      "liveChatConnection": {
+        "title": "Connexion des joueurs",
+        "joinMode": {
+          "title": "Connexion",
+          "help": "Dès l'arrivée : chaque joueur est connecté en entrant dans le monde. En cliquant sur Rejoindre : il se connecte lui-même, et son arrivée est annoncée dans la salle Général.",
+          "auto": "Dès l'arrivée dans le monde",
+          "button": "En cliquant sur Rejoindre"
+        },
+        "idle": {
+          "title": "Déconnexion pour inactivité",
+          "help": "Sans message ni frappe dans la chatbox pendant ce temps, le joueur est déconnecté et son départ est annoncé dans la salle Général. Il revient en cliquant sur Rejoindre.",
+          "never": "Jamais",
+          "minutes": "Après {count, plural, one {# minute} other {# minutes}}",
+          "hours": "Après {count, plural, one {# heure} other {# heures}}"
+        },
+        "offline": {
+          "title": "Sans connexion",
+          "help": "Ce que voit un joueur qui n'est pas connecté : seulement le bouton Rejoindre, ou les messages en lecture seule.",
+          "none": "Rien",
+          "read": "Lecture seule"
+        }
+      },
       "liveChatOptions": {
         "title": "Options",
         "colors": {
@@ -2731,6 +2753,15 @@
     "withPersona": "<user>{userName}</user> avec <persona>{personaName}</persona>",
     "choosePersona": "Écrire avec un persona",
     "clearPersona": "Écrire sans persona",
-    "personaRejected": "Ce persona ne peut pas écrire ici."
+    "personaRejected": "Ce persona ne peut pas écrire ici.",
+    "join": "Rejoindre la chatbox",
+    "joinHint": "Rejoignez la chatbox pour voir les messages et écrire.",
+    "joinFailed": "Impossible de rejoindre la chatbox.",
+    "leave": "Quitter la chatbox",
+    "leaveFailed": "Impossible de quitter la chatbox.",
+    "notJoined": "Rejoignez la chatbox pour écrire.",
+    "systemJoin": "{name} a rejoint la chatbox",
+    "systemLeave": "{name} a quitté la chatbox",
+    "systemIdle": "{name} a quitté la chatbox (inactivité)"
   }
 }

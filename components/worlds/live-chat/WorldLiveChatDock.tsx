@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { ChevronDown, CornerUpLeft, Hash, Maximize2, MessageSquareText, MessagesSquare, Minimize2, PanelBottom, PanelRight, Reply, SendHorizontal, Trash2, UserRound, Users, X } from "lucide-react";
+import { ChevronDown, CornerUpLeft, Hash, LogIn, LogOut, Maximize2, MessageSquareText, MessagesSquare, Minimize2, PanelBottom, PanelRight, Reply, SendHorizontal, Trash2, UserRound, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MAIN_PLACE, placeKey, type LiveChannel, type LiveChatPlace } from "@/lib/worldLiveChannels";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { useLiveChatOptions } from "@/hooks/useLiveChatOptions";
+import { useLiveChatSession } from "@/hooks/useLiveChatSession";
 import { usePersonaTints } from "@/hooks/usePersonaTints";
 import { parseLiveChatInput, type LiveChatOptions } from "@/lib/worldLiveChatOptions";
 import { BUBBLE_MAX_ALPHA, bubbleStyle, readableOnPage } from "@/lib/bubbleColors";
@@ -107,8 +108,14 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   const t = useTranslations("worldLiveChat");
   const { channels } = useLiveChannels(worldId);
   const [place, setPlace] = usePlace(chatroom, channels);
+  // La connexion à la chatbox (migration 244) : connecté, on se compte parmi
+  // les présents et on écrit ; sinon, selon le monde, on lit ou rien.
+  const session = useLiveChatSession(worldId);
+  const connected = session.status === "off" || session.status === "joined";
+  const away = session.status === "away";
+  const canRead = connected || (away && session.connection?.offlineView === "read");
   const { messages, loading, presentCount, send, remove, userId, unread, hasOlder, loadingOlder, loadOlder } =
-    useWorldLiveChat(worldId, place);
+    useWorldLiveChat(worldId, place, { present: connected });
   const options = useLiveChatOptions(worldId);
   // Couleur de groupe des personas, lue seulement si le monde les permet.
   const tints = usePersonaTints(worldId, options.personas);
@@ -134,6 +141,12 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   // Un fil de salon d'un autre salon ne compte pas : seul celui-ci est en vue.
   const unreadHere = (k: string) => unread.has(k) && (!k.startsWith("r:") || k === `r:${chatroom?.id}`);
 
+  async function join() {
+    const res = await session.join();
+    if (res === "too_fast") toast.error(t("tooFast"));
+    else if (res === "error") toast.error(t("joinFailed"));
+  }
+
   if (!open) {
     return (
       <button
@@ -150,11 +163,17 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
           <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-activity" />
         )}
         <span className="relative min-w-0 flex-1 overflow-hidden">
-          {last ? (
+          {last && canRead ? (
             // La clé rejoue l'animation d'entrée à chaque nouveau message.
             <span key={last.id} className="flex min-w-0 items-baseline gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <span className="shrink-0 font-semibold text-foreground">{last.author?.username ?? "…"}</span>
-              <span className="truncate text-muted-foreground">{liveChatPlainText(last.content)}</span>
+              {last.system ? (
+                <span className="truncate text-muted-foreground">{systemLine(t, last)}</span>
+              ) : (
+                <>
+                  <span className="shrink-0 font-semibold text-foreground">{last.author?.username ?? "…"}</span>
+                  <span className="truncate text-muted-foreground">{liveChatPlainText(last.content)}</span>
+                </>
+              )}
             </span>
           ) : (
             <span className="truncate text-muted-foreground">{t("title")}</span>
@@ -227,6 +246,21 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
           )}
           <PresentCount count={presentCount} compact={narrow} />
           <div className="ml-auto flex shrink-0 items-center">
+            {session.status === "joined" && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={async () => {
+                  const res = await session.leave();
+                  if (res === "too_fast") toast.error(t("tooFast"));
+                  else if (res === "error") toast.error(t("leaveFailed"));
+                }}
+                aria-label={t("leave")}
+                title={t("leave")}
+              >
+                <LogOut />
+              </Button>
+            )}
             {!fullscreen && (
               // À droite seulement sur grand écran : en dessous, la colonne n'aurait pas la place.
               <Button
@@ -261,8 +295,10 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
         </header>
         {/* Changer de salle remonte la liste et le champ (défilement, brouillon).
             Clés distinctes : ce sont deux enfants du même parent. */}
+        {canRead ? (
         <MessageList
           key={`list-${key}`}
+          readOnly={!connected}
           messages={messages}
           loading={loading}
           hasOlder={hasOlder}
@@ -281,6 +317,21 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
             if (replyTo?.id === id) setReplyTo(null);
           }}
         />
+        ) : (
+          // Sans lecture : l'invitation à rejoindre, rien d'autre.
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+            {away && (
+              <>
+                <p className="text-sm text-muted-foreground">{t("joinHint")}</p>
+                <Button onClick={() => void join()} data-testid="world-live-chat-join">
+                  <LogIn />
+                  {t("join")}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+        {connected ? (
         <Composer
           key={`composer-${key}`}
           worldId={worldId}
@@ -294,12 +345,30 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
             const res = await send(content, replyTo?.id ?? null, { ...extras, isAction });
             if (res === "too_fast") toast.error(t("tooFast"));
             else if (res === "persona") toast.error(t("personaRejected"));
-            else if (res === "error") toast.error(t("sendFailed"));
-            if (res === "ok") setReplyTo(null);
+            else if (res === "not_joined") {
+              // Déconnecté entre-temps (inactivité, autre onglet) : on relit.
+              toast.error(t("notJoined"));
+              session.refresh();
+            } else if (res === "error") toast.error(t("sendFailed"));
+            if (res === "ok") {
+              setReplyTo(null);
+              session.sent();
+            }
             return res === "ok";
           }}
+          onTyping={session.activity}
           onEscape={() => setOpen(false)}
         />
+        ) : (
+          away && canRead && (
+            <div className="flex shrink-0 justify-center border-t p-2">
+              <Button onClick={() => void join()} data-testid="world-live-chat-join">
+                <LogIn />
+                {t("join")}
+              </Button>
+            </div>
+          )
+        )}
       </section>
     </>
   );
@@ -546,6 +615,7 @@ function MessageList({
   tints,
   onReply,
   onDelete,
+  readOnly = false,
 }: {
   messages: LiveChatMessage[];
   loading: boolean;
@@ -559,6 +629,8 @@ function MessageList({
   selfId: string | null;
   onReply: (message: LiveChatMessage) => void;
   onDelete: (id: string) => void;
+  /** Pas connecté (lecture seule) : ni répondre ni supprimer. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("worldLiveChat");
   const tCommon = useTranslations("common");
@@ -627,6 +699,7 @@ function MessageList({
                 grouped={rowGrouped(messages, i)}
                 continued={rowGrouped(messages, i + 1)}
                 mine={m.user_id === selfId}
+                readOnly={readOnly}
                 options={options}
                 personaTint={m.persona_id ? tints[m.persona_id] : undefined}
                 onReply={() => onReply(m)}
@@ -656,6 +729,7 @@ export function isGrouped(prev: LiveChatMessage | undefined, cur: LiveChatMessag
   if (!prev || prev.user_id !== cur.user_id) return false;
   if ((prev.persona_id ?? null) !== (cur.persona_id ?? null)) return false;
   if (prev.is_action || cur.is_action) return false;
+  if (prev.system || cur.system) return false;
   return new Date(cur.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60_000;
 }
 
@@ -673,6 +747,16 @@ function LiveChatText({ text }: { text: string }) {
       s.type === "text" ? s.text : s.type === "strong" ? <strong key={i}>{render(s.children)}</strong> : <em key={i}>{render(s.children)}</em>,
     );
   return <>{render(parseLiveChatMarkdown(text))}</>;
+}
+
+/** Un message système en clair : « alice a rejoint la chatbox ». */
+function systemLine(t: ReturnType<typeof useTranslations<"worldLiveChat">>, message: LiveChatMessage): string {
+  const name = message.author?.username ?? "…";
+  return message.system === "join"
+    ? t("systemJoin", { name })
+    : message.system === "idle"
+      ? t("systemIdle", { name })
+      : t("systemLeave", { name });
 }
 
 /** Amène le message cité en vue et le fait briller un instant. */
@@ -693,6 +777,7 @@ function MessageRow({
   personaTint,
   onReply,
   onDelete,
+  readOnly = false,
 }: {
   message: LiveChatMessage;
   grouped: boolean;
@@ -705,11 +790,27 @@ function MessageRow({
   personaTint?: string;
   onReply: () => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }) {
   const t = useTranslations("worldLiveChat");
   const format = useFormatter();
   const name = message.author?.username ?? "…";
   const time = format.dateTime(new Date(message.created_at), { hour: "2-digit", minute: "2-digit" });
+  if (message.system) {
+    // Écrit par la base : une ligne discrète, ni réponse ni suppression.
+    const Icon = message.system === "join" ? LogIn : LogOut;
+    return (
+      <li data-live-message={message.id} className="mt-2 flex items-center gap-3 px-4 py-0.5">
+        <div className="flex w-8 shrink-0 justify-center">
+          <Icon className="size-3.5 text-muted-foreground" aria-hidden />
+        </div>
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground" data-testid="world-live-chat-system">
+          {systemLine(t, message)}{" "}
+          <time dateTime={message.created_at} className="ml-1">{time}</time>
+        </p>
+      </li>
+    );
+  }
   // Les options suivent le monde à l'affichage aussi : éteinte après coup,
   // une option ne colore plus et ne montre plus de persona (migration 241).
   const persona = options.personas ? (message.persona ?? null) : null;
@@ -727,7 +828,7 @@ function MessageRow({
 
   // Répondre, et supprimer le sien : juste après l'heure, au survol (ou au
   // clavier).
-  const actions = (
+  const actions = readOnly ? null : (
     <span
       data-testid="world-live-chat-actions"
       className="inline-flex h-5 items-center gap-0.5 align-middle not-italic opacity-0 focus-within:opacity-100 group-hover:opacity-100"
@@ -935,6 +1036,7 @@ function Composer({
   replyTo,
   onCancelReply,
   onSend,
+  onTyping,
   onEscape,
 }: {
   worldId: string;
@@ -943,6 +1045,8 @@ function Composer({
   replyTo: LiveChatMessage | null;
   onCancelReply: () => void;
   onSend: (text: string, extras: SendExtras) => Promise<boolean>;
+  /** La frappe : une activité (connexion à la chatbox, migration 244). */
+  onTyping?: () => void;
   onEscape: () => void;
 }) {
   const t = useTranslations("worldLiveChat");
@@ -1066,7 +1170,10 @@ function Composer({
       <Input
         ref={inputRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          onTyping?.();
+        }}
         onKeyDown={(e) => {
           if (e.key !== "Escape") return;
           // Échap retire d'abord la réponse en cours, puis referme.

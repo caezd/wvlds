@@ -167,6 +167,10 @@ export type World = {
   live_chat_bubbles?: boolean | null;
   live_chat_personas?: boolean | null;
   live_chat_actions?: boolean | null;
+  /** Connexion à la chatbox (migration 244), voir lib/worldLiveChatConnection. */
+  live_chat_join_mode?: "auto" | "button" | null;
+  live_chat_idle_minutes?: number | null;
+  live_chat_offline_view?: "none" | "read" | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;

@@ -42,6 +42,7 @@ import { TimelineSettings } from "./TimelineSettings";
 import { WorldLiveChannelsSettings } from "./WorldLiveChannelsSettings";
 import { WorldLiveChatRetentionSetting } from "./WorldLiveChatRetentionSetting";
 import { WorldLiveChatOptionsSettings } from "./WorldLiveChatOptionsSettings";
+import { WorldLiveChatConnectionSettings } from "./WorldLiveChatConnectionSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
@@ -444,6 +445,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         <InactiveOptions inactive={!enableLiveChat}>
                             <WorldLiveChannelsSettings worldId={world.id} />
                             <WorldLiveChatOptionsSettings
+                                world={world}
+                                onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
+                            />
+                            <WorldLiveChatConnectionSettings
                                 world={world}
                                 onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
                             />

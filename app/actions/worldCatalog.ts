@@ -25,6 +25,7 @@ import {
 import type { WorldCatalogItem, WorldCatalogCategory, WorldCatalogProperty, WorldCatalogRarity, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
 import { isLiveChatRetention, type LiveChatRetention } from "@/lib/worldLiveChatRetention";
+import { liveChatConnectionPatchSchema, type LiveChatConnectionPatch } from "@/lib/worldLiveChatConnection";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
@@ -121,6 +122,16 @@ export async function setWorldLiveChatRetention(worldId: string, retention: Live
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ live_chat_retention: retention }).eq("id", worldId);
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldLiveChatRetention", error) };
+  return { ok: true as const };
+}
+
+/** Connexion à la chatbox : mode, délai d'inactivité, vue sans connexion (migration 244). */
+export async function setWorldLiveChatConnection(worldId: string, patch: LiveChatConnectionPatch) {
+  const input = parseInput(z.strictObject({ worldId: idSchema, patch: liveChatConnectionPatchSchema }), { worldId, patch });
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update(input.data.patch).eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldLiveChatConnection", error) };
   return { ok: true as const };
 }
 

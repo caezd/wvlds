@@ -11,6 +11,7 @@ import {
     setWorldHomeShowStats,
     setWorldHomeGridGap,
     setWorldLiveChatRetention,
+    setWorldLiveChatConnection,
     setWorldAgeRestricted,
     setWorldTimeline,
     setWorldPersonaTemplate,
@@ -158,6 +159,43 @@ describe("setWorldLiveChatRetention", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldLiveChatRetention("w1", 50)).toEqual({ ok: false, error: "saveFailed" });
+    });
+});
+
+// ── setWorldLiveChatConnection ────────────────────────────────────────────────
+
+describe("setWorldLiveChatConnection", () => {
+    it("enregistre le mode, le délai d'inactivité et la vue sans connexion", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await setWorldLiveChatConnection("11111111-1111-4111-8111-111111111111", { live_chat_join_mode: "button", live_chat_idle_minutes: 15, live_chat_offline_view: "read" })).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
+            live_chat_join_mode: "button",
+            live_chat_idle_minutes: 15,
+            live_chat_offline_view: "read",
+        });
+    });
+
+    it("« Jamais » : un délai nul", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await setWorldLiveChatConnection("11111111-1111-4111-8111-111111111111", { live_chat_idle_minutes: null })).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ live_chat_idle_minutes: null });
+    });
+
+    it("refuse un mode, un délai hors paliers ou une clé inconnue, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const id = "11111111-1111-4111-8111-111111111111";
+        for (const patch of [{ live_chat_join_mode: "x" }, { live_chat_idle_minutes: 7 }, { live_chat_offline_view: "all" }, { enable_live_chat: true }, {}]) {
+            expect((await setWorldLiveChatConnection(id, patch as never)).ok).toBe(false);
+        }
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldLiveChatConnection("11111111-1111-4111-8111-111111111111", { live_chat_offline_view: "none" })).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 

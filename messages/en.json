@@ -1139,6 +1139,28 @@
         "help": "Number of messages kept, 100 at most. Every room, including a game room's, works with this retention limit. Everything kept can be read by scrolling back; beyond that, the oldest are deleted automatically. Lowering the setting deletes the excess right away.",
         "option": "{count} messages per room"
       },
+      "liveChatConnection": {
+        "title": "Player connection",
+        "joinMode": {
+          "title": "Connection",
+          "help": "On arrival: every player is connected on entering the world. By clicking Join: players connect themselves, and their arrival is announced in the General room.",
+          "auto": "On arriving in the world",
+          "button": "By clicking Join"
+        },
+        "idle": {
+          "title": "Disconnect when inactive",
+          "help": "With no message or typing in the chat for this long, the player is disconnected and their departure is announced in the General room. They come back by clicking Join.",
+          "never": "Never",
+          "minutes": "After {count, plural, one {# minute} other {# minutes}}",
+          "hours": "After {count, plural, one {# hour} other {# hours}}"
+        },
+        "offline": {
+          "title": "Without connection",
+          "help": "What a player who isn't connected sees: only the Join button, or the messages read-only.",
+          "none": "Nothing",
+          "read": "Read only"
+        }
+      },
       "liveChatOptions": {
         "title": "Options",
         "colors": {
@@ -2731,6 +2753,15 @@
     "withPersona": "<user>{userName}</user> as <persona>{personaName}</persona>",
     "choosePersona": "Write as a persona",
     "clearPersona": "Write without a persona",
-    "personaRejected": "This persona can't write here."
+    "personaRejected": "This persona can't write here.",
+    "join": "Join the chat",
+    "joinHint": "Join the chat to see messages and write.",
+    "joinFailed": "Couldn't join the chat.",
+    "leave": "Leave the chat",
+    "leaveFailed": "Couldn't leave the chat.",
+    "notJoined": "Join the chat to write.",
+    "systemJoin": "{name} joined the chat",
+    "systemLeave": "{name} left the chat",
+    "systemIdle": "{name} left the chat (inactive)"
   }
 }
