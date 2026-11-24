@@ -33,6 +33,7 @@ import {
     setWorldCurrency,
     setWorldInventoryMode,
     setWorldInventorySlots,
+    setWorldGains,
     setWorldHomeGrid,
     addWorldTag,
 } from "@/app/actions/worldCatalog";
@@ -278,6 +279,36 @@ describe("setWorldInventorySlots", () => {
         const mock = createSupabaseMock();
         use(mock);
         expect((await setWorldInventorySlots(id, { inventory_slots_default: 10, inventory_slots_max: 5, inventory_slot_cost: null })).ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+});
+
+// ── setWorldGains ──────────────────────────────────────────────────────────────
+
+describe("setWorldGains (migration 252)", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const gains = {
+        gain_message: 5,
+        gain_scene_joined: 10,
+        gain_scene_created: 20,
+        gain_scene_completed: 50,
+        gain_daily_login: 3,
+        gain_message_cooldown: 2,
+        gain_daily_cap: null,
+    };
+
+    it("enregistre montants, délai et plafond", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await setWorldGains(id, gains)).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith(gains);
+    });
+
+    it("refuse un montant négatif ou une colonne en plus, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect((await setWorldGains(id, { ...gains, gain_message: -1 })).ok).toBe(false);
+        expect((await setWorldGains(id, { ...gains, enable_gains: true } as never)).ok).toBe(false);
         expect(mock.from).not.toHaveBeenCalled();
     });
 });

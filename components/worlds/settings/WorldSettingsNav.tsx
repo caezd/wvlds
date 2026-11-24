@@ -11,6 +11,7 @@ import {
   Flag,
   FolderTree,
   Globe,
+  HandCoins,
   House,
   Map as MapIcon,
   Megaphone,
@@ -51,6 +52,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   items: Package,
   shops: Store,
   trades: ArrowRightLeft,
+  gains: HandCoins,
   categories: FolderTree,
   groups: UsersRound,
   relations: Waypoints,
@@ -80,6 +82,7 @@ export function useSettingsSectionLabel() {
         case "items": return tCatalogue("items");
         case "shops": return tShops("title");
         case "trades": return tSettings("trades");
+        case "gains": return tSettings("gains");
         case "categories": return t("tabCategories");
         case "groups": return t("tabGroups");
         case "relations": return t("tabRelations");

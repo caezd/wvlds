@@ -46,9 +46,10 @@ import { WorldLiveChatConnectionSettings } from "./WorldLiveChatConnectionSettin
 import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import { WorldInventorySettings } from "./WorldInventorySettings";
 import { ShopManager } from "@/components/worlds/shops/ShopManager";
+import { WorldGainsSettings } from "./WorldGainsSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, ArrowRightLeft, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowRightLeft, BookOpen, Clock, Coins, HandCoins, Map as MapIcon, MessagesSquare, Package, Store, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
@@ -255,6 +256,20 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             setTradesSameAccount(enabled);
             onUpdated?.({ ...world, trades_same_account: enabled } as World);
         }
+    }
+
+    // Les gains automatiques (migration 252) : coupés par défaut, avec la monnaie seulement.
+    const [enableGains, setEnableGains] = React.useState(world.enable_gains === true);
+    const [togglingGains, setTogglingGains] = React.useState(false);
+    const gainsOpen = enableGains && enableEconomy;
+
+    async function handleGainsToggle(enabled: boolean) {
+        setTogglingGains(true);
+        const res = await setWorldFeature(world.id, "enable_gains", enabled);
+        setTogglingGains(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setEnableGains(enabled);
+        onUpdated?.({ ...world, enable_gains: enabled } as World);
     }
 
     async function handleWikiToggle(enabled: boolean) {
@@ -602,6 +617,36 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 ),
             }]
             : []),
+        ...(world_economy
+            ? [{
+                id: "gains" as const,
+                icon: HandCoins,
+                label: tSettings("gains"),
+                active: gainsOpen,
+                page: (
+                    <FeaturePage
+                        title={tSettings("gains")}
+                        help={tSettings("gainsHelp")}
+                        toggle={{
+                            label: tSettings(enableGains ? "enabledM" : "disabledM"),
+                            ariaLabel: tSettings("enableGains"),
+                            checked: enableGains,
+                            // Les gains se paient dans la monnaie du monde.
+                            disabled: togglingGains || !enableEconomy,
+                            onCheckedChange: v => void handleGainsToggle(v),
+                        }}
+                    >
+                        {!enableEconomy && <p className="text-sm text-muted-foreground">{tSettings("gainsNeedEconomy")}</p>}
+                        <InactiveOptions inactive={!gainsOpen}>
+                            <WorldGainsSettings
+                                world={world}
+                                onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
+                            />
+                        </InactiveOptions>
+                    </FeaturePage>
+                ),
+            }]
+            : []),
     ];
 
     // Les pastilles du menu de gauche (WorldSettingsView).
@@ -616,8 +661,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             items: enableInventory,
             shops: shopsOpen,
             trades: tradesOpen,
+            gains: gainsOpen,
         });
-    }, [onStatusChange, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen, tradesOpen]);
+    }, [onStatusChange, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen, tradesOpen, gainsOpen]);
 
   return (
     <>

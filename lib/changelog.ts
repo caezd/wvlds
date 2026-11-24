@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-24",
     category: "Fonctionnalité",
+    area: "Monde",
+    text: "Gains : la monnaie du monde se gagne en jouant, à activer dans Paramètres › Fonctions › Économie › Gains.\n- montant par message, par scène rejointe, créée ou terminée\n- gain de la première visite du jour, pour chacun de vos personas du monde\n- délai entre deux messages payés et plafond par jour, réglables\n- chaque gain apparaît dans l’historique de la bourse",
+  },
+  {
+    date: "2026-11-24",
+    category: "Fonctionnalité",
     area: "Salons",
     text: "Échanges : un bloc **Transférer** dans le composeur, pour donner de l’argent ou des objets à un autre persona du monde.\n- transfert immédiat : la bourse et l’inventaire du destinataire sont crédités à l’envoi\n- le message montre qui a donné quoi à qui, tel que la base l’a enregistré\n- à activer dans Paramètres › Fonctions › Économie › Échanges\n- échanges entre personas d’un même compte : option à part, coupée par défaut",
   },

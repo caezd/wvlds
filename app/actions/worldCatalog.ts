@@ -28,6 +28,7 @@ import { isLiveChatRetention, type LiveChatRetention } from "@/lib/worldLiveChat
 import { liveChatConnectionPatchSchema, type LiveChatConnectionPatch } from "@/lib/worldLiveChatConnection";
 import { currencyUnitsSchema, type CurrencyUnit } from "@/lib/worldCurrency";
 import { INVENTORY_MODES, inventorySettingsSchema, type InventoryMode, type InventorySettingsPatch } from "@/lib/personaInventory";
+import { gainSettingsSchema, type GainSettings } from "@/lib/worldGains";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
@@ -63,6 +64,7 @@ export type WorldFeatureField =
   | "enable_shops"
   | "enable_trades"
   | "trades_same_account"
+  | "enable_gains"
   | "live_chat_colors"
   | "live_chat_bubbles"
   | "live_chat_personas"
@@ -174,6 +176,16 @@ export async function setWorldInventorySlots(worldId: string, patch: InventorySe
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update(input.data.patch).eq("id", worldId);
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldInventorySlots", error) };
+  return { ok: true as const };
+}
+
+/** Les montants des gains automatiques, le délai et le plafond (migration 252). */
+export async function setWorldGains(worldId: string, settings: GainSettings) {
+  const input = parseInput(z.strictObject({ worldId: idSchema, settings: gainSettingsSchema }), { worldId, settings });
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update(input.data.settings).eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldGains", error) };
   return { ok: true as const };
 }
 

@@ -1244,7 +1244,32 @@
       "tradesHelp": "A persona gives money or items to another from a room’s composer, with the Transfer block. The transfer is immediate.",
       "tradesNeedSomething": "Enable currencies or items first.",
       "tradesSameAccount": "Trades between personas of the same account",
-      "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another."
+      "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another.",
+      "gains": "Earnings",
+      "enableGains": "Enable earnings",
+      "gainsHelp": "World currency earned by playing: per message, per scene joined, created or completed, and on the first visit of the day.",
+      "gainsNeedEconomy": "Earnings need the currency.",
+      "gainsForm": {
+        "title": "Amounts",
+        "amountIn": "{label} in {unit}",
+        "message": "Per message",
+        "messageHelp": "Each in-character message visible to everyone.",
+        "scene_joined": "Per scene joined",
+        "scene_joinedHelp": "A persona’s first appearance in a room.",
+        "scene_created": "Per scene created",
+        "scene_createdHelp": "The room creator’s first in-character message.",
+        "scene_completed": "Per scene completed",
+        "scene_completedHelp": "Each persona who wrote in the room, when it is marked “completed”.",
+        "daily_login": "Daily visit",
+        "daily_loginHelp": "On the first visit to the world each day (UTC), for each of the player’s personas.",
+        "cooldown": "Delay between two paid messages (minutes)",
+        "cooldownHelp": "A persona is paid once per delay, however many messages it posts. 0: no delay.",
+        "cap": "Daily cap",
+        "capHelp": "A persona’s total earnings per day (UTC). Empty: no cap.",
+        "save": "Save earnings",
+        "saved": "Earnings saved.",
+        "invalid": "Whole, positive amounts; a delay of one day at most."
+      }
     },
     "timelinePicker": {
       "year": "Year",
@@ -1496,7 +1521,12 @@
         "slots": "Inventory slot",
         "purchase": "Purchase",
         "sale": "Sale",
-        "transfer": "Trade"
+        "transfer": "Trade",
+        "gain_message": "Earning: message",
+        "gain_scene_joined": "Earning: scene joined",
+        "gain_scene_created": "Earning: scene created",
+        "gain_scene_completed": "Earning: scene completed",
+        "gain_daily_login": "Earning: daily visit"
       }
     },
     "inventory": {
@@ -2967,5 +2997,8 @@
       "off": "Trades are disabled in this world.",
       "failed": "The transfer failed."
     }
+  },
+  "gains": {
+    "daily": "Daily earning: {amount} for your personas."
   }
 }

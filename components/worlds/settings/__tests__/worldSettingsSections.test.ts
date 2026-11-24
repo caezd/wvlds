@@ -24,10 +24,11 @@ describe("worldSettingsSections", () => {
     expect(UNTITLED_SETTINGS_GROUPS).toEqual(["top"]);
   });
 
-  it("Fonctions : les pages, puis la sous-catégorie Économie (devises, objets, boutiques, échanges)", () => {
+  it("Fonctions : les pages, puis la sous-catégorie Économie (devises, objets, boutiques, échanges, gains)", () => {
     const features = visibleSettingsGroups(() => true).find((g) => g.id === "features");
-    expect(features?.sections).toEqual(["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops", "trades"]);
+    expect(features?.sections).toEqual(["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops", "trades", "gains"]);
     expect(subgroupOf("trades")).toBe("economy");
+    expect(subgroupOf("gains")).toBe("economy");
     expect(subgroupOf("currency")).toBe("economy");
     expect(subgroupOf("items")).toBe("economy");
     expect(subgroupOf("shops")).toBe("economy");

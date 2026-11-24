@@ -8,16 +8,16 @@
  */
 
 /** Les sous-pages de l'ancien onglet « Fonctions ». */
-export const FEATURE_SECTIONS = ["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops", "trades"] as const;
+export const FEATURE_SECTIONS = ["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops", "trades", "gains"] as const;
 export type FeatureSectionId = (typeof FEATURE_SECTIONS)[number];
 
 /**
  * Les sous-catégories d'un groupe : des sections qui se suivent, rangées sous
  * un titre à elles dans le menu. L'économie réunit devises, objets,
- * boutiques et échanges (demande du 2026-11-24).
+ * boutiques, échanges et gains (demande du 2026-11-24).
  */
 export const SETTINGS_SUBGROUPS = {
-  economy: ["currency", "items", "shops", "trades"],
+  economy: ["currency", "items", "shops", "trades", "gains"],
 } as const satisfies Record<string, readonly FeatureSectionId[]>;
 export type SettingsSubgroupId = keyof typeof SETTINGS_SUBGROUPS;
 

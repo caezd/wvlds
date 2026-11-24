@@ -1244,7 +1244,32 @@
       "tradesHelp": "Un persona donne de l’argent ou des objets à un autre depuis le composeur d’un salon, avec le bloc Transférer. Le transfert est immédiat.",
       "tradesNeedSomething": "Activez d’abord les devises ou les objets.",
       "tradesSameAccount": "Échanges entre personas d’un même compte",
-      "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre."
+      "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre.",
+      "gains": "Gains",
+      "enableGains": "Activer les gains",
+      "gainsHelp": "La monnaie du monde gagnée en jouant : par message, par scène rejointe, créée ou terminée, et à la première visite du jour.",
+      "gainsNeedEconomy": "Les gains demandent les devises.",
+      "gainsForm": {
+        "title": "Montants",
+        "amountIn": "{label} en {unit}",
+        "message": "Par message",
+        "messageHelp": "Chaque message en persona, visible de tous.",
+        "scene_joined": "Par scène rejointe",
+        "scene_joinedHelp": "La première apparition d’un persona dans un salon.",
+        "scene_created": "Par scène créée",
+        "scene_createdHelp": "Le premier message en persona du créateur du salon.",
+        "scene_completed": "Par scène terminée",
+        "scene_completedHelp": "Chaque persona qui a écrit dans le salon, quand il passe à « terminé ».",
+        "daily_login": "Connexion du jour",
+        "daily_loginHelp": "À la première visite du monde dans la journée (UTC), pour chacun des personas du joueur.",
+        "cooldown": "Délai entre deux messages payés (minutes)",
+        "cooldownHelp": "Un persona n’est payé qu’une fois par délai, quel que soit le nombre de messages. 0 : aucun délai.",
+        "cap": "Plafond par jour",
+        "capHelp": "Total des gains d’un persona par jour (UTC). Vide : sans plafond.",
+        "save": "Enregistrer les gains",
+        "saved": "Gains enregistrés.",
+        "invalid": "Montants entiers et positifs ; délai d’une journée au plus."
+      }
     },
     "timelinePicker": {
       "year": "Année",
@@ -1496,7 +1521,12 @@
         "slots": "Emplacement d'inventaire",
         "purchase": "Achat",
         "sale": "Revente",
-        "transfer": "Échange"
+        "transfer": "Échange",
+        "gain_message": "Gain : message",
+        "gain_scene_joined": "Gain : scène rejointe",
+        "gain_scene_created": "Gain : scène créée",
+        "gain_scene_completed": "Gain : scène terminée",
+        "gain_daily_login": "Gain : connexion du jour"
       }
     },
     "inventory": {
@@ -2967,5 +2997,8 @@
       "off": "Les échanges sont désactivés dans ce monde.",
       "failed": "Le transfert a échoué."
     }
+  },
+  "gains": {
+    "daily": "Gain du jour : {amount} pour vos personas."
   }
 }

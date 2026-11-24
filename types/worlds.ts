@@ -178,6 +178,15 @@ export type World = {
   /** Échanges entre personas, et entre personas d'un même compte (migration 251) ; coupés par défaut. */
   enable_trades?: boolean | null;
   trades_same_account?: boolean | null;
+  /** Gains automatiques (migration 252), en unités de base ; voir lib/worldGains. */
+  enable_gains?: boolean | null;
+  gain_message?: number | null;
+  gain_scene_joined?: number | null;
+  gain_scene_created?: number | null;
+  gain_scene_completed?: number | null;
+  gain_daily_login?: number | null;
+  gain_message_cooldown?: number | null;
+  gain_daily_cap?: number | null;
   currency_units?: unknown;
   /** Inventaire des personas (migration 247), voir lib/personaInventory. */
   inventory_mode?: "free" | "catalog" | "held" | null;

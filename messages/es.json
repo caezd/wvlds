@@ -1244,7 +1244,32 @@
       "tradesHelp": "Un persona da dinero u objetos a otro desde el compositor de una sala, con el bloque Transferir. La transferencia es inmediata.",
       "tradesNeedSomething": "Active primero las divisas o los objetos.",
       "tradesSameAccount": "Intercambios entre personas de una misma cuenta",
-      "tradesSameAccountHelp": "Permite a un jugador pasar dinero y objetos de uno de sus personas a otro."
+      "tradesSameAccountHelp": "Permite a un jugador pasar dinero y objetos de uno de sus personas a otro.",
+      "gains": "Ganancias",
+      "enableGains": "Activar las ganancias",
+      "gainsHelp": "La moneda del mundo que se gana jugando: por mensaje, por escena a la que se une, creada o terminada, y en la primera visita del día.",
+      "gainsNeedEconomy": "Las ganancias requieren las monedas.",
+      "gainsForm": {
+        "title": "Importes",
+        "amountIn": "{label} en {unit}",
+        "message": "Por mensaje",
+        "messageHelp": "Cada mensaje en persona, visible para todos.",
+        "scene_joined": "Por escena a la que se une",
+        "scene_joinedHelp": "La primera aparición de un persona en una sala.",
+        "scene_created": "Por escena creada",
+        "scene_createdHelp": "El primer mensaje en persona del creador de la sala.",
+        "scene_completed": "Por escena terminada",
+        "scene_completedHelp": "Cada persona que escribió en la sala, cuando pasa a «terminada».",
+        "daily_login": "Conexión del día",
+        "daily_loginHelp": "En la primera visita al mundo del día (UTC), para cada uno de los personas del jugador.",
+        "cooldown": "Intervalo entre dos mensajes pagados (minutos)",
+        "cooldownHelp": "Un persona solo cobra una vez por intervalo, sea cual sea el número de mensajes. 0: sin intervalo.",
+        "cap": "Límite diario",
+        "capHelp": "Total de ganancias de un persona por día (UTC). Vacío: sin límite.",
+        "save": "Guardar las ganancias",
+        "saved": "Ganancias guardadas.",
+        "invalid": "Importes enteros y positivos; un intervalo de un día como máximo."
+      }
     },
     "timelinePicker": {
       "year": "Año",
@@ -1496,7 +1521,12 @@
         "slots": "Espacio de inventario",
         "purchase": "Compra",
         "sale": "Reventa",
-        "transfer": "Intercambio"
+        "transfer": "Intercambio",
+        "gain_message": "Ganancia: mensaje",
+        "gain_scene_joined": "Ganancia: escena a la que se une",
+        "gain_scene_created": "Ganancia: escena creada",
+        "gain_scene_completed": "Ganancia: escena terminada",
+        "gain_daily_login": "Ganancia: conexión del día"
       }
     },
     "inventory": {
@@ -2967,5 +2997,8 @@
       "off": "Los intercambios están desactivados en este mundo.",
       "failed": "La transferencia ha fallado."
     }
+  },
+  "gains": {
+    "daily": "Ganancia del día: {amount} para sus personas."
   }
 }
