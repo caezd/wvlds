@@ -12,13 +12,18 @@ export const FEATURE_SECTIONS = ["catalogue", "map", "wiki", "personas", "timeli
 export type FeatureSectionId = (typeof FEATURE_SECTIONS)[number];
 
 export const SETTINGS_GROUPS = [
-  { id: "world", sections: ["general", "home", "community"] },
+  // En tête du menu, sans titre de groupe.
+  { id: "top", sections: ["general", "community"] },
+  { id: "world", sections: ["home"] },
   { id: "features", sections: FEATURE_SECTIONS },
   { id: "rooms", sections: ["categories", "groups", "relations"] },
   { id: "members", sections: ["roles", "announcements", "reports"] },
 ] as const;
 
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
+
+/** Les groupes affichés sans titre : leurs sections, simplement listées. */
+export const UNTITLED_SETTINGS_GROUPS: readonly SettingsGroupId[] = ["top"];
 export type SettingsSectionId = (typeof SETTINGS_GROUPS)[number]["sections"][number];
 
 export const SETTINGS_SECTIONS: readonly SettingsSectionId[] = SETTINGS_GROUPS.flatMap((g) => g.sections);

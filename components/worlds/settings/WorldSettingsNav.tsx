@@ -27,6 +27,7 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { StatusPill } from "./FeatureLayout";
 import {
   isFeatureSection,
+  UNTITLED_SETTINGS_GROUPS,
   type FeatureSectionId,
   type SettingsGroupId,
   type SettingsSectionId,
@@ -109,11 +110,21 @@ export function WorldSettingsNav({
 
   return (
     <nav aria-label={tSettings("menu.label")} className="space-y-5 p-3 md:p-4" data-testid="settings-nav">
-      {groups.map((group) => (
-        <div key={group.id} role="group" aria-labelledby={`settings-group-${group.id}`}>
-          <SectionLabel as="p" id={`settings-group-${group.id}`} className="px-2.5 pb-1.5">
-            {tSettings(`menu.groups.${group.id}`)}
-          </SectionLabel>
+      {groups.map((group) => {
+        // Sans titre (Général, Communauté) : une simple liste en tête.
+        const titled = !UNTITLED_SETTINGS_GROUPS.includes(group.id);
+        return (
+        <div
+          key={group.id}
+          {...(titled
+            ? { role: "group", "aria-labelledby": `settings-group-${group.id}` }
+            : { "data-testid": `settings-nav-${group.id}` })}
+        >
+          {titled && (
+            <SectionLabel as="p" id={`settings-group-${group.id}`} className="px-2.5 pb-1.5">
+              {tSettings(`menu.groups.${group.id as Exclude<SettingsGroupId, "top">}`)}
+            </SectionLabel>
+          )}
           <ul className="space-y-0.5">
             {group.sections.map((id) => {
               const Icon = ICONS[id];
@@ -149,7 +160,8 @@ export function WorldSettingsNav({
             })}
           </ul>
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }

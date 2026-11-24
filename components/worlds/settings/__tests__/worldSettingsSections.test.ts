@@ -4,6 +4,7 @@ import {
   requestedSection,
   urlWithSection,
   visibleSettingsGroups,
+  UNTITLED_SETTINGS_GROUPS,
   type SettingsSectionId,
 } from "../worldSettingsSections";
 
@@ -11,6 +12,15 @@ describe("worldSettingsSections", () => {
   it("retire les sections interdites, puis les groupes vides", () => {
     const groups = visibleSettingsGroups((id) => id === "roles" || id === "reports");
     expect(groups).toEqual([{ id: "members", sections: ["roles", "reports"] }]);
+  });
+
+  it("Général et Communauté ouvrent le menu, hors groupe ; Monde ne garde que la page d'accueil", () => {
+    const groups = visibleSettingsGroups(() => true);
+    expect(groups.slice(0, 2)).toEqual([
+      { id: "top", sections: ["general", "community"] },
+      { id: "world", sections: ["home"] },
+    ]);
+    expect(UNTITLED_SETTINGS_GROUPS).toEqual(["top"]);
   });
 
   it("la section demandée : connue et permise, sinon rien", () => {

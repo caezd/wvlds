@@ -60,6 +60,9 @@ const nav = () => screen.getByRole("navigation", { name: "Sections des paramètr
 const groupes = () => within(nav()).getAllByRole("group").map((g) => g.getAttribute("aria-labelledby"));
 const entrees = (groupe: string) =>
   within(within(nav()).getByRole("group", { name: groupe })).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
+// Les sections en tête du menu, hors de tout groupe.
+const enTete = () =>
+  within(within(nav()).getByTestId("settings-nav-top")).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
 
 let pushState: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -72,10 +75,11 @@ beforeEach(() => {
 afterEach(() => pushState.mockRestore());
 
 describe("WorldSettingsView — menu de gauche", () => {
-  it("range les sections en quatre groupes, dans l'ordre", () => {
+  it("Général et Communauté en tête, hors groupe ; puis quatre groupes, dans l'ordre", () => {
     monter();
+    expect(enTete()).toEqual(["Général", "Communauté"]);
     expect(groupes()).toEqual(["settings-group-world", "settings-group-features", "settings-group-rooms", "settings-group-members"]);
-    expect(entrees("Monde")).toEqual(["Général", "Page d'accueil", "Communauté"]);
+    expect(entrees("Monde")).toEqual(["Page d'accueil"]);
     expect(entrees("Fonctions")).toEqual(["Catalogue", "Carte", "Wiki", "Personas", "Chronologie"]);
     expect(entrees("Salons & personas")).toEqual(["Catégories", "Groupes", "Relations"]);
     expect(entrees("Membres")).toEqual(["Rôles", "Annonces", "Signalements"]);

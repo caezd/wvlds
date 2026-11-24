@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Interface",
+    area: "Monde",
+    text: "Paramètres du monde : **Général** et **Communauté** en tête du menu, hors groupe ; le groupe **Monde** ne garde que **Page d’accueil**.",
+  },
+  {
+    date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
     text: "Chatbox : une salle peut être réservée à un groupe de personas, à sa création ou ensuite (Paramètres › Chatbox › Salles).\n- seuls la voient les joueurs qui ont un persona dans ce groupe ou l’un de ses sous-groupes, et les gérants du monde\n- supprimer le groupe supprime la salle et ses messages, après confirmation",
