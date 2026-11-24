@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { ChevronDown, CornerUpLeft, Hash, MessageSquareText, MessagesSquare, Reply, SendHorizontal, Trash2, UserRound, Users, X } from "lucide-react";
+import { ChevronDown, CornerUpLeft, Hash, Maximize2, MessageSquareText, MessagesSquare, Minimize2, PanelBottom, PanelRight, Reply, SendHorizontal, Trash2, UserRound, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLiveChatContext, type LiveChatRoom } from "@/lib/worldLiveChatStore";
+import {
+  setLiveChatFullscreen,
+  setLiveChatOpen,
+  setLiveChatPlacement,
+  setLiveChatSize,
+  useLiveChatLayout,
+  type LiveChatPlacement,
+} from "@/lib/liveChatLayout";
 import { useWorldLiveChat, type LiveChatMessage, type SendExtras } from "@/hooks/useWorldLiveChat";
 import { useLiveChannels } from "@/hooks/useLiveChannels";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
@@ -52,6 +60,19 @@ export function WorldLiveChatDock() {
   return <Dock worldId={context.worldId} chatroom={context.chatroom} />;
 }
 
+/**
+ * Pour `AppShell` : la chatbox ouverte à droite de la page (sur grand écran),
+ * ou en plein écran à sa place. Rien de tout cela quand le dock ne s'affiche
+ * pas (hors d'un monde, drapeau éteint), quel que soit le dernier choix.
+ */
+export function useLiveChatDockLayout(): { side: boolean; fullscreen: boolean } {
+  const { world_live_chat } = useFeatureFlags();
+  const context = useLiveChatContext();
+  const layout = useLiveChatLayout();
+  const shown = !!world_live_chat && !!context && layout.open;
+  return { side: shown && layout.placement === "side", fullscreen: shown && layout.fullscreen };
+}
+
 /** L'endroit à afficher : la salle choisie, tant qu'elle existe encore. */
 function usePlace(chatroom: LiveChatRoom | null, channels: LiveChannel[] | null) {
   const chatroomId = chatroom?.id ?? null;
@@ -77,14 +98,10 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   const options = useLiveChatOptions(worldId);
   // Couleur de groupe des personas, lue seulement si le monde les permet.
   const tints = usePersonaTints(worldId, options.personas);
-  // Ouvert ou fermé : le dernier choix, retenu par ce navigateur. Le dock ne
-  // se monte qu'après l'hydratation (WorldLiveChatAnchor) : lire le stockage
-  // ici ne crée pas d'écart avec le rendu serveur.
-  const [open, setOpenRaw] = useState(() => readStored(OPEN_KEY, (raw) => raw === "1") ?? false);
-  const setOpen = (value: boolean) => {
-    setOpenRaw(value);
-    writeStored(OPEN_KEY, value ? "1" : null);
-  };
+  // Ouverte ou fermée, en bas ou à droite : le dernier choix (lib/liveChatLayout).
+  const { open, placement, fullscreen, height, width } = useLiveChatLayout();
+  const panelRef = useRef<HTMLElement>(null);
+  const setOpen = setLiveChatOpen;
   const [replyTo, setReplyTo] = useState<LiveChatMessage | null>(null);
   const last = messages[messages.length - 1] ?? null;
   const key = placeKey(place);
@@ -136,8 +153,26 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
     <section
       aria-label={t("title")}
       data-testid="world-live-chat-panel"
-      className="flex h-[50dvh] w-full shrink-0 flex-col overflow-hidden border-t bg-background lg:mt-2 lg:rounded-lg lg:border"
+      data-placement={placement}
+      data-fullscreen={fullscreen || undefined}
+      ref={panelRef}
+      // La taille réglée à la poignée ; sans elle, celle des classes.
+      style={{
+        "--live-chat-height": height ? `${height}px` : undefined,
+        "--live-chat-width": width ? `${width}px` : undefined,
+      } as React.CSSProperties}
+      className={cn(
+        "relative flex w-full shrink-0 flex-col overflow-hidden border-t bg-background lg:rounded-lg lg:border",
+        // Plein écran : la place de la page. À droite : une colonne à côté
+        // d'elle sur grand écran, en bas sinon (AppShell range les deux).
+        fullscreen
+          ? "min-h-0 flex-1"
+          : placement === "side"
+            ? "h-[var(--live-chat-height,50dvh)] max-h-[85dvh] lg:h-auto lg:max-h-none lg:w-[var(--live-chat-width,24rem)] lg:max-w-[60vw]"
+            : "h-[var(--live-chat-height,50dvh)] max-h-[85dvh] lg:mt-2",
+      )}
     >
+      {!fullscreen && <ResizeHandle panel={panelRef} placement={placement} height={height} width={width} />}
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
         <MessagesSquare className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <h2 className="sr-only">{t("title")}</h2>
@@ -168,10 +203,33 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
           })}
         </div>
         <PresentCount count={presentCount} />
+        <div className="ml-auto flex shrink-0 items-center">
+          {!fullscreen && (
+            // À droite seulement sur grand écran : en dessous, la colonne n'aurait pas la place.
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="hidden lg:inline-flex"
+              onClick={() => setLiveChatPlacement(placement === "side" ? "bottom" : "side")}
+              aria-label={placement === "side" ? t("dockBottom") : t("dockRight")}
+              title={placement === "side" ? t("dockBottom") : t("dockRight")}
+            >
+              {placement === "side" ? <PanelBottom /> : <PanelRight />}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setLiveChatFullscreen(!fullscreen)}
+            aria-label={fullscreen ? t("exitFullscreen") : t("fullscreen")}
+            title={fullscreen ? t("exitFullscreen") : t("fullscreen")}
+          >
+            {fullscreen ? <Minimize2 /> : <Maximize2 />}
+          </Button>
+        </div>
         <Button
           variant="ghost"
           size="icon-sm"
-          className="ml-auto"
           onClick={() => setOpen(false)}
           aria-label={t("close")}
         >
@@ -220,6 +278,82 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
         onEscape={() => setOpen(false)}
       />
     </section>
+  );
+}
+
+/** Le pas d'une flèche du clavier sur la poignée, en pixels. */
+const RESIZE_STEP = 32;
+
+/** Les bornes de la chatbox : assez grande pour lire, assez petite pour laisser la page. */
+function clampSize(size: number, side: boolean) {
+  const max = side ? window.innerWidth * 0.6 : window.innerHeight * 0.85;
+  return Math.round(Math.min(Math.max(size, side ? 280 : 160), Math.max(max, side ? 280 : 160)));
+}
+
+/**
+ * La poignée entre la page et la chatbox : glisser (ou les flèches du
+ * clavier) règle sa hauteur en bas, sa largeur à droite. La taille se retient
+ * à la fin du glisser (lib/liveChatLayout).
+ */
+function ResizeHandle({
+  panel,
+  placement,
+  height,
+  width,
+}: {
+  panel: React.RefObject<HTMLElement | null>;
+  placement: LiveChatPlacement;
+  height: number | null;
+  width: number | null;
+}) {
+  const t = useTranslations("worldLiveChat");
+  const side = placement === "side";
+  const drag = useRef<{ from: number; size: number } | null>(null);
+  // La taille réglée, sinon celle qu'affiche le panneau.
+  const current = () => {
+    const box = panel.current?.getBoundingClientRect();
+    return (side ? width ?? box?.width : height ?? box?.height) ?? 0;
+  };
+  const resize = (size: number, persist: boolean) =>
+    setLiveChatSize(side ? { width: clampSize(size, true) } : { height: clampSize(size, false) }, persist);
+  const value = side ? width : height;
+  return (
+    <div
+      role="separator"
+      aria-orientation={side ? "vertical" : "horizontal"}
+      aria-label={t("resize")}
+      aria-valuenow={value ?? undefined}
+      tabIndex={0}
+      data-testid="world-live-chat-resize"
+      className={cn(
+        "absolute z-10 touch-none transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 focus-visible:outline-none",
+        // À droite : le bord gauche, sur grand écran seulement (en dessous, le chat est en bas).
+        side ? "inset-y-0 left-0 hidden w-1.5 cursor-col-resize lg:block" : "inset-x-0 top-0 h-1.5 cursor-row-resize",
+      )}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        drag.current = { from: side ? e.clientX : e.clientY, size: current() };
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current) return;
+        // Le chat grandit vers la page : vers le haut en bas, vers la gauche à droite.
+        resize(drag.current.size + drag.current.from - (side ? e.clientX : e.clientY), false);
+      }}
+      onPointerUp={() => {
+        if (!drag.current) return;
+        drag.current = null;
+        resize(current(), true);
+      }}
+      onPointerCancel={() => { drag.current = null; }}
+      onKeyDown={(e) => {
+        const grow = side ? e.key === "ArrowLeft" : e.key === "ArrowUp";
+        const shrink = side ? e.key === "ArrowRight" : e.key === "ArrowDown";
+        if (!grow && !shrink) return;
+        e.preventDefault();
+        resize(current() + (grow ? RESIZE_STEP : -RESIZE_STEP), true);
+      }}
+    />
   );
 }
 
@@ -593,8 +727,6 @@ function MessageRow({
 /** Ce que le joueur a choisi pour écrire (persona, couleur), gardé par monde dans ce navigateur. */
 type ComposerPersona = Pick<Persona, "id" | "name" | "avatar_url" | "dialogue_color">;
 
-/** La chatbox ouverte ("1") ; absente, elle est fermée. Vaut pour tous les mondes. */
-const OPEN_KEY = "liveChat:open";
 const personaKey = (worldId: string) => `liveChat:persona:${worldId}`;
 const colorKey = (worldId: string) => `liveChat:color:${worldId}`;
 

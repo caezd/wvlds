@@ -14,7 +14,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldsRail } from "./WorldsRail";
-import { WorldLiveChatDock } from "@/components/worlds/live-chat/WorldLiveChatDock";
+import { WorldLiveChatDock, useLiveChatDockLayout } from "@/components/worlds/live-chat/WorldLiveChatDock";
 import type { Quota } from "@/lib/userQuota";
 
 type WorldRailItem = { id: string; name: string; icon_url: string | null; owner_id: string };
@@ -49,6 +49,8 @@ function AppShellInner({
   children: React.ReactNode;
 }) {
   const tCommon = useTranslations("common");
+  // Le chat du monde à droite de la page, ou à sa place (plein écran).
+  const liveChat = useLiveChatDockLayout();
   const { notifications: notifEnabled, direct_messages: dmsEnabled, public_worlds: exploreEnabled } = useFeatureFlags();
   const { panelOpen: dmsOpen, closePanel: closeDms } = useDms();
   // Contexte du panneau seul : AppShell enveloppe toute l'application et
@@ -183,8 +185,12 @@ function AppShellInner({
           </Button>
         </header>
 
+        {/* La page et le chat du monde : l'un sous l'autre, ou côte à côte quand
+            le chat s'ouvre à droite (grand écran). En plein écran, le chat prend
+            la place de la page, qui reste montée (défilement, brouillons). */}
+        <div className={cn("flex min-h-0 flex-1 flex-col", liveChat.side && "lg:flex-row lg:gap-2")}>
         {/* Bordé sur ses quatre côtés : un espace le sépare du rail des mondes. */}
-        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-lg">
+        <main className={cn("relative flex h-full w-full min-w-0 flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-lg", liveChat.fullscreen && "hidden")}>
           <div
             id="thread"
             className={cn(
@@ -196,10 +202,11 @@ function AppShellInner({
           </div>
         </main>
 
-        {/* Chat en direct du monde courant : barre repliée, ou panneau de la
-            moitié de l'écran qui resserre le contenu au-dessus. Rien hors
-            d'un monde (cf. lib/worldLiveChatStore.ts). */}
+        {/* Chat en direct du monde courant : barre repliée, ou panneau qui
+            resserre la page (en dessous ou à droite). Rien hors d'un monde
+            (cf. lib/worldLiveChatStore.ts, lib/liveChatLayout.ts). */}
         <WorldLiveChatDock />
+        </div>
       </section>
 
     </div>

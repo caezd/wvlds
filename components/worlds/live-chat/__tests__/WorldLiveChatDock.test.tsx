@@ -82,7 +82,8 @@ vi.mock("@/components/personas/PersonaPickerDialog", () => ({
   ),
 }));
 
-import { WorldLiveChatDock, isGrouped } from "@/components/worlds/live-chat/WorldLiveChatDock";
+import { WorldLiveChatDock, isGrouped, useLiveChatDockLayout } from "@/components/worlds/live-chat/WorldLiveChatDock";
+import { __resetLiveChatLayout } from "@/lib/liveChatLayout";
 
 const msg = (id: string, user_id: string, username: string, content: string, created_at = "2026-11-09T10:00:00Z"): LiveChatMessage => ({
   id, world_id: "w1", user_id, content, created_at, author: { username, avatar_url: null },
@@ -104,6 +105,7 @@ beforeEach(() => {
   optionsMock.value = { colors: false, bubbles: false, personas: false, actions: false };
   tintsMock.value = {};
   localStorage.clear();
+  __resetLiveChatLayout();
 });
 
 describe("WorldLiveChatDock", () => {
@@ -135,7 +137,7 @@ describe("WorldLiveChatDock", () => {
     render(<WorldLiveChatDock />);
     await user.click(screen.getByTestId("world-live-chat-bar"));
     const panel = screen.getByTestId("world-live-chat-panel");
-    expect(panel).toHaveClass("h-[50dvh]");
+    expect(panel).toHaveClass("h-[var(--live-chat-height,50dvh)]");
     expect(screen.getByRole("log")).toHaveTextContent("bonjour");
     await user.click(screen.getByRole("button", { name: "Fermer le chat" }));
     expect(screen.getByTestId("world-live-chat-bar")).toBeInTheDocument();
@@ -146,11 +148,13 @@ describe("WorldLiveChatDock", () => {
     const premier = render(<WorldLiveChatDock />);
     await user.click(screen.getByTestId("world-live-chat-bar"));
     premier.unmount();
+    __resetLiveChatLayout();
 
     const second = render(<WorldLiveChatDock />);
     expect(screen.getByTestId("world-live-chat-panel")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox"), "{Escape}");
     second.unmount();
+    __resetLiveChatLayout();
 
     render(<WorldLiveChatDock />);
     expect(screen.getByTestId("world-live-chat-bar")).toBeInTheDocument();
@@ -241,6 +245,104 @@ describe("WorldLiveChatDock", () => {
     await user.click(screen.getByTestId("world-live-chat-bar"));
     await user.type(screen.getByRole("textbox"), "{Escape}");
     expect(screen.getByTestId("world-live-chat-bar")).toBeInTheDocument();
+  });
+});
+
+/** Ce que la coquille de l'application lit pour placer la page et le dock. */
+function Coquille() {
+  const { side, fullscreen } = useLiveChatDockLayout();
+  return (
+    <>
+      <output data-testid="coquille">{`${side ? "droite" : "bas"}${fullscreen ? " plein" : ""}`}</output>
+      <WorldLiveChatDock />
+    </>
+  );
+}
+
+describe("WorldLiveChatDock — plein écran et emplacement", () => {
+  it("ouvert, il passe en plein écran puis en sort ; le refermer quitte le plein écran", async () => {
+    const user = userEvent.setup();
+    render(<Coquille />);
+    // Fermé, rien à agrandir.
+    expect(screen.queryByRole("button", { name: "Plein écran" })).toBeNull();
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    await user.click(screen.getByRole("button", { name: "Plein écran" }));
+    expect(screen.getByTestId("world-live-chat-panel")).toHaveAttribute("data-fullscreen", "true");
+    expect(screen.getByTestId("coquille")).toHaveTextContent("bas plein");
+    await user.click(screen.getByRole("button", { name: "Quitter le plein écran" }));
+    expect(screen.getByTestId("world-live-chat-panel")).not.toHaveAttribute("data-fullscreen");
+    expect(screen.getByTestId("coquille")).toHaveTextContent(/^bas$/);
+
+    await user.click(screen.getByRole("button", { name: "Plein écran" }));
+    await user.click(screen.getByRole("button", { name: "Fermer le chat" }));
+    expect(screen.getByTestId("coquille")).toHaveTextContent(/^bas$/);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    expect(screen.getByTestId("world-live-chat-panel")).not.toHaveAttribute("data-fullscreen");
+  });
+
+  it("en bas ou à droite : le choix est retenu d'un chargement à l'autre ; fermé, il reste une barre en bas", async () => {
+    const user = userEvent.setup();
+    const premier = render(<Coquille />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    expect(screen.getByTestId("world-live-chat-panel")).toHaveAttribute("data-placement", "bottom");
+    await user.click(screen.getByRole("button", { name: "Afficher à droite" }));
+    expect(screen.getByTestId("world-live-chat-panel")).toHaveAttribute("data-placement", "side");
+    expect(screen.getByTestId("coquille")).toHaveTextContent(/^droite$/);
+    premier.unmount();
+    __resetLiveChatLayout();
+
+    render(<Coquille />);
+    expect(screen.getByTestId("world-live-chat-panel")).toHaveAttribute("data-placement", "side");
+    await user.click(screen.getByRole("button", { name: "Fermer le chat" }));
+    expect(screen.getByTestId("coquille")).toHaveTextContent(/^bas$/);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    await user.click(screen.getByRole("button", { name: "Afficher en bas" }));
+    expect(screen.getByTestId("world-live-chat-panel")).toHaveAttribute("data-placement", "bottom");
+  });
+
+  it("en bas, la poignée entre la page et le chat règle sa hauteur ; la taille est retenue", async () => {
+    const user = userEvent.setup();
+    const premier = render(<Coquille />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    const poignee = screen.getByRole("separator", { name: "Redimensionner le chat" });
+    expect(poignee).toHaveAttribute("aria-orientation", "horizontal");
+    // Sans réglage, la moitié de l'écran ; la première flèche part de la taille affichée.
+    vi.spyOn(screen.getByTestId("world-live-chat-panel"), "getBoundingClientRect").mockReturnValue({ height: 400, width: 800 } as DOMRect);
+    poignee.focus();
+    await user.keyboard("{ArrowUp}{ArrowUp}");
+    expect(screen.getByTestId("world-live-chat-panel").style.getPropertyValue("--live-chat-height")).toBe("464px");
+    await user.keyboard("{ArrowDown}");
+    expect(localStorage.getItem("liveChat:height")).toBe("432");
+    premier.unmount();
+    __resetLiveChatLayout();
+
+    render(<Coquille />);
+    expect(screen.getByTestId("world-live-chat-panel").style.getPropertyValue("--live-chat-height")).toBe("432px");
+  });
+
+  it("à droite, la poignée règle sa largeur ; en plein écran, il n'y en a pas", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("liveChat:open", "1");
+    localStorage.setItem("liveChat:placement", "side");
+    localStorage.setItem("liveChat:width", "384");
+    render(<Coquille />);
+    const poignee = screen.getByRole("separator", { name: "Redimensionner le chat" });
+    expect(poignee).toHaveAttribute("aria-orientation", "vertical");
+    poignee.focus();
+    // Le chat est à droite : la flèche gauche l'élargit.
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByTestId("world-live-chat-panel").style.getPropertyValue("--live-chat-width")).toBe("416px");
+    expect(localStorage.getItem("liveChat:width")).toBe("416");
+    await user.click(screen.getByRole("button", { name: "Plein écran" }));
+    expect(screen.queryByRole("separator", { name: "Redimensionner le chat" })).toBeNull();
+  });
+
+  it("hors d'un monde, la coquille garde sa mise en page, même si le dernier choix était ouvert à droite", () => {
+    localStorage.setItem("liveChat:open", "1");
+    localStorage.setItem("liveChat:placement", "side");
+    worldMock.id = null;
+    render(<Coquille />);
+    expect(screen.getByTestId("coquille")).toHaveTextContent(/^bas$/);
   });
 });
 
