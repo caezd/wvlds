@@ -155,7 +155,7 @@ describe("WorldSettingsView — carte et wiki", () => {
     await userEvent.click(screen.getByRole("button", { name: "Catalogue" }));
     const page = screen.getByRole("region", { name: "Catalogue" });
     // Inventaire coupé : ses réglages restent en vue, inertes ; compétences actives : leur restriction non.
-    expect(within(page).getByRole("combobox", { name: "Ajout d'objets" })).toBeDisabled();
+    expect(within(page).getByRole("radio", { name: /^Libre/ })).toBeDisabled();
     expect(within(page).getByRole("spinbutton", { name: "Emplacements de départ" })).toBeDisabled();
     expect(within(page).getByRole("switch", { name: "Compétences : Restreindre au catalogue du monde" })).toBeEnabled();
     // Faceclaims coupés : « Faceclaim obligatoire » visible, inerte.

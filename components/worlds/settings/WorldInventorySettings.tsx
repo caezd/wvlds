@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { setWorldInventoryMode, setWorldInventorySlots } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ import {
   inventorySettingsSchema,
   type InventoryMode,
 } from "@/lib/personaInventory";
-import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, SettingsSection, TitleWithHelp, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Une saisie numérique : un entier, ou `null` si le champ est vide. */
 function parseCount(raw: string): number | null {
@@ -119,27 +119,29 @@ export function WorldInventorySettings({
   return (
     <SettingsSection title={t("title")}>
       <ToggleList>
-        <ToggleItem
-          title={t("mode.title")}
-          help={t("mode.help")}
-          control={
-            <Select value={mode} onValueChange={(v) => v !== mode && void changeMode(v as InventoryMode)}>
-              <SelectTrigger aria-label={t("mode.title")} className={cn("h-9 w-56 shrink-0 rounded-md data-[size=default]:h-9", FIELD)}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {INVENTORY_MODES.map((m) => (
-                  <SelectItem key={m} value={m} textValue={t(`mode.${m}`)}>
-                    <span className="flex flex-col">
-                      <span>{t(`mode.${m}`)}</span>
-                      <span className="text-xs text-muted-foreground">{t(`mode.${m}Hint`)}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          }
-        />
+        {/* Les trois modes en liste à cocher : chacun dit en clair ce qu'il permet. */}
+        <div className="px-4 py-2.5">
+          <p className="text-sm font-medium">
+            <TitleWithHelp title={t("mode.title")} help={t("mode.help")} />
+          </p>
+          <RadioGroup
+            aria-label={t("mode.title")}
+            value={mode}
+            onValueChange={(v) => v !== mode && void changeMode(v as InventoryMode)}
+            className="mt-2 gap-0.5"
+          >
+            {INVENTORY_MODES.map((m) => (
+              <label
+                key={m}
+                className="flex cursor-pointer items-center gap-2.5 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/50"
+              >
+                <RadioGroupItem value={m} />
+                <span className="text-sm">{t(`mode.${m}`)}</span>
+                <span className="min-w-0 truncate text-xs text-muted-foreground">{t(`mode.${m}Hint`)}</span>
+              </label>
+            ))}
+          </RadioGroup>
+        </div>
         <ToggleItem
           title={t("slotsDefault.title")}
           help={t("slotsDefault.help")}

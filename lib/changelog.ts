@@ -59,7 +59,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Catalogue",
-    text: "Inventaire des personas : un onglet **Inventaire** sur la fiche, avec la bourse et les objets ; réglages dans Paramètres › Fonctions › Catalogue.\n- ajout d’objets libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé sur la bourse du persona\n- un objet empilable prend un emplacement, un objet unique un par exemplaire\n- qui gère l’économie donne ou reprend un objet du catalogue\n- un clic sur un objet du catalogue ouvre sa fiche\n- le champ de fiche « Inventaire » disparaît : ses objets sont passés dans l’onglet",
+    text: "Inventaire des personas : un onglet **Inventaire** sur la fiche, avec la bourse et les objets ; réglages dans Paramètres › Fonctions › Catalogue.\n- ajout d’objets, à cocher : libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé sur la bourse du persona\n- un objet empilable prend un emplacement, un objet unique un par exemplaire\n- qui gère l’économie donne ou reprend un objet du catalogue\n- un clic sur un objet du catalogue ouvre sa fiche\n- le champ de fiche « Inventaire » disparaît : ses objets sont passés dans l’onglet",
   },
   {
     date: "2026-11-24",

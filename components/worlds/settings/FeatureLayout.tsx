@@ -34,7 +34,7 @@ export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
 export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
 
 /** Un titre suivi de son aide. */
-function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {
+export function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
       {title}

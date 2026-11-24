@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -28,11 +28,14 @@ describe("WorldInventorySettings (migration 247)", () => {
   it("change le mode d'ajout des objets", async () => {
     const user = userEvent.setup();
     render(<WorldInventorySettings world={monde({ inventory_mode: "free" })} />);
-    const mode = screen.getByRole("combobox", { name: "Ajout d'objets" });
-    expect(mode).toHaveTextContent("Libre");
-    await user.click(mode);
-    await user.click(await screen.findByRole("option", { name: /^Tenu/ }));
+    const modes = screen.getByRole("radiogroup", { name: "Ajout d'objets" });
+    expect(within(modes).getAllByRole("radio")).toHaveLength(3);
+    expect(within(modes).getByRole("radio", { name: /^Libre/ })).toBeChecked();
+    // Chaque option dit ce qu'elle permet, en clair.
+    expect(within(modes).getByText("Objets donnés, achetés ou échangés")).toBeInTheDocument();
+    await user.click(within(modes).getByRole("radio", { name: /^Tenu/ }));
     await waitFor(() => expect(setWorldInventoryMode).toHaveBeenCalledWith("w1", "held"));
+    expect(within(modes).getByRole("radio", { name: /^Tenu/ })).toBeChecked();
   });
 
   it("sans limite de départ, ni plafond ni prix", () => {
