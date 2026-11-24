@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { LiveChatMessage } from "@/hooks/useWorldLiveChat";
@@ -697,6 +697,71 @@ describe("isGrouped", () => {
       await user.click(screen.getByTestId("world-live-chat-bar"));
       const tabs = within(screen.getByTestId("world-live-chat-places")).getAllByRole("tab");
       expect(within(tabs[1]).getByTestId("world-live-chat-unread")).toBeInTheDocument();
+    });
+
+    describe("chatbox étroite (à droite, mobile)", () => {
+      // jsdom ne mesure rien : le panneau s'annonce large de 380 px.
+      const original = window.ResizeObserver;
+      beforeEach(() => {
+        window.ResizeObserver = (
+          class {
+            constructor(private cb: ResizeObserverCallback) {}
+            observe(el: Element) {
+              if ((el as HTMLElement).dataset.testid === "world-live-chat-panel") {
+                this.cb([{ target: el, contentRect: { width: 380 } } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
+              }
+            }
+            unobserve() {}
+            disconnect() {}
+          }
+        ) as unknown as typeof ResizeObserver;
+      });
+      afterEach(() => {
+        window.ResizeObserver = original;
+      });
+
+      it("un menu remplace les onglets : la salle courante, puis le choix d'une autre", async () => {
+        const user = userEvent.setup();
+        channelsMock.channels = [salle("c1", "Hors-jeu", { color: "#ff8800" }), salle("c2", "Aide")];
+        worldMock.chatroom = { id: "r1", title: "La taverne" };
+        render(<WorldLiveChatDock />);
+        await user.click(screen.getByTestId("world-live-chat-bar"));
+        expect(screen.queryByRole("tablist")).toBeNull();
+        await user.click(screen.getByRole("button", { name: "Salle : La taverne" }));
+        const choix = screen.getAllByRole("menuitemradio");
+        expect(choix.map((c) => c.textContent)).toEqual(["Général", "Hors-jeu", "Aide", "La taverne"]);
+        expect(choix[3]).toHaveAttribute("aria-checked", "true");
+        // Les salles gardent leur couleur.
+        expect((choix[1].querySelector("span[style]") as HTMLElement).style.color).toBe("rgb(255, 136, 0)");
+        await user.click(choix[1]);
+        expect(placeSeen.last).toEqual({ kind: "channel", id: "c1" });
+        expect(screen.getByRole("button", { name: "Salle : Hors-jeu" })).toBeInTheDocument();
+      });
+
+      it("une pastille sur le menu et sur la salle où un message est arrivé", async () => {
+        const user = userEvent.setup();
+        channelsMock.channels = [salle("c1", "Hors-jeu")];
+        chat.unread = new Set(["c:c1"]);
+        render(<WorldLiveChatDock />);
+        await user.click(screen.getByTestId("world-live-chat-bar"));
+        const menu = screen.getByRole("button", { name: "Salle : Général" });
+        expect(within(menu).getByTestId("world-live-chat-unread")).toBeInTheDocument();
+        await user.click(menu);
+        const [general, horsJeu] = screen.getAllByRole("menuitemradio");
+        expect(within(horsJeu).getByTestId("world-live-chat-unread")).toBeInTheDocument();
+        expect(within(general).queryByTestId("world-live-chat-unread")).toBeNull();
+      });
+
+      it("les présents se réduisent à leur nombre ; le libellé reste en infobulle", async () => {
+        const user = userEvent.setup();
+        chat.presentCount = 2;
+        render(<WorldLiveChatDock />);
+        await user.click(screen.getByTestId("world-live-chat-bar"));
+        const presents = screen.getByTestId("world-live-chat-present");
+        expect(presents).toHaveAttribute("title", "2 présents");
+        expect(presents).toHaveAccessibleName("2 présents");
+        expect(presents.textContent).toBe("2");
+      });
     });
 
     it("un clic sur un message y répond ; l'envoi porte la réponse, Échap l'annule", async () => {

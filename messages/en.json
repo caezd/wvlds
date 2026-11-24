@@ -2710,6 +2710,7 @@
     "tooFast": "Too many messages: please wait a moment.",
     "deleteFailed": "Could not delete the message.",
     "channels": "Chat rooms",
+    "currentPlace": "Room: {name}",
     "mainChannel": "General",
     "chatroomThread": "“{title}” room thread",
     "chatroomThreadFallback": "This room",

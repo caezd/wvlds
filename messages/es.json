@@ -2710,6 +2710,7 @@
     "tooFast": "Demasiados mensajes: espere un momento.",
     "deleteFailed": "No se pudo eliminar el mensaje.",
     "channels": "Salas del chat",
+    "currentPlace": "Sala: {name}",
     "mainChannel": "General",
     "chatroomThread": "Hilo de la sala «{title}»",
     "chatroomThreadFallback": "Esta sala",

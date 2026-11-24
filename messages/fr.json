@@ -2710,6 +2710,7 @@
     "tooFast": "Trop de messages : patientez un instant.",
     "deleteFailed": "Suppression impossible.",
     "channels": "Salles du chat",
+    "currentPlace": "Salle : {name}",
     "mainChannel": "Général",
     "chatroomThread": "Fil du salon « {title} »",
     "chatroomThreadFallback": "Ce salon",

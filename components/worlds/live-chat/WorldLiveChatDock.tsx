@@ -33,6 +33,14 @@ import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { HsvColorPicker, normalizeHexColor } from "@/components/ui/hsv-color-picker";
 import { liveChatPlainText, parseLiveChatMarkdown, type LiveChatSpan } from "@/lib/liveChatMarkdown";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import type { Persona } from "@/types/db";
 
@@ -41,6 +49,8 @@ const MAX_LENGTH = DB_TEXT_LIMITS["world_live_messages.content"];
 const STICK_THRESHOLD = 80;
 /** Distance au bas (px) au-delà de laquelle « Descendre » apparaît (celle des salons). */
 const JUMP_THRESHOLD = 160;
+/** Largeur (px) sous laquelle les salles passent des onglets à un menu. */
+const NARROW_WIDTH = 560;
 
 /**
  * Chat en direct du monde courant, au bas de l'application.
@@ -104,6 +114,8 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   // Ouverte ou fermée, en bas ou à droite : le dernier choix (lib/liveChatLayout).
   const { open, placement, fullscreen, height, width } = useLiveChatLayout();
   const panelRef = useRef<HTMLElement>(null);
+  // Étroite (à droite, sur mobile) : un menu des salles, les présents réduits.
+  const narrow = useNarrow(panelRef, open);
   const setOpen = setLiveChatOpen;
   const [replyTo, setReplyTo] = useState<LiveChatMessage | null>(null);
   const last = messages[messages.length - 1] ?? null;
@@ -181,33 +193,38 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
         <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
           <MessagesSquare className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <h2 className="sr-only">{t("title")}</h2>
-          {/* Les salles : la principale, celles du monde, le fil du salon. */}
-          <div role="tablist" aria-label={t("channels")} className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto" data-testid="world-live-chat-places">
-            {places.map((entry) => {
-              const k = placeKey(entry.place);
-              const selected = k === key;
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setPlace(entry.place)}
-                  data-place={k}
-                  className={cn(
-                    "relative flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors",
-                    selected ? "bg-muted font-semibold text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                  )}
-                >
-                  <PlaceLabel entry={entry} className="max-w-40" />
-                  {!selected && unreadHere(k) && (
-                    <span className="size-1.5 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-unread" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <PresentCount count={presentCount} />
+          {/* Les salles : la principale, celles du monde, le fil du salon ; en
+              onglets, ou dans un menu quand la place manque. */}
+          {narrow ? (
+            <PlaceMenu places={places} current={current} unreadHere={unreadHere} onSelect={setPlace} />
+          ) : (
+            <div role="tablist" aria-label={t("channels")} className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto" data-testid="world-live-chat-places">
+              {places.map((entry) => {
+                const k = placeKey(entry.place);
+                const selected = k === key;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setPlace(entry.place)}
+                    data-place={k}
+                    className={cn(
+                      "relative flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors",
+                      selected ? "bg-muted font-semibold text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    )}
+                  >
+                    <PlaceLabel entry={entry} className="max-w-40" />
+                    {!selected && unreadHere(k) && (
+                      <span className="size-1.5 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-unread" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <PresentCount count={presentCount} compact={narrow} />
           <div className="ml-auto flex shrink-0 items-center">
             {!fullscreen && (
               // À droite seulement sur grand écran : en dessous, la colonne n'aurait pas la place.
@@ -368,12 +385,106 @@ function ResizeHandle({
   );
 }
 
-function PresentCount({ count }: { count: number }) {
+/**
+ * Le panneau plus étroit que `NARROW_WIDTH` : mesuré à chaque changement de
+ * taille (poignée, emplacement, plein écran, fenêtre). Large tant qu'il n'est
+ * pas mesuré.
+ */
+function useNarrow(panel: React.RefObject<HTMLElement | null>, open: boolean) {
+  const [narrow, setNarrow] = useState(false);
+  useLayoutEffect(() => {
+    const el = panel.current;
+    if (!open || !el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry?.contentRect.width ?? 0;
+      setNarrow(width > 0 && width < NARROW_WIDTH);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [panel, open]);
+  return narrow;
+}
+
+/** Les salles dans un menu : la courante en bouton, une pastille s'il y a du nouveau ailleurs. */
+function PlaceMenu({
+  places,
+  current,
+  unreadHere,
+  onSelect,
+}: {
+  places: PlaceEntry[];
+  current: PlaceEntry;
+  unreadHere: (key: string) => boolean;
+  onSelect: (place: LiveChatPlace) => void;
+}) {
   const t = useTranslations("worldLiveChat");
+  const currentKey = placeKey(current.place);
+  const elsewhere = places.some((p) => placeKey(p.place) !== currentKey && unreadHere(placeKey(p.place)));
+  // Le fil du salon, à part : il n'est pas une salle du monde.
+  const rooms = places.filter((p) => p.kind !== "chatroom");
+  const thread = places.find((p) => p.kind === "chatroom");
+  const item = (entry: PlaceEntry) => {
+    const k = placeKey(entry.place);
+    return (
+      <DropdownMenuRadioItem key={k} value={k} className="gap-2 text-xs">
+        <PlaceLabel entry={entry} className="flex-1" />
+        {k !== currentKey && unreadHere(k) && (
+          <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-unread" />
+        )}
+      </DropdownMenuRadioItem>
+    );
+  };
   return (
-    <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground tabular-nums" data-testid="world-live-chat-present">
+    <div className="flex min-w-0 flex-1 items-center" data-testid="world-live-chat-places">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 min-w-0 gap-1 px-2 text-xs font-semibold text-foreground"
+            aria-label={t("currentPlace", { name: placeName(current, t) })}
+          >
+            <PlaceLabel entry={current} className="max-w-48" />
+            {elsewhere && (
+              <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-unread" />
+            )}
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuRadioGroup
+            value={currentKey}
+            onValueChange={(k) => {
+              const entry = places.find((p) => placeKey(p.place) === k);
+              if (entry) onSelect(entry.place);
+            }}
+          >
+            {rooms.map(item)}
+            {thread && (
+              <>
+                <DropdownMenuSeparator />
+                {item(thread)}
+              </>
+            )}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+/** Les présents ; `compact`, leur nombre seul, le libellé en infobulle. */
+function PresentCount({ count, compact = false }: { count: number; compact?: boolean }) {
+  const t = useTranslations("worldLiveChat");
+  const label = t("present", { count });
+  return (
+    <span
+      className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground tabular-nums"
+      data-testid="world-live-chat-present"
+      {...(compact ? { role: "img", "aria-label": label, title: label } : {})}
+    >
       <Users className="size-3.5" aria-hidden />
-      {t("present", { count })}
+      {compact ? count : label}
     </span>
   );
 }
@@ -390,6 +501,12 @@ export function buildPlaces(channels: LiveChannel[], chatroom: LiveChatRoom | nu
     ...channels.map((channel) => ({ place: { kind: "channel" as const, id: channel.id }, kind: "channel" as const, channel })),
     ...(chatroom ? [{ place: { kind: "chatroom" as const, id: chatroom.id }, kind: "chatroom" as const, title: chatroom.title }] : []),
   ];
+}
+
+/** Le nom d'une salle, en texte. */
+function placeName(entry: PlaceEntry, t: ReturnType<typeof useTranslations<"worldLiveChat">>) {
+  if (entry.kind === "chatroom") return entry.title || t("chatroomThreadFallback");
+  return entry.kind === "channel" ? entry.channel.name : t("mainChannel");
 }
 
 /** L'icône (« # » par défaut) et le nom d'une salle, à sa couleur. */
