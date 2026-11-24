@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-24",
     category: "Interface",
+    area: "Monde",
+    text: "Chatbox : elle reste ouverte ou fermée d’une visite à l’autre, selon le dernier choix.",
+  },
+  {
+    date: "2026-11-24",
+    category: "Interface",
     area: "Personas",
     text: "Paramètres › Groupes : un groupe se crée et se règle sur sa page — nom, description, couleur propre ou héritée, couleur appliquée, membres. Dans la liste, une ligne ouvre la page du groupe ; son menu ajoute un sous-groupe, déplace ou supprime.",
   },

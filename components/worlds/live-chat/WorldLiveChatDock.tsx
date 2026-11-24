@@ -77,7 +77,14 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   const options = useLiveChatOptions(worldId);
   // Couleur de groupe des personas, lue seulement si le monde les permet.
   const tints = usePersonaTints(worldId, options.personas);
-  const [open, setOpen] = useState(false);
+  // Ouvert ou fermé : le dernier choix, retenu par ce navigateur. Le dock ne
+  // se monte qu'après l'hydratation (WorldLiveChatAnchor) : lire le stockage
+  // ici ne crée pas d'écart avec le rendu serveur.
+  const [open, setOpenRaw] = useState(() => readStored(OPEN_KEY, (raw) => raw === "1") ?? false);
+  const setOpen = (value: boolean) => {
+    setOpenRaw(value);
+    writeStored(OPEN_KEY, value ? "1" : null);
+  };
   const [replyTo, setReplyTo] = useState<LiveChatMessage | null>(null);
   const last = messages[messages.length - 1] ?? null;
   const key = placeKey(place);
@@ -586,6 +593,8 @@ function MessageRow({
 /** Ce que le joueur a choisi pour écrire (persona, couleur), gardé par monde dans ce navigateur. */
 type ComposerPersona = Pick<Persona, "id" | "name" | "avatar_url" | "dialogue_color">;
 
+/** La chatbox ouverte ("1") ; absente, elle est fermée. Vaut pour tous les mondes. */
+const OPEN_KEY = "liveChat:open";
 const personaKey = (worldId: string) => `liveChat:persona:${worldId}`;
 const colorKey = (worldId: string) => `liveChat:color:${worldId}`;
 

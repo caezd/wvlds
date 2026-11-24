@@ -141,6 +141,21 @@ describe("WorldLiveChatDock", () => {
     expect(screen.getByTestId("world-live-chat-bar")).toBeInTheDocument();
   });
 
+  it("retient le dernier choix, ouvert ou fermé, d'un chargement à l'autre", async () => {
+    const user = userEvent.setup();
+    const premier = render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    premier.unmount();
+
+    const second = render(<WorldLiveChatDock />);
+    expect(screen.getByTestId("world-live-chat-panel")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox"), "{Escape}");
+    second.unmount();
+
+    render(<WorldLiveChatDock />);
+    expect(screen.getByTestId("world-live-chat-bar")).toBeInTheDocument();
+  });
+
   it("affiche l'invitation à écrire quand le fil est vide", async () => {
     const user = userEvent.setup();
     render(<WorldLiveChatDock />);
