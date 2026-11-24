@@ -13,11 +13,12 @@ import { CHANGELOG } from "@/lib/changelog";
  */
 /** Une phrase de l'entrée, assez pour la reconnaître, assez courte pour tenir sur un nœud. */
 const extrait = (texte: string) => texte.split(/[.;:—]/)[0].trim().slice(0, 40);
-/** L'extrait ne doit désigner qu'une entrée (`getByText` est insensible à la casse),
- *  ni porter de Markdown : la page le rend en gras ou en code, pas en clair. */
+/** L'extrait ne doit paraître qu'une fois dans tout le journal, puces comprises
+ *  (`getByText` est insensible à la casse), ni porter de Markdown : la page le
+ *  rend en gras ou en code, pas en clair. */
 const unique = (texte: string) =>
   !/[*`]/.test(extrait(texte)) &&
-  CHANGELOG.filter(o => o.text.toLowerCase().includes(extrait(texte).toLowerCase())).length === 1;
+  CHANGELOG.reduce((n, o) => n + o.text.toLowerCase().split(extrait(texte).toLowerCase()).length - 1, 0) === 1;
 const correctif = CHANGELOG.find(e => e.category === "Correctif" && unique(e.text))!;
 const autre = CHANGELOG.find(e => e.category !== "Correctif" && unique(e.text))!;
 const TEXTE_CORRECTIF = extrait(correctif.text);

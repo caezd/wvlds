@@ -909,6 +909,10 @@
           "label": "Gérer la chronologie",
           "help": "Créer, modifier et supprimer les événements du monde et ses arcs narratifs."
         },
+        "economy_manage": {
+          "label": "Gérer l'économie",
+          "help": "Créditer ou débiter la bourse des personas."
+        },
         "relations_manage": {
           "label": "Gérer les relations",
           "help": "Types et groupes de relations, et modération des relations entre personas."
@@ -1138,6 +1142,27 @@
         "title": "Messages conservés",
         "help": "Nombre de messages gardés, 100 au plus. Toutes les salles, y compris celle d’un salon de jeu, fonctionnent avec cette limite de conservation. Tout ce qui est gardé se relit en remontant le fil ; au-delà, les plus anciens sont effacés automatiquement. Baisser le réglage efface le surplus tout de suite.",
         "option": "{count} messages par salle"
+      },
+      "economy": {
+        "title": "Économie",
+        "help": "Une monnaie propre au monde et une bourse pour chaque persona. Désactivée, les soldes sont gardés et reviennent à la réactivation.",
+        "enable": "Activer l'économie",
+        "currency": {
+          "title": "Monnaie",
+          "help": "Divisez la monnaie en paliers, du plus grand au plus petit : chacun vaut un nombre entier du palier suivant. Les montants se convertissent d'eux-mêmes d'un palier à l'autre.",
+          "unitName": "Nom du palier {n}",
+          "unitShort": "Abréviation du palier {n}",
+          "unitRatio": "{name} en {next}",
+          "fallbackName": "palier {n}",
+          "namePlaceholder": "Nom",
+          "shortPlaceholder": "Abrév.",
+          "base": "Unité de base",
+          "add": "Ajouter un palier",
+          "remove": "Retirer {name}",
+          "save": "Enregistrer la monnaie",
+          "saved": "Monnaie enregistrée.",
+          "invalid": "Chaque palier doit porter un nom et valoir au moins 2 du palier suivant."
+        }
       },
       "liveChatConnection": {
         "title": "Connexion des joueurs",
@@ -1408,6 +1433,28 @@
     "statsDialogDescription": "Statistiques et informations du monde."
   },
   "personas": {
+    "wallet": {
+      "tab": "Bourse",
+      "balance": "Solde",
+      "adjust": "Ajuster",
+      "adjustTitle": "Ajuster la bourse de {name}",
+      "adjustDescription": "Le mouvement est inscrit dans l'historique de la bourse.",
+      "credit": "Créditer",
+      "debit": "Débiter",
+      "direction": "Sens du mouvement",
+      "amountIn": "Montant en {unit}",
+      "note": "Motif",
+      "notePlaceholder": "Facultatif",
+      "confirm": "Valider",
+      "adjusted": "Bourse mise à jour.",
+      "insufficient": "Solde insuffisant.",
+      "failed": "Impossible de mettre à jour la bourse.",
+      "history": "Mouvements",
+      "noHistory": "Aucun mouvement.",
+      "kinds": {
+        "adjust": "Ajustement"
+      }
+    },
     "tabs": {
       "add": "Ajouter un onglet",
       "empty": "Aucun onglet pour ce personnage.",

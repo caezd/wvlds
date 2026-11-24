@@ -909,6 +909,10 @@
           "label": "Manage the timeline",
           "help": "Create, edit and delete the world's events and story arcs."
         },
+        "economy_manage": {
+          "label": "Manage the economy",
+          "help": "Credit or debit personas' purses."
+        },
         "relations_manage": {
           "label": "Manage relations",
           "help": "Relation types and groups, and moderation of relations between personas."
@@ -1138,6 +1142,27 @@
         "title": "Messages kept",
         "help": "Number of messages kept, 100 at most. Every room, including a game room's, works with this retention limit. Everything kept can be read by scrolling back; beyond that, the oldest are deleted automatically. Lowering the setting deletes the excess right away.",
         "option": "{count} messages per room"
+      },
+      "economy": {
+        "title": "Economy",
+        "help": "A currency of the world's own and a purse for each persona. When disabled, balances are kept and come back when re-enabled.",
+        "enable": "Enable the economy",
+        "currency": {
+          "title": "Currency",
+          "help": "Split the currency into tiers, from largest to smallest: each is worth a whole number of the next tier. Amounts convert between tiers on their own.",
+          "unitName": "Tier {n} name",
+          "unitShort": "Tier {n} abbreviation",
+          "unitRatio": "{name} in {next}",
+          "fallbackName": "tier {n}",
+          "namePlaceholder": "Name",
+          "shortPlaceholder": "Abbr.",
+          "base": "Base unit",
+          "add": "Add a tier",
+          "remove": "Remove {name}",
+          "save": "Save the currency",
+          "saved": "Currency saved.",
+          "invalid": "Each tier needs a name and must be worth at least 2 of the next tier."
+        }
       },
       "liveChatConnection": {
         "title": "Player connection",
@@ -1408,6 +1433,28 @@
     "statsDialogDescription": "Statistics and information about the world."
   },
   "personas": {
+    "wallet": {
+      "tab": "Purse",
+      "balance": "Balance",
+      "adjust": "Adjust",
+      "adjustTitle": "Adjust {name}'s purse",
+      "adjustDescription": "The movement is recorded in the purse's history.",
+      "credit": "Credit",
+      "debit": "Debit",
+      "direction": "Direction",
+      "amountIn": "Amount in {unit}",
+      "note": "Reason",
+      "notePlaceholder": "Optional",
+      "confirm": "Confirm",
+      "adjusted": "Purse updated.",
+      "insufficient": "Insufficient balance.",
+      "failed": "Couldn't update the purse.",
+      "history": "Movements",
+      "noHistory": "No movements.",
+      "kinds": {
+        "adjust": "Adjustment"
+      }
+    },
     "tabs": {
       "add": "Add a tab",
       "empty": "No tab for this character yet.",

@@ -30,6 +30,7 @@ import {
     reorderWorldCatalogItems,
     getWorldCatalogUsage,
     importWorldCatalogItems,
+    setWorldCurrency,
     setWorldHomeGrid,
     addWorldTag,
 } from "@/app/actions/worldCatalog";
@@ -196,6 +197,37 @@ describe("setWorldLiveChatConnection", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldLiveChatConnection("11111111-1111-4111-8111-111111111111", { live_chat_offline_view: "none" })).toEqual({ ok: false, error: "saveFailed" });
+    });
+});
+
+// ── setWorldCurrency ──────────────────────────────────────────────────────────
+
+describe("setWorldCurrency", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const OR = [
+        { name: "Or", short: "po", value: 100 },
+        { name: "Cuivre", short: "pc", value: 1 },
+    ];
+
+    it("enregistre les paliers, noms et abréviations nettoyés", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await setWorldCurrency(id, [{ name: " Or ", short: "po ", value: 100 }, OR[1]])).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ currency_units: OR });
+    });
+
+    it("refuse des paliers sans unité de base ou qui ne se divisent pas, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        for (const units of [[{ name: "Or", short: "", value: 100 }], [{ name: "Or", short: "", value: 150 }, { name: "Argent", short: "", value: 100 }, OR[1]], []]) {
+            expect((await setWorldCurrency(id, units)).ok).toBe(false);
+        }
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldCurrency(id, OR)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 

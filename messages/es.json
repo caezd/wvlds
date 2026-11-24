@@ -909,6 +909,10 @@
           "label": "Gestionar la cronología",
           "help": "Crear, modificar y eliminar los eventos del mundo y sus arcos narrativos."
         },
+        "economy_manage": {
+          "label": "Gestionar la economía",
+          "help": "Abonar o cargar la bolsa de las personas."
+        },
         "relations_manage": {
           "label": "Gestionar las relaciones",
           "help": "Tipos y grupos de relaciones, y moderación de las relaciones entre personas."
@@ -1138,6 +1142,27 @@
         "title": "Mensajes conservados",
         "help": "Número de mensajes conservados, 100 como máximo. Todas las salas, incluida la de una sala de juego, funcionan con este límite de conservación. Todo lo conservado se puede releer subiendo en el hilo; más allá, los más antiguos se borran automáticamente. Bajar el ajuste borra el excedente de inmediato.",
         "option": "{count} mensajes por sala"
+      },
+      "economy": {
+        "title": "Economía",
+        "help": "Una moneda propia del mundo y una bolsa para cada persona. Desactivada, los saldos se conservan y vuelven al reactivarla.",
+        "enable": "Activar la economía",
+        "currency": {
+          "title": "Moneda",
+          "help": "Divida la moneda en escalones, del mayor al menor: cada uno vale un número entero del escalón siguiente. Los importes se convierten solos de un escalón a otro.",
+          "unitName": "Nombre del escalón {n}",
+          "unitShort": "Abreviatura del escalón {n}",
+          "unitRatio": "{name} en {next}",
+          "fallbackName": "escalón {n}",
+          "namePlaceholder": "Nombre",
+          "shortPlaceholder": "Abrev.",
+          "base": "Unidad base",
+          "add": "Añadir un escalón",
+          "remove": "Quitar {name}",
+          "save": "Guardar la moneda",
+          "saved": "Moneda guardada.",
+          "invalid": "Cada escalón debe tener un nombre y valer al menos 2 del escalón siguiente."
+        }
       },
       "liveChatConnection": {
         "title": "Conexión de los jugadores",
@@ -1408,6 +1433,28 @@
     "statsDialogDescription": "Estadísticas e información del mundo."
   },
   "personas": {
+    "wallet": {
+      "tab": "Bolsa",
+      "balance": "Saldo",
+      "adjust": "Ajustar",
+      "adjustTitle": "Ajustar la bolsa de {name}",
+      "adjustDescription": "El movimiento queda registrado en el historial de la bolsa.",
+      "credit": "Abonar",
+      "debit": "Cargar",
+      "direction": "Sentido del movimiento",
+      "amountIn": "Importe en {unit}",
+      "note": "Motivo",
+      "notePlaceholder": "Opcional",
+      "confirm": "Validar",
+      "adjusted": "Bolsa actualizada.",
+      "insufficient": "Saldo insuficiente.",
+      "failed": "No se pudo actualizar la bolsa.",
+      "history": "Movimientos",
+      "noHistory": "Ningún movimiento.",
+      "kinds": {
+        "adjust": "Ajuste"
+      }
+    },
     "tabs": {
       "add": "Añadir una pestaña",
       "empty": "Ninguna pestaña para este personaje.",

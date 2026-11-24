@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Économie : une monnaie propre au monde et une bourse pour chaque persona, dans Paramètres › Fonctions › Économie.\n- monnaie divisée en paliers (or, argent, cuivre…), chacun valant un nombre entier du suivant ; les montants se convertissent d’eux-mêmes\n- onglet **Bourse** sur la fiche du persona : solde et derniers mouvements\n- permission **Gérer l’économie** : créditer ou débiter une bourse, avec un motif",
+  },
+  {
+    date: "2026-11-24",
     category: "Interface",
     area: "Monde",
     text: "Paramètres du monde : **Général** et **Communauté** en tête du menu, hors groupe ; le groupe **Monde** ne garde que **Page d’accueil**.",

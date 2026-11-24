@@ -1,0 +1,96 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+import { PersonaWalletSection } from "@/components/personas/PersonaWalletSection";
+import type { WalletMovement } from "@/hooks/usePersonaWallet";
+
+const UNITS = [
+  { name: "Argent", short: "pa", value: 100 },
+  { name: "Cuivre", short: "pc", value: 1 },
+];
+const mouvement = (id: string, delta: number, note: string | null = null): WalletMovement => ({
+  id, delta, balance_after: 0, kind: "adjust", note, created_at: "2026-11-24T10:00:00Z",
+});
+
+const adjust = vi.fn();
+const wallet = (over: Partial<Parameters<typeof PersonaWalletSection>[0]["wallet"]> = {}) => ({
+  status: "on" as const,
+  units: UNITS,
+  balance: 523,
+  ledger: [] as WalletMovement[],
+  adjust,
+  ...over,
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  adjust.mockResolvedValue({ ok: true });
+});
+
+describe("PersonaWalletSection (migration 246)", () => {
+  it("montre le solde décomposé en paliers", () => {
+    render(<PersonaWalletSection personaName="Lia" wallet={wallet()} canManage={false} />);
+    expect(screen.getByTestId("persona-wallet-balance")).toHaveTextContent("5 pa 23 pc");
+  });
+
+  it("sans la permission, pas d'ajustement", () => {
+    render(<PersonaWalletSection personaName="Lia" wallet={wallet()} canManage={false} />);
+    expect(screen.queryByRole("button", { name: "Ajuster" })).toBeNull();
+  });
+
+  it("liste les mouvements, signés, avec leur motif ou leur nature", () => {
+    render(
+      <PersonaWalletSection
+        personaName="Lia"
+        wallet={wallet({ ledger: [mouvement("m1", 500, "Quête"), mouvement("m2", -23)] })}
+        canManage={false}
+      />,
+    );
+    const items = within(screen.getByRole("list", { name: "Mouvements" })).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("+5 pa");
+    expect(items[0]).toHaveTextContent("Quête");
+    expect(items[1]).toHaveTextContent("−23 pc");
+    expect(items[1]).toHaveTextContent("Ajustement");
+  });
+
+  it("sans mouvement, le dit", () => {
+    render(<PersonaWalletSection personaName="Lia" wallet={wallet()} canManage={false} />);
+    expect(screen.getByText("Aucun mouvement.")).toBeInTheDocument();
+  });
+
+  it("débite un montant saisi par palier, avec son motif", async () => {
+    const user = userEvent.setup();
+    render(<PersonaWalletSection personaName="Lia" wallet={wallet()} canManage />);
+    await user.click(screen.getByRole("button", { name: "Ajuster" }));
+    const dialog = await screen.findByRole("dialog", { name: "Ajuster la bourse de Lia" });
+    const valider = within(dialog).getByRole("button", { name: "Valider" });
+    expect(valider).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Débiter" }));
+    await user.type(within(dialog).getByRole("spinbutton", { name: "Montant en Argent" }), "2");
+    await user.type(within(dialog).getByRole("spinbutton", { name: "Montant en Cuivre" }), "50");
+    await user.type(within(dialog).getByRole("textbox", { name: "Motif" }), "Amende");
+    await user.click(valider);
+
+    await waitFor(() => expect(adjust).toHaveBeenCalledWith(-250, "Amende"));
+    expect(toast.success).toHaveBeenCalledWith("Bourse mise à jour.");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("un solde insuffisant est signalé, le dialogue reste ouvert", async () => {
+    adjust.mockResolvedValue({ ok: false, error: "insufficient" });
+    const user = userEvent.setup();
+    render(<PersonaWalletSection personaName="Lia" wallet={wallet()} canManage />);
+    await user.click(screen.getByRole("button", { name: "Ajuster" }));
+    const dialog = await screen.findByRole("dialog", { name: "Ajuster la bourse de Lia" });
+    await user.click(within(dialog).getByRole("button", { name: "Débiter" }));
+    await user.type(within(dialog).getByRole("spinbutton", { name: "Montant en Argent" }), "9");
+    await user.click(within(dialog).getByRole("button", { name: "Valider" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Solde insuffisant."));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});

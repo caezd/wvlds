@@ -32,6 +32,7 @@ export const FLAG_KEYS = [
   "direct_messages",
   "quests",
   "world_live_chat",
+  "world_economy",
 ] as const;
 
 export type FlagKey = (typeof FLAG_KEYS)[number];
@@ -70,6 +71,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   direct_messages: false,
   quests: false,
   world_live_chat: false,
+  world_economy: false,
 };
 
 /**

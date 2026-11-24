@@ -32,6 +32,9 @@ import { useWorldMembership } from "@/components/providers/WorldMembershipProvid
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { PersonaJournalSection } from "@/components/personas/PersonaJournalSection";
+import { PersonaWalletSection } from "@/components/personas/PersonaWalletSection";
+import { usePersonaWallet } from "@/hooks/usePersonaWallet";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { indexCatalog } from "@/lib/worldCatalog";
 // Inventaire et compétences (fiches d'objets du catalogue) : chargés à
 // l'ouverture d'une fiche qui en a, plutôt qu'avec chaque salon.
@@ -363,6 +366,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
     return () => { cancelled = true; };
   }, [persona?.id, selfId, plan, supabase, canPlayNpc, reviewActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // La bourse (migration 246) : un onglet tant que l'économie du monde est active.
+  const { world_economy } = useFeatureFlags();
+  const wallet = usePersonaWallet(world_economy && persona ? persona.id : null, world_economy ? worldId : null);
+  const canManageWallet = !!worldId && membershipWorldId === worldId && can("economy.manage");
+
   const userPresence = persona ? getUserPresence(persona.user_id) : "offline";
   const _isOnline = userPresence === "online";
   const presenceLine =
@@ -470,6 +478,9 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                           {s.name}
                         </TabBarTrigger>
                       ))}
+                      {wallet.status === "on" && (
+                        <TabBarTrigger value="__wallet__">{t("wallet.tab")}</TabBarTrigger>
+                      )}
                       {worldId && (
                         <TabBarTrigger value="__relations__">{t("relations.tab")}</TabBarTrigger>
                       )}
@@ -496,6 +507,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                       )}
                     </TabsContent>
                   ))}
+                  {wallet.status === "on" && (
+                    <TabsContent value="__wallet__" className="px-5 py-4">
+                      <PersonaWalletSection personaName={persona.name} wallet={wallet} canManage={canManageWallet} />
+                    </TabsContent>
+                  )}
                   {worldId && (
                     <TabsContent value="__relations__" className="px-5 py-4">
                       <PersonaRelationsSection personaId={persona.id} worldId={worldId} ownerId={persona.user_id} selfId={selfId} />

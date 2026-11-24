@@ -43,9 +43,10 @@ import { WorldLiveChannelsSettings } from "./WorldLiveChannelsSettings";
 import { WorldLiveChatRetentionSetting } from "./WorldLiveChatRetentionSetting";
 import { WorldLiveChatOptionsSettings } from "./WorldLiveChatOptionsSettings";
 import { WorldLiveChatConnectionSettings } from "./WorldLiveChatConnectionSettings";
+import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BookOpen, Clock, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
+import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
@@ -80,7 +81,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
   const tSettings = useTranslations("worlds.settings");
   const tCatalogue = useTranslations("catalogue");
   const tCommon = useTranslations("common");
-  const { world_timeline, world_live_chat } = useFeatureFlags();
+  const { world_timeline, world_live_chat, world_economy } = useFeatureFlags();
 
     const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
     const [enableSkills, setEnableSkills] = React.useState(world.enable_skills !== false);
@@ -203,6 +204,19 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableLiveChat(enabled);
         onUpdated?.({ ...world, enable_live_chat: enabled } as World);
+    }
+
+    // L'économie (migration 246) : éteinte par défaut, seul `true` l'active.
+    const [enableEconomy, setEnableEconomy] = React.useState(world.enable_economy === true);
+    const [togglingEconomy, setTogglingEconomy] = React.useState(false);
+
+    async function handleEconomyToggle(enabled: boolean) {
+        setTogglingEconomy(true);
+        const res = await setWorldFeature(world.id, "enable_economy", enabled);
+        setTogglingEconomy(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setEnableEconomy(enabled);
+        onUpdated?.({ ...world, enable_economy: enabled } as World);
     }
 
     async function handleWikiToggle(enabled: boolean) {
@@ -462,6 +476,35 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 ),
             }]
             : []),
+        // L'économie (migration 246) : la monnaie du monde et la bourse des personas.
+        ...(world_economy
+            ? [{
+                id: "economy" as const,
+                icon: Coins,
+                label: tSettings("economy.title"),
+                active: enableEconomy,
+                page: (
+                    <FeaturePage
+                        title={tSettings("economy.title")}
+                        help={tSettings("economy.help")}
+                        toggle={{
+                            label: tSettings(enableEconomy ? "enabledF" : "disabledF"),
+                            ariaLabel: tSettings("economy.enable"),
+                            checked: enableEconomy,
+                            disabled: togglingEconomy,
+                            onCheckedChange: v => void handleEconomyToggle(v),
+                        }}
+                    >
+                        <InactiveOptions inactive={!enableEconomy}>
+                            <WorldCurrencySettings
+                                world={world}
+                                onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
+                            />
+                        </InactiveOptions>
+                    </FeaturePage>
+                ),
+            }]
+            : []),
     ];
 
     // Les pastilles du menu de gauche (WorldSettingsView).
@@ -473,8 +516,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             personas: personasActive,
             timeline: timelineEnabled,
             chatbox: enableLiveChat,
+            economy: enableEconomy,
         });
-    }, [onStatusChange, catalogueActive, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat]);
+    }, [onStatusChange, catalogueActive, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy]);
 
   return (
     <>

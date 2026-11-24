@@ -8,7 +8,7 @@
  */
 
 /** Les sous-pages de l'ancien onglet « Fonctions ». */
-export const FEATURE_SECTIONS = ["catalogue", "map", "wiki", "personas", "timeline", "chatbox"] as const;
+export const FEATURE_SECTIONS = ["catalogue", "map", "wiki", "personas", "timeline", "chatbox", "economy"] as const;
 export type FeatureSectionId = (typeof FEATURE_SECTIONS)[number];
 
 export const SETTINGS_GROUPS = [

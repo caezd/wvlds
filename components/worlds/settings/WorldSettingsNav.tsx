@@ -6,6 +6,7 @@ import {
   BookOpen,
   ChevronRight,
   Clock,
+  Coins,
   Flag,
   FolderTree,
   Globe,
@@ -43,6 +44,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   personas: UserRound,
   timeline: Clock,
   chatbox: MessagesSquare,
+  economy: Coins,
   categories: FolderTree,
   groups: UsersRound,
   relations: Waypoints,
@@ -67,6 +69,7 @@ export function useSettingsSectionLabel() {
         case "personas": return t("nav.personas");
         case "timeline": return t("nav.timeline");
         case "chatbox": return tSettings("chatbox");
+        case "economy": return tSettings("economy.title");
         case "categories": return t("tabCategories");
         case "groups": return t("tabGroups");
         case "relations": return t("tabRelations");

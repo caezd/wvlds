@@ -26,6 +26,7 @@ import type { WorldCatalogItem, WorldCatalogCategory, WorldCatalogProperty, Worl
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
 import { isLiveChatRetention, type LiveChatRetention } from "@/lib/worldLiveChatRetention";
 import { liveChatConnectionPatchSchema, type LiveChatConnectionPatch } from "@/lib/worldLiveChatConnection";
+import { currencyUnitsSchema, type CurrencyUnit } from "@/lib/worldCurrency";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
@@ -57,6 +58,7 @@ export type WorldFeatureField =
   | "enable_map"
   | "enable_wiki"
   | "enable_live_chat"
+  | "enable_economy"
   | "live_chat_colors"
   | "live_chat_bubbles"
   | "live_chat_personas"
@@ -132,6 +134,19 @@ export async function setWorldLiveChatConnection(worldId: string, patch: LiveCha
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update(input.data.patch).eq("id", worldId);
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldLiveChatConnection", error) };
+  return { ok: true as const };
+}
+
+/** La monnaie d'un monde (migration 246) : ses paliers, contrôlés aussi par la base. */
+export async function setWorldCurrency(worldId: string, units: CurrencyUnit[]) {
+  const input = parseInput(z.strictObject({ worldId: idSchema, units: currencyUnitsSchema }), { worldId, units });
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("worlds")
+    .update({ currency_units: [...input.data.units].sort((a, b) => b.value - a.value) })
+    .eq("id", worldId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldCurrency", error) };
   return { ok: true as const };
 }
 

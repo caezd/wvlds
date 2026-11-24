@@ -223,13 +223,13 @@ describe("WorldRolesTab — fiche", () => {
     await screen.findByRole("list", { name: "Rôles" });
     await user.click(screen.getByRole("button", { name: /^Éditeur/ }));
     const contenu = within(await screen.findByRole("region", { name: "Éditeur" })).getByRole("region", { name: "Contenu" });
-    expect(contenu).toHaveTextContent("2 sur 7");
+    expect(contenu).toHaveTextContent("2 sur 8");
 
     await user.click(within(contenu).getByRole("button", { name: "Tout activer" }));
 
     const update = mock.builders.find((b) => b.builder.update.mock.calls.length > 0)!;
     expect(update.builder.update).toHaveBeenCalledWith({
-      permissions: ["wiki.edit", "map.edit", "roles.manage", "wiki.comment", "lexicon.edit", "tags.manage", "catalog.edit", "timeline.manage"],
+      permissions: ["wiki.edit", "map.edit", "roles.manage", "wiki.comment", "lexicon.edit", "tags.manage", "catalog.edit", "timeline.manage", "economy.manage"],
     });
     expect(await within(contenu).findByRole("button", { name: "Tout désactiver" })).toBeEnabled();
   });
