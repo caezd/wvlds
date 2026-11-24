@@ -59,7 +59,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Boutiques : une vue **Boutiques** dans le menu du monde, à activer dans Paramètres › Fonctions › Économie › Boutiques (avec la monnaie et les objets).\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte : prix de rachat propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, prix et stocks gérés par qui gère l’économie, en mode modification ; une boutique fermée ne se voit que d’eux",
+    text: "Boutiques : une vue **Boutiques** dans le menu du monde, à activer dans Paramètres › Fonctions › Économie › Boutiques (avec la monnaie et les objets).\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte : prix de rachat propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, articles, prix et stocks gérés depuis la page de réglages Boutiques ; un lien « Gérer les boutiques » y mène depuis la vue\n- une boutique fermée ne se voit que de qui gère l’économie",
   },
   {
     date: "2026-11-24",

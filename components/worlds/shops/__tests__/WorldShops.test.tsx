@@ -18,7 +18,6 @@ vi.mock("@/components/providers/CurrentUserProvider", () => ({ useCurrentUser: (
 
 import { WorldShops } from "@/components/worlds/shops/WorldShops";
 import { useWorldShops } from "@/hooks/useWorldShops";
-import { addWorldShop, addWorldShopItem } from "@/app/actions/worldShops";
 import { toast } from "sonner";
 
 const UNITS = [
@@ -53,10 +52,10 @@ function shops(patch: Record<string, unknown> = {}) {
   return state;
 }
 
-function renderShops(canManage = false) {
+function renderShops(canManage = false, manageHref: string | null = null) {
   return render(
     <NextIntlClientProvider locale="fr" messages={fr}>
-      <WorldShops worldId="w1" canManage={canManage} />
+      <WorldShops worldId="w1" canManage={canManage} manageHref={manageHref} />
     </NextIntlClientProvider>,
   );
 }
@@ -69,7 +68,7 @@ describe("WorldShops (migration 249)", () => {
   it("économie ou inventaire coupés : le dit", () => {
     shops({ status: "off" });
     renderShops();
-    expect(screen.getByText(/demandent l’économie et l’inventaire/)).toBeInTheDocument();
+    expect(screen.getByText(/l’économie, l’inventaire et l’option Boutiques/)).toBeInTheDocument();
   });
 
   it("une boutique par onglet ; ses articles, leur prix, leur stock", () => {
@@ -132,36 +131,19 @@ describe("WorldShops (migration 249)", () => {
     expect(within(card("Épée")).getByRole("button", { name: "Acheter" })).toBeDisabled();
   });
 
-  it("qui gère l'économie crée une boutique", async () => {
-    const state = shops();
-    const user = userEvent.setup();
-    renderShops(true);
-    await user.click(screen.getByRole("button", { name: "Modifier" }));
-    await user.click(screen.getByRole("button", { name: "Nouvelle boutique" }));
-    const dialog = await screen.findByRole("dialog", { name: "Nouvelle boutique" });
-    await user.type(within(dialog).getByLabelText("Nom"), "Herboriste");
-    await user.click(within(dialog).getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() =>
-      expect(addWorldShop).toHaveBeenCalledWith("w1", expect.objectContaining({ name: "Herboriste", is_open: true, buyback_enabled: false })),
-    );
-    expect(state.reload).toHaveBeenCalled();
+  it("la gestion vit dans les paramètres : un lien pour qui règle le monde, rien à modifier ici", () => {
+    shops();
+    renderShops(true, "/w/w1?view=settings&section=shops");
+    expect(screen.getByRole("link", { name: "Gérer les boutiques" })).toHaveAttribute("href", "/w/w1?view=settings&section=shops");
+    expect(screen.queryByRole("button", { name: "Modifier" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Nouvelle boutique" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mettre en vente" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Supprimer la boutique" })).toBeNull();
   });
 
-  it("qui gère l'économie met un objet en vente, à un prix saisi par palier", async () => {
+  it("sans accès aux paramètres, pas de lien", () => {
     shops();
-    const user = userEvent.setup();
     renderShops(true);
-    await user.click(screen.getByRole("button", { name: "Modifier" }));
-    await user.click(screen.getByRole("button", { name: "Mettre en vente" }));
-    // L'épée est déjà en vente : seul le bouclier est proposé.
-    expect(within(await screen.findByRole("dialog")).queryByRole("button", { name: /Épée/ })).toBeNull();
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Bouclier/ }));
-    const dialog = await screen.findByRole("dialog", { name: "Article : Bouclier" });
-    await user.type(within(dialog).getByRole("spinbutton", { name: "Prix en Or" }), "3");
-    await user.type(within(dialog).getByRole("spinbutton", { name: "Stock" }), "5");
-    await user.click(within(dialog).getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() =>
-      expect(addWorldShopItem).toHaveBeenCalledWith("s1", "c3", { price: 300, stock: 5, buyback_price: null }),
-    );
+    expect(screen.queryByRole("link", { name: "Gérer les boutiques" })).toBeNull();
   });
 });

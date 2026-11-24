@@ -1238,7 +1238,7 @@
       "enableItems": "Activar los objetos",
       "enableShops": "Activar las tiendas",
       "shopsHelp": "Tiendas donde los personas compran objetos del catálogo, y los revenden si la tienda lo acepta.",
-      "shopsManage": "Las tiendas, sus artículos, precios y existencias se gestionan desde la vista Tiendas del mundo.",
+      "shopsNeedEconomy": "Las tiendas requieren las monedas y los objetos.",
       "trades": "Intercambios",
       "enableTrades": "Activar los intercambios",
       "tradesHelp": "Un persona da dinero u objetos a otro desde el compositor de una sala, con el bloque Transferir. La transferencia es inmediata.",
@@ -2884,7 +2884,8 @@
   },
   "shops": {
     "title": "Tiendas",
-    "off": "Las tiendas requieren la economía y el inventario, que se activan en Ajustes › Funciones.",
+    "manage": "Gestionar las tiendas",
+    "off": "Las tiendas requieren la economía, el inventario y la opción Tiendas, que se activan en Ajustes › Funciones › Economía.",
     "empty": "Todavía no hay tiendas.",
     "create": "Nueva tienda",
     "closed": "Cerrada",

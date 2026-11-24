@@ -1238,7 +1238,7 @@
       "enableItems": "Enable items",
       "enableShops": "Enable shops",
       "shopsHelp": "Shops where personas buy catalogue items, and sell them back if the shop allows it.",
-      "shopsManage": "Shops, their items, prices and stock are managed from the world’s Shops view.",
+      "shopsNeedEconomy": "Shops need the currency and the items.",
       "trades": "Trades",
       "enableTrades": "Enable trades",
       "tradesHelp": "A persona gives money or items to another from a room’s composer, with the Transfer block. The transfer is immediate.",
@@ -2884,7 +2884,8 @@
   },
   "shops": {
     "title": "Shops",
-    "off": "Shops need the economy and the inventory, enabled in Settings › Features.",
+    "manage": "Manage shops",
+    "off": "Shops need the economy, the inventory and the Shops option, enabled in Settings › Features › Economy.",
     "empty": "No shops yet.",
     "create": "New shop",
     "closed": "Closed",

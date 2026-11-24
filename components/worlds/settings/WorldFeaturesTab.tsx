@@ -45,6 +45,7 @@ import { WorldLiveChatOptionsSettings } from "./WorldLiveChatOptionsSettings";
 import { WorldLiveChatConnectionSettings } from "./WorldLiveChatConnectionSettings";
 import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import { WorldInventorySettings } from "./WorldInventorySettings";
+import { ShopManager } from "@/components/worlds/shops/ShopManager";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, ArrowRightLeft, UserRound, type LucideIcon } from "lucide-react";
@@ -555,9 +556,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             onCheckedChange: v => void handleShopsToggle(v),
                         }}
                     >
-                        <p className="text-sm text-muted-foreground">
-                            {enableEconomy && enableInventory ? tSettings("shopsManage") : tShops("off")}
-                        </p>
+                        {!(enableEconomy && enableInventory) && (
+                            <p className="text-sm text-muted-foreground">{tSettings("shopsNeedEconomy")}</p>
+                        )}
+                        {/* Boutiques, articles, prix, stocks et rachats (la vue du monde ne garde que la vitrine). */}
+                        {shopsOpen && <ShopManager worldId={world.id} />}
                     </FeaturePage>
                 ),
             }]

@@ -43,6 +43,9 @@ vi.mock("@/components/worlds/settings/WorldRelationsSettings", () => ({
 vi.mock("@/components/worlds/settings/WorldCurrencySettings", () => ({
   WorldCurrencySettings: () => <div />,
 }));
+vi.mock("@/components/worlds/shops/ShopManager", () => ({
+  ShopManager: ({ worldId }: { worldId: string }) => <p>gestion des boutiques de {worldId}</p>,
+}));
 
 const setWorldFeature = vi.fn().mockResolvedValue({ ok: true });
 vi.mock("@/app/actions/worldCatalog", () => ({
@@ -108,7 +111,8 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     await ouvrir("Boutiques");
     const page = screen.getByRole("region", { name: "Boutiques" });
     expect(within(page).getByRole("switch", { name: "Activer les boutiques" })).toBeDisabled();
-    expect(within(page).getByText(/demandent l’économie et l’inventaire/)).toBeInTheDocument();
+    expect(within(page).getByText("Les boutiques demandent les devises et les objets.")).toBeInTheDocument();
+    expect(within(page).queryByText(/gestion des boutiques/)).toBeNull();
   });
 
   it("Boutiques : l'interrupteur appelle l'action avec le bon champ", async () => {
@@ -117,6 +121,8 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const page = screen.getByRole("region", { name: "Boutiques" });
     await userEvent.click(within(page).getByRole("switch", { name: "Activer les boutiques" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_shops", true));
+    // Ouvertes, les boutiques se gèrent sur la page même.
+    expect(await within(page).findByText("gestion des boutiques de w1")).toBeInTheDocument();
   });
 
   it("Échanges : inerte sans devises ni objets", async () => {

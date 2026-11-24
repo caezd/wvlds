@@ -1238,7 +1238,7 @@
       "enableItems": "Activer les objets",
       "enableShops": "Activer les boutiques",
       "shopsHelp": "Des boutiques où les personas achètent des objets du catalogue, et les revendent si la boutique l’accepte.",
-      "shopsManage": "Les boutiques, leurs articles, prix et stocks se gèrent depuis la vue Boutiques du monde.",
+      "shopsNeedEconomy": "Les boutiques demandent les devises et les objets.",
       "trades": "Échanges",
       "enableTrades": "Activer les échanges",
       "tradesHelp": "Un persona donne de l’argent ou des objets à un autre depuis le composeur d’un salon, avec le bloc Transférer. Le transfert est immédiat.",
@@ -2884,7 +2884,8 @@
   },
   "shops": {
     "title": "Boutiques",
-    "off": "Les boutiques demandent l’économie et l’inventaire, à activer dans Paramètres › Fonctions.",
+    "manage": "Gérer les boutiques",
+    "off": "Les boutiques demandent l’économie, l’inventaire et l’option Boutiques, à activer dans Paramètres › Fonctions › Économie.",
     "empty": "Aucune boutique pour l’instant.",
     "create": "Nouvelle boutique",
     "closed": "Fermée",

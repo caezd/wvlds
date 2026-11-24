@@ -262,7 +262,11 @@ export function WorldHome({
             timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : null}
           />
         ) : showShops ? (
-          <WorldShops worldId={worldId} canManage={can("economy.manage")} />
+          <WorldShops
+            worldId={worldId}
+            canManage={can("economy.manage")}
+            manageHref={can("world.settings") ? `/w/${worldId}?view=settings&section=shops` : null}
+          />
         ) : showTimeline ? (
           <WorldTimeline
             worldId={worldId}
