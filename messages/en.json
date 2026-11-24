@@ -1118,7 +1118,7 @@
       "enableChatbox": "Enable the chatbox",
       "liveChannels": {
         "title": "Rooms",
-        "help": "Like folders to sort the chatbox's discussions. The main room is always there; each game room also has its own thread, which opens by itself when you're in it. A room can have its own color and icon (“#” without one).",
+        "help": "Like folders to sort the chatbox's discussions. The main room is always there; each game room also has its own thread, which opens by itself when you're in it. A room can have its own color and icon (“#” without one). A room restricted to a persona group is only visible to players who have a persona in that group or one of its subgroups, and to the world’s managers. Deleting the group deletes the room and its messages.",
         "count": "{count, plural, one {# room} other {# rooms}}",
         "main": "General",
         "mainHint": "Main room",
@@ -1126,6 +1126,10 @@
         "namePlaceholder": "New room…",
         "add": "Add the room",
         "icon": "Icon of the {name} room",
+        "visibility": "Who can see {name}",
+        "newVisibility": "Who can see the new room",
+        "everyone": "All members",
+        "restrictTo": "Restricted to a group",
         "delete": "Delete the {name} room",
         "deleteTitle": "Delete the “{name}” room?",
         "deleteBody": "The room disappears from the chatbox, with all its messages. This can't be undone."
@@ -2226,6 +2230,8 @@
     "groupName": "Group name",
     "typeName": "Type name",
     "deleteGroup": "Delete group",
+    "deleteGroupTitle": "Delete the group “{name}”?",
+    "deleteGroupRooms": "The chat rooms restricted to this group will be deleted with all their messages: {rooms}. This cannot be undone.",
     "deleteType": "Delete the type {name}",
     "dashFor": "Line of {name}",
     "reciprocityFor": "Reciprocity of {name}",

@@ -130,7 +130,8 @@ describe("WorldGroupsSettings — la liste", () => {
   });
 
   it("supprimer un groupe : ses sous-groupes remontent d'un niveau et gardent leur couleur", async () => {
-    const mock = monter([{ data: null }]);
+    // Aucune salle de chatbox liée : la suppression part sans confirmation.
+    const mock = monter([{ data: [] }, { data: null }]);
     const user = userEvent.setup();
     await ouvrirMenu(user, "Maison");
     await user.click(await screen.findByRole("menuitem", { name: "Supprimer le groupe" }));
@@ -141,6 +142,36 @@ describe("WorldGroupsSettings — la liste", () => {
     const cadette = ligne("Branche cadette").querySelector("[data-group-swatch]")!;
     expect(cadette).not.toHaveAttribute("data-inherited");
     expect(cadette).toHaveStyle({ backgroundColor: "#ff0000" });
+  });
+});
+
+describe("WorldGroupsSettings — salles de chatbox liées (migration 243)", () => {
+  it("un groupe lié à des salles demande confirmation : elles partent avec lui", async () => {
+    const mock = monter([{ data: [{ id: "c1", name: "Conseil" }, { id: "c2", name: "Écuries" }] }, { data: null }]);
+    const user = userEvent.setup();
+    await ouvrirMenu(user, "Maison");
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer le groupe" }));
+    const salles = mock.buildersFor("world_live_channels")[0];
+    expect(salles.eq).toHaveBeenCalledWith("group_id", "maison");
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Supprimer le groupe « Maison » ?");
+    expect(dialog).toHaveTextContent("Conseil, Écuries");
+    expect(mock.buildersFor("world_persona_groups").some((b) => b.delete.mock.calls.length > 0)).toBe(false);
+    await user.click(within(dialog).getByRole("button", { name: "Supprimer" }));
+    await waitFor(() => expect(lignes()).toEqual([["Branche cadette", 0], ["Ordre", 0]]));
+    const ecriture = mock.buildersFor("world_persona_groups").at(-1)!;
+    expect(ecriture.delete).toHaveBeenCalled();
+    expect(ecriture.eq).toHaveBeenCalledWith("id", "maison");
+  });
+
+  it("annuler garde le groupe", async () => {
+    const mock = monter([{ data: [{ id: "c1", name: "Conseil" }] }]);
+    const user = userEvent.setup();
+    await ouvrirMenu(user, "Maison");
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer le groupe" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Annuler" }));
+    expect(mock.buildersFor("world_persona_groups").some((b) => b.delete.mock.calls.length > 0)).toBe(false);
+    expect(lignes()).toEqual([["Maison", 0], ["Branche cadette", 1], ["Ordre", 0]]);
   });
 });
 

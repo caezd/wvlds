@@ -186,6 +186,20 @@ describe("useWorldLiveChat — salles et fils de salon (migration 238)", () => {
     expect(result.current.messages[0].author?.username).toBe("bob");
   });
 
+  it("une salle réservée à un groupe : l'avis arrive sans contenu, le message est relu (migration 243)", async () => {
+    const relu = { ...row("g", "u2", "2026-11-09T10:00:00Z", "bob"), channel_id: "c1", chatroom_id: null, reply_to_id: null, reply: null };
+    const { result, mock } = setupAt([{ data: [] }, { data: relu }], { kind: "channel", id: "c1" });
+    await waitFor(() => expect(mock.channelNamed("world:w1")).toBeDefined());
+    const ch = mock.channelNamed("world:w1")!;
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", id: "g", channel_id: "c1", chatroom_id: null } }));
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    expect(mock.buildersFor("world_live_messages")[1].eq).toHaveBeenCalledWith("id", "g");
+    // Ailleurs, l'avis se signale sans rien lire.
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", id: "h", channel_id: "c2", chatroom_id: null } }));
+    await waitFor(() => expect(result.current.unread.has("c:c2")).toBe(true));
+    expect(mock.buildersFor("world_live_messages")).toHaveLength(2);
+  });
+
   it("envoie dans la salle choisie, avec la réponse", async () => {
     const sent = { ...row("n", "me", "2026-11-09T10:00:00Z", "moi"), channel_id: "c1", chatroom_id: null, reply_to_id: "m1", reply: null };
     const { result, mock } = setupAt([{ data: [] }, { data: sent }], { kind: "channel", id: "c1" });

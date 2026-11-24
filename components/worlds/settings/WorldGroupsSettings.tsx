@@ -8,6 +8,16 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -65,6 +75,8 @@ type OpenPage = { id: string } | { parentId: string | null };
  *
  * Un sous-groupe sans couleur propre prend celle de son parent ; supprimer un
  * groupe fait remonter ses sous-groupes d'un niveau (la base fait de même).
+ * Les salles de chatbox réservées au groupe (migration 243) partent avec lui :
+ * la suppression le dit et attend une confirmation.
  */
 export function WorldGroupsSettings({ worldId }: { worldId: string }) {
   const t = useTranslations("relations");
@@ -76,6 +88,8 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
   const [assignments, setAssignments] = React.useState<PersonaGroupAssignment[]>([]);
   const [personas, setPersonas] = React.useState<GroupPersona[]>([]);
   const [page, setPage] = React.useState<OpenPage | null>(null);
+  // Un groupe lié à des salles de chatbox, en attente de confirmation.
+  const [pendingDelete, setPendingDelete] = React.useState<{ id: string; name: string; rooms: string[] } | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -152,6 +166,24 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     setRows((prev) => [...(prev ?? []), row]);
     setPage({ id: row.id });
     return true;
+  }
+
+  /**
+   * Supprimer, après confirmation si des salles de chatbox sont réservées au
+   * groupe : elles sont supprimées avec lui, et leurs messages.
+   */
+  async function askRemove(id: string) {
+    const group = rows?.find((g) => g.id === id);
+    if (!group) return;
+    const { data, error } = await supabase
+      .from("world_live_channels")
+      .select("id, name")
+      .eq("group_id", id)
+      .order("sort_index");
+    if (error) { toast.error(tCommon("saveError")); return; }
+    const rooms = (data ?? []) as { id: string; name: string }[];
+    if (rooms.length === 0) { void remove(id); return; }
+    setPendingDelete({ id, name: group.name, rooms: rooms.map((r) => r.name) });
   }
 
   async function remove(id: string) {
@@ -304,7 +336,7 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
                     ))}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => void remove(g.id)}
+                      onClick={() => void askRemove(g.id)}
                       className="text-destructive focus:text-destructive"
                     >
                       <Trash2 className="mr-2 size-4" /> {t("deleteGroup")}
@@ -320,6 +352,29 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
           {t("newGroup")}
         </button>
       </SettingsSection>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteGroupTitle", { name: pendingDelete?.name ?? "" })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("deleteGroupRooms", { rooms: pendingDelete?.rooms.join(", ") ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const id = pendingDelete?.id;
+                setPendingDelete(null);
+                if (id) void remove(id);
+              }}
+            >
+              {tCommon("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FeaturePage>
   );
 }

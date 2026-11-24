@@ -1118,7 +1118,7 @@
       "enableChatbox": "Activar la chatbox",
       "liveChannels": {
         "title": "Salas",
-        "help": "Como carpetas para ordenar las conversaciones de la chatbox. La sala principal siempre está; cada sala de juego tiene además su propio hilo, que se abre solo cuando estás en ella. Una sala puede tener su color y su icono («#» sin icono).",
+        "help": "Como carpetas para ordenar las conversaciones de la chatbox. La sala principal siempre está; cada sala de juego tiene además su propio hilo, que se abre solo cuando estás en ella. Una sala puede tener su color y su icono («#» sin icono). Una sala reservada a un grupo de personas solo es visible para los jugadores que tienen un persona en ese grupo o en uno de sus subgrupos, y para los gestores del mundo. Eliminar el grupo elimina la sala y sus mensajes.",
         "count": "{count, plural, one {# sala} other {# salas}}",
         "main": "General",
         "mainHint": "Sala principal",
@@ -1126,6 +1126,10 @@
         "namePlaceholder": "Nueva sala…",
         "add": "Añadir la sala",
         "icon": "Icono de la sala {name}",
+        "visibility": "Visibilidad de la sala {name}",
+        "newVisibility": "Visibilidad de la nueva sala",
+        "everyone": "Todos los miembros",
+        "restrictTo": "Reservada a un grupo",
         "delete": "Eliminar la sala {name}",
         "deleteTitle": "¿Eliminar la sala «{name}»?",
         "deleteBody": "La sala desaparece de la chatbox, con todos sus mensajes. Esta acción es definitiva."
@@ -2226,6 +2230,8 @@
     "groupName": "Nombre del grupo",
     "typeName": "Nombre del tipo",
     "deleteGroup": "Eliminar el grupo",
+    "deleteGroupTitle": "¿Eliminar el grupo «{name}»?",
+    "deleteGroupRooms": "Las salas del chat reservadas a este grupo se eliminarán con todos sus mensajes: {rooms}. Esta acción es definitiva.",
     "deleteType": "Eliminar el tipo {name}",
     "dashFor": "Trazo de {name}",
     "reciprocityFor": "Reciprocidad de {name}",

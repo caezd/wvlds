@@ -20,9 +20,14 @@ export type LiveChannel = {
   /** Icône Lucide (kebab-case), ou nulle : « # ». */
   icon: string | null;
   sort_index: number;
+  /**
+   * Le groupe de personas qui y a accès (migration 243), sous-groupes compris ;
+   * nul : tous les membres. La RLS cache la salle aux autres.
+   */
+  group_id: string | null;
 };
 
-export const LIVE_CHANNEL_COLUMNS = "id, world_id, name, color, icon, sort_index";
+export const LIVE_CHANNEL_COLUMNS = "id, world_id, name, color, icon, sort_index, group_id";
 export const LIVE_CHANNEL_NAME_MAX = 40;
 
 export type LiveChatPlace =

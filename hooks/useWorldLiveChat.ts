@@ -253,13 +253,18 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
   // ajout porte la ligne entière (lisible par tous les membres) ; un retrait,
   // son id.
   //
-  // Un message d'un fil de salon arrive sans son contenu (migration 238 : un
-  // salon privé ne laisse rien voir) : on le relit, avec nos droits.
+  // Un message d'un fil de salon, ou d'une salle réservée à un groupe, arrive
+  // sans son contenu (migrations 238 et 243 : rien ne doit filtrer vers qui ne
+  // les voit pas) : on le relit, avec nos droits.
   useTopic(worldId && userId ? topic.world(worldId) : null, ({ event, payload }) => {
     if (event !== "live") return;
-    const avis = payload as { op?: string; id?: string; chatroom_id?: string | null; record?: Row };
+    const avis = payload as { op?: string; id?: string; channel_id?: string | null; chatroom_id?: string | null; record?: Row };
     if (avis.op === "INSERT") {
-      const where = avis.record ? placeOf(avis.record) : avis.chatroom_id ? placeOf({ chatroom_id: avis.chatroom_id }) : null;
+      const where = avis.record
+        ? placeOf(avis.record)
+        : avis.chatroom_id || avis.channel_id
+          ? placeOf({ channel_id: avis.channel_id, chatroom_id: avis.chatroom_id })
+          : null;
       if (!where) return;
       const whereKey = placeKey(where);
       if (whereKey !== key) {

@@ -8,7 +8,9 @@ import { fetchLiveChannels, sortChannels, type LiveChannel } from "@/lib/worldLi
 /**
  * Les salles de la chatbox d'un monde, tenues à jour : avis `live_channels`
  * du canal du monde (migration 238), relecture au retour d'une coupure.
- * `null` tant qu'elles ne sont pas chargées.
+ * Une salle réservée à un groupe (migration 243) s'annonce sans sa ligne :
+ * la liste se relit alors, avec nos droits. `null` tant qu'elles ne sont pas
+ * chargées.
  */
 export function useLiveChannels(worldId: string | null) {
   const supabase = useMemo(() => createClient(), []);
@@ -27,6 +29,10 @@ export function useLiveChannels(worldId: string | null) {
   useTopic(worldId ? topic.world(worldId) : null, ({ event, payload }) => {
     if (event !== "live_channels") return;
     const avis = payload as { op?: string; id?: string; record?: LiveChannel };
+    if (avis.op !== "DELETE" && !avis.record) {
+      void load();
+      return;
+    }
     setChannels((prev) => {
       if (!prev) return prev;
       if (avis.op === "DELETE" && avis.id) return prev.filter((c) => c.id !== avis.id);

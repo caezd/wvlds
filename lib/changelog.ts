@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Chatbox : une salle peut être réservée à un groupe de personas, à sa création ou ensuite (Paramètres › Chatbox › Salles).\n- seuls la voient les joueurs qui ont un persona dans ce groupe ou l’un de ses sous-groupes, et les gérants du monde\n- supprimer le groupe supprime la salle et ses messages, après confirmation",
+  },
+  {
+    date: "2026-11-24",
     category: "Interface",
     area: "Monde",
     text: "Chatbox :\n- reste ouverte ou fermée d’une visite à l’autre, selon le dernier choix\n- **Plein écran** : elle prend la place de la page\n- en bas ou à droite de la page, au choix\n- taille réglable en glissant l’espace qui la sépare de la page, retenue d’une visite à l’autre\n- remonté dans le fil, le bouton **Descendre** des salons ramène aux derniers messages\n- étroite (à droite, sur mobile) : les salles passent dans un menu, avec leurs pastilles de nouveaux messages ; les présents se réduisent à leur nombre",

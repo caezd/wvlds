@@ -1118,7 +1118,7 @@
       "enableChatbox": "Activer la chatbox",
       "liveChannels": {
         "title": "Salles",
-        "help": "Comme des dossiers pour ranger les discussions de la chatbox. La salle principale est toujours là ; chaque salon de jeu a en plus son propre fil, qui s’ouvre de lui-même quand on y est. Une salle peut avoir sa couleur et son icône (« # » sans icône).",
+        "help": "Comme des dossiers pour ranger les discussions de la chatbox. La salle principale est toujours là ; chaque salon de jeu a en plus son propre fil, qui s’ouvre de lui-même quand on y est. Une salle peut avoir sa couleur et son icône (« # » sans icône). Une salle réservée à un groupe de personas n’est visible que par les joueurs qui ont un persona dans ce groupe ou l’un de ses sous-groupes, et par les gérants du monde. Supprimer le groupe supprime la salle et ses messages.",
         "count": "{count, plural, one {# salle} other {# salles}}",
         "main": "Général",
         "mainHint": "Salle principale",
@@ -1126,6 +1126,10 @@
         "namePlaceholder": "Nouvelle salle…",
         "add": "Ajouter la salle",
         "icon": "Icône de la salle {name}",
+        "visibility": "Visibilité de la salle {name}",
+        "newVisibility": "Visibilité de la nouvelle salle",
+        "everyone": "Tous les membres",
+        "restrictTo": "Réservée à un groupe",
         "delete": "Supprimer la salle {name}",
         "deleteTitle": "Supprimer la salle « {name} » ?",
         "deleteBody": "La salle disparaît de la chatbox, avec tous ses messages. Cette action est définitive."
@@ -2226,6 +2230,8 @@
     "groupName": "Nom du groupe",
     "typeName": "Nom du type",
     "deleteGroup": "Supprimer le groupe",
+    "deleteGroupTitle": "Supprimer le groupe « {name} » ?",
+    "deleteGroupRooms": "Les salles de chatbox réservées à ce groupe seront supprimées avec tous leurs messages : {rooms}. Cette action est définitive.",
     "deleteType": "Supprimer le type {name}",
     "dashFor": "Trait de {name}",
     "reciprocityFor": "Réciprocité de {name}",
