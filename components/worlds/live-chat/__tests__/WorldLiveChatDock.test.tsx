@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { LiveChatMessage } from "@/hooks/useWorldLiveChat";
 
@@ -379,6 +379,35 @@ describe("WorldLiveChatDock — remontée de l'historique (migration 240)", () =
     await user.click(screen.getByTestId("world-live-chat-bar"));
     await user.click(screen.getByRole("button", { name: "Messages précédents" }));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith("Chargement des messages précédents impossible."));
+  });
+
+  it("remonté dans le fil, le bouton « Descendre » des salons apparaît et ramène en bas", async () => {
+    const user = userEvent.setup();
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    const descendre = screen.getByLabelText("Descendre");
+    // En bas : le bouton reste caché.
+    expect(descendre).toHaveAttribute("tabindex", "-1");
+
+    // jsdom ne calcule pas de mise en page : on donne au fil ses mesures.
+    const fil = screen.getByRole("log").parentElement!;
+    const scrollTo = vi.fn();
+    fil.scrollTo = scrollTo;
+    Object.defineProperty(fil, "scrollHeight", { configurable: true, value: 1000 });
+    Object.defineProperty(fil, "clientHeight", { configurable: true, value: 200 });
+    fil.scrollTop = 100;
+    fireEvent.scroll(fil);
+    expect(descendre).toHaveAttribute("tabindex", "0");
+    expect(descendre).toHaveAttribute("aria-hidden", "false");
+
+    await user.click(descendre);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1000, behavior: "smooth" });
+
+    // De retour en bas : il se cache.
+    fil.scrollTop = 800;
+    fireEvent.scroll(fil);
+    expect(descendre).toHaveAttribute("tabindex", "-1");
   });
 
   it("pendant la lecture, le bouton attend", async () => {

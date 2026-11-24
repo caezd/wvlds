@@ -108,29 +108,39 @@ export const ScrollAreaWithJumpToBottom = React.forwardRef<HTMLDivElement, Props
     return (
       <div ref={rootRef} className="relative h-full">
         <ScrollArea className={className}>{children}</ScrollArea>
-
-        <div
-          className={[
-            // Offset surchargeable via --jump-btn-bottom (ex. si le footer chevauche la zone de scroll)
-            "pointer-events-none absolute bottom-[var(--jump-btn-bottom,2.5rem)] left-1/2 z-10",
-            "-translate-x-1/2 transition-all duration-200 ease-out",
-            showDown ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
-          ].join(" ")}
-        >
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            // Posé sur les messages : un fond plein pour rester lisible.
-            className="pointer-events-auto bg-background shadow"
-            tabIndex={showDown ? 0 : -1}
-            aria-hidden={!showDown}
-            onClick={scrollToBottom}
-            aria-label="Descendre"
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-        </div>
+        <JumpToBottomButton visible={showDown} onClick={scrollToBottom} />
       </div>
     );
   });
+
+/**
+ * Le bouton « Descendre » posé en bas d'un fil de messages, centré : il
+ * glisse en place quand le lecteur s'éloigne du bas. Le parent est
+ * `relative`. Aussi dans la chatbox d'un monde (WorldLiveChatDock).
+ */
+export function JumpToBottomButton({ visible, onClick }: { visible: boolean; onClick: () => void }) {
+  return (
+    <div
+      className={[
+        // Offset surchargeable via --jump-btn-bottom (ex. si le footer chevauche la zone de scroll)
+        "pointer-events-none absolute bottom-[var(--jump-btn-bottom,2.5rem)] left-1/2 z-10",
+        "-translate-x-1/2 transition-all duration-200 ease-out",
+        visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+      ].join(" ")}
+    >
+      <Button
+        type="button"
+        size="icon"
+        variant="outline"
+        // Posé sur les messages : un fond plein pour rester lisible.
+        className="pointer-events-auto bg-background shadow"
+        tabIndex={visible ? 0 : -1}
+        aria-hidden={!visible}
+        onClick={onClick}
+        aria-label="Descendre"
+      >
+        <ArrowDown className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}

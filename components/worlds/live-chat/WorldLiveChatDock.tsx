@@ -6,6 +6,7 @@ import { ChevronDown, CornerUpLeft, Hash, Maximize2, MessageSquareText, Messages
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { JumpToBottomButton } from "@/components/ScrollAreaWithJumpToBottom";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
@@ -38,6 +39,8 @@ import type { Persona } from "@/types/db";
 const MAX_LENGTH = DB_TEXT_LIMITS["world_live_messages.content"];
 /** Distance au bas (px) en deçà de laquelle un nouveau message fait défiler. */
 const STICK_THRESHOLD = 80;
+/** Distance au bas (px) au-delà de laquelle « Descendre » apparaît (celle des salons). */
+const JUMP_THRESHOLD = 160;
 
 /**
  * Chat en direct du monde courant, au bas de l'application.
@@ -446,6 +449,10 @@ function MessageList({
   // Distance au bas avant une remontée : les messages ajoutés au-dessus ne
   // doivent pas déplacer ce que le lecteur a sous les yeux.
   const fromBottomRef = useRef<number | null>(null);
+  // Remonté assez loin : le bouton « Descendre », comme dans un salon.
+  const [farFromBottom, setFarFromBottom] = useState(false);
+  const measureFromBottom = (el: HTMLElement) =>
+    setFarFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > JUMP_THRESHOLD);
 
   // Suit le bas tant que le lecteur y est ; s'il remonte lire l'historique,
   // un nouveau message ne le ramène pas de force.
@@ -468,47 +475,57 @@ function MessageList({
   }
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={(e) => {
-        const el = e.currentTarget;
-        stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD;
-        // Le lecteur a bougé : une position gardée et jamais rendue (messages
-        // tous déjà là) ne doit pas le déplacer au prochain message.
-        if (!loadingOlder) fromBottomRef.current = null;
-      }}
-      className="min-h-0 flex-1 overflow-y-auto py-2"
-    >
-      {messages.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-          {loading ? tCommon("loading") : t("empty")}
-        </p>
-      ) : (
-        <>
-        {hasOlder && (
-          <div className="flex justify-center px-4 pb-1">
-            <Button variant="ghost" size="sm" disabled={loadingOlder} onClick={() => void loadOlder()}>
-              {loadingOlder ? tCommon("loading") : t("loadOlder")}
-            </Button>
-          </div>
+    <div className="relative flex min-h-0 flex-1 flex-col [--jump-btn-bottom:0.75rem]">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD;
+          measureFromBottom(el);
+          // Le lecteur a bougé : une position gardée et jamais rendue (messages
+          // tous déjà là) ne doit pas le déplacer au prochain message.
+          if (!loadingOlder) fromBottomRef.current = null;
+        }}
+        className="min-h-0 flex-1 overflow-y-auto py-2"
+      >
+        {messages.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            {loading ? tCommon("loading") : t("empty")}
+          </p>
+        ) : (
+          <>
+          {hasOlder && (
+            <div className="flex justify-center px-4 pb-1">
+              <Button variant="ghost" size="sm" disabled={loadingOlder} onClick={() => void loadOlder()}>
+                {loadingOlder ? tCommon("loading") : t("loadOlder")}
+              </Button>
+            </div>
+          )}
+          <ol role="log" aria-live="polite" className="flex flex-col">
+            {messages.map((m, i) => (
+              <MessageRow
+                key={m.id}
+                message={m}
+                grouped={rowGrouped(messages, i)}
+                continued={rowGrouped(messages, i + 1)}
+                mine={m.user_id === selfId}
+                options={options}
+                personaTint={m.persona_id ? tints[m.persona_id] : undefined}
+                onReply={() => onReply(m)}
+                onDelete={() => onDelete(m.id)}
+              />
+            ))}
+          </ol>
+          </>
         )}
-        <ol role="log" aria-live="polite" className="flex flex-col">
-          {messages.map((m, i) => (
-            <MessageRow
-              key={m.id}
-              message={m}
-              grouped={rowGrouped(messages, i)}
-              continued={rowGrouped(messages, i + 1)}
-              mine={m.user_id === selfId}
-              options={options}
-              personaTint={m.persona_id ? tints[m.persona_id] : undefined}
-              onReply={() => onReply(m)}
-              onDelete={() => onDelete(m.id)}
-            />
-          ))}
-        </ol>
-        </>
-      )}
+      </div>
+      <JumpToBottomButton
+        visible={farFromBottom}
+        onClick={() => {
+          const el = scrollRef.current;
+          el?.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        }}
+      />
     </div>
   );
 }
