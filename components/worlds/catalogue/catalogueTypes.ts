@@ -16,25 +16,45 @@ export type CatalogItem = WorldCatalogItem & { category_id: string | null };
 /** Catégorie fictive des éléments non classés. */
 export const UNCAT = "__uncat__";
 
-/** Préfixe des identifiants de colonne, côté glisser-déposer. */
-export const COL_PREFIX = "col-";
+/** Rang dans le tableau : l'ancienne grille se lit colonne par colonne, puis par rang. */
+function compareBoard(a: WorldCatalogCategory, b: WorldCatalogCategory): number {
+  return a.column_index - b.column_index || a.sort_index - b.sort_index;
+}
 
 /**
- * Répartit les catégories en colonnes, triées, en écartant les colonnes vides.
+ * Les catégories dans l'ordre du tableau, de gauche à droite.
  *
- * Les catégories portent chacune leur numéro de colonne et leur rang. Les
- * colonnes vides disparaissent : sans cela, supprimer la dernière catégorie
- * d'une colonne y laisserait un blanc au milieu de la grille.
+ * Le catalogue était une grille de trois colonnes où s'empilaient les
+ * catégories ; la base garde ce couple (colonne, rang). Le tableau le lit
+ * comme un seul ordre, sans rien réécrire tant qu'on ne déplace rien.
  *
  * Fonction pure — voir `__tests__/catalogueTypes.test.ts`.
  */
-export function groupByColumn(cats: WorldCatalogCategory[]): WorldCatalogCategory[][] {
-  if (cats.length === 0) return [];
-  const maxCol = Math.max(...cats.map(c => c.column_index));
-  const buckets: WorldCatalogCategory[][] = Array.from({ length: maxCol + 1 }, () => []);
-  for (const cat of cats) buckets[cat.column_index]?.push(cat);
-  return buckets
-    .map(col => [...col].sort((a, b) => a.sort_index - b.sort_index))
-    .filter(col => col.length > 0);
+export function boardOrder(cats: readonly WorldCatalogCategory[]): WorldCatalogCategory[] {
+  return [...cats].sort(compareBoard);
 }
 
+/**
+ * Le tableau après avoir posé `activeId` à la place de `overId`, renuméroté
+ * en ordre simple (colonne 0, rang 0…n) ; `null` s'il n'y a rien à faire.
+ */
+export function moveCategory(
+  cats: readonly WorldCatalogCategory[],
+  activeId: string,
+  overId: string,
+): WorldCatalogCategory[] | null {
+  const ordered = boardOrder(cats);
+  const from = ordered.findIndex(c => c.id === activeId);
+  const to = ordered.findIndex(c => c.id === overId);
+  if (from < 0 || to < 0 || from === to) return null;
+  const next = [...ordered];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next.map((c, i) => ({ ...c, column_index: 0, sort_index: i }));
+}
+
+/** La place d'une catégorie créée : au bout du tableau. */
+export function appendPosition(cats: readonly WorldCatalogCategory[]): { column_index: number; sort_index: number } {
+  const last = boardOrder(cats).at(-1);
+  return last ? { column_index: last.column_index, sort_index: last.sort_index + 1 } : { column_index: 0, sort_index: 0 };
+}

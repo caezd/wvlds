@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  X, Plus, Pencil, Trash2, Loader2, Check, FolderPlus, ArrowUpAZ, ChevronRight,
+  X, Plus, Pencil, Trash2, Loader2, Check, FolderPlus, ArrowUpAZ, ChevronRight, ChevronLeft,
 } from "lucide-react";
-import {
-  useDroppable,
-} from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -22,51 +20,132 @@ import type { WorldCatalogCategory } from "@/types/worlds";
 import { UNCAT, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
 import { DragHandle, SortableItemRow } from "./CataloguePieces";
-import { SectionLabel } from "@/components/ui/section-label";
 import { buttonVariants } from "@/components/ui/button";
 
-// Conteneurs : une catégorie, la zone des non classés, une colonne.
+// Les colonnes du tableau : une par catégorie, celle des objets sans
+// catégorie, et celle qui en crée une.
 
-// ── Sortable category container ───────────────────────────────────────────────
+/** Une colonne du tableau : largeur fixe, fond discret, cartes empilées. */
+const COLUMN = "flex w-72 shrink-0 snap-start flex-col rounded-xl border border-border bg-muted/30";
+
+type ItemHandlers = {
+  usage: Record<string, number> | null;
+  onEditItem: (item: CatalogItem) => void;
+  onDuplicateItem: (id: string) => void;
+  onDeleteItem: (id: string) => void;
+  onOpenItem: (item: CatalogItem) => void;
+};
+
+/** Les cartes d'une colonne, triables, et son pied : ajouter, trier. */
+function ColumnCards({
+  items,
+  type,
+  canEdit,
+  canReorder,
+  categoryId,
+  handlers,
+  onAddIn,
+  onSortAlpha,
+}: {
+  items: CatalogItem[];
+  type: CatalogType;
+  canEdit: boolean;
+  canReorder: boolean;
+  categoryId: string | null;
+  handlers: ItemHandlers;
+  onAddIn: (categoryId: string | null) => void;
+  onSortAlpha: (categoryId: string | null) => void;
+}) {
+  const t = useTranslations("catalogue");
+  return (
+    <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+      <div className="flex min-h-12 flex-1 flex-col gap-1.5 px-2 pb-2">
+        {items.map(item => (
+          <SortableItemRow
+            key={item.id}
+            item={item}
+            canEdit={canEdit}
+            canReorder={canReorder}
+            usageCount={handlers.usage?.[item.id]}
+            onEdit={() => handlers.onEditItem(item)}
+            onDuplicate={() => handlers.onDuplicateItem(item.id)}
+            onDelete={() => handlers.onDeleteItem(item.id)}
+            onOpenDetail={() => handlers.onOpenItem(item)}
+          />
+        ))}
+
+        {canEdit && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onAddIn(categoryId)}
+              className="flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {type === "inventory" ? t("addItemBtn") : t("addSkillBtn")}
+            </button>
+            {items.length > 1 && (
+              <button
+                type="button"
+                onClick={() => onSortAlpha(categoryId)}
+                title={t("sortAlpha")}
+                aria-label={t("sortAlpha")}
+                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-7")}
+              >
+                <ArrowUpAZ className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </SortableContext>
+  );
+}
+
+/** Le compte d'objets d'une colonne. */
+function CountPill({ count }: { count: number }) {
+  const t = useTranslations("catalogue");
+  return (
+    <span
+      title={t("itemCount", { count })}
+      className="shrink-0 rounded-full bg-muted px-1.5 text-2xs font-medium tabular-nums text-muted-foreground"
+    >
+      {count}
+    </span>
+  );
+}
+
+// ── Colonne d'une catégorie ───────────────────────────────────────────────────
 
 /**
- * Une catégorie et ses objets.
+ * Une catégorie, en colonne du tableau.
  *
- * Elle se replie d'un clic sur le chevron, pour tout le monde : c'est une
- * préférence de lecture, pas un geste d'auteur. Repliée, elle garde son
- * en-tête et son compte d'objets — et reste une cible de dépôt : l'objet
- * lâché sur l'en-tête va au bout de la catégorie, comme un dépôt sur son nom.
+ * Elle se glisse par sa poignée pour changer de place, et reçoit les cartes
+ * lâchées sur elle. Repliée — une préférence de lecture, pour tout le monde —
+ * elle n'est plus qu'une bande étroite, son nom à la verticale et son compte
+ * d'objets ; elle reste une cible de dépôt.
  */
-export function SortableCategoryContainer({
+export function CategoryColumn({
   category,
   items,
   type,
   canEdit,
   canReorder,
-  usage,
   collapsed,
   onToggleCollapsed,
-  onEditItem,
-  onDuplicateItem,
-  onDeleteItem,
-  onOpenItem,
   onAddIn,
   onEditCategory,
   onDeleteCategory,
   onSortAlpha,
-}: {
+  ...handlers
+}: ItemHandlers & {
   category: WorldCatalogCategory;
   items: CatalogItem[];
   type: CatalogType;
   canEdit: boolean;
   canReorder: boolean;
-  usage: Record<string, number> | null;
   collapsed: boolean;
   onToggleCollapsed: (id: string) => void;
-  onEditItem: (item: CatalogItem) => void;
-  onDuplicateItem: (id: string) => void;
-  onDeleteItem: (id: string) => void;
-  onOpenItem: (item: CatalogItem) => void;
   /** Ouvre le dialogue de création, dans cette catégorie (`null` : sans). */
   onAddIn: (categoryId: string | null) => void;
   /** Ouvre la présentation de la catégorie : nom, description, bannière. */
@@ -77,10 +156,10 @@ export function SortableCategoryContainer({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     data: { type: "category" },
+    disabled: !canReorder,
   });
-
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.35 : 1,
   };
@@ -88,58 +167,76 @@ export function SortableCategoryContainer({
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const hasPresentation = !!category.banner_url || !!category.description;
+  const toggleLabel = collapsed
+    ? t("expandCategory", { name: category.name })
+    : t("collapseCategory", { name: category.name });
 
-  return (
-    <div ref={setNodeRef} style={style} className="space-y-0.5">
-      {/* Category header */}
-      <div className="group/cat flex items-center gap-1 rounded-xl px-2 py-1.5">
-        {canReorder && <DragHandle {...attributes} {...listeners} />}
+  if (collapsed) {
+    return (
+      <section
+        ref={setNodeRef}
+        style={style}
+        aria-label={category.name}
+        className="flex w-11 shrink-0 snap-start flex-col items-center gap-2 rounded-xl border border-border bg-muted/30 py-2"
+      >
         <button
           type="button"
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? t("expandCategory", { name: category.name }) : t("collapseCategory", { name: category.name })}
+          aria-expanded={false}
+          aria-label={toggleLabel}
+          onClick={() => onToggleCollapsed(category.id)}
+          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+        <CountPill count={items.length} />
+        <span className="text-sm font-semibold text-muted-foreground [writing-mode:vertical-rl]">{category.name}</span>
+      </section>
+    );
+  }
+
+  return (
+    <section ref={setNodeRef} style={style} aria-label={category.name} className={COLUMN}>
+      <div className="group/cat flex items-center gap-1 px-2 py-2">
+        {canReorder && <DragHandle {...attributes} {...listeners} aria-label={t("moveCategory", { name: category.name })} />}
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{category.name}</span>
+        <CountPill count={items.length} />
+        {canEdit && (
+          <div className="flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover/cat:opacity-100">
+            <button
+              aria-label={t("editCategory", { name: category.name })}
+              type="button"
+              onClick={() => onEditCategory(category)}
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6")}
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+            <button
+              aria-label={tCommon("delete")}
+              type="button"
+              onClick={() => onDeleteCategory(category.id)}
+              className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6 hover:text-destructive")}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          aria-expanded
+          aria-label={toggleLabel}
           onClick={() => onToggleCollapsed(category.id)}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-90")} />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <>
-            <span className="flex-1 text-sm font-semibold text-muted-foreground truncate">{category.name}</span>
-            <span
-              title={t("itemCount", { count: items.length })}
-              className="shrink-0 rounded-full bg-muted px-1.5 text-2xs font-medium tabular-nums text-muted-foreground"
-            >
-              {items.length}
-            </span>
-            {canEdit && (
-              <div className="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-                <button
-                  aria-label={t("editCategory", { name: category.name })}
-                  type="button"
-                  onClick={() => onEditCategory(category)}
-                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6")}
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-                <button
-                  aria-label={tCommon("delete")}
-                  type="button"
-                  onClick={() => onDeleteCategory(category.id)}
-                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6 hover:text-destructive")}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-        </>
       </div>
 
-      {/* Dépliée : la présentation de la catégorie, bannière puis description. */}
-      {!collapsed && hasPresentation && (
+      {/* La présentation de la catégorie, bannière puis description. */}
+      {hasPresentation && (
         <div className="mx-2 mb-2 space-y-2" data-testid="category-presentation">
           {category.banner_url && (
-            <div className="relative h-24 w-full overflow-hidden rounded-lg [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]">
-              <StoredImage url={category.banner_url} width={720} height={240} alt="" className="object-cover" draggable={false} />
+            <div className="relative h-20 w-full overflow-hidden rounded-lg">
+              <StoredImage url={category.banner_url} width={576} height={160} alt="" className="object-cover" draggable={false} />
             </div>
           )}
           {category.description && (
@@ -148,158 +245,91 @@ export function SortableCategoryContainer({
         </div>
       )}
 
-      {/* Items in this category */}
-      {!collapsed && <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-0.5 min-h-[2px]">
-          {items.map(item => (
-            <SortableItemRow
-              key={item.id}
-              item={item}
-              canEdit={canEdit}
-              canReorder={canReorder}
-              usageCount={usage?.[item.id]}
-              onEdit={() => onEditItem(item)}
-              onDuplicate={() => onDuplicateItem(item.id)}
-              onDelete={() => onDeleteItem(item.id)}
-              onOpenDetail={() => onOpenItem(item)}
-            />
-          ))}
-
-          {canEdit && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onAddIn(category.id)}
-                className="flex flex-1 items-center gap-2 rounded-lg border border-dashed border-border px-3 text-muted-foreground transition-colors hover:border-ring hover:text-foreground py-1.5 text-xs"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {type === "inventory" ? t("addItemBtn") : t("addSkillBtn")}
-              </button>
-              {items.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => onSortAlpha(category.id)}
-                  title={t("sortAlpha")}
-                  className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "ml-auto size-7")}
-                >
-                  <ArrowUpAZ className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </SortableContext>}
-    </div>
+      <ColumnCards
+        items={items}
+        type={type}
+        canEdit={canEdit}
+        canReorder={canReorder}
+        categoryId={category.id}
+        handlers={handlers}
+        onAddIn={onAddIn}
+        onSortAlpha={onSortAlpha}
+      />
+    </section>
   );
 }
 
-// ── Uncategorized droppable section ──────────────────────────────────────────
+// ── Colonne des objets sans catégorie ────────────────────────────────────────
 
-export function UncategorizedSection({
+export function UncategorizedColumn({
   items,
   type,
   canEdit,
   canReorder,
-  usage,
-  showHeader,
-  onEditItem,
-  onDuplicateItem,
-  onDeleteItem,
-  onOpenItem,
+  titled,
   onAddIn,
   onSortAlpha,
-}: {
+  ...handlers
+}: ItemHandlers & {
   items: CatalogItem[];
   type: CatalogType;
   canEdit: boolean;
   canReorder: boolean;
-  usage: Record<string, number> | null;
-  showHeader: boolean;
-  onEditItem: (item: CatalogItem) => void;
-  onDuplicateItem: (id: string) => void;
-  onDeleteItem: (id: string) => void;
-  onOpenItem: (item: CatalogItem) => void;
+  /** Titrée « Sans catégorie » à côté d'autres colonnes ; seule, elle n'a pas de titre. */
+  titled: boolean;
   onAddIn: (categoryId: string | null) => void;
   onSortAlpha: (categoryId: string | null) => void;
 }) {
   const t = useTranslations("catalogue");
   const { setNodeRef, isOver } = useDroppable({ id: UNCAT });
+  const label = titled ? t("uncategorized") : type === "inventory" ? t("items") : t("skills");
 
   return (
-    <div className="space-y-0.5">
-      {showHeader && (
-        <div className="px-4 pb-1 pt-3">
-          <SectionLabel as="span">
-            {t("uncategorized")}
-          </SectionLabel>
-        </div>
-      )}
-      <div
-        ref={setNodeRef}
-        className={cn(
-          "min-h-[8px] rounded-xl transition-colors",
-          isOver && "bg-muted/20",
-        )}
-      >
-        <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-          {items.map(item => (
-            <SortableItemRow
-              key={item.id}
-              item={item}
-              canEdit={canEdit}
-              canReorder={canReorder}
-              usageCount={usage?.[item.id]}
-              onEdit={() => onEditItem(item)}
-              onDuplicate={() => onDuplicateItem(item.id)}
-              onDelete={() => onDeleteItem(item.id)}
-              onOpenDetail={() => onOpenItem(item)}
-            />
-          ))}
-        </SortableContext>
-
-        {!showHeader && items.length === 0 && !canEdit && (
-          <div className="py-10 text-center text-sm text-muted-foreground">
-            {type === "inventory" ? t("emptyInventory") : t("emptySkills")}
-          </div>
-        )}
-
-        {canEdit && (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => onAddIn(null)}
-              className="flex flex-1 items-center gap-2 rounded-lg border border-dashed border-border px-3 text-muted-foreground transition-colors hover:border-ring hover:text-foreground py-2 text-sm"
-            >
-              <Plus className="h-4 w-4" />
-              {showHeader
-                ? (type === "inventory" ? t("addItemUncategorized") : t("addSkillUncategorized"))
-                : (type === "inventory" ? t("addItemBtn") : t("addSkillBtn"))
-              }
-            </button>
-            {items.length > 1 && (
-              <button
-                type="button"
-                onClick={() => onSortAlpha(null)}
-                title={t("sortAlpha")}
-                className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "ml-auto")}
-              >
-                <ArrowUpAZ className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        )}
+    <section ref={setNodeRef} aria-label={label} className={cn(COLUMN, isOver && "border-primary/40")}>
+      <div className="flex items-center gap-1 px-3 py-2">
+        <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", titled && "text-muted-foreground")}>{label}</span>
+        <CountPill count={items.length} />
       </div>
-    </div>
+      {items.length === 0 && !canEdit && (
+        <p className="px-3 pb-4 text-sm text-muted-foreground">
+          {type === "inventory" ? t("emptyInventory") : t("emptySkills")}
+        </p>
+      )}
+      <ColumnCards
+        items={items}
+        type={type}
+        canEdit={canEdit}
+        canReorder={canReorder}
+        categoryId={null}
+        handlers={handlers}
+        onAddIn={onAddIn}
+        onSortAlpha={onSortAlpha}
+      />
+    </section>
   );
 }
 
-// ── Add category form ─────────────────────────────────────────────────────────
+// ── Colonne qui crée une catégorie ───────────────────────────────────────────
 
-export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => Promise<void>; onCancel: () => void }) {
+export function AddCategoryColumn({ onAdd }: { onAdd: (name: string) => Promise<void> }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex h-11 w-72 shrink-0 snap-start items-center gap-2 rounded-xl border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
+      >
+        <FolderPlus className="h-4 w-4" />
+        {t("createCategory")}
+      </button>
+    );
+  }
 
   return (
     <form
@@ -310,8 +340,9 @@ export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => 
         await onAdd(name.trim());
         setSaving(false);
         setName("");
+        setOpen(false);
       }}
-      className="flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2"
+      className="flex w-72 shrink-0 snap-start items-center gap-2 self-start rounded-xl border border-dashed border-border px-3 py-2"
     >
       <FolderPlus className="h-4 w-4 shrink-0 text-muted-foreground" />
       <input
@@ -319,11 +350,12 @@ export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => 
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder={t("categoryNamePlaceholder")}
-        className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground"
+        className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground"
         maxLength={60}
       />
       <button
         type="submit"
+        aria-label={t("createCategory")}
         disabled={!name.trim() || saving}
         className={cn(buttonVariants({ size: "icon-sm" }), "size-6")}
       >
@@ -332,7 +364,7 @@ export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => 
       <button
         aria-label={tCommon("cancel")}
         type="button"
-        onClick={onCancel}
+        onClick={() => { setOpen(false); setName(""); }}
         className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-6")}
       >
         <X className="h-3 w-3" />
@@ -340,41 +372,3 @@ export function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => 
     </form>
   );
 }
-
-// ── Droppable column wrapper ──────────────────────────────────────────────────
-
-export function DroppableColumn({
-  id,
-  showSplitIndicator = false,
-  splitPosition = 0.5,
-  colRefCallback,
-  children,
-}: {
-  id: string;
-  showSplitIndicator?: boolean;
-  splitPosition?: number;
-  colRefCallback?: (el: HTMLDivElement | null) => void;
-  children?: React.ReactNode;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <div
-      ref={el => { setNodeRef(el); colRefCallback?.(el); }}
-      className={cn(
-        "relative flex flex-col min-w-0 rounded-xl transition-colors duration-150",
-        isOver && "bg-primary/5",
-      )}
-    >
-      {children}
-      {/* Split indicator: vertical line at the future column boundary */}
-      <div
-        className={cn(
-          "pointer-events-none absolute top-2 bottom-2 w-0.5 rounded-full transition-all duration-150 z-10",
-          showSplitIndicator ? "bg-primary opacity-100 shadow-[0_0_6px_2px_color-mix(in_oklab,var(--primary)_40%,transparent)]" : "opacity-0",
-        )}
-        style={{ left: `${splitPosition * 100}%`, transform: "translateX(-50%)" }}
-      />
-    </div>
-  );
-}
-

@@ -45,6 +45,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Correctif",
+    area: "Catalogue",
+    text: "Les catégories du catalogue s’affichent de nouveau.",
+  },
+  {
+    date: "2026-11-24",
+    category: "Interface",
+    area: "Catalogue",
+    text: "Le catalogue devient un tableau, pour les objets comme pour les compétences.\n- une colonne par catégorie (plantes, armes, armures…), les objets sans catégorie en tête\n- glisser une carte d’une colonne à l’autre, ou une colonne pour la changer de place\n- une colonne repliée devient une bande étroite\n- « Créer une catégorie » au bout du tableau",
+  },
+  {
+    date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Catalogue",
     text: "Inventaire des personas : un onglet **Inventaire** sur la fiche, avec la bourse et les objets ; réglages dans Paramètres › Fonctions › Catalogue.\n- ajout d’objets libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé sur la bourse du persona\n- un objet empilable prend un emplacement, un objet unique un par exemplaire\n- qui gère l’économie donne ou reprend un objet du catalogue\n- un clic sur un objet du catalogue ouvre sa fiche\n- le champ de fiche « Inventaire » disparaît : ses objets sont passés dans l’onglet",

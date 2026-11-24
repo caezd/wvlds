@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, FolderPlus, Search, Download, Upload, X, Trash2, FolderInput, CheckSquare } from "lucide-react";
+import { Loader2, Search, Download, Upload, X, Trash2, FolderInput, CheckSquare } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -12,8 +12,9 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  pointerWithin,
+  type CollisionDetection,
   type DragStartEvent,
-  type DragMoveEvent,
   type DragOverEvent,
   type DragEndEvent,
   type DragCancelEvent,
@@ -22,7 +23,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   arrayMove,
-  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
 import { cn } from "@/lib/utils";
@@ -60,7 +61,7 @@ import {
   normalizeForSearch,
   parseCatalogImport,
 } from "@/lib/worldCatalog";
-import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } from "./catalogueTypes";
+import { UNCAT, appendPosition, boardOrder, moveCategory, type CatalogType, type CatalogItem } from "./catalogueTypes";
 import type { WorldCatalogItem } from "@/types/worlds";
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
@@ -70,7 +71,7 @@ import { CatalogItemDetail } from "./CatalogItemDetail";
 import { CatalogCategoryDialog } from "./CatalogCategoryDialog";
 import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
 import { CatalogTrashDialog } from "./CatalogTrashDialog";
-import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
+import { AddCategoryColumn, CategoryColumn, UncategorizedColumn } from "./CatalogueSections";
 import { ERR_NON_AUTORISE, messageErreurAction } from "@/lib/actionErrors";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -122,7 +123,6 @@ export function CatalogueList({
   const catalogIndex = useMemo(() => indexCatalog(items), [items]);
   // La catégorie dont on édite la présentation (nom, description, bannière).
   const [editingCategory, setEditingCategory] = useState<WorldCatalogCategory | null>(null);
-  const [addingCategoryInCol, setAddingCategoryInCol] = useState<number | false>(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   // Les objets cochés. La sélection ne survit pas à la sortie du mode
@@ -167,8 +167,8 @@ export function CatalogueList({
           .select("id, world_id, type, name, sort_index, column_index, description, banner_url")
           .eq("world_id", worldId)
           .eq("type", type)
-          // La corbeille a sa propre vue : la liste ne montre que le vivant.
-          .is("deleted_at", null)
+          // Pas de corbeille pour les catégories : la table n'a pas de
+          // `deleted_at`, un filtre dessus ferait échouer la requête.
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
         (supabase as ReturnType<typeof createClient>)
@@ -417,12 +417,10 @@ export function CatalogueList({
 
   // ── Category CRUD ──
 
-  async function handleAddCategory(name: string, colIdx = 0) {
-    const sortIdx = categories.filter(c => c.column_index === colIdx).length;
-    const res = await addWorldCatalogCategory(worldId, type, name, { column_index: colIdx, sort_index: sortIdx });
+  async function handleAddCategory(name: string) {
+    const res = await addWorldCatalogCategory(worldId, type, name, appendPosition(categories));
     if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setCategories(prev => [...prev, res.category]);
-    setAddingCategoryInCol(false);
   }
 
 
@@ -453,8 +451,6 @@ export function CatalogueList({
 
   const importInputRef = useRef<HTMLInputElement>(null);
   const dragStartCategoryRef = useRef<string | null>(null);
-  const [splitAfterCol, setSplitAfterCol] = useState<number | null>(null);
-  const colRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
 
   function resolveCategoryId(overId: string): string | null | undefined {
     if (overId === UNCAT) return null;
@@ -469,30 +465,28 @@ export function CatalogueList({
     }
   }
 
-  // Detect split zone (right 40% of a column) for category drags via pointer position
-  function onDragMove({ activatorEvent, delta }: DragMoveEvent) {
-    const isDraggingCat = activeDragId !== null && categories.some(c => c.id === activeDragId);
-    const nCols = groupByColumn(categories).length;
-    if (!isDraggingCat || nCols >= 3) {
-      if (splitAfterCol !== null) setSplitAfterCol(null);
-      return;
+  /**
+   * Qui est sous la carte ou la colonne qu'on glisse.
+   *
+   * Une colonne ne vise que les colonnes. Une carte vise d'abord ce qui est
+   * sous le pointeur — une carte, sinon la colonne qui la recevra au bout —,
+   * et à défaut le plus proche : une carte lâchée entre deux colonnes ne doit
+   * pas se perdre.
+   */
+  const collisionDetection: CollisionDetection = (args) => {
+    if (args.active.data.current?.type === "category") {
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter(c => c.data.current?.type === "category"),
+      });
     }
-    const startX = (activatorEvent as PointerEvent).clientX ?? 0;
-    const currentX = startX + delta.x;
-    // Threshold scales with column count: 50% for 1 col, 67% for 2 cols
-    const splitThreshold = 1 - 1 / (nCols + 1);
-
-    let found: number | null = null;
-    for (const [colIdx, el] of colRefs.current) {
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      if (currentX >= rect.left + rect.width * splitThreshold && currentX <= rect.right + 60) {
-        found = colIdx;
-        break;
-      }
+    const under = pointerWithin(args);
+    if (under.length > 0) {
+      const cards = under.filter(c => args.droppableContainers.find(d => d.id === c.id)?.data.current?.type === "item");
+      return cards.length > 0 ? cards : under;
     }
-    if (found !== splitAfterCol) setSplitAfterCol(found);
-  }
+    return closestCenter(args);
+  };
 
   // Cross-category item preview only — no server calls here
   function onDragOver({ active, over }: DragOverEvent) {
@@ -506,7 +500,6 @@ export function CatalogueList({
 
   function onDragCancel(_e: DragCancelEvent) {
     setActiveDragId(null);
-    setSplitAfterCol(null);
     dragStartCategoryRef.current = null;
   }
 
@@ -517,92 +510,10 @@ export function CatalogueList({
     const activeType = active.data.current?.type as string | undefined;
 
     if (activeType === "category") {
-      const overId = over.id as string;
-      const activeIdStr = active.id as string;
-      const activeCat = categories.find(c => c.id === activeIdStr);
-      if (!activeCat) { setSplitAfterCol(null); return; }
-      const origColIdx = activeCat.column_index;
-
-      // ── Split: create new column to the right of splitAfterCol ──
-      if (splitAfterCol !== null) {
-        const splitIdx = splitAfterCol;
-        setSplitAfterCol(null);
-        const newColIdx = splitIdx + 1;
-        const raw = categories.map(c => {
-          if (c.id === activeIdStr) return { ...c, column_index: newColIdx, sort_index: 0 };
-          if (c.column_index >= newColIdx) return { ...c, column_index: c.column_index + 1 };
-          return c;
-        });
-        const distinctCols = [...new Set(raw.map(c => c.column_index))].sort((a, b) => a - b);
-        const colMap = new Map(distinctCols.map((col, i) => [col, i]));
-        const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
-        setCategories(next);
-        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
-        return;
-      }
-
-      if (activeIdStr === overId) return;
-
-      // ── Dropped on a column zone: move to that column (append) ──
-      if (overId.startsWith(COL_PREFIX)) {
-        const targetColIdx = parseInt(overId.slice(COL_PREFIX.length), 10);
-        if (targetColIdx === origColIdx) return;
-        const targetCats = categories
-          .filter(c => c.column_index === targetColIdx)
-          .sort((a, b) => a.sort_index - b.sort_index);
-        const updatedActive = { ...activeCat, column_index: targetColIdx, sort_index: targetCats.length };
-        const others = categories.filter(c => c.id !== activeIdStr);
-        const raw = [...others, updatedActive];
-        const distinctCols = [...new Set(raw.map(c => c.column_index))].sort((a, b) => a - b);
-        const colMap = new Map(distinctCols.map((col, i) => [col, i]));
-        const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
-        setCategories(next);
-        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
-        return;
-      }
-
-      // ── Dropped on a category ──
-      const overCat = categories.find(c => c.id === overId);
-      if (!overCat) return;
-      const targetColIdx = overCat.column_index;
-
-      if (origColIdx === targetColIdx) {
-        // Within-column reorder
-        const colCats = categories
-          .filter(c => c.column_index === targetColIdx)
-          .sort((a, b) => a.sort_index - b.sort_index);
-        const fromIdx = colCats.findIndex(c => c.id === activeIdStr);
-        const toIdx = colCats.findIndex(c => c.id === overId);
-        if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
-        const reordered = arrayMove(colCats, fromIdx, toIdx).map((c, i) => ({ ...c, sort_index: i }));
-        const next = [...categories.filter(c => c.column_index !== targetColIdx), ...reordered];
-        setCategories(next);
-        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
-      } else {
-        // Cross-column move: insert before overCat in target column
-        const updatedActive = { ...activeCat, column_index: targetColIdx };
-        const targetWithout = categories
-          .filter(c => c.column_index === targetColIdx && c.id !== activeIdStr)
-          .sort((a, b) => a.sort_index - b.sort_index);
-        const insertAt = targetWithout.findIndex(c => c.id === overId);
-        const newTargetCats = insertAt >= 0
-          ? [...targetWithout.slice(0, insertAt), updatedActive, ...targetWithout.slice(insertAt)]
-          : [...targetWithout, updatedActive];
-        const reindexedTarget = newTargetCats.map((c, i) => ({ ...c, sort_index: i }));
-        const reindexedSource = categories
-          .filter(c => c.column_index === origColIdx && c.id !== activeIdStr)
-          .sort((a, b) => a.sort_index - b.sort_index)
-          .map((c, i) => ({ ...c, sort_index: i }));
-        const others = categories.filter(
-          c => c.column_index !== targetColIdx && c.column_index !== origColIdx,
-        );
-        const raw = [...others, ...reindexedTarget, ...reindexedSource];
-        const distinctCols = [...new Set(raw.map(c => c.column_index))].sort((a, b) => a - b);
-        const colMap = new Map(distinctCols.map((col, i) => [col, i]));
-        const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
-        setCategories(next);
-        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
-      }
+      const next = moveCategory(categories, active.id as string, over.id as string);
+      if (!next) return;
+      setCategories(next);
+      reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       return;
     }
 
@@ -682,8 +593,10 @@ export function CatalogueList({
   };
   const activeItem = activeDragId ? (items.find(i => i.id === activeDragId) ?? null) : null;
   const activeCategory = activeDragId ? (categories.find(c => c.id === activeDragId) ?? null) : null;
-  const columnGroups = groupByColumn(categories);
-  const numColumns = columnGroups.length;
+  const board = boardOrder(categories);
+  // La colonne des objets sans catégorie : pour qui édite, elle reçoit ce
+  // qu'on y crée ; pour qui lit, elle ne paraît que si elle a quelque chose.
+  const showUncategorized = !hasCategories || uncatItems.length > 0 || canEdit;
 
   if (loading) {
     return (
@@ -857,119 +770,60 @@ export function CatalogueList({
       <CatalogueRowProvider value={rowContext}>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={collisionDetection}
         onDragStart={onDragStart}
-        onDragMove={onDragMove}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
         onDragCancel={onDragCancel}
       >
-        {/* Categories — responsive columns */}
-        {hasCategories && (
-          <div className={cn(
-            "grid gap-x-4 items-start",
-            numColumns === 2 && "grid-cols-1 sm:grid-cols-2",
-            numColumns === 3 && "grid-cols-1 sm:grid-cols-3",
-          )}>
-            {columnGroups.map((colCats, colIdx) => (
-              <DroppableColumn
-                key={colIdx}
-                id={`${COL_PREFIX}${colIdx}`}
-                showSplitIndicator={splitAfterCol === colIdx && numColumns < 3}
-                splitPosition={1 - 1 / (numColumns + 1)}
-                colRefCallback={el => colRefs.current.set(colIdx, el)}
-              >
-                <SortableContext items={colCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                  {colCats
-                    .filter(cat => !searching || visibleItems.some(i => i.category_id === cat.id))
-                    .map(cat => (
-                    <SortableCategoryContainer
-                      key={cat.id}
-                      category={cat}
-                      items={visibleItems.filter(i => i.category_id === cat.id)}
-                      type={type}
-                      canEdit={canEdit}
-                      canReorder={canReorder}
-                      usage={usage}
-                      // Une recherche déplie tout : ses résultats doivent se voir.
-                      collapsed={collapsed.has(cat.id) && !searching}
-                      onToggleCollapsed={toggleCollapsed}
-                      onEditItem={setEditingItem}
-                      onDuplicateItem={id => void handleDuplicateItem(id)}
-                      onDeleteItem={id => void handleDeleteItem(id)}
-                      onOpenItem={setDetailItem}
-                      onAddIn={categoryId => setDraft(newDraft(categoryId))}
-                      onEditCategory={setEditingCategory}
-                      onDeleteCategory={id => void handleDeleteCategory(id)}
-                      onSortAlpha={handleSortAlpha}
-                    />
-                  ))}
-                </SortableContext>
+        {/* Le tableau : une colonne par catégorie, défilant de côté. */}
+        <div className="-mx-1 flex snap-x items-start gap-3 overflow-x-auto px-1 pb-3">
+          {showUncategorized && (
+            <UncategorizedColumn
+              items={uncatItems}
+              type={type}
+              canEdit={canEdit}
+              canReorder={canReorder}
+              titled={hasCategories}
+              usage={usage}
+              onEditItem={setEditingItem}
+              onDuplicateItem={id => void handleDuplicateItem(id)}
+              onDeleteItem={id => void handleDeleteItem(id)}
+              onOpenItem={setDetailItem}
+              onAddIn={categoryId => setDraft(newDraft(categoryId))}
+              onSortAlpha={handleSortAlpha}
+            />
+          )}
 
-                {/* Add category in this column */}
-                {canEdit && (
-                  <div className="mt-1">
-                    {addingCategoryInCol === colIdx ? (
-                      <AddCategoryForm
-                        onAdd={name => handleAddCategory(name, colIdx)}
-                        onCancel={() => setAddingCategoryInCol(false)}
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setAddingCategoryInCol(colIdx)}
-                        className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
-                      >
-                        <FolderPlus className="h-3.5 w-3.5" />
-                        {t("createCategory")}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </DroppableColumn>
-            ))}
+          <SortableContext items={board.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+            {board
+              .filter(cat => !searching || visibleItems.some(i => i.category_id === cat.id))
+              .map(cat => (
+                <CategoryColumn
+                  key={cat.id}
+                  category={cat}
+                  items={visibleItems.filter(i => i.category_id === cat.id)}
+                  type={type}
+                  canEdit={canEdit}
+                  canReorder={canReorder}
+                  usage={usage}
+                  // Une recherche déplie tout : ses résultats doivent se voir.
+                  collapsed={collapsed.has(cat.id) && !searching}
+                  onToggleCollapsed={toggleCollapsed}
+                  onEditItem={setEditingItem}
+                  onDuplicateItem={id => void handleDuplicateItem(id)}
+                  onDeleteItem={id => void handleDeleteItem(id)}
+                  onOpenItem={setDetailItem}
+                  onAddIn={categoryId => setDraft(newDraft(categoryId))}
+                  onEditCategory={setEditingCategory}
+                  onDeleteCategory={id => void handleDeleteCategory(id)}
+                  onSortAlpha={handleSortAlpha}
+                />
+              ))}
+          </SortableContext>
 
-          </div>
-        )}
-
-        {/* Uncategorized / flat list when no categories */}
-        {(!hasCategories || uncatItems.length > 0 || canEdit) && (
-          <UncategorizedSection
-            items={uncatItems}
-            type={type}
-            canEdit={canEdit}
-            canReorder={canReorder}
-            usage={usage}
-            showHeader={hasCategories}
-            onEditItem={setEditingItem}
-            onDuplicateItem={id => void handleDuplicateItem(id)}
-            onDeleteItem={id => void handleDeleteItem(id)}
-            onOpenItem={setDetailItem}
-            onAddIn={categoryId => setDraft(newDraft(categoryId))}
-            onSortAlpha={handleSortAlpha}
-          />
-        )}
-
-        {/* Add first category (when no columns exist yet) */}
-        {canEdit && !hasCategories && (
-          <div className="pt-3 border-t border-border mt-3">
-            {addingCategoryInCol === 0 ? (
-              <AddCategoryForm
-                onAdd={name => handleAddCategory(name, 0)}
-                onCancel={() => setAddingCategoryInCol(false)}
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAddingCategoryInCol(0)}
-                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
-              >
-                <FolderPlus className="h-3.5 w-3.5" />
-                {t("createCategory")}
-              </button>
-            )}
-          </div>
-        )}
+          {canEdit && !searching && <AddCategoryColumn onAdd={handleAddCategory} />}
+        </div>
 
         {/* Drag overlay */}
         <DragOverlay>

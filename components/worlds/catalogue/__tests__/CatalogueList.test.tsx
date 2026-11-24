@@ -27,6 +27,7 @@ const actions = vi.hoisted(() => ({
   setWorldCatalogItemsRarity: vi.fn(async (ids: string[]) => ({ ok: true, ids })),
   updateWorldCatalogItem: vi.fn(),
   updateWorldCatalogCategory: vi.fn(),
+  addWorldCatalogCategory: vi.fn(),
 }));
 vi.mock("@/app/actions/worldCatalog", () => ({
   addWorldCatalogItem: actions.addWorldCatalogItem,
@@ -38,7 +39,7 @@ vi.mock("@/app/actions/worldCatalog", () => ({
   purgeWorldCatalogItem: vi.fn(),
   listTrashedWorldCatalogItems: vi.fn(),
   duplicateWorldCatalogItem: vi.fn(),
-  addWorldCatalogCategory: vi.fn(),
+  addWorldCatalogCategory: actions.addWorldCatalogCategory,
   updateWorldCatalogCategory: actions.updateWorldCatalogCategory,
   deleteWorldCatalogCategory: vi.fn(),
   reorderWorldCatalogCategories: vi.fn(),
@@ -63,9 +64,9 @@ const ARC = item("i-arc", "Arc", ARMES.id, 1);
 const POTION = item("i-potion", "Potion", null, 0);
 const CORDE = item("i-corde", "Corde", null, 1);
 
-function mount(props: { canEdit?: boolean; categories?: unknown[] } = {}) {
+function mount(props: { canEdit?: boolean; categories?: unknown[]; items?: unknown[] } = {}) {
   vi.mocked(createClient).mockReturnValue(
-    createSupabaseMock({ results: [{ data: props.categories ?? [ARMES, OUTILS] }, { data: [EPEE, ARC, POTION, CORDE] }] }) as never,
+    createSupabaseMock({ results: [{ data: props.categories ?? [ARMES, OUTILS] }, { data: props.items ?? [EPEE, ARC, POTION, CORDE] }] }) as never,
   );
   return render(<CatalogueList type="inventory" worldId="w1" canEdit={props.canEdit ?? true} usage={null} />);
 }
@@ -92,6 +93,53 @@ function reorderCalls() {
     (rows as { id: string; sort_index: number; category_id: string | null }[]).map(r => [r.id, r.sort_index, r.category_id]),
   );
 }
+
+/** Les colonnes du tableau, de gauche à droite. */
+function columns() {
+  return screen.getAllByRole("region").map(r => r.getAttribute("aria-label"));
+}
+
+describe("CatalogueList — tableau", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    actions.addWorldCatalogCategory.mockReset().mockImplementation(
+      (worldId: string, type: string, name: string, pos: { column_index: number; sort_index: number }) =>
+        Promise.resolve({ ok: true, category: { id: "cat-new", world_id: worldId, type, name, ...pos } }),
+    );
+  });
+
+  it("une colonne par catégorie, les objets sans catégorie en tête", async () => {
+    mount();
+    await screen.findByText("Épée");
+    expect(columns()).toEqual(["Sans catégorie", "Armes", "Outils"]);
+    const armes = screen.getByRole("region", { name: "Armes" });
+    expect(within(armes).getByText("Épée")).toBeInTheDocument();
+    expect(within(armes).getByText("Arc")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Sans catégorie" })).getByText("Potion")).toBeInTheDocument();
+  });
+
+  it("l'ancienne grille se lit colonne par colonne", async () => {
+    mount({ categories: [{ ...OUTILS, column_index: 1, sort_index: 0 }, { ...ARMES, column_index: 0, sort_index: 3 }] });
+    await screen.findByText("Épée");
+    expect(columns()).toEqual(["Sans catégorie", "Armes", "Outils"]);
+  });
+
+  it("pour un visiteur, pas de colonne « Sans catégorie » vide", async () => {
+    mount({ canEdit: false, items: [EPEE, ARC] });
+    await screen.findByText("Épée");
+    expect(columns()).toEqual(["Armes", "Outils"]);
+  });
+
+  it("créer une catégorie l'ajoute au bout du tableau", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Épée");
+    await user.click(screen.getByRole("button", { name: "Créer une catégorie" }));
+    await user.type(screen.getByPlaceholderText("Nom de la catégorie"), "Plantes{Enter}");
+    expect(actions.addWorldCatalogCategory).toHaveBeenCalledWith("w1", "inventory", "Plantes", { column_index: 0, sort_index: 2 });
+    await waitFor(() => expect(columns()).toEqual(["Sans catégorie", "Armes", "Outils", "Plantes"]));
+  });
+});
 
 describe("CatalogueList — gestion", () => {
   beforeEach(() => {
@@ -229,7 +277,7 @@ describe("CatalogueList — gestion", () => {
 
     await user.click(screen.getByRole("button", { name: "Replier Armes" }));
     expect(screen.queryByText("Épée")).toBeNull();
-    expect(screen.getByTitle(/^2 /)).toHaveTextContent("2");
+    expect(within(screen.getByRole("region", { name: "Armes" })).getByTitle(/^2 /)).toHaveTextContent("2");
     expect(screen.getByRole("button", { name: "Déplier Armes" })).toHaveAttribute("aria-expanded", "false");
     expect([...loadCollapsedCategories("w1", "inventory")]).toEqual(["cat-armes"]);
     unmount();
@@ -274,8 +322,7 @@ describe("CatalogueList — gestion", () => {
     mount();
     await screen.findByText("Potion");
 
-    // Le premier « Ajouter un objet » est celui de la première catégorie.
-    await user.click(screen.getAllByRole("button", { name: "Ajouter un objet" })[0]);
+    await user.click(within(screen.getByRole("region", { name: "Armes" })).getByRole("button", { name: "Ajouter un objet" }));
     const dialogue = await screen.findByRole("dialog", { name: "Nouvel objet" });
     await user.type(within(dialogue).getByPlaceholderText("Nom de l'objet"), "Dague");
     await user.click(within(dialogue).getByRole("button", { name: "Créer" }));
@@ -295,7 +342,7 @@ describe("CatalogueList — gestion", () => {
     mount();
     await screen.findByText("Potion");
 
-    await user.click(screen.getByRole("button", { name: "Ajouter un objet sans catégorie" }));
+    await user.click(within(screen.getByRole("region", { name: "Sans catégorie" })).getByRole("button", { name: "Ajouter un objet" }));
     const dialogue = await screen.findByRole("dialog", { name: "Nouvel objet" });
     const nom = within(dialogue).getByPlaceholderText("Nom de l'objet");
     await user.type(nom, "Torche");

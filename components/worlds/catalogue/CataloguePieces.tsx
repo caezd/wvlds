@@ -70,7 +70,7 @@ export function DragHandle(props: React.HTMLAttributes<HTMLSpanElement>) {
 // ── Sortable item row ─────────────────────────────────────────────────────────
 
 /**
- * Une ligne du catalogue.
+ * Une carte du catalogue, dans la colonne de sa catégorie.
  *
  * `canEdit` ouvre les commandes ; `canReorder` la poignée de déplacement. Les
  * deux sont distincts depuis la recherche : une liste filtrée ne montre plus
@@ -124,8 +124,8 @@ export function SortableItemRow({
       style={style}
       data-selected={selected || undefined}
       className={cn(
-        "group/item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors",
-        selected && "bg-primary/5",
+        "group/item flex items-center gap-1.5 rounded-lg border border-border bg-background px-1.5 py-1.5 transition-colors",
+        selected && "border-primary/40 bg-primary/5",
       )}
     >
       {canReorder && <DragHandle {...attributes} {...listeners} />}
