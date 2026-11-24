@@ -188,7 +188,7 @@ function AppShellInner({
         {/* La page et le chat du monde : l'un sous l'autre, ou côte à côte quand
             le chat s'ouvre à droite (grand écran). En plein écran, le chat prend
             la place de la page, qui reste montée (défilement, brouillons). */}
-        <div className={cn("flex min-h-0 flex-1 flex-col", liveChat.side && "lg:flex-row lg:gap-2")}>
+        <div className={cn("flex min-h-0 flex-1 flex-col", liveChat.side && "lg:flex-row")}>
         {/* Bordé sur ses quatre côtés : un espace le sépare du rail des mondes. */}
         <main className={cn("relative flex h-full w-full min-w-0 flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-lg", liveChat.fullscreen && "hidden")}>
           <div

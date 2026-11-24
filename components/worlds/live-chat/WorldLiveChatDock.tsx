@@ -150,134 +150,137 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   }
 
   return (
-    <section
-      aria-label={t("title")}
-      data-testid="world-live-chat-panel"
-      data-placement={placement}
-      data-fullscreen={fullscreen || undefined}
-      ref={panelRef}
-      // La taille réglée à la poignée ; sans elle, celle des classes.
-      style={{
-        "--live-chat-height": height ? `${height}px` : undefined,
-        "--live-chat-width": width ? `${width}px` : undefined,
-      } as React.CSSProperties}
-      className={cn(
-        "relative flex w-full shrink-0 flex-col overflow-hidden border-t bg-background lg:rounded-lg lg:border",
-        // Plein écran : la place de la page. À droite : une colonne à côté
-        // d'elle sur grand écran, en bas sinon (AppShell range les deux).
-        fullscreen
-          ? "min-h-0 flex-1"
-          : placement === "side"
-            ? "h-[var(--live-chat-height,50dvh)] max-h-[85dvh] lg:h-auto lg:max-h-none lg:w-[var(--live-chat-width,24rem)] lg:max-w-[60vw]"
-            : "h-[var(--live-chat-height,50dvh)] max-h-[85dvh] lg:mt-2",
-      )}
-    >
+    <>
+      {/* Hors plein écran, l'espace entre la page et le chat est sa poignée. */}
       {!fullscreen && <ResizeHandle panel={panelRef} placement={placement} height={height} width={width} />}
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
-        <MessagesSquare className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <h2 className="sr-only">{t("title")}</h2>
-        {/* Les salles : la principale, celles du monde, le fil du salon. */}
-        <div role="tablist" aria-label={t("channels")} className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto" data-testid="world-live-chat-places">
-          {places.map((entry) => {
-            const k = placeKey(entry.place);
-            const selected = k === key;
-            return (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                onClick={() => setPlace(entry.place)}
-                data-place={k}
-                className={cn(
-                  "relative flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors",
-                  selected ? "bg-muted font-semibold text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
+      <section
+        aria-label={t("title")}
+        data-testid="world-live-chat-panel"
+        data-placement={placement}
+        data-fullscreen={fullscreen || undefined}
+        ref={panelRef}
+        // La taille réglée à la poignée ; sans elle, celle des classes.
+        style={{
+          "--live-chat-height": height ? `${height}px` : undefined,
+          "--live-chat-width": width ? `${width}px` : undefined,
+        } as React.CSSProperties}
+        className={cn(
+          "relative flex w-full shrink-0 flex-col overflow-hidden border-t bg-background lg:rounded-lg lg:border",
+          // Plein écran : la place de la page. À droite : une colonne à côté
+          // d'elle sur grand écran, en bas sinon (AppShell range les deux).
+          fullscreen
+            ? "min-h-0 flex-1"
+            : placement === "side"
+              ? "h-[var(--live-chat-height,50dvh)] max-h-[85dvh] lg:h-auto lg:max-h-none lg:w-[var(--live-chat-width,24rem)] lg:max-w-[60vw]"
+              : "h-[var(--live-chat-height,50dvh)] max-h-[85dvh]",
+        )}
+      >
+        <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
+          <MessagesSquare className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <h2 className="sr-only">{t("title")}</h2>
+          {/* Les salles : la principale, celles du monde, le fil du salon. */}
+          <div role="tablist" aria-label={t("channels")} className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto" data-testid="world-live-chat-places">
+            {places.map((entry) => {
+              const k = placeKey(entry.place);
+              const selected = k === key;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setPlace(entry.place)}
+                  data-place={k}
+                  className={cn(
+                    "relative flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors",
+                    selected ? "bg-muted font-semibold text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  <PlaceLabel entry={entry} className="max-w-40" />
+                  {!selected && unreadHere(k) && (
+                    <span className="size-1.5 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-unread" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <PresentCount count={presentCount} />
+          <div className="ml-auto flex shrink-0 items-center">
+            {!fullscreen && (
+              // À droite seulement sur grand écran : en dessous, la colonne n'aurait pas la place.
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="hidden lg:inline-flex"
+                onClick={() => setLiveChatPlacement(placement === "side" ? "bottom" : "side")}
+                aria-label={placement === "side" ? t("dockBottom") : t("dockRight")}
+                title={placement === "side" ? t("dockBottom") : t("dockRight")}
               >
-                <PlaceLabel entry={entry} className="max-w-40" />
-                {!selected && unreadHere(k) && (
-                  <span className="size-1.5 rounded-full bg-primary" aria-label={t("newActivity")} data-testid="world-live-chat-unread" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <PresentCount count={presentCount} />
-        <div className="ml-auto flex shrink-0 items-center">
-          {!fullscreen && (
-            // À droite seulement sur grand écran : en dessous, la colonne n'aurait pas la place.
+                {placement === "side" ? <PanelBottom /> : <PanelRight />}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon-sm"
-              className="hidden lg:inline-flex"
-              onClick={() => setLiveChatPlacement(placement === "side" ? "bottom" : "side")}
-              aria-label={placement === "side" ? t("dockBottom") : t("dockRight")}
-              title={placement === "side" ? t("dockBottom") : t("dockRight")}
+              onClick={() => setLiveChatFullscreen(!fullscreen)}
+              aria-label={fullscreen ? t("exitFullscreen") : t("fullscreen")}
+              title={fullscreen ? t("exitFullscreen") : t("fullscreen")}
             >
-              {placement === "side" ? <PanelBottom /> : <PanelRight />}
+              {fullscreen ? <Minimize2 /> : <Maximize2 />}
             </Button>
-          )}
+          </div>
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setLiveChatFullscreen(!fullscreen)}
-            aria-label={fullscreen ? t("exitFullscreen") : t("fullscreen")}
-            title={fullscreen ? t("exitFullscreen") : t("fullscreen")}
+            onClick={() => setOpen(false)}
+            aria-label={t("close")}
           >
-            {fullscreen ? <Minimize2 /> : <Maximize2 />}
+            <ChevronDown />
           </Button>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setOpen(false)}
-          aria-label={t("close")}
-        >
-          <ChevronDown />
-        </Button>
-      </header>
-      {/* Changer de salle remonte la liste et le champ (défilement, brouillon).
-          Clés distinctes : ce sont deux enfants du même parent. */}
-      <MessageList
-        key={`list-${key}`}
-        messages={messages}
-        loading={loading}
-        hasOlder={hasOlder}
-        loadingOlder={loadingOlder}
-        onLoadOlder={async () => {
-          const read = await loadOlder();
-          if (read === null) toast.error(t("loadOlderFailed"));
-          return read ?? 0;
-        }}
-        selfId={userId}
-        options={options}
-        tints={tints}
-        onReply={setReplyTo}
-        onDelete={async (id) => {
-          if (!(await remove(id))) toast.error(t("deleteFailed"));
-          if (replyTo?.id === id) setReplyTo(null);
-        }}
-      />
-      <Composer
-        key={`composer-${key}`}
-        worldId={worldId}
-        userId={userId}
-        options={options}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        onSend={async (text, extras) => {
-          // `/me …` : une action jouée, si le monde les permet (migration 241).
-          const { content, isAction } = parseLiveChatInput(text, options.actions);
-          const res = await send(content, replyTo?.id ?? null, { ...extras, isAction });
-          if (res === "too_fast") toast.error(t("tooFast"));
-          else if (res === "persona") toast.error(t("personaRejected"));
-          else if (res === "error") toast.error(t("sendFailed"));
-          if (res === "ok") setReplyTo(null);
-          return res === "ok";
-        }}
-        onEscape={() => setOpen(false)}
-      />
-    </section>
+        </header>
+        {/* Changer de salle remonte la liste et le champ (défilement, brouillon).
+            Clés distinctes : ce sont deux enfants du même parent. */}
+        <MessageList
+          key={`list-${key}`}
+          messages={messages}
+          loading={loading}
+          hasOlder={hasOlder}
+          loadingOlder={loadingOlder}
+          onLoadOlder={async () => {
+            const read = await loadOlder();
+            if (read === null) toast.error(t("loadOlderFailed"));
+            return read ?? 0;
+          }}
+          selfId={userId}
+          options={options}
+          tints={tints}
+          onReply={setReplyTo}
+          onDelete={async (id) => {
+            if (!(await remove(id))) toast.error(t("deleteFailed"));
+            if (replyTo?.id === id) setReplyTo(null);
+          }}
+        />
+        <Composer
+          key={`composer-${key}`}
+          worldId={worldId}
+          userId={userId}
+          options={options}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onSend={async (text, extras) => {
+            // `/me …` : une action jouée, si le monde les permet (migration 241).
+            const { content, isAction } = parseLiveChatInput(text, options.actions);
+            const res = await send(content, replyTo?.id ?? null, { ...extras, isAction });
+            if (res === "too_fast") toast.error(t("tooFast"));
+            else if (res === "persona") toast.error(t("personaRejected"));
+            else if (res === "error") toast.error(t("sendFailed"));
+            if (res === "ok") setReplyTo(null);
+            return res === "ok";
+          }}
+          onEscape={() => setOpen(false)}
+        />
+      </section>
+    </>
   );
 }
 
@@ -291,9 +294,10 @@ function clampSize(size: number, side: boolean) {
 }
 
 /**
- * La poignée entre la page et la chatbox : glisser (ou les flèches du
- * clavier) règle sa hauteur en bas, sa largeur à droite. La taille se retient
- * à la fin du glisser (lib/liveChatLayout).
+ * La poignée entre la page et la chatbox : l'espace qui les sépare, sans
+ * trait visible ; seul le curseur l'annonce au survol. Glisser (ou les
+ * flèches du clavier) règle la hauteur du chat en bas, sa largeur à droite.
+ * La taille se retient à la fin du glisser (lib/liveChatLayout).
  */
 function ResizeHandle({
   panel,
@@ -326,9 +330,13 @@ function ResizeHandle({
       tabIndex={0}
       data-testid="world-live-chat-resize"
       className={cn(
-        "absolute z-10 touch-none transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 focus-visible:outline-none",
-        // À droite : le bord gauche, sur grand écran seulement (en dessous, le chat est en bas).
-        side ? "inset-y-0 left-0 hidden w-1.5 cursor-col-resize lg:block" : "inset-x-0 top-0 h-1.5 cursor-row-resize",
+        // Le contour au clavier seulement : à la souris, le curseur suffit.
+        "shrink-0 touch-none rounded-full focus-visible:bg-primary/40 focus-visible:outline-none",
+        side
+          ? // Sur grand écran seulement (en dessous, le chat est en bas).
+            "hidden w-2 cursor-col-resize lg:block"
+          : // Sur mobile, pas d'espace : la poignée chevauche le haut du chat.
+            "relative z-10 -mb-1.5 h-1.5 cursor-row-resize lg:mb-0 lg:h-2",
       )}
       onPointerDown={(e) => {
         e.preventDefault();

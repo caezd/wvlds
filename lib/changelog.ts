@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Interface",
     area: "Monde",
-    text: "Chatbox :\n- reste ouverte ou fermée d’une visite à l’autre, selon le dernier choix\n- **Plein écran** : elle prend la place de la page\n- en bas ou à droite de la page, au choix\n- taille réglable en glissant son bord, retenue d’une visite à l’autre",
+    text: "Chatbox :\n- reste ouverte ou fermée d’une visite à l’autre, selon le dernier choix\n- **Plein écran** : elle prend la place de la page\n- en bas ou à droite de la page, au choix\n- taille réglable en glissant l’espace qui la sépare de la page, retenue d’une visite à l’autre",
   },
   {
     date: "2026-11-24",

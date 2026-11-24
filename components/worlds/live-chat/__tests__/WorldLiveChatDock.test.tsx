@@ -306,6 +306,9 @@ describe("WorldLiveChatDock — plein écran et emplacement", () => {
     await user.click(screen.getByTestId("world-live-chat-bar"));
     const poignee = screen.getByRole("separator", { name: "Redimensionner le chat" });
     expect(poignee).toHaveAttribute("aria-orientation", "horizontal");
+    // La poignée est l'espace entre la page et le chat, pas un bord du chat.
+    expect(screen.getByTestId("world-live-chat-panel")).not.toContainElement(poignee);
+    expect(poignee.nextElementSibling).toBe(screen.getByTestId("world-live-chat-panel"));
     // Sans réglage, la moitié de l'écran ; la première flèche part de la taille affichée.
     vi.spyOn(screen.getByTestId("world-live-chat-panel"), "getBoundingClientRect").mockReturnValue({ height: 400, width: 800 } as DOMRect);
     poignee.focus();
@@ -328,6 +331,7 @@ describe("WorldLiveChatDock — plein écran et emplacement", () => {
     render(<Coquille />);
     const poignee = screen.getByRole("separator", { name: "Redimensionner le chat" });
     expect(poignee).toHaveAttribute("aria-orientation", "vertical");
+    expect(poignee.nextElementSibling).toBe(screen.getByTestId("world-live-chat-panel"));
     poignee.focus();
     // Le chat est à droite : la flèche gauche l'élargit.
     await user.keyboard("{ArrowLeft}");
