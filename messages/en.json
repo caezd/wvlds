@@ -2725,7 +2725,6 @@
     "withPersona": "<user>{userName}</user> as <persona>{personaName}</persona>",
     "choosePersona": "Write as a persona",
     "clearPersona": "Write without a persona",
-    "personaRejected": "This persona can't write here.",
-    "placeholderActions": "Write in the world chat… (/me for an action)"
+    "personaRejected": "This persona can't write here."
   }
 }

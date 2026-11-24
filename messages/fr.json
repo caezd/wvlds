@@ -2725,7 +2725,6 @@
     "withPersona": "<user>{userName}</user> avec <persona>{personaName}</persona>",
     "choosePersona": "Écrire avec un persona",
     "clearPersona": "Écrire sans persona",
-    "personaRejected": "Ce persona ne peut pas écrire ici.",
-    "placeholderActions": "Écrire dans le chat du monde… (/me pour une action)"
+    "personaRejected": "Ce persona ne peut pas écrire ici."
   }
 }

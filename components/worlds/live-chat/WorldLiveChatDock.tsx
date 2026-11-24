@@ -1047,7 +1047,7 @@ function Composer({
           else onEscape();
         }}
         maxLength={MAX_LENGTH}
-        placeholder={t(options.actions ? "placeholderActions" : "placeholder")}
+        placeholder={t("placeholder")}
         aria-label={t("placeholder")}
         readOnly={sending}
         aria-busy={sending || undefined}

@@ -562,7 +562,7 @@ describe("WorldLiveChatDock — options du monde (migration 241)", () => {
     optionsMock.value = { ...optionsMock.value, actions: true };
     const user = await ouvrir();
     const input = screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" });
-    expect(input).toHaveAttribute("placeholder", "Écrire dans le chat du monde… (/me pour une action)");
+    expect(input).toHaveAttribute("placeholder", "Écrire dans le chat du monde…");
     await user.type(input, "/me se rend à la porte.{Enter}");
     expect(chat.send).toHaveBeenCalledWith("se rend à la porte.", null, { color: null, personaId: null, isAction: true });
   });
