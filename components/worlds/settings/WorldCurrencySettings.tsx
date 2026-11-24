@@ -88,14 +88,14 @@ export function WorldCurrencySettings({
         {rows.map((row, i) => {
           const next = rows[i + 1];
           return (
-            <div key={i} className={cn(SETTINGS_ROW, "gap-2")}>
+            <div key={i} className={cn(SETTINGS_ROW, "flex-nowrap gap-2")}>
               <Input
                 value={row.name}
                 maxLength={MAX_CURRENCY_NAME_LENGTH}
                 placeholder={t("namePlaceholder")}
                 aria-label={t("unitName", { n: i + 1 })}
                 onChange={(e) => patchRow(i, { name: e.target.value })}
-                className={cn("h-8 w-36 rounded-md text-sm", FIELD)}
+                className={cn("h-8 w-32 min-w-0 shrink rounded-md text-sm", FIELD)}
               />
               <Input
                 value={row.short}
@@ -103,10 +103,10 @@ export function WorldCurrencySettings({
                 placeholder={t("shortPlaceholder")}
                 aria-label={t("unitShort", { n: i + 1 })}
                 onChange={(e) => patchRow(i, { short: e.target.value })}
-                className={cn("h-8 w-20 rounded-md text-sm", FIELD)}
+                className={cn("h-8 w-16 shrink-0 rounded-md text-sm", FIELD)}
               />
               {next ? (
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
                   =
                   <Input
                     type="number"
@@ -115,18 +115,18 @@ export function WorldCurrencySettings({
                     value={Number.isFinite(row.ratio) ? row.ratio : ""}
                     aria-label={t("unitRatio", { name: labelOf(row, i), next: labelOf(next, i + 1) })}
                     onChange={(e) => patchRow(i, { ratio: e.target.valueAsNumber })}
-                    className={cn("h-8 w-24 rounded-md text-sm", FIELD)}
+                    className={cn("h-8 w-20 shrink-0 rounded-md text-sm", FIELD)}
                   />
                   <span className="truncate">{labelOf(next, i + 1)}</span>
                 </span>
               ) : (
-                <span className="text-sm text-muted-foreground">{t("base")}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{t("base")}</span>
               )}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="ml-auto size-8"
+                className="size-8 shrink-0"
                 disabled={rows.length === 1}
                 aria-label={t("remove", { name: labelOf(row, i) })}
                 onClick={() => setRows((current) => current.filter((_, j) => j !== i))}

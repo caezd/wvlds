@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import * as React from "react";
-import { ClipboardCheck, NotebookText, Waypoints, type LucideIcon } from "lucide-react";
+import { ClipboardCheck, Coins, NotebookText, Waypoints, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -33,6 +33,9 @@ import { PersonaNpcBadge } from "./PersonaNpcBadge";
 // chargée à ce moment-là plutôt qu'avec chaque salon.
 const PersonaReviewSection = dynamic(() => import("./PersonaReviewPanel").then((m) => m.PersonaReviewSection));
 import { PersonaJournalSection } from "./PersonaJournalSection";
+import { PersonaWalletSection } from "./PersonaWalletSection";
+import { usePersonaWallet } from "@/hooks/usePersonaWallet";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import type { PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
@@ -486,6 +489,8 @@ export function usePersonaProfile({
   const tRelations = useTranslations("personas.relations");
   const tReview = useTranslations("personas.review");
   const tJournal = useTranslations("personas.journal");
+  const tWallet = useTranslations("personas.wallet");
+  const { world_economy } = useFeatureFlags();
   // Relire exige `personas.review` dans le monde du persona — le contexte
   // n'est celui de ce monde que sous `/w/[id]` ou dans un de ses salons.
   const { worldId: membershipWorldId, can } = useWorldMembership();
@@ -511,6 +516,9 @@ export function usePersonaProfile({
   const [ownerId, setOwnerId] = React.useState<string | null>(ownerIdProp ?? null);
   // Le monde relit-il ses fiches (migration 184) ? Sinon ni badge de relecture ni onglet.
   const reviewActive = useWorldReviewActive(worldId) === true;
+  // La bourse (migration 246) : lue une fois le monde du persona connu, si
+  // le site a ouvert l'économie ; un onglet tant que le monde l'active.
+  const wallet = usePersonaWallet(world_economy ? personaId ?? null : null, world_economy ? worldId : null);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState<boolean | null>(null);
@@ -728,6 +736,18 @@ export function usePersonaProfile({
         icon: NotebookText,
         content: <PersonaJournalSection personaId={personaId} worldId={worldId} ownerId={userId} isNpc={isNpc} />,
       },
+      ...(wallet.status === "on" ? [{
+        id: "__wallet__",
+        label: tWallet("tab"),
+        icon: Coins,
+        content: (
+          <PersonaWalletSection
+            personaName={name ?? label ?? ""}
+            wallet={wallet}
+            canManage={membershipWorldId === worldId && can("economy.manage")}
+          />
+        ),
+      }] : []),
       // La relecture : le propriétaire y lit les commentaires, un
       // relecteur du monde y valide ou renvoie la fiche.
       ...((reviewActive && (viewerId === userId || (membershipWorldId === worldId && can("personas.review")))) ? [{
