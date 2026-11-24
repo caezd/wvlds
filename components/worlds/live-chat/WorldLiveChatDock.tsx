@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { ChevronDown, CornerUpLeft, Hash, MessageSquareText, MessagesSquare, Reply, SendHorizontal, Trash2, Users, X } from "lucide-react";
+import { ChevronDown, CornerUpLeft, Hash, MessageSquareText, MessagesSquare, Reply, SendHorizontal, Trash2, UserRound, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLiveChatContext, type LiveChatRoom } from "@/lib/worldLiveChatStore";
-import { useWorldLiveChat, type LiveChatMessage } from "@/hooks/useWorldLiveChat";
+import { useWorldLiveChat, type LiveChatMessage, type SendExtras } from "@/hooks/useWorldLiveChat";
 import { useLiveChannels } from "@/hooks/useLiveChannels";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MAIN_PLACE, placeKey, type LiveChannel, type LiveChatPlace } from "@/lib/worldLiveChannels";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
+import { useLiveChatOptions } from "@/hooks/useLiveChatOptions";
+import { usePersonaTints } from "@/hooks/usePersonaTints";
+import { parseLiveChatInput, type LiveChatOptions } from "@/lib/worldLiveChatOptions";
+import { BUBBLE_MAX_ALPHA, bubbleStyle, readableOnPage } from "@/lib/bubbleColors";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
+import { HsvColorPicker, normalizeHexColor } from "@/components/ui/hsv-color-picker";
+import { liveChatPlainText, parseLiveChatMarkdown, type LiveChatSpan } from "@/lib/liveChatMarkdown";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
+import type { Persona } from "@/types/db";
 
 const MAX_LENGTH = DB_TEXT_LIMITS["world_live_messages.content"];
 /** Distance au bas (px) en deçà de laquelle un nouveau message fait défiler. */
@@ -64,6 +74,9 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
   const [place, setPlace] = usePlace(chatroom, channels);
   const { messages, loading, presentCount, send, remove, userId, unread, hasOlder, loadingOlder, loadOlder } =
     useWorldLiveChat(worldId, place);
+  const options = useLiveChatOptions(worldId);
+  // Couleur de groupe des personas, lue seulement si le monde les permet.
+  const tints = usePersonaTints(worldId, options.personas);
   const [open, setOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<LiveChatMessage | null>(null);
   const last = messages[messages.length - 1] ?? null;
@@ -101,7 +114,7 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
             // La clé rejoue l'animation d'entrée à chaque nouveau message.
             <span key={last.id} className="flex min-w-0 items-baseline gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <span className="shrink-0 font-semibold text-foreground">{last.author?.username ?? "…"}</span>
-              <span className="truncate text-muted-foreground">{last.content}</span>
+              <span className="truncate text-muted-foreground">{liveChatPlainText(last.content)}</span>
             </span>
           ) : (
             <span className="truncate text-muted-foreground">{t("title")}</span>
@@ -172,6 +185,8 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
           return read ?? 0;
         }}
         selfId={userId}
+        options={options}
+        tints={tints}
         onReply={setReplyTo}
         onDelete={async (id) => {
           if (!(await remove(id))) toast.error(t("deleteFailed"));
@@ -180,11 +195,17 @@ function Dock({ worldId, chatroom }: { worldId: string; chatroom: LiveChatRoom |
       />
       <Composer
         key={`composer-${key}`}
+        worldId={worldId}
+        userId={userId}
+        options={options}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
-        onSend={async (text) => {
-          const res = await send(text, replyTo?.id ?? null);
+        onSend={async (text, extras) => {
+          // `/me …` : une action jouée, si le monde les permet (migration 241).
+          const { content, isAction } = parseLiveChatInput(text, options.actions);
+          const res = await send(content, replyTo?.id ?? null, { ...extras, isAction });
           if (res === "too_fast") toast.error(t("tooFast"));
+          else if (res === "persona") toast.error(t("personaRejected"));
           else if (res === "error") toast.error(t("sendFailed"));
           if (res === "ok") setReplyTo(null);
           return res === "ok";
@@ -251,11 +272,16 @@ function MessageList({
   loadingOlder,
   onLoadOlder,
   selfId,
+  options,
+  tints,
   onReply,
   onDelete,
 }: {
   messages: LiveChatMessage[];
   loading: boolean;
+  options: LiveChatOptions;
+  /** Persona → couleur de son groupe (usePersonaTints). */
+  tints: Record<string, string>;
   hasOlder: boolean;
   loadingOlder: boolean;
   /** Rend le nombre de messages lus (0 en cas d'échec). */
@@ -322,9 +348,11 @@ function MessageList({
             <MessageRow
               key={m.id}
               message={m}
-              // Une réponse rouvre toujours un en-tête : la citation s'y accroche.
-              grouped={!m.reply_to_id && isGrouped(messages[i - 1], m)}
-              canDelete={m.user_id === selfId}
+              grouped={rowGrouped(messages, i)}
+              continued={rowGrouped(messages, i + 1)}
+              mine={m.user_id === selfId}
+              options={options}
+              personaTint={m.persona_id ? tints[m.persona_id] : undefined}
               onReply={() => onReply(m)}
               onDelete={() => onDelete(m.id)}
             />
@@ -336,10 +364,31 @@ function MessageList({
   );
 }
 
-/** Même auteur à moins de cinq minutes d'écart : pas de nouvel en-tête. */
+/**
+ * Même auteur, même persona, à moins de cinq minutes d'écart : pas de nouvel
+ * en-tête. Une action jouée (`/me`) ne se regroupe jamais : elle porte son nom.
+ */
 export function isGrouped(prev: LiveChatMessage | undefined, cur: LiveChatMessage): boolean {
   if (!prev || prev.user_id !== cur.user_id) return false;
+  if ((prev.persona_id ?? null) !== (cur.persona_id ?? null)) return false;
+  if (prev.is_action || cur.is_action) return false;
   return new Date(cur.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60_000;
+}
+
+/** Le message `i` suit le précédent sans nouvel en-tête. Une réponse rouvre
+ * toujours un en-tête : la citation s'y accroche. */
+function rowGrouped(messages: LiveChatMessage[], i: number): boolean {
+  const m = messages[i];
+  return !!m && !m.reply_to_id && isGrouped(messages[i - 1], m);
+}
+
+/** `**gras**` et `*italique*` d'un message (lib/liveChatMarkdown). */
+function LiveChatText({ text }: { text: string }) {
+  const render = (spans: LiveChatSpan[]): ReactNode[] =>
+    spans.map((s, i) =>
+      s.type === "text" ? s.text : s.type === "strong" ? <strong key={i}>{render(s.children)}</strong> : <em key={i}>{render(s.children)}</em>,
+    );
+  return <>{render(parseLiveChatMarkdown(text))}</>;
 }
 
 /** Amène le message cité en vue et le fait briller un instant. */
@@ -354,13 +403,22 @@ function jumpTo(id: string) {
 function MessageRow({
   message,
   grouped,
-  canDelete,
+  continued = false,
+  mine,
+  options,
+  personaTint,
   onReply,
   onDelete,
 }: {
   message: LiveChatMessage;
   grouped: boolean;
-  canDelete: boolean;
+  /** Le message suivant prolonge ce groupe (bulles : coin bas resserré). */
+  continued?: boolean;
+  /** Le message est le sien : il peut l'effacer, et ses bulles ont leur fond. */
+  mine: boolean;
+  options: LiveChatOptions;
+  /** La couleur du groupe du persona, s'il en a une. */
+  personaTint?: string;
   onReply: () => void;
   onDelete: () => void;
 }) {
@@ -368,10 +426,48 @@ function MessageRow({
   const format = useFormatter();
   const name = message.author?.username ?? "…";
   const time = format.dateTime(new Date(message.created_at), { hour: "2-digit", minute: "2-digit" });
+  // Les options suivent le monde à l'affichage aussi : éteinte après coup,
+  // une option ne colore plus et ne montre plus de persona (migration 241).
+  const persona = options.personas ? (message.persona ?? null) : null;
+  const color = options.colors ? (message.color ?? null) : null;
+  const action = !!message.is_action;
+  // `bubbles` : la mise en page du fil (actions /me comprises) ; `bubble` : ce
+  // message-ci est une bulle — une action reste du texte en italique.
+  const bubbles = options.bubbles;
+  const bubble = bubbles && !action;
+  const avatarUrl = persona ? persona.avatar_url : (message.author?.avatar_url ?? null);
+  // Qui parle ou agit : le persona s'il y en a un, sinon le joueur.
+  const speaker = persona?.name ?? name;
+  // Le nom du persona prend la couleur de son groupe, comme dans les salons.
+  const personaStyle = persona && personaTint ? { color: personaTint } : undefined;
+
+  const actions = (
+    <div
+      data-testid="world-live-chat-actions"
+      className={cn(
+        "absolute flex h-5 items-center gap-0.5 opacity-0 focus-within:opacity-100 group-hover:opacity-100",
+        // Ligne : dans la marge de droite (`pr-16`), sur la première ligne du
+        // texte. Bulle : juste à côté d'elle, à mi-hauteur.
+        !bubbles
+          ? cn("-right-14", action ? "top-1.5" : "top-0")
+          : "left-full top-1/2 ml-1 -translate-y-1/2",
+      )}
+    >
+      <Button variant="ghost" size="icon-sm" className="size-6" onClick={onReply} aria-label={t("replyTo", { name })}>
+        <Reply className="size-3.5" />
+      </Button>
+      {mine && (
+        <Button variant="ghost" size="icon-sm" className="size-6" onClick={onDelete} aria-label={t("deleteMessage")}>
+          <Trash2 className="size-3.5" />
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <li
       data-live-message={message.id}
+      data-mine={mine || undefined}
       // Un clic sur le message y répond — pas sur un lien, un bouton, ni
       // quand on vient de sélectionner du texte pour le copier.
       onClick={(e) => {
@@ -380,16 +476,23 @@ function MessageRow({
         onReply();
       }}
       className={cn(
-        "group relative flex cursor-pointer gap-3 px-4 transition-colors hover:bg-muted data-[highlight=true]:bg-primary/10",
-        grouped ? "py-0.5" : "mt-2 py-1",
+        // Pas de fond au survol : seuls les boutons d'action apparaissent.
+        "group relative flex cursor-pointer gap-3 px-4 data-[highlight=true]:bg-primary/10",
+        bubbles
+          ? // Bulles serrées ; l'avatar en haut du groupe, à hauteur du pseudo.
+            // Les actions /me suivent le même espacement.
+            cn("gap-2", grouped ? "pt-0.5" : "mt-2 pt-1")
+          : // En-tête et action se centrent sur l'avatar (`pt-1.5`/`py-1.5`) :
+            // la ligne n'ajoute qu'une petite marge.
+            cn("pr-16 py-0.5", !grouped && "mt-2"),
       )}
     >
       <div className="w-8 shrink-0">
         {!grouped && (
           <UserProfileSheetTrigger userId={message.user_id} label={name}>
             <Avatar className="size-8 rounded-full">
-              {message.author?.avatar_url && <AvatarImage src={message.author.avatar_url} alt="" />}
-              <AvatarFallback className="rounded-full text-xs">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
+              {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+              <AvatarFallback className="rounded-full text-xs">{speaker.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
           </UserProfileSheetTrigger>
         )}
@@ -406,7 +509,7 @@ function MessageRow({
             >
               <CornerUpLeft className="size-3 shrink-0" aria-hidden />
               <span className="shrink-0 font-semibold">{message.reply.username ?? "…"}</span>
-              <span className="truncate">{message.reply.content}</span>
+              <span className="truncate">{liveChatPlainText(message.reply.content)}</span>
             </button>
           ) : (
             <p className="mb-0.5 flex items-center gap-1 text-xs italic text-muted-foreground" data-testid="world-live-chat-quote">
@@ -415,45 +518,144 @@ function MessageRow({
             </p>
           )
         )}
-        {!grouped && (
-          <div className="flex items-baseline gap-2">
+        {!grouped && !action && (
+          <div
+            className={cn(
+              // Centré sur l'avatar, à la hauteur de la première ligne d'un /me.
+              "flex items-baseline gap-2",
+              bubble ? "mb-0.5 px-3 pt-2 text-muted-foreground" : "pt-1.5",
+            )}
+          >
             <UserProfileSheetTrigger userId={message.user_id} label={name}>
-              <span className="text-sm font-semibold hover:underline">{name}</span>
+              <span className={cn("hover:underline", bubble ? "text-xs" : "text-sm")} data-testid="world-live-chat-author">
+                {persona ? (
+                  t.rich("withPersona", {
+                    user: (chunks) => <span className="font-semibold">{chunks}</span>,
+                    persona: (chunks) => <span className="font-semibold" style={personaStyle}>{chunks}</span>,
+                    userName: name,
+                    personaName: persona.name,
+                  })
+                ) : (
+                  <span className="font-semibold">{name}</span>
+                )}
+              </span>
             </UserProfileSheetTrigger>
             <time dateTime={message.created_at} className="text-xs text-muted-foreground">{time}</time>
           </div>
         )}
-        <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
-      </div>
-      <div className="absolute right-2 top-0.5 flex gap-0.5 opacity-0 focus-within:opacity-100 group-hover:opacity-100">
-        <Button variant="ghost" size="icon-sm" onClick={onReply} aria-label={t("replyTo", { name })}>
-          <Reply />
-        </Button>
-        {canDelete && (
-          <Button variant="ghost" size="icon-sm" onClick={onDelete} aria-label={t("deleteMessage")}>
-            <Trash2 />
-          </Button>
-        )}
+        <div className={cn("relative", bubbles && "w-fit max-w-[80%]")}>
+          {action ? (
+            // `/me` : l'action jouée, en italique, précédée de qui la joue.
+            // Sur une ligne, elle se centre sur l'avatar (6 + 20 + 6 = 32 px) ;
+            // avec les bulles, elle prend aussi leur retrait.
+            <p
+              className={cn("whitespace-pre-wrap break-words py-1.5 text-sm italic [&_em]:not-italic", bubbles && "px-3")}
+              style={{ color: readableOnPage(color) }}
+              data-testid="world-live-chat-action"
+            >
+              <span className="font-semibold" style={persona ? personaStyle : undefined}>{speaker}</span> <LiveChatText text={message.content} />
+              <time dateTime={message.created_at} className="ml-2 text-xs not-italic text-muted-foreground">{time}</time>
+            </p>
+          ) : bubble ? (
+            <p
+              className={cn(
+                "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
+                // Dans un groupe, les coins côté avatar se resserrent.
+                grouped && "rounded-tl-md",
+                continued && "rounded-bl-md",
+                // Toutes à gauche ; les siennes se distinguent par leur fond.
+                !color && (mine ? "bg-primary text-primary-foreground" : "bg-muted"),
+              )}
+              style={bubbleStyle(color)}
+              data-testid="world-live-chat-bubble"
+            >
+              <LiveChatText text={message.content} />
+            </p>
+          ) : (
+            <p className="whitespace-pre-wrap break-words text-sm" style={{ color: readableOnPage(color) }}>
+              <LiveChatText text={message.content} />
+            </p>
+          )}
+          {actions}
+        </div>
       </div>
     </li>
   );
 }
 
+/** Ce que le joueur a choisi pour écrire (persona, couleur), gardé par monde dans ce navigateur. */
+type ComposerPersona = Pick<Persona, "id" | "name" | "avatar_url" | "dialogue_color">;
+
+const personaKey = (worldId: string) => `liveChat:persona:${worldId}`;
+const colorKey = (worldId: string) => `liveChat:color:${worldId}`;
+
+function readStored<T>(key: string, parse: (raw: string) => T | null): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(key: string, value: string | null) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    /* stockage indisponible : le choix vaut pour la session */
+  }
+}
+
+function parsePersona(raw: string): ComposerPersona | null {
+  try {
+    const p = JSON.parse(raw) as Partial<ComposerPersona>;
+    return typeof p.id === "string" && typeof p.name === "string"
+      ? { id: p.id, name: p.name, avatar_url: p.avatar_url ?? null, dialogue_color: p.dialogue_color ?? null }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function Composer({
+  worldId,
+  userId,
+  options,
   replyTo,
   onCancelReply,
   onSend,
   onEscape,
 }: {
+  worldId: string;
+  userId: string | null;
+  options: LiveChatOptions;
   replyTo: LiveChatMessage | null;
   onCancelReply: () => void;
-  onSend: (text: string) => Promise<boolean>;
+  onSend: (text: string, extras: SendExtras) => Promise<boolean>;
   onEscape: () => void;
 }) {
   const t = useTranslations("worldLiveChat");
+  const tChatrooms = useTranslations("chatrooms");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Persona et couleur (migration 241) : lus au montage, gardés par monde.
+  const [persona, setPersonaRaw] = useState<ComposerPersona | null>(() => readStored(personaKey(worldId), parsePersona));
+  const [color, setColorRaw] = useState<string | null>(() => readStored(colorKey(worldId), (raw) => raw));
+
+  function setPersona(p: ComposerPersona | null) {
+    setPersonaRaw(p);
+    writeStored(personaKey(worldId), p ? JSON.stringify(p) : null);
+    // Comme dans les salons : un persona qui a sa couleur de dialogue l'apporte.
+    if (p?.dialogue_color) setColor(p.dialogue_color);
+  }
+  function setColor(c: string | null) {
+    setColorRaw(c);
+    writeStored(colorKey(worldId), c);
+  }
+  // Sans bulles, la couleur ne teinte que du texte : son opacité ne compte pas.
+  const sentColor = color && !options.bubbles ? normalizeHexColor(color) : color;
 
   // Le panneau s'ouvre pour écrire : le curseur y va directement (desktop).
   useEffect(() => {
@@ -468,9 +670,14 @@ function Composer({
   async function submit() {
     if (!text.trim() || sending) return;
     setSending(true);
-    const ok = await onSend(text);
+    const ok = await onSend(text, {
+      color: options.colors ? sentColor : null,
+      personaId: options.personas ? (persona?.id ?? null) : null,
+    });
     setSending(false);
     if (ok) setText("");
+    // Le champ n'est jamais désactivé pendant l'envoi (`readOnly`) : désactivé,
+    // il perdait le curseur, et ce focus partait avant sa réactivation.
     inputRef.current?.focus();
   }
 
@@ -480,7 +687,7 @@ function Composer({
       <div className="flex items-center gap-2 px-3 pt-2 text-xs text-muted-foreground" data-testid="world-live-chat-replying">
         <CornerUpLeft className="size-3.5 shrink-0" aria-hidden />
         <span className="shrink-0">{t("replyingTo", { name: replyTo.author?.username ?? "…" })}</span>
-        <span className="min-w-0 flex-1 truncate">{replyTo.content}</span>
+        <span className="min-w-0 flex-1 truncate">{liveChatPlainText(replyTo.content)}</span>
         <Button type="button" variant="ghost" size="icon-sm" onClick={onCancelReply} aria-label={t("cancelReply")}>
           <X />
         </Button>
@@ -493,6 +700,59 @@ function Composer({
         void submit();
       }}
     >
+      {options.personas && (
+        <span className="flex shrink-0 items-center" data-testid="world-live-chat-persona">
+          <PersonaPickerDialog
+            selected={persona as Persona | null}
+            onSelect={(p) => setPersona(p ? { id: p.id, name: p.name, avatar_url: p.avatar_url, dialogue_color: p.dialogue_color ?? null } : null)}
+            required={false}
+            userId={userId}
+            worldId={worldId}
+            trigger={
+              <Button type="button" variant="ghost" size="icon" aria-label={persona ? persona.name : t("choosePersona")} title={persona ? persona.name : t("choosePersona")}>
+                {persona ? (
+                  <Avatar className="size-7 rounded-full">
+                    {persona.avatar_url && <AvatarImage src={persona.avatar_url} alt="" />}
+                    <AvatarFallback className="rounded-full text-xs">{persona.name.slice(0, 1).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <UserRound />
+                )}
+              </Button>
+            }
+          />
+          {persona && (
+            <Button type="button" variant="ghost" size="icon-sm" className="size-6" onClick={() => setPersona(null)} aria-label={t("clearPersona")}>
+              <X className="size-3.5" />
+            </Button>
+          )}
+        </span>
+      )}
+      {options.colors && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" aria-label={tChatrooms("dialogColorTitle")} title={tChatrooms("dialogColorTitle")}>
+              <span
+                className={cn("size-4 rounded-full border border-border", !sentColor && "bg-muted")}
+                style={sentColor ? { backgroundColor: sentColor } : undefined}
+                data-testid="world-live-chat-color-swatch"
+              />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 space-y-3">
+            {/* L'opacité ne vaut que pour le fond des bulles : sans elles, pas de réglage. */}
+            <HsvColorPicker
+              color={sentColor ?? DEFAULT_PLAYER_COLOR}
+              onChange={setColor}
+              alpha={options.bubbles}
+              maxAlpha={BUBBLE_MAX_ALPHA}
+            />
+            <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setColor(null)}>
+              {tChatrooms("colorReset")}
+            </Button>
+          </PopoverContent>
+        </Popover>
+      )}
       <Input
         ref={inputRef}
         value={text}
@@ -504,9 +764,10 @@ function Composer({
           else onEscape();
         }}
         maxLength={MAX_LENGTH}
-        placeholder={t("placeholder")}
+        placeholder={t(options.actions ? "placeholderActions" : "placeholder")}
         aria-label={t("placeholder")}
-        disabled={sending}
+        readOnly={sending}
+        aria-busy={sending || undefined}
         className="flex-1"
       />
       <Button type="submit" size="icon" disabled={sending || !text.trim()} aria-label={t("send")}>

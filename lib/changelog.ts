@@ -57,6 +57,30 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-11-23",
+    category: "Interface",
+    area: "Monde",
+    text: "Paramètres d’un monde : toutes les pages ont la même largeur et la même mise en page — titre à gauche, réglages à droite. Général, Page d’accueil, Communauté, Catégories et Signalements reprennent les listes et cartes des autres pages.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Chatbox : **gras** et *italique* dans les messages, avec `**texte**` et `*texte*`.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Chatbox : quatre options, désactivées par défaut, dans Paramètres › Fonctions › Chatbox :\n- **Couleurs de dialogue** : chaque joueur choisit la couleur de ses messages.\n- **Bulles** : les messages s’affichent en bulles, les siens sur un fond distinct.\n- **Écrire avec un persona** : le message est signé « joueur avec persona », avec l’avatar du persona ; le nom du persona prend la couleur de son groupe.\n- **Actions /me** : « /me ouvre la porte. » s’affiche en italique, précédé du nom du joueur ou de son persona.",
+  },
+  {
+    date: "2026-11-23",
+    category: "Interface",
+    area: "Monde",
+    text: "Chatbox : plus de fond au survol d’un message ; boutons Répondre et Supprimer toujours à la même place, calés sur le texte. Après un envoi, le curseur reste dans le champ pour enchaîner.",
+  },
+  {
+    date: "2026-11-23",
     category: "Fonctionnalité",
     area: "Monde",
     text: "Chatbox : nombre de messages conservés par salle réglable dans Paramètres › Fonctions › Chatbox — 25, 50 ou 100 (le maximum, et le défaut). Au-delà, les plus anciens sont effacés automatiquement ; baisser le réglage efface le surplus tout de suite. Tout ce qui est conservé se relit avec « Messages précédents », en haut du fil.",

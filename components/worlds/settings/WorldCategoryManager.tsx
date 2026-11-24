@@ -36,6 +36,8 @@ import {
 import type { ChatroomCategory } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
+import { cn } from "@/lib/utils";
+import { SETTINGS_ROW, SURFACE } from "./FeatureLayout";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -143,7 +145,7 @@ function CategoryForm({
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className="space-y-3 rounded-xl border border-border bg-muted/20 p-3"
+      className={cn("space-y-3 rounded-md p-3", SURFACE)}
     >
       <div className="space-y-1.5">
         <ImagePickerCropField
@@ -238,7 +240,8 @@ function CategoryRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2.5 rounded-lg bg-muted/60 px-2.5 py-1.5 transition-colors hover:bg-muted/70"
+      className={SETTINGS_ROW}
+      data-category-id={category.id}
     >
       {canEdit && (
         <button
@@ -384,12 +387,10 @@ export function WorldCategoryManager({
 
   return (
     <div className="space-y-3">
-      {/* Même conteneur de zone de glisser-déposer que la grille d'accueil
-          (WorldHomeGridEditor) : `rounded-lg border border-dashed p-2`. */}
-      <div className="rounded-lg border border-dashed p-2">
+      <div>
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
           <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {categories.map((category) => (
                 <CategoryRow
                   key={category.id}
@@ -407,7 +408,7 @@ export function WorldCategoryManager({
         </DndContext>
 
         {categories.length === 0 && !creating && (
-          <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+          <p className="py-4 text-center text-sm text-muted-foreground">
             {t("settings.noCategories")}
           </p>
         )}

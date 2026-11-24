@@ -52,6 +52,36 @@ vi.mock("@/components/profile/UserProfileSheetTrigger", () => ({
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
+// jsdom fournit un localStorage partiel (pas de .clear()) : même remplacement
+// que components/__tests__/ChatroomComposerDraft.test.tsx.
+const _store: Record<string, string> = {};
+vi.stubGlobal("localStorage", {
+  getItem: (key: string) => _store[key] ?? null,
+  setItem: (key: string, value: string) => { _store[key] = value; },
+  removeItem: (key: string) => { delete _store[key]; },
+  clear: () => { for (const k of Object.keys(_store)) delete _store[k]; },
+});
+
+// Options de la chatbox (migration 241), éteintes sauf mention.
+const optionsMock = vi.hoisted(() => ({
+  value: { colors: false, bubbles: false, personas: false, actions: false },
+}));
+vi.mock("@/hooks/useLiveChatOptions", () => ({ useLiveChatOptions: () => optionsMock.value }));
+// Teintes des groupes de personas : persona → couleur.
+const tintsMock = vi.hoisted(() => ({ value: {} as Record<string, string> }));
+vi.mock("@/hooks/usePersonaTints", () => ({ usePersonaTints: () => tintsMock.value }));
+// Le vrai sélecteur charge les personas : ici, un bouton qui en choisit un.
+vi.mock("@/components/personas/PersonaPickerDialog", () => ({
+  PersonaPickerDialog: ({ trigger, onSelect }: { trigger: React.ReactNode; onSelect: (p: unknown) => void }) => (
+    <>
+      {trigger}
+      <button type="button" onClick={() => onSelect({ id: "p1", name: "Lyra", avatar_url: null, dialogue_color: "#f87171" })}>
+        choisir Lyra
+      </button>
+    </>
+  ),
+}));
+
 import { WorldLiveChatDock, isGrouped } from "@/components/worlds/live-chat/WorldLiveChatDock";
 
 const msg = (id: string, user_id: string, username: string, content: string, created_at = "2026-11-09T10:00:00Z"): LiveChatMessage => ({
@@ -71,6 +101,9 @@ beforeEach(() => {
   chat.hasOlder = false;
   chat.loadingOlder = false;
   chat.loadOlder.mockResolvedValue(0);
+  optionsMock.value = { colors: false, bubbles: false, personas: false, actions: false };
+  tintsMock.value = {};
+  localStorage.clear();
 });
 
 describe("WorldLiveChatDock", () => {
@@ -121,8 +154,48 @@ describe("WorldLiveChatDock", () => {
     await user.click(screen.getByTestId("world-live-chat-bar"));
     const input = screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" });
     await user.type(input, "salut{Enter}");
-    expect(chat.send).toHaveBeenCalledWith("salut", null);
+    expect(chat.send).toHaveBeenCalledWith("salut", null, { color: null, personaId: null, isAction: false });
     await waitFor(() => expect(input).toHaveValue(""));
+  });
+
+  it("après un envoi au bouton, le curseur revient dans le champ, resté actif pendant l'envoi", async () => {
+    const user = userEvent.setup();
+    let finish: (v: string) => void = () => {};
+    chat.send.mockImplementation(() => new Promise<string>((r) => { finish = r; }));
+    render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    const input = screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" });
+    await user.type(input, "salut");
+    await user.click(screen.getByRole("button", { name: "Envoyer" }));
+    // Pendant l'envoi : en lecture seule, jamais désactivé (il perdrait le curseur).
+    expect(input).not.toBeDisabled();
+    expect(input).toHaveAttribute("readonly");
+    finish("ok");
+    await waitFor(() => expect(input).toHaveValue(""));
+    expect(input).toHaveFocus();
+    expect(input).not.toHaveAttribute("readonly");
+  });
+
+  it("une ligne de message n'a pas de fond au survol", async () => {
+    chat.messages = [msg("a", "u1", "alice", "bonjour")];
+    render(<WorldLiveChatDock />);
+    await userEvent.setup().click(screen.getByTestId("world-live-chat-bar"));
+    const row = screen.getByRole("log").querySelector("[data-live-message='a']")!;
+    expect(row.className).not.toMatch(/hover:bg-/);
+  });
+
+  it("les actions se calent sur le texte, avec ou sans en-tête", async () => {
+    // b suit a du même auteur à une minute : regroupé, sans en-tête.
+    chat.messages = [
+      msg("a", "u1", "alice", "premier", "2026-11-09T10:00:00Z"),
+      msg("b", "u1", "alice", "ok", "2026-11-09T10:01:00Z"),
+    ];
+    render(<WorldLiveChatDock />);
+    await userEvent.setup().click(screen.getByTestId("world-live-chat-bar"));
+    const actions = screen.getAllByTestId("world-live-chat-actions");
+    expect(actions).toHaveLength(2);
+    expect(actions.map((a) => a.parentElement!.querySelector("p")!.textContent)).toEqual(["premier", "ok"]);
+    for (const a of actions) expect(a).toHaveClass("top-0", "h-5");
   });
 
   it("garde le texte et prévient quand le rythme est dépassé", async () => {
@@ -197,6 +270,221 @@ describe("WorldLiveChatDock — remontée de l'historique (migration 240)", () =
   });
 });
 
+describe("WorldLiveChatDock — options du monde (migration 241)", () => {
+  const ouvrir = async () => {
+    const user = userEvent.setup();
+    render(<WorldLiveChatDock />);
+    await user.click(screen.getByTestId("world-live-chat-bar"));
+    return user;
+  };
+  const avecPersona = (m: LiveChatMessage): LiveChatMessage => ({
+    ...m, persona_id: "p1", persona: { id: "p1", name: "Lyra", avatar_url: null }, color: "#f87171",
+  });
+
+  it("options éteintes : ni persona, ni couleur, ni bulle, ni sélecteurs", async () => {
+    chat.messages = [avecPersona(msg("a", "u1", "alice", "bonjour"))];
+    await ouvrir();
+    expect(screen.getByTestId("world-live-chat-author")).toHaveTextContent(/^alice$/);
+    expect(screen.getByText("bonjour")).not.toHaveAttribute("style");
+    expect(screen.queryByTestId("world-live-chat-bubble")).toBeNull();
+    expect(screen.queryByTestId("world-live-chat-persona")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Couleur des dialogues" })).toBeNull();
+  });
+
+  it("personas : le message est signé « joueur avec persona »", async () => {
+    optionsMock.value = { ...optionsMock.value, personas: true };
+    chat.messages = [avecPersona(msg("a", "u1", "alice", "bonjour"))];
+    await ouvrir();
+    expect(screen.getByTestId("world-live-chat-author")).toHaveTextContent("alice avec Lyra");
+  });
+
+  it("personas : le nom du persona prend la couleur de son groupe, le joueur garde la sienne", async () => {
+    optionsMock.value = { ...optionsMock.value, personas: true, actions: true };
+    tintsMock.value = { p1: "#22c55e" };
+    chat.messages = [
+      avecPersona(msg("a", "u1", "alice", "bonjour")),
+      { ...avecPersona(msg("b", "u1", "alice", "salue.", "2026-11-09T10:10:00Z")), is_action: true },
+    ];
+    await ouvrir();
+    const auteur = screen.getByTestId("world-live-chat-author");
+    expect(within(auteur).getByText("Lyra")).toHaveStyle({ color: "#22c55e" });
+    expect(within(auteur).getByText("alice").getAttribute("style") ?? "").not.toMatch(/color/);
+    expect(within(screen.getByTestId("world-live-chat-action")).getByText("Lyra")).toHaveStyle({ color: "#22c55e" });
+  });
+
+  it("personas : sans couleur de groupe, le nom garde la couleur du texte", async () => {
+    optionsMock.value = { ...optionsMock.value, personas: true };
+    tintsMock.value = { autre: "#22c55e" };
+    chat.messages = [avecPersona(msg("a", "u1", "alice", "bonjour"))];
+    await ouvrir();
+    expect(within(screen.getByTestId("world-live-chat-author")).getByText("Lyra").getAttribute("style") ?? "").not.toMatch(/color/);
+  });
+
+  it("couleurs : le texte prend la couleur du message, si elle se lit", async () => {
+    optionsMock.value = { ...optionsMock.value, colors: true };
+    chat.messages = [
+      { ...msg("a", "u1", "alice", "rouge"), color: "#f87171" },
+      { ...msg("b", "u2", "bob", "noir", "2026-11-09T10:10:00Z"), color: "#000000" },
+      { ...msg("c", "u3", "carole", "vert pâle", "2026-11-09T10:20:00Z"), color: "#4ade804d" },
+    ];
+    await ouvrir();
+    expect(screen.getByText("rouge")).toHaveStyle({ color: "#f87171" });
+    // Transparente : le texte prend sa teinte opaque, l'opacité ne vaut que pour les bulles.
+    expect(screen.getByText("vert pâle")).toHaveStyle({ color: "#4ade80" });
+    // Illisible sur le fond sombre : couleur par défaut.
+    expect(screen.getByText("noir").getAttribute("style") ?? "").not.toMatch(/color/);
+  });
+
+  it("couleurs : le réglage d'opacité n'existe qu'avec les bulles, et part opaque sans elles", async () => {
+    optionsMock.value = { ...optionsMock.value, colors: true };
+    localStorage.setItem("liveChat:color:w1", "#4ade804d");
+    const user = await ouvrir();
+    await user.click(screen.getByRole("button", { name: "Couleur des dialogues" }));
+    expect(screen.queryByRole("slider", { name: "Opacité" })).toBeNull();
+    await user.type(screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" }), "salut{Enter}");
+    expect(chat.send).toHaveBeenCalledWith("salut", null, { color: "#4ade80", personaId: null, isAction: false });
+  });
+
+  it("bulles : le sélecteur garde l'opacité, et la couleur part telle quelle", async () => {
+    optionsMock.value = { ...optionsMock.value, colors: true, bubbles: true };
+    localStorage.setItem("liveChat:color:w1", "#4ade804d");
+    const user = await ouvrir();
+    await user.click(screen.getByRole("button", { name: "Couleur des dialogues" }));
+    expect(screen.getByRole("slider", { name: "Opacité" })).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" }), "salut{Enter}");
+    expect(chat.send).toHaveBeenCalledWith("salut", null, { color: "#4ade804d", personaId: null, isAction: false });
+  });
+
+  it("bulles : toutes à gauche, avec nom ; les siennes se distinguent par leur fond", async () => {
+    optionsMock.value = { ...optionsMock.value, bubbles: true };
+    chat.messages = [msg("a", "u1", "alice", "salut"), msg("b", "me", "moi", "coucou", "2026-11-09T10:10:00Z")];
+    await ouvrir();
+    const bulles = screen.getAllByTestId("world-live-chat-bubble");
+    expect(bulles.map((b) => b.textContent)).toEqual(["salut", "coucou"]);
+    const mienne = screen.getByRole("log").querySelector("[data-live-message='b']")!;
+    expect(mienne).toHaveAttribute("data-mine", "true");
+    expect(within(mienne as HTMLElement).getByTestId("world-live-chat-author")).toHaveTextContent("moi");
+    expect(bulles[0]).toHaveClass("bg-muted");
+    expect(bulles[1]).toHaveClass("bg-primary");
+  });
+
+  it("bulles : un groupe a son avatar et son nom en haut, et des coins resserrés entre ses bulles", async () => {
+    optionsMock.value = { ...optionsMock.value, bubbles: true };
+    chat.messages = [
+      msg("a", "u1", "alice", "un", "2026-11-09T10:00:00Z"),
+      msg("b", "u1", "alice", "deux", "2026-11-09T10:01:00Z"),
+      msg("c", "u1", "alice", "trois", "2026-11-09T10:02:00Z"),
+      msg("d", "u2", "bob", "seul", "2026-11-09T10:03:00Z"),
+    ];
+    await ouvrir();
+    const row = (id: string) => screen.getByRole("log").querySelector<HTMLElement>(`[data-live-message='${id}']`)!;
+    const hasAvatar = (id: string) => row(id).firstElementChild!.childElementCount > 0;
+    const hasName = (id: string) => within(row(id)).queryByTestId("world-live-chat-author") !== null;
+    expect(["a", "b", "c", "d"].map(hasAvatar)).toEqual([true, false, false, true]);
+    expect(["a", "b", "c", "d"].map(hasName)).toEqual([true, false, false, true]);
+    const bulle = (id: string) => within(row(id)).getByTestId("world-live-chat-bubble");
+    expect(bulle("a")).toHaveClass("rounded-bl-md");
+    expect(bulle("a")).not.toHaveClass("rounded-tl-md");
+    expect(bulle("b")).toHaveClass("rounded-tl-md", "rounded-bl-md");
+    expect(bulle("c")).toHaveClass("rounded-tl-md");
+    expect(bulle("c")).not.toHaveClass("rounded-bl-md");
+    expect(bulle("d")).not.toHaveClass("rounded-tl-md");
+    expect(bulle("d")).not.toHaveClass("rounded-bl-md");
+  });
+
+  it("bulles : une action /me prend l'espacement et le retrait des bulles", async () => {
+    optionsMock.value = { ...optionsMock.value, bubbles: true, actions: true };
+    chat.messages = [
+      msg("a", "u1", "alice", "salut", "2026-11-09T10:00:00Z"),
+      { ...msg("b", "u1", "alice", "ouvre la porte.", "2026-11-09T10:01:00Z"), is_action: true },
+    ];
+    await ouvrir();
+    const row = (id: string) => screen.getByRole("log").querySelector<HTMLElement>(`[data-live-message='${id}']`)!;
+    // Même espacement de ligne que les bulles, sans marge de droite.
+    expect(row("b").className.split(" ").filter((c) => /^(gap|mt|pt|pb|py|pr)-/.test(c)).sort())
+      .toEqual(row("a").className.split(" ").filter((c) => /^(gap|mt|pt|pb|py|pr)-/.test(c)).sort());
+    const action = screen.getByTestId("world-live-chat-action");
+    expect(action).toHaveClass("px-3", "py-1.5");
+    expect(within(row("b")).getByTestId("world-live-chat-actions")).toHaveClass("left-full");
+  });
+
+  it("actions : /me part en action jouée", async () => {
+    optionsMock.value = { ...optionsMock.value, actions: true };
+    const user = await ouvrir();
+    const input = screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" });
+    expect(input).toHaveAttribute("placeholder", "Écrire dans le chat du monde… (/me pour une action)");
+    await user.type(input, "/me se rend à la porte.{Enter}");
+    expect(chat.send).toHaveBeenCalledWith("se rend à la porte.", null, { color: null, personaId: null, isAction: true });
+  });
+
+  it("sans l'option, /me part tel quel", async () => {
+    const user = await ouvrir();
+    await user.type(screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" }), "/me salue{Enter}");
+    expect(chat.send).toHaveBeenCalledWith("/me salue", null, { color: null, personaId: null, isAction: false });
+  });
+
+  it("**gras** et *italique* dans les messages ; aperçus sans les marques", async () => {
+    optionsMock.value = { ...optionsMock.value, bubbles: true, actions: true };
+    chat.messages = [
+      msg("a", "u1", "alice", "un **gros** et un *petit* mot", "2026-11-09T10:00:00Z"),
+      { ...msg("b", "u1", "alice", "chuchote *très* bas", "2026-11-09T10:01:00Z"), is_action: true },
+      { ...msg("c", "u2", "bob", "**Oui**", "2026-11-09T10:02:00Z"), reply_to_id: "a", reply: { id: "a", user_id: "u1", username: "alice", content: "un **gros** mot" } },
+    ];
+    render(<WorldLiveChatDock />);
+    // Barre : dernier message sans ses astérisques.
+    expect(screen.getByTestId("world-live-chat-bar")).toHaveTextContent("Oui");
+    expect(screen.getByTestId("world-live-chat-bar")).not.toHaveTextContent("**");
+    await userEvent.setup().click(screen.getByTestId("world-live-chat-bar"));
+    const bulle = screen.getAllByTestId("world-live-chat-bubble")[0];
+    expect(bulle.querySelector("strong")).toHaveTextContent("gros");
+    expect(bulle.querySelector("em")).toHaveTextContent("petit");
+    expect(bulle).toHaveTextContent("un gros et un petit mot");
+    // Dans une action, déjà en italique, l'italique ressort en romain.
+    const action = screen.getByTestId("world-live-chat-action");
+    expect(action.querySelector("em")).toHaveTextContent("très");
+    expect(action).toHaveClass("[&_em]:not-italic");
+    expect(screen.getByTestId("world-live-chat-quote")).toHaveTextContent("un gros mot");
+  });
+
+  it("une action s'affiche en italique, précédée du persona qui la joue", async () => {
+    optionsMock.value = { ...optionsMock.value, personas: true, actions: true };
+    chat.messages = [{ ...avecPersona(msg("a", "u1", "alice", "se rend à la porte.")), is_action: true }];
+    await ouvrir();
+    const action = screen.getByTestId("world-live-chat-action");
+    expect(action).toHaveClass("italic");
+    expect(action).toHaveTextContent(/^Lyra se rend à la porte\./);
+  });
+
+  it("une action et un en-tête se centrent pareil sur l'avatar, avec le même espacement", async () => {
+    optionsMock.value = { ...optionsMock.value, actions: true };
+    chat.messages = [
+      { ...msg("a", "u1", "alice", "se lève."), is_action: true },
+      msg("b", "u2", "bob", "salut", "2026-11-09T10:01:00Z"),
+    ];
+    await ouvrir();
+    const row = (id: string) => screen.getByRole("log").querySelector<HTMLElement>(`[data-live-message='${id}']`)!;
+    // 6 + 20 + 6 = 32 px, la hauteur de l'avatar : la première ligne d'un /me
+    // et le pseudo d'un message tombent au même endroit.
+    expect(screen.getByTestId("world-live-chat-action")).toHaveClass("py-1.5");
+    expect(within(row("b")).getByTestId("world-live-chat-author").closest("div")).toHaveClass("pt-1.5");
+    for (const id of ["a", "b"]) expect(row(id)).toHaveClass("mt-2", "py-0.5");
+    expect(within(row("a")).getByTestId("world-live-chat-actions")).toHaveClass("top-1.5");
+  });
+
+  it("choisir un persona l'envoie avec sa couleur de dialogue, et le choix reste pour le monde", async () => {
+    optionsMock.value = { ...optionsMock.value, personas: true, colors: true };
+    const user = await ouvrir();
+    await user.click(screen.getByRole("button", { name: "choisir Lyra" }));
+    expect(screen.getByRole("button", { name: "Lyra" })).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" }), "bonjour{Enter}");
+    expect(chat.send).toHaveBeenCalledWith("bonjour", null, { color: "#f87171", personaId: "p1", isAction: false });
+    expect(JSON.parse(localStorage.getItem("liveChat:persona:w1")!)).toMatchObject({ id: "p1", name: "Lyra" });
+    // Retirer le persona : on écrit de nouveau en son nom propre.
+    await user.click(screen.getByRole("button", { name: "Écrire sans persona" }));
+    expect(localStorage.getItem("liveChat:persona:w1")).toBeNull();
+  });
+});
+
 describe("isGrouped", () => {
   it("regroupe un même auteur à moins de cinq minutes", () => {
     const a = msg("a", "u1", "alice", "1", "2026-11-09T10:00:00Z");
@@ -204,6 +492,12 @@ describe("isGrouped", () => {
     expect(isGrouped(a, msg("c", "u1", "alice", "3", "2026-11-09T10:06:00Z"))).toBe(false);
     expect(isGrouped(a, msg("d", "u2", "bob", "4", "2026-11-09T10:01:00Z"))).toBe(false);
     expect(isGrouped(undefined, a)).toBe(false);
+  });
+
+  it("ne regroupe ni deux personas différents, ni une action (migration 241)", () => {
+    const a = msg("a", "u1", "alice", "1", "2026-11-09T10:00:00Z");
+    expect(isGrouped(a, { ...msg("b", "u1", "alice", "2", "2026-11-09T10:01:00Z"), persona_id: "p1" })).toBe(false);
+    expect(isGrouped(a, { ...msg("c", "u1", "alice", "3", "2026-11-09T10:01:00Z"), is_action: true })).toBe(false);
   });
 
   describe("salles, fil du salon et réponses (migration 238)", () => {
@@ -270,7 +564,7 @@ describe("isGrouped", () => {
 
       await user.click(screen.getByRole("button", { name: "Répondre à bob" }));
       await user.type(input, "Oui !{Enter}");
-      await waitFor(() => expect(chat.send).toHaveBeenCalledWith("Oui !", "m1"));
+      await waitFor(() => expect(chat.send).toHaveBeenCalledWith("Oui !", "m1", { color: null, personaId: null, isAction: false }));
       await waitFor(() => expect(screen.queryByTestId("world-live-chat-replying")).toBeNull());
     });
 

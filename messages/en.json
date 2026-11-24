@@ -1126,15 +1126,33 @@
         "namePlaceholder": "New room…",
         "add": "Add the room",
         "icon": "Icon of the {name} room",
-        "resetIcon": "Back to # for the {name} room",
         "delete": "Delete the {name} room",
         "deleteTitle": "Delete the “{name}” room?",
         "deleteBody": "The room disappears from the chatbox, with all its messages. This can't be undone."
       },
       "liveChatRetention": {
         "title": "Messages kept",
-        "help": "Each chatbox room keeps this many messages, 100 at most: the main room, custom rooms and each game room's thread count separately. Everything kept can be read by scrolling back; beyond that, the oldest are deleted automatically. Lowering the setting deletes the excess right away.",
+        "help": "Number of messages kept, 100 at most. Every room, including a game room's, works with this retention limit. Everything kept can be read by scrolling back; beyond that, the oldest are deleted automatically. Lowering the setting deletes the excess right away.",
         "option": "{count} messages per room"
+      },
+      "liveChatOptions": {
+        "title": "Options",
+        "colors": {
+          "title": "Dialogue colors",
+          "help": "Each player picks the color of their chatbox messages. A persona with its own dialogue color lends it to its messages."
+        },
+        "bubbles": {
+          "title": "Bubbles",
+          "help": "Messages show as bubbles, like in a messaging app: yours on the right, others' on the left."
+        },
+        "personas": {
+          "title": "Write as a persona",
+          "help": "Each player can attach one of their playable personas to their messages: the persona's avatar shows, and the message is signed by the player with their persona."
+        },
+        "actions": {
+          "title": "/me actions",
+          "help": "A message starting with /me becomes a roleplayed action: in italics, preceded by the player's name, or their persona's."
+        }
       }
     },
     "timelinePicker": {
@@ -2697,6 +2715,11 @@
     "jumpTo": "Show the quoted message",
     "newActivity": "New messages",
     "loadOlder": "Earlier messages",
-    "loadOlderFailed": "Couldn't load earlier messages."
+    "loadOlderFailed": "Couldn't load earlier messages.",
+    "withPersona": "<user>{userName}</user> as <persona>{personaName}</persona>",
+    "choosePersona": "Write as a persona",
+    "clearPersona": "Write without a persona",
+    "personaRejected": "This persona can't write here.",
+    "placeholderActions": "Write in the world chat… (/me for an action)"
   }
 }

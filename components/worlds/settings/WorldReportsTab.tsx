@@ -11,6 +11,8 @@ import { replyExcerpt } from "@/lib/replyExcerpt";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import DateDisplay from "@/components/date-display";
+import { cn } from "@/lib/utils";
+import { SURFACE } from "./FeatureLayout";
 
 /**
  * File des signalements ouverts d'un monde. Visible de qui a « Gérer les
@@ -56,7 +58,7 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
 
   if (reports.length === 0) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground" data-testid="reports-empty">
+      <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground" data-testid="reports-empty">
         <Flag className="h-5 w-5" />
         {t("reportsEmpty")}
       </div>
@@ -64,7 +66,7 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-3">
+    <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{t("reportsIntro")}</p>
       <ul className="space-y-3">
         {reports.map((r) => {
@@ -73,7 +75,7 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
           const extrait = r.content === null ? null : (replyExcerpt(r.content) ?? t("reportsBlock"));
           const occupe = busyId === r.id;
           return (
-            <li key={r.id} className="rounded-lg border border-border p-3" data-testid="report-item">
+            <li key={r.id} className={cn("rounded-md p-3", SURFACE)} data-testid="report-item">
               <div className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
                 <span>{t("reportsBy", { name: r.reporter?.username ?? t("reportsUnknown") })}</span>
                 <span>·</span>

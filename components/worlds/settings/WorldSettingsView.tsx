@@ -66,11 +66,10 @@ import type { World } from "@/types/worlds";
 
 
 
-import { LabelWithHelp } from "./LabelWithHelp";
 import { WorldReportsTab } from "./WorldReportsTab";
 import { WorldRolesTab } from "./WorldRolesTab";
 import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
-import { SettingsSection } from "./FeatureLayout";
+import { FeaturePage, SETTINGS_PAGE_WIDTH, SettingsSection } from "./FeatureLayout";
 import { WorldSettingsNav, useSettingsSectionLabel } from "./WorldSettingsNav";
 import {
   SECTION_PARAM,
@@ -346,10 +345,11 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     /** Une page de réglages : titre, puis son contenu, à sa largeur — calée
      *  contre le menu, pour que le titre ne saute pas d'une section à l'autre.
      *  `ownTitle` : la page porte déjà le sien (FeaturePage), pas de doublon. */
-    const page = (id: SettingsSectionId, width: string, children: React.ReactNode, ownTitle = false) => (
-        <div className={cn("w-full", width)} data-settings-page={id}>
-            {!ownTitle && <h3 className="mb-6 text-xl font-semibold tracking-tight">{sectionLabel(id)}</h3>}
-            {children}
+    // Toutes les pages ont la même largeur et la même mise en page que celles
+    // des fonctions (FeaturePage) : titre, puis sections à deux colonnes.
+    const page = (id: SettingsSectionId, children: React.ReactNode, ownTitle = false) => (
+        <div className={SETTINGS_PAGE_WIDTH} data-settings-page={id}>
+            {ownTitle ? children : <FeaturePage title={sectionLabel(id)}>{children}</FeaturePage>}
         </div>
     );
 
@@ -397,23 +397,20 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         )}
 
                         {/* ── Général ──────────────────────────────────── */}
-                        {shown === "general" && page("general", "max-w-xl", (
+                        {shown === "general" && page("general", (
                             <>
                             <form
                                 onSubmit={(e) => e.preventDefault()}
                                 className="space-y-6"
                             >
                                 {/* -- Nom ------------------------------------ */}
+                                <SettingsSection title={t("name")} help={t("nameHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>
-                                                <LabelWithHelp help={t("nameHelp")}>
-                                                    {t("name")}
-                                                </LabelWithHelp>
-                                            </FormLabel>
+                                            <FormLabel className="sr-only">{t("name")}</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder={t("namePlaceholder")}
@@ -429,18 +426,16 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         </FormItem>
                                     )}
                                 />
+                                </SettingsSection>
 
                                 {/* -- Description ---------------------------- */}
+                                <SettingsSection title={t("description")} help={t("tagHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="description"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>
-                                                <LabelWithHelp help={t("tagHelp")}>
-                                                    {t("description")}
-                                                </LabelWithHelp>
-                                            </FormLabel>
+                                            <FormLabel className="sr-only">{t("description")}</FormLabel>
                                             <FormControl>
                                                 <Textarea
                                                     rows={5}
@@ -456,18 +451,16 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         </FormItem>
                                     )}
                                 />
+                                </SettingsSection>
 
                                 {/* -- Icône ----------------------------------- */}
+                                <SettingsSection title={tSettings("worldIcon")} help={t("iconHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="icon_url"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel>
-                                                <LabelWithHelp help={t("iconHelp")}>
-                                                    {tSettings("worldIcon")}
-                                                </LabelWithHelp>
-                                            </FormLabel>
+                                            <FormLabel className="sr-only">{tSettings("worldIcon")}</FormLabel>
                                             <div className="flex items-start gap-3">
                                                 {iconUrl ? (
                                                     <div className="flex items-start gap-2">
@@ -560,18 +553,16 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         </FormItem>
                                     )}
                                 />
+                                </SettingsSection>
 
                                 {/* -- Bannière -------------------------------- */}
+                                <SettingsSection title={tSettings("banner")} help={t("bannerHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="banner_url"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel>
-                                                <LabelWithHelp help={t("bannerHelp")}>
-                                                    {tSettings("banner")}
-                                                </LabelWithHelp>
-                                            </FormLabel>
+                                            <FormLabel className="sr-only">{tSettings("banner")}</FormLabel>
                                             <ImagePickerCropField
                                                 aspect={16 / 7}
                                                 uploading={uploading === "banner"}
@@ -596,6 +587,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         </FormItem>
                                     )}
                                 />
+                                </SettingsSection>
 
                                 {/* -- Couleurs de la page d'accueil : désactivé temporairement
                                      (voir HomeColorField plus haut) — WorldHome applique
@@ -605,7 +597,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             {/* Supprimer le monde reste au propriétaire : `world.settings`
                                 permet de régler le monde, pas d'en disposer. */}
                             {membership?.isOwner && (
-                                <SettingsSection title={tSettings("menu.dangerZone")} className="mt-10">
+                                <SettingsSection title={tSettings("menu.dangerZone")}>
                                     <div>
                                         <Button
                                             type="button"
@@ -626,13 +618,12 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         ))}
 
                         {/* ── Page d'accueil ───────────────────────────── */}
-                        {/* Plus large : un éditeur de grille 12 colonnes a besoin de place. */}
-                        {shown === "home" && page("home", "max-w-2xl", (
+                        {shown === "home" && page("home", (
                             <WorldHomeGridSettings world={world} onUpdated={onUpdated} />
                         ))}
 
                         {/* ── Communauté ───────────────────────────────── */}
-                        {shown === "community" && page("community", "max-w-xl", (
+                        {shown === "community" && page("community", (
                             <WorldCommunityTab
                                 key={`community-${world.id}`}
                                 world={world}
@@ -647,7 +638,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             leur état, et le menu connaît l'état de chacune. Elles
                             portent leur propre titre (FeaturePage). */}
                         {settings && (
-                            <div className={cn("w-full max-w-3xl", !isFeatureSection(shown) && "hidden")}>
+                            <div className={cn(SETTINGS_PAGE_WIDTH, !isFeatureSection(shown) && "hidden")}>
                                 <WorldFeaturesTab
                                     // La clé REMONTE les pages quand on change de monde.
                                     key={`features-${world.id}`}
@@ -662,28 +653,28 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         )}
 
                         {/* ── Catégories ───────────────────────────────── */}
-                        {shown === "categories" && page("categories", "max-w-xl", (
+                        {shown === "categories" && page("categories", (
                             <WorldCategoryManager worldId={world.id} canEdit />
                         ))}
 
                         {/* ── Groupes ──────────────────────────────────── */}
-                        {shown === "groups" && page("groups", "max-w-4xl", (
+                        {shown === "groups" && page("groups", (
                             <WorldGroupsSettings worldId={world.id} />
                         ), true)}
 
                         {/* ── Relations ────────────────────────────────── */}
-                        {shown === "relations" && page("relations", "max-w-4xl", (
+                        {shown === "relations" && page("relations", (
                             <WorldRelationsSettings worldId={world.id} />
                         ), true)}
 
                         {/* ── Rôles ────────────────────────────────────── */}
-                        {shown === "roles" && page("roles", "max-w-5xl", (
+                        {shown === "roles" && page("roles", (
                             <WorldRolesTab key={`roles-${world.id}`} worldId={world.id} />
                         ))}
 
                         {/* ── Annonces ─────────────────────────────────── */}
-                        {/* Plus large : l'aperçu en direct se range à droite du formulaire. */}
-                        {shown === "announcements" && page("announcements", "max-w-6xl", (
+                        {/* L'aperçu en direct se range à droite du formulaire quand la page a sa pleine largeur. */}
+                        {shown === "announcements" && page("announcements", (
                             <WorldAnnouncementsTab
                                 key={`announcements-${world.id}`}
                                 worldId={world.id}
@@ -692,7 +683,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         ))}
 
                         {/* ── Signalements ─────────────────────────────── */}
-                        {shown === "reports" && page("reports", "max-w-3xl", (
+                        {shown === "reports" && page("reports", (
                             <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
                         ))}
                     </div>

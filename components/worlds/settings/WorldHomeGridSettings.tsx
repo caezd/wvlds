@@ -12,11 +12,10 @@ import {
   type WorldHomeGridGap,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { HelpHint } from "@/components/ui/help-hint";
+import { ToggleItem, ToggleList } from "./FeatureLayout";
 
 const GAP_OPTIONS: WorldHomeGridGap[] = ["compact", "comfortable", "spacious"];
 
@@ -74,47 +73,41 @@ export function WorldHomeGridSettings({
 
   return (
     <div className="space-y-6">
-      <div className="divide-y divide-border rounded-lg border border-border">
-        <div className="flex items-start justify-between gap-4 p-3">
-          <p className="flex items-center gap-1.5 text-sm font-medium">
-              {t("home.showStats")}
-              <HelpHint title={t("home.showStats")}>{t("home.showStatsDesc")}</HelpHint>
-          </p>
-          <Switch
-            checked={showStats}
-            disabled={togglingStats}
-            onCheckedChange={(v) => void handleToggleStats(v)}
-            className="mt-0.5 shrink-0"
-          />
-        </div>
-
-        <div className="space-y-2 p-3">
-          <p className="flex items-center gap-1.5 text-sm font-medium">
-              {t("home.gridGap")}
-              <HelpHint title={t("home.gridGap")}>{t("home.gridGapDesc")}</HelpHint>
-          </p>
-          <div className="flex gap-1.5" role="radiogroup" aria-label={t("home.gridGap")}>
-            {GAP_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                role="radio"
-                aria-checked={gap === option}
-                disabled={savingGap}
-                onClick={() => void handleChangeGap(option)}
-                className={cn(
-                  "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
-                  gap === option
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )}
-              >
-                {t(`home.gridGapOptions.${option}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ToggleList>
+        <ToggleItem
+          title={t("home.showStats")}
+          help={t("home.showStatsDesc")}
+          checked={showStats}
+          disabled={togglingStats}
+          onCheckedChange={(v) => void handleToggleStats(v)}
+        />
+        <ToggleItem
+          title={t("home.gridGap")}
+          help={t("home.gridGapDesc")}
+          control={
+            <div className="flex shrink-0 gap-1" role="radiogroup" aria-label={t("home.gridGap")}>
+              {GAP_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={gap === option}
+                  disabled={savingGap}
+                  onClick={() => void handleChangeGap(option)}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60",
+                    gap === option
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {t(`home.gridGapOptions.${option}`)}
+                </button>
+              ))}
+            </div>
+          }
+        />
+      </ToggleList>
 
       <WorldHomeGridEditor
         worldId={world.id}

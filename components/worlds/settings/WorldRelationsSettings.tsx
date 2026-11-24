@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FIELD, FeaturePage, SURFACE, SettingsSection } from "./FeatureLayout";
+import { FIELD, FeaturePage, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
 import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
 
 const RT_COLUMNS = "id, world_id, name, color, dash, sort_index, mutual, marital_status";
@@ -33,7 +33,7 @@ const SOLID = "solid";
 type Reciprocity = "none" | "mutual" | RelationMaritalStatus;
 
 /** Une ligne d'une liste : bordée, sur le fond des cartes. */
-const ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
+const ROW = SETTINGS_ROW;
 /** Un champ sans cadre, dans une ligne. */
 const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0";
 /** La pastille de couleur, carrée comme sur la maquette. */

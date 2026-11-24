@@ -1126,15 +1126,33 @@
         "namePlaceholder": "Nueva sala…",
         "add": "Añadir la sala",
         "icon": "Icono de la sala {name}",
-        "resetIcon": "Volver al # para la sala {name}",
         "delete": "Eliminar la sala {name}",
         "deleteTitle": "¿Eliminar la sala «{name}»?",
         "deleteBody": "La sala desaparece de la chatbox, con todos sus mensajes. Esta acción es definitiva."
       },
       "liveChatRetention": {
         "title": "Mensajes conservados",
-        "help": "Cada sala de la chatbox conserva este número de mensajes, 100 como máximo: la sala principal, las salas personalizadas y el hilo de cada sala de juego cuentan por separado. Todo lo conservado se puede releer subiendo en el hilo; más allá, los más antiguos se borran automáticamente. Bajar el ajuste borra el excedente de inmediato.",
+        "help": "Número de mensajes conservados, 100 como máximo. Todas las salas, incluida la de una sala de juego, funcionan con este límite de conservación. Todo lo conservado se puede releer subiendo en el hilo; más allá, los más antiguos se borran automáticamente. Bajar el ajuste borra el excedente de inmediato.",
         "option": "{count} mensajes por sala"
+      },
+      "liveChatOptions": {
+        "title": "Opciones",
+        "colors": {
+          "title": "Colores de diálogo",
+          "help": "Cada jugador elige el color de sus mensajes en la chatbox. Un persona con su propio color de diálogo lo presta a sus mensajes."
+        },
+        "bubbles": {
+          "title": "Burbujas",
+          "help": "Los mensajes se muestran en burbujas, como en una mensajería: los suyos a la derecha, los de los demás a la izquierda."
+        },
+        "personas": {
+          "title": "Escribir con un persona",
+          "help": "Cada jugador puede asociar uno de sus personas jugables a sus mensajes: se muestra el avatar del persona y el mensaje queda firmado por el jugador con su persona."
+        },
+        "actions": {
+          "title": "Acciones /me",
+          "help": "Un mensaje que empieza por /me se convierte en una acción interpretada: en cursiva, precedida del nombre del jugador o de su persona."
+        }
       }
     },
     "timelinePicker": {
@@ -2697,6 +2715,11 @@
     "jumpTo": "Ver el mensaje citado",
     "newActivity": "Mensajes nuevos",
     "loadOlder": "Mensajes anteriores",
-    "loadOlderFailed": "No se pudieron cargar los mensajes anteriores."
+    "loadOlderFailed": "No se pudieron cargar los mensajes anteriores.",
+    "withPersona": "<user>{userName}</user> con <persona>{personaName}</persona>",
+    "choosePersona": "Escribir con un persona",
+    "clearPersona": "Escribir sin persona",
+    "personaRejected": "Este persona no puede escribir aquí.",
+    "placeholderActions": "Escribir en el chat del mundo… (/me para una acción)"
   }
 }

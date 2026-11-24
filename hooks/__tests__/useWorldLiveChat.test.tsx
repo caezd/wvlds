@@ -197,6 +197,39 @@ describe("useWorldLiveChat — salles et fils de salon (migration 238)", () => {
     expect(insertBuilder.insert).toHaveBeenCalledWith({ world_id: "w1", user_id: "me", content: "coucou", channel_id: "c1", reply_to_id: "m1" });
   });
 
+  it("envoie la couleur, le persona et l'action demandés (migration 241)", async () => {
+    const sent = { ...row("n", "me", "2026-11-09T10:00:00Z", "moi"), channel_id: null, chatroom_id: null, reply_to_id: null, reply: null };
+    const { result, mock } = setupAt([{ data: [] }, { data: sent }], { kind: "main" });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect(await result.current.send("se lève", null, { color: "#f87171", personaId: "p1", isAction: true })).toBe("ok");
+    });
+    expect(mock.buildersFor("world_live_messages")[1].insert).toHaveBeenCalledWith({
+      world_id: "w1", user_id: "me", content: "se lève", color: "#f87171", persona_id: "p1", is_action: true,
+    });
+  });
+
+  it("un persona refusé par la base se dit", async () => {
+    const { result } = setupAt([{ data: [] }, { data: null, error: { message: "Ce persona ne peut pas écrire ici." } }], { kind: "main" });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect(await result.current.send("salut", null, { personaId: "p9" })).toBe("persona");
+    });
+  });
+
+  it("un message reçu en direct retrouve son persona", async () => {
+    const { result, mock } = setupAt(
+      [{ data: [] }, { data: { id: "p1", name: "Lyra", avatar_url: "lyra.png" } }],
+      { kind: "main" },
+    );
+    await waitFor(() => expect(mock.channelNamed("world:w1")).toBeDefined());
+    const ch = mock.channelNamed("world:w1")!;
+    const record = { ...row("x", "me", "2026-11-09T10:05:00Z", "moi"), channel_id: null, chatroom_id: null, persona_id: "p1", is_action: false };
+    act(() => ch.emit(isLive, { event: "live", payload: { op: "INSERT", record } }));
+    await waitFor(() => expect(result.current.messages[0]?.persona?.name).toBe("Lyra"));
+    expect(mock.from).toHaveBeenCalledWith("personas");
+  });
+
   it("un message cité qui disparaît : la citation le dit", async () => {
     const m1 = { ...row("m1", "u2", "2026-11-09T10:00:00Z"), channel_id: null, chatroom_id: null, reply_to_id: null, reply: null };
     const m2 = { ...row("m2", "u3", "2026-11-09T10:01:00Z"), channel_id: null, chatroom_id: null, reply_to_id: "m1", reply: { id: "m1", content: "msg m1", user_id: "u2", profiles: { username: "u2" } } };
@@ -247,6 +280,20 @@ describe("useWorldLiveChat — remontée de l'historique (migration 240)", () =>
   it("jamais plus d'une page par lecture : le plafond de 100 tient en deux", () => {
     expect(LIVE_CHAT_PAGE * 2).toBeGreaterThanOrEqual(LIVE_CHAT_RETENTION_MAX);
     expect(LIVE_CHAT_PAGE).toBeLessThanOrEqual(LIVE_CHAT_RETENTION_MAX);
+  });
+
+  it("dans le fil d'un salon, la remontée ne lit que ce fil", async () => {
+    const mock = createSupabaseMock({ user: { id: "me" }, results: [{ data: page(LIVE_CHAT_PAGE) }, { data: page(5, LIVE_CHAT_PAGE) }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const { result } = renderHook(() => useWorldLiveChat("w1", { kind: "chatroom", id: "r1" }));
+    await waitFor(() => expect(result.current.hasOlder).toBe(true));
+    await act(async () => {
+      await result.current.loadOlder();
+    });
+    const b = mock.buildersFor("world_live_messages")[1];
+    expect(b.eq).toHaveBeenCalledWith("chatroom_id", "r1");
+    expect(b.is).not.toHaveBeenCalled();
+    expect(result.current.messages).toHaveLength(LIVE_CHAT_PAGE + 5);
   });
 
   it("un échec de lecture se signale sans toucher au fil", async () => {

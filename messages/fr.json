@@ -1126,15 +1126,33 @@
         "namePlaceholder": "Nouvelle salle…",
         "add": "Ajouter la salle",
         "icon": "Icône de la salle {name}",
-        "resetIcon": "Revenir au # pour la salle {name}",
         "delete": "Supprimer la salle {name}",
         "deleteTitle": "Supprimer la salle « {name} » ?",
         "deleteBody": "La salle disparaît de la chatbox, avec tous ses messages. Cette action est définitive."
       },
       "liveChatRetention": {
         "title": "Messages conservés",
-        "help": "Chaque salle de la chatbox garde ce nombre de messages, 100 au plus : la salle principale, les salles personnalisées et le fil de chaque salon comptent à part. Tout ce qui est gardé se relit en remontant le fil ; au-delà, les plus anciens sont effacés automatiquement. Baisser le réglage efface le surplus tout de suite.",
+        "help": "Nombre de messages gardés, 100 au plus. Toutes les salles, y compris celle d’un salon de jeu, fonctionnent avec cette limite de conservation. Tout ce qui est gardé se relit en remontant le fil ; au-delà, les plus anciens sont effacés automatiquement. Baisser le réglage efface le surplus tout de suite.",
         "option": "{count} messages par salle"
+      },
+      "liveChatOptions": {
+        "title": "Options",
+        "colors": {
+          "title": "Couleurs de dialogue",
+          "help": "Chaque joueur choisit la couleur de ses messages dans la chatbox. Un persona qui a sa propre couleur de dialogue la prête à ses messages."
+        },
+        "bubbles": {
+          "title": "Bulles",
+          "help": "Les messages s’affichent en bulles, comme dans une messagerie : les vôtres à droite, ceux des autres à gauche."
+        },
+        "personas": {
+          "title": "Écrire avec un persona",
+          "help": "Chaque joueur peut associer l’un de ses personas jouables à ses messages : l’avatar du persona s’affiche, et le message est signé du joueur avec son persona."
+        },
+        "actions": {
+          "title": "Actions /me",
+          "help": "Un message qui commence par /me devient une action jouée : en italique, précédée du nom du joueur, ou de son persona."
+        }
       }
     },
     "timelinePicker": {
@@ -2697,6 +2715,11 @@
     "jumpTo": "Voir le message cité",
     "newActivity": "Nouveaux messages",
     "loadOlder": "Messages précédents",
-    "loadOlderFailed": "Chargement des messages précédents impossible."
+    "loadOlderFailed": "Chargement des messages précédents impossible.",
+    "withPersona": "<user>{userName}</user> avec <persona>{personaName}</persona>",
+    "choosePersona": "Écrire avec un persona",
+    "clearPersona": "Écrire sans persona",
+    "personaRejected": "Ce persona ne peut pas écrire ici.",
+    "placeholderActions": "Écrire dans le chat du monde… (/me pour une action)"
   }
 }

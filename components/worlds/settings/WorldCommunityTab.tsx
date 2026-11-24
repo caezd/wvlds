@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
-import { LabelWithHelp } from "./LabelWithHelp";
+import { FIELD, SettingsSection } from "./FeatureLayout";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
 
 type ProprietesOnglet = {
@@ -29,7 +29,6 @@ import {
   removeWorldTag,
 } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { HelpHint } from "@/components/ui/help-hint";
 
 /**
  * Onglet « Communauté » des réglages d'un monde : visibilité, types d'avatars
@@ -194,18 +193,15 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
 
   return (
                             <>
-                                <div className="mx-auto max-w-xl space-y-6">
+                                <div className="space-y-6">
                                     {/* -- Visibilité ----------------------------- */}
+                                    <SettingsSection title={tSettings("visibility")} help={t("publicWorldHelp")}>
                                     <FormField
                                         control={form.control}
                                         name="visibility"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>
-                                                    <LabelWithHelp help={t("publicWorldHelp")}>
-                                                        {tSettings("visibility")}
-                                                    </LabelWithHelp>
-                                                </FormLabel>
+                                                <FormLabel className="sr-only">{tSettings("visibility")}</FormLabel>
                                                 <FormControl>
                                                     <SegmentedRail>
                                                         <Segment
@@ -232,15 +228,12 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                             </FormItem>
                                         )}
                                     />
+                                    </SettingsSection>
 
                                     {/* -- Sécurité ----------------------------- */}
                                     {/* Deux cartes plutôt qu'un interrupteur : le choix se lit
                                         d'un coup d'œil, comme Privé / Public juste au-dessus. */}
-                                    <div className="space-y-3">
-                                        <p className="flex items-center gap-1.5 text-sm font-medium">
-                                            {t("tabSecurity")}
-                                            <HelpHint title={t("tabSecurity")}>{tSettings("ageRestrictedHelp")}</HelpHint>
-                                        </p>
+                                    <SettingsSection title={t("tabSecurity")} help={tSettings("ageRestrictedHelp")}>
                                         <SegmentedRail>
                                             <Segment
                                                 active={!ageRestricted}
@@ -257,14 +250,10 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 onClick={() => void handleAgeRestrictedToggle(true)}
                                             />
                                         </SegmentedRail>
-                                    </div>
+                                    </SettingsSection>
 
                                     {/* -- Avatars acceptés --------------------- */}
-                                    <div className="space-y-3">
-                                        <p className="flex items-center gap-1.5 text-sm font-medium">
-                                            {t("acceptedAvatarTypes")}
-                                            <HelpHint title={t("acceptedAvatarTypes")}>{tSettings("avatarTypesHelp")}</HelpHint>
-                                        </p>
+                                    <SettingsSection title={t("acceptedAvatarTypes")} help={tSettings("avatarTypesHelp")}>
                                         <SegmentedRail>
                                             <Segment
                                                 active={allowsRealAvatars}
@@ -281,22 +270,14 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
                                             />
                                         </SegmentedRail>
-                                    </div>
+                                    </SettingsSection>
 
                                     {/* -- Tags -------------------------------- */}
                                     {/* Un seul cadre pour ce qu'on a et ce qu'on tape, une ligne
                                         discrète pour ce qu'on propose : trois rangées de pastilles
                                         de formes différentes se lisaient comme un fourre-tout. */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="flex items-center gap-1.5 text-sm font-medium">
-                                                {tSettings("tags")}
-                                                <HelpHint title={tSettings("tags")}>{tSettings("tagsHelp")}</HelpHint>
-                                            </p>
-                                            <p className="text-xs-plus tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
-                                        </div>
-
-                                        <div className="space-y-2 rounded-lg border border-border p-2">
+                                    <SettingsSection title={tSettings("tags")} help={tSettings("tagsHelp")} meta={`${tags.length}/${MAX_TAGS}`}>
+                                        <div className={cn("space-y-2 rounded-md border p-2", FIELD)}>
                                             {tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {tags.map((tag) => (
@@ -371,7 +352,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 ))}
                                             </div>
                                         )}
-                                    </div>
+                                    </SettingsSection>
                                 </div>
                             </>
   );

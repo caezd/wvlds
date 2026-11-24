@@ -12,6 +12,9 @@ import { MAIN_PLACE, placeColumns, placeKey, placeOf, type LiveChatPlace } from 
 
 export type LiveChatAuthor = { username: string | null; avatar_url: string | null };
 
+/** Le persona qui signe un message (migration 241). */
+export type LiveChatPersona = { id: string; name: string; avatar_url: string | null };
+
 /** Le message auquel on répond, en bref ; `null` s'il a été supprimé. */
 export type LiveChatReply = { id: string; content: string; user_id: string; username: string | null };
 
@@ -27,13 +30,19 @@ export type LiveChatMessage = {
   reply_to_id?: string | null;
   /** Le message cité : connu, ou `null` (supprimé, ou hors de portée). */
   reply?: LiveChatReply | null;
+  /** Couleur de dialogue figée à l'envoi, persona, action `/me` (migration 241). */
+  color?: string | null;
+  persona_id?: string | null;
+  persona?: LiveChatPersona | null;
+  is_action?: boolean;
   author: LiveChatAuthor | null;
 };
 
 type ReplyRow = { id: string; content: string; user_id: string; profiles?: { username: string | null } | { username: string | null }[] | null };
-type Row = Omit<LiveChatMessage, "author" | "reply"> & {
+type Row = Omit<LiveChatMessage, "author" | "reply" | "persona"> & {
   profiles?: LiveChatAuthor | LiveChatAuthor[] | null;
   reply?: ReplyRow | ReplyRow[] | null;
+  persona?: LiveChatPersona | LiveChatPersona[] | null;
 };
 
 /**
@@ -45,7 +54,8 @@ export const LIVE_CHAT_PAGE = 50;
 const LIVE_CHAT_MEMORY = 200;
 
 const SELECT =
-  "id, world_id, user_id, content, created_at, channel_id, chatroom_id, reply_to_id, profiles(username, avatar_url), " +
+  "id, world_id, user_id, content, created_at, channel_id, chatroom_id, reply_to_id, color, persona_id, is_action, " +
+  "profiles(username, avatar_url), persona:personas(id, name, avatar_url), " +
   "reply:world_live_messages!reply_to_id(id, content, user_id, profiles(username))";
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
@@ -69,11 +79,13 @@ function pageQuery(
 }
 
 function toMessage(row: Row): LiveChatMessage {
-  const { profiles, reply, ...rest } = row;
+  const { profiles, reply, persona, ...rest } = row;
   const r = one(reply);
   return {
     ...rest,
     author: one(profiles),
+    // `persona` absent de la ligne (avis temps réel) : à retrouver.
+    ...(persona !== undefined || !row.persona_id ? { persona: one(persona) } : {}),
     // `reply` absent de la ligne (avis temps réel) : à retrouver ; présent mais
     // nul : le message cité n'est plus lisible.
     ...(reply !== undefined || !row.reply_to_id
@@ -89,7 +101,10 @@ export function mergeMessage(list: LiveChatMessage[], msg: LiveChatMessage): Liv
   return next.length > LIVE_CHAT_MEMORY ? next.slice(next.length - LIVE_CHAT_MEMORY) : next;
 }
 
-export type SendResult = "ok" | "too_fast" | "error";
+export type SendResult = "ok" | "too_fast" | "persona" | "error";
+
+/** Ce qu'un message porte en plus de son texte (migration 241). */
+export type SendExtras = { color?: string | null; personaId?: string | null; isAction?: boolean };
 
 /**
  * Chat en direct d'un monde, dans une salle (`place`, migration 238 : salle
@@ -126,6 +141,8 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
 
   // Auteurs déjà connus : un INSERT temps réel n'apporte que `user_id`.
   const authorsRef = useRef(new Map<string, LiveChatAuthor>());
+  // De même pour les personas : l'avis n'apporte que `persona_id`.
+  const personasRef = useRef(new Map<string, LiveChatPersona | null>());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const appearOfflineRef = useRef(appearOffline);
 
@@ -169,6 +186,20 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
       return next;
     });
   }, [key]);
+
+  /** Le persona d'un message reçu en direct : connu, sinon relu. */
+  const resolvePersona = useCallback(
+    async (msg: LiveChatMessage): Promise<LiveChatMessage> => {
+      if (msg.persona !== undefined || !msg.persona_id) return msg;
+      const id = msg.persona_id;
+      if (personasRef.current.has(id)) return { ...msg, persona: personasRef.current.get(id) ?? null };
+      const { data } = await supabase.from(TABLE.PERSONAS).select("id, name, avatar_url").eq("id", id).maybeSingle();
+      const persona = (data as LiveChatPersona | null) ?? null;
+      personasRef.current.set(id, persona);
+      return { ...msg, persona };
+    },
+    [supabase],
+  );
 
   /** Le message cité par un message reçu en direct : en mémoire, sinon relu. */
   const resolveReply = useCallback(
@@ -240,6 +271,7 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
         const msg = toMessage(avis.record);
         if (msg.world_id !== worldId) return;
         void resolveAuthor(msg)
+          .then(resolvePersona)
           .then(resolveReply)
           .then((full) => setMessages((prev) => mergeMessage(prev, full)));
       } else if (avis.id) {
@@ -312,7 +344,7 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
   }, [appearOffline, userId]);
 
   const send = useCallback(
-    async (raw: string, replyToId: string | null = null): Promise<SendResult> => {
+    async (raw: string, replyToId: string | null = null, extras: SendExtras = {}): Promise<SendResult> => {
       const content = raw.trim();
       if (!worldId || !userId || !content) return "error";
       const here = placeColumns(placeRef.current);
@@ -326,11 +358,17 @@ export function useWorldLiveChat(worldId: string | null, place: LiveChatPlace = 
           ...(here.channel_id ? { channel_id: here.channel_id } : {}),
           ...(here.chatroom_id ? { chatroom_id: here.chatroom_id } : {}),
           ...(replyToId ? { reply_to_id: replyToId } : {}),
+          // La base retire ce qu'une option éteinte ne permet pas (migration 241).
+          ...(extras.color ? { color: extras.color } : {}),
+          ...(extras.personaId ? { persona_id: extras.personaId } : {}),
+          ...(extras.isAction ? { is_action: true } : {}),
         })
         .select(SELECT)
         .single();
       if (error || !data) {
-        return error?.message?.includes("Trop de messages") ? "too_fast" : "error";
+        if (error?.message?.includes("Trop de messages")) return "too_fast";
+        if (error?.message?.includes("persona")) return "persona";
+        return "error";
       }
       setMessages((prev) => mergeMessage(prev, toMessage(data as Row)));
       return "ok";

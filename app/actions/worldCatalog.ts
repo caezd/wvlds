@@ -55,7 +55,11 @@ export type WorldFeatureField =
   | "enable_skills"
   | "enable_map"
   | "enable_wiki"
-  | "enable_live_chat";
+  | "enable_live_chat"
+  | "live_chat_colors"
+  | "live_chat_bubbles"
+  | "live_chat_personas"
+  | "live_chat_actions";
 
 export async function setWorldFeature(
   worldId: string,

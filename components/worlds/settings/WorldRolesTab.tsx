@@ -182,7 +182,7 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:gap-10">
+    <div className="flex flex-col gap-6 md:flex-row md:gap-10">
       {/* ── Liste ──────────────────────────────────────────── */}
       <aside className={cn("w-full shrink-0", deuxColonnes && "md:w-56 md:border-r md:border-border md:pr-4")}>
         <div className="flex items-center justify-between gap-2 pb-2 pl-2.5">

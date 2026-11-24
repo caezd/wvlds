@@ -31,10 +31,10 @@ import {
   type LiveChannel,
 } from "@/lib/worldLiveChannels";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { SURFACE, SettingsSection } from "./FeatureLayout";
+import { SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
 
 /** Une ligne de la liste : bordée, sur le fond des cartes (comme les relations). */
-const ROW = cn("flex min-h-12 flex-wrap items-center gap-2 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
+const ROW = SETTINGS_ROW;
 const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0";
 const SWATCH = "size-6 rounded-md border-0 shadow-none";
 /** Couleur d'une salle qui n'en a pas encore : un gris neutre. */
@@ -159,7 +159,7 @@ export function WorldLiveChannelsSettings({ worldId }: { worldId: string }) {
             </span>
           </li>
           {channels.map((c, i) => (
-            <li key={c.id} className={cn(ROW, "group")} data-channel-id={c.id}>
+            <li key={c.id} className={ROW} data-channel-id={c.id}>
               <ColorPickerButton
                 color={c.color ?? NO_COLOR}
                 alpha={false}
@@ -190,23 +190,6 @@ export function WorldLiveChannelsSettings({ worldId }: { worldId: string }) {
                   </button>
                 }
               />
-              {c.icon && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  // Discret : n'apparaît qu'au survol (ou au clavier).
-                  className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  title={t("resetIcon", { name: c.name })}
-                  onClick={() => {
-                    edit(c.id, { icon: null });
-                    void save(c.id, { icon: null });
-                  }}
-                  aria-label={t("resetIcon", { name: c.name })}
-                >
-                  #
-                </Button>
-              )}
               <Input
                 value={c.name}
                 maxLength={LIVE_CHANNEL_NAME_MAX}

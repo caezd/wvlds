@@ -35,6 +35,22 @@ export function readableTextOn(background: string): string | undefined {
 }
 
 /**
+ * Une couleur de texte posée directement sur la page (chatbox sans bulles,
+ * actions /me) : sa teinte opaque — l'opacité ne vaut que pour le fond d'une
+ * bulle — si elle s'y lit (contraste d'au moins 3:1), sinon `undefined` : le
+ * texte garde la couleur par défaut plutôt que de disparaître dans le fond
+ * (un noir, un bleu nuit).
+ */
+export function readableOnPage(color: string | null | undefined): string | undefined {
+  if (!color) return undefined;
+  const c = parseHexColor(color);
+  if (!c) return undefined;
+  const l = luminance(c);
+  const page = luminance(PAGE_BACKGROUND);
+  return (Math.max(l, page) + 0.05) / (Math.min(l, page) + 0.05) >= 3 ? rgbaToHex(c) : undefined;
+}
+
+/**
  * Fond d'une bulle : la couleur choisie, son opacité ramenée à
  * `BUBBLE_MAX_ALPHA` au plus — y compris pour une couleur enregistrée opaque
  * avant ce plafond, ou écrite à la main (`"…"{#ff0000}`).

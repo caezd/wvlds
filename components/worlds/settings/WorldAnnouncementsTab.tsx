@@ -247,11 +247,11 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
     <div className="@container/announcements space-y-6" data-testid="announcements-tab">
       {/* Le formulaire ; à sa droite, quand la place le permet, l'aperçu en
           direct, qui reste visible pendant qu'on descend dans le formulaire. */}
-      <div className="grid gap-10 @5xl/announcements:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-      <div className="@container min-w-0 max-w-3xl space-y-6">
+      <div className="grid gap-10 @4xl/announcements:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="@container min-w-0 space-y-6">
       <div ref={formRef} className="scroll-mt-6" />
       {/* ── Type ─────────────────────────────────────────── */}
-      <SettingsSection title={t("kind")} help={t("kindHelp")} className="border-t-0 pt-0">
+      <SettingsSection title={t("kind")} help={t("kindHelp")}>
         <KindPicker kind={kind} onChange={setKind} dmsEnabled={dmsEnabled} />
       </SettingsSection>
 
@@ -427,7 +427,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       </SettingsSection>
       </div>
 
-      <aside className="hidden @5xl/announcements:block" aria-label={t("previewLive")} data-testid="announcement-live-preview-aside">
+      <aside className="hidden @4xl/announcements:block" aria-label={t("previewLive")} data-testid="announcement-live-preview-aside">
         <div className="sticky top-0 space-y-3">
           <SectionLabel as="p" className="flex items-center gap-1.5">
             <Eye className="size-3.5" aria-hidden />
@@ -438,7 +438,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       </aside>
       </div>
 
-      <div className="@container max-w-3xl space-y-6">
+      <div className="@container space-y-6">
       {/* ── Programmées (rien s'il n'y en a pas) ─────────── */}
       {scheduled.length > 0 && (
         <SettingsSection title={t("scheduledTitle")} help={t("scheduledHelp")} meta={String(scheduled.length)}>

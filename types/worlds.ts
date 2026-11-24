@@ -162,6 +162,11 @@ export type World = {
   enable_live_chat?: boolean | null;
   /** Chatbox : messages gardés par salle, 25 à 100 (migrations 239 et 240). Absent = 100. */
   live_chat_retention?: number | null;
+  /** Options de la chatbox (migration 241), éteintes par défaut. */
+  live_chat_colors?: boolean | null;
+  live_chat_bubbles?: boolean | null;
+  live_chat_personas?: boolean | null;
+  live_chat_actions?: boolean | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;

@@ -66,8 +66,8 @@ describe("WorldLiveChannelsSettings", () => {
     await waitFor(() => expect(screen.getAllByRole("textbox", { name: "Nom de la salle" })).toHaveLength(3));
   });
 
-  it("renomme à la sortie du champ, change l'icône et revient au #", async () => {
-    monter([{ data: null }, { data: null }, { data: null }]);
+  it("renomme à la sortie du champ et change l'icône", async () => {
+    monter([{ data: null }, { data: null }]);
     const nom = screen.getAllByRole("textbox", { name: "Nom de la salle" })[1];
     await userEvent.clear(nom);
     await userEvent.type(nom, "Entraide");
@@ -76,8 +76,6 @@ describe("WorldLiveChannelsSettings", () => {
 
     await userEvent.click(screen.getAllByRole("button", { name: "choisir café" })[1]);
     await waitFor(() => expect(mock.buildersFor("world_live_channels")[1].update).toHaveBeenCalledWith({ icon: "coffee" }));
-    await userEvent.click(screen.getByRole("button", { name: "Revenir au # pour la salle Hors-jeu" }));
-    await waitFor(() => expect(mock.buildersFor("world_live_channels")[2].update).toHaveBeenCalledWith({ icon: null }));
   });
 
   it("réordonne en une requête", async () => {
