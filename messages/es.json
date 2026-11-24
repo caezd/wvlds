@@ -1238,7 +1238,13 @@
       "enableItems": "Activar los objetos",
       "enableShops": "Activar las tiendas",
       "shopsHelp": "Tiendas donde los personas compran objetos del catálogo, y los revenden si la tienda lo acepta.",
-      "shopsManage": "Las tiendas, sus artículos, precios y existencias se gestionan desde la vista Tiendas del mundo."
+      "shopsManage": "Las tiendas, sus artículos, precios y existencias se gestionan desde la vista Tiendas del mundo.",
+      "trades": "Intercambios",
+      "enableTrades": "Activar los intercambios",
+      "tradesHelp": "Un persona da dinero u objetos a otro desde el compositor de una sala, con el bloque Transferir. La transferencia es inmediata.",
+      "tradesNeedSomething": "Active primero las divisas o los objetos.",
+      "tradesSameAccount": "Intercambios entre personas de una misma cuenta",
+      "tradesSameAccountHelp": "Permite a un jugador pasar dinero y objetos de uno de sus personas a otro."
     },
     "timelinePicker": {
       "year": "Año",
@@ -1489,7 +1495,8 @@
         "adjust": "Ajuste",
         "slots": "Espacio de inventario",
         "purchase": "Compra",
-        "sale": "Reventa"
+        "sale": "Reventa",
+        "transfer": "Intercambio"
       }
     },
     "inventory": {
@@ -2932,5 +2939,32 @@
     "buybackPriceIn": "Precio de recompra en {unit}",
     "editItem": "Editar el artículo: {name}",
     "removeItem": "Retirar de la venta: {name}"
+  },
+  "trades": {
+    "menu": "Transferir",
+    "menuHint": "Dar dinero u objetos a otro persona.",
+    "title": "Transferir",
+    "description": "La transferencia es inmediata: el destinatario lo recibe todo en cuanto se envía.",
+    "to": "Destinatario",
+    "search": "Buscar un persona",
+    "noRecipient": "Ningún persona a quien dar en este mundo.",
+    "amount": "Dinero",
+    "amountIn": "Importe en {unit}",
+    "balance": "Saldo: {amount}",
+    "items": "Objetos",
+    "noItems": "Este persona no lleva ningún objeto.",
+    "quantityOf": "Cantidad de {name}",
+    "submit": "Transferir",
+    "given": "{from} dio a {to}",
+    "missing": "Transferencia no encontrada.",
+    "errors": {
+      "funds": "Saldo insuficiente.",
+      "full": "El inventario del destinatario está lleno.",
+      "max": "El destinatario superaría la cantidad máxima de este objeto.",
+      "insufficient": "Cantidad insuficiente.",
+      "sameAccount": "Los intercambios entre sus propios personas están desactivados en este mundo.",
+      "off": "Los intercambios están desactivados en este mundo.",
+      "failed": "La transferencia ha fallado."
+    }
   }
 }

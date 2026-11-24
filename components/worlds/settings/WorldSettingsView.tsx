@@ -129,6 +129,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             // Les objets, eux, vivent sans monnaie.
             case "currency":
             case "shops":
+            case "trades":
                 return settings && world_economy;
             case "community":
                 return public_worlds && settings;

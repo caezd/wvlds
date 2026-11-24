@@ -66,6 +66,16 @@ describe("setWorldFeature", () => {
         });
     });
 
+    it("couper les échanges coupe aussi les échanges d'un même compte (migration 251)", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldFeature("w1", "enable_trades", false);
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
+            enable_trades: false,
+            trades_same_account: false,
+        });
+    });
+
     it("activer une fonctionnalité ne touche pas la restriction", async () => {
         const mock = createSupabaseMock({ results: [{ error: null }] });
         use(mock);

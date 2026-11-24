@@ -1238,7 +1238,13 @@
       "enableItems": "Enable items",
       "enableShops": "Enable shops",
       "shopsHelp": "Shops where personas buy catalogue items, and sell them back if the shop allows it.",
-      "shopsManage": "Shops, their items, prices and stock are managed from the world’s Shops view."
+      "shopsManage": "Shops, their items, prices and stock are managed from the world’s Shops view.",
+      "trades": "Trades",
+      "enableTrades": "Enable trades",
+      "tradesHelp": "A persona gives money or items to another from a room’s composer, with the Transfer block. The transfer is immediate.",
+      "tradesNeedSomething": "Enable currencies or items first.",
+      "tradesSameAccount": "Trades between personas of the same account",
+      "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another."
     },
     "timelinePicker": {
       "year": "Year",
@@ -1489,7 +1495,8 @@
         "adjust": "Adjustment",
         "slots": "Inventory slot",
         "purchase": "Purchase",
-        "sale": "Sale"
+        "sale": "Sale",
+        "transfer": "Trade"
       }
     },
     "inventory": {
@@ -2932,5 +2939,32 @@
     "buybackPriceIn": "Buyback price in {unit}",
     "editItem": "Edit item: {name}",
     "removeItem": "Remove from sale: {name}"
+  },
+  "trades": {
+    "menu": "Transfer",
+    "menuHint": "Give money or items to another persona.",
+    "title": "Transfer",
+    "description": "The transfer is immediate: the recipient gets everything as soon as it is sent.",
+    "to": "Recipient",
+    "search": "Search for a persona",
+    "noRecipient": "No persona to give to in this world.",
+    "amount": "Money",
+    "amountIn": "Amount in {unit}",
+    "balance": "Balance: {amount}",
+    "items": "Items",
+    "noItems": "This persona carries no items.",
+    "quantityOf": "Quantity of {name}",
+    "submit": "Transfer",
+    "given": "{from} gave to {to}",
+    "missing": "Transfer not found.",
+    "errors": {
+      "funds": "Insufficient balance.",
+      "full": "The recipient’s inventory is full.",
+      "max": "The recipient would exceed this item’s maximum quantity.",
+      "insufficient": "Insufficient quantity.",
+      "sameAccount": "Trades between your own personas are disabled in this world.",
+      "off": "Trades are disabled in this world.",
+      "failed": "The transfer failed."
+    }
   }
 }

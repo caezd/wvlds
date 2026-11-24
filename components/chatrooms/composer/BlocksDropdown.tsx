@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import {
   Component, Dices, Pipette, ImagePlus, Eye, Lock, Sword, Heart,
   Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check,
-  AlertTriangle, Vote, type LucideIcon,
+  AlertTriangle, Vote, ArrowRightLeft, type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -41,6 +41,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { clampTimelineDate, formatTimelineLabel } from "@/lib/worldTimeline";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
 import { BUBBLE_MAX_ALPHA, bubbleBackground, bubbleStyle } from "@/lib/bubbleColors";
+import type { usePersonaTransfer } from "@/hooks/usePersonaTransfer";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -53,6 +54,7 @@ const HpDialog = dynamic(() => import("../blocks/HpBlock").then((m) => m.HpDialo
 const CalloutDialog = dynamic(() => import("../blocks/CalloutDialog").then((m) => m.CalloutDialog), { ssr: false });
 const AnchorDialog = dynamic(() => import("../blocks/AnchorDialog").then((m) => m.AnchorDialog), { ssr: false });
 const ChoiceDialog = dynamic(() => import("../blocks/ChoiceBlock").then((m) => m.ChoiceDialog), { ssr: false });
+const TransferDialog = dynamic(() => import("../blocks/TransferBlock").then((m) => m.TransferDialog), { ssr: false });
 
 /** Point d'intérêt d'une carte de monde, proposé à l'ancrage d'un message. */
 export type MapPinOption = { id: string; title: string; color: string };
@@ -208,6 +210,7 @@ export function BlocksDropdown({
     mapPins,
     mapPinId,
     onMapPinChange,
+    transfer,
 }: {
     /** "drawer" : rendu en drawer plein écran (mobile, pas de survol — cf.
      *  `useMobileDrawer` côté parent) avec aperçu + confirmation explicite au
@@ -234,14 +237,17 @@ export function BlocksDropdown({
     mapPins?: MapPinOption[];
     mapPinId?: string | null;
     onMapPinChange?: (id: string | null) => void;
+    /** Le bloc Transférer (migration 251) : paraît quand le monde a les échanges. */
+    transfer?: ReturnType<typeof usePersonaTransfer>;
 }) {
     const t = useTranslations("chatrooms");
     const tChatrooms = useTranslations("chatrooms");
     const tCommon = useTranslations("common");
+    const tTrades = useTranslations("trades");
     const { chatroom_blocks, block_npc, block_hp, block_choice } = useFeatureFlags();
     const [open, setOpen] = useState(false);
     const [colorPickerOpen, setColorPickerOpen] = useState(false);
-    const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "choice" | "timeline" | "location" | null>(null);
+    const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "choice" | "transfer" | "timeline" | "location" | null>(null);
     const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
     const [draftPinId, setDraftPinId] = useState<string | null>(null);
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -263,6 +269,7 @@ export function BlocksDropdown({
         ...(chatroom_blocks && block_choice ? [{ id: "choice", icon: Vote, title: t("choice"), description: t("choiceHint"), onActivate: () => { setOpen(false); setActiveTool("choice"); } }] : []),
         ...(chatroom_blocks && block_npc ? [{ id: "npc", icon: Sword, title: t("npcCard"), description: t("npcHint"), onActivate: () => { setOpen(false); setActiveTool("npc"); } }] : []),
         ...(chatroom_blocks && block_hp ? [{ id: "hp", icon: Heart, title: t("healthBar"), description: t("hpHint"), onActivate: () => { setOpen(false); setActiveTool("hp"); } }] : []),
+        ...(transfer?.status === "on" ? [{ id: "transfer", icon: ArrowRightLeft, title: tTrades("menu"), description: tTrades("menuHint"), onActivate: () => { setOpen(false); setActiveTool("transfer"); } }] : []),
     ];
 
     const optionItems: ComposerMenuItem[] = [
@@ -348,6 +355,16 @@ export function BlocksDropdown({
                                 {label}
                             </div>
                         ))}
+                    </div>
+                );
+            case "transfer":
+                return (
+                    <div className="flex w-full items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+                        <ArrowRightLeft className="h-5 w-5 shrink-0 text-primary" />
+                        <div className="text-sm">
+                            <div className="font-medium">Brom → Aria</div>
+                            <div className="text-xs-plus text-muted-foreground">1 po 50 pa · Potion ×2</div>
+                        </div>
                     </div>
                 );
             case "npc":
@@ -729,6 +746,15 @@ export function BlocksDropdown({
                 onOpenChange={(v) => !v && setActiveTool(null)}
                 onSend={(content) => { onSend(content); setActiveTool(null); }}
             />
+            {transfer && activeTool === "transfer" && (
+                <TransferDialog
+                    open
+                    onOpenChange={(v) => !v && setActiveTool(null)}
+                    transfer={transfer}
+                    chatId={chatId ?? null}
+                    onSend={(content) => { onSend(content); setActiveTool(null); }}
+                />
+            )}
         </>
     );
 }

@@ -50,6 +50,7 @@ const MAX_TAG_LENGTH = 24;
 /** Sous-option à retomber quand on désactive la fonctionnalité principale. */
 const RESTRICTION_LIEE: Partial<Record<WorldFeatureField, string>> = {
   enable_skills: "restrict_skills",
+  enable_trades: "trades_same_account",
 };
 
 export type WorldFeatureField =
@@ -60,6 +61,8 @@ export type WorldFeatureField =
   | "enable_live_chat"
   | "enable_economy"
   | "enable_shops"
+  | "enable_trades"
+  | "trades_same_account"
   | "live_chat_colors"
   | "live_chat_bubbles"
   | "live_chat_personas"

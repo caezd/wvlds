@@ -76,9 +76,17 @@ export type ChoiceBlock = {
   options: ChoiceOption[];
 };
 
-export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock | ChoiceBlock;
+// Bloc « Transfert » (migration 251) : l'identifiant d'une ligne de
+// world_transfers. Ce qui a changé de mains se lit en base, jamais ici : le
+// message s'écrit librement, la ligne seulement par transfer_to_persona.
+export type TransferBlock = {
+  _type: "transfer";
+  id: string;
+};
 
-const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor", "choice"]);
+export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock | ChoiceBlock | TransferBlock;
+
+const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor", "choice", "transfer"]);
 
 export function parseChatBlock(content: string): ChatBlock | null {
   if (!content.startsWith("{")) return null;

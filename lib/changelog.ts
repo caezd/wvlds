@@ -45,9 +45,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Fonctionnalité",
+    area: "Salons",
+    text: "Échanges : un bloc **Transférer** dans le composeur, pour donner de l’argent ou des objets à un autre persona du monde.\n- transfert immédiat : la bourse et l’inventaire du destinataire sont crédités à l’envoi\n- le message montre qui a donné quoi à qui, tel que la base l’a enregistré\n- à activer dans Paramètres › Fonctions › Économie › Échanges\n- échanges entre personas d’un même compte : option à part, coupée par défaut",
+  },
+  {
+    date: "2026-11-24",
     category: "Interface",
     area: "Monde",
-    text: "Paramètres › Fonctions : une sous-catégorie **Économie** (Devises, Objets, Boutiques) ; le catalogue se sépare en deux vues.\n- **Objets** et **Compétences** : une vue chacune dans le menu du monde, à la place du Catalogue\n- réglages des compétences et des faceclaims dans Fonctions › Personas\n- faceclaims retirés du catalogue",
+    text: "Paramètres › Fonctions : une sous-catégorie **Économie** (Devises, Objets, Boutiques, Échanges) ; le catalogue se sépare en deux vues.\n- **Objets** et **Compétences** : une vue chacune dans le menu du monde, à la place du Catalogue\n- réglages des compétences et des faceclaims dans Fonctions › Personas\n- faceclaims retirés du catalogue",
   },
   {
     date: "2026-11-24",

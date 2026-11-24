@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
+  ArrowRightLeft,
   BookOpen,
   ChevronRight,
   Clock,
@@ -49,6 +50,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   currency: Coins,
   items: Package,
   shops: Store,
+  trades: ArrowRightLeft,
   categories: FolderTree,
   groups: UsersRound,
   relations: Waypoints,
@@ -77,6 +79,7 @@ export function useSettingsSectionLabel() {
         case "currency": return tSettings("economy.currencies");
         case "items": return tCatalogue("items");
         case "shops": return tShops("title");
+        case "trades": return tSettings("trades");
         case "categories": return t("tabCategories");
         case "groups": return t("tabGroups");
         case "relations": return t("tabRelations");

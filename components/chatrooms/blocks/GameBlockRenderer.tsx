@@ -20,6 +20,7 @@ import { HpBlockView } from "./HpBlock";
 import { CalloutBlockView } from "./CalloutBlock";
 import { AnchorBlockView } from "./AnchorBlockView";
 import { ChoiceBlockView } from "./ChoiceBlock";
+import { TransferBlockView } from "./TransferBlock";
 import { useTranslations } from "next-intl";
 
 /**
@@ -42,7 +43,15 @@ export function GameBlockRenderer({
   block: ChatBlock;
   mine: boolean;
   label: string;
-  message: { id: number; content?: string | null; chat_id?: string; metadata?: ChatMessageMeta | null };
+  message: {
+    id: number;
+    content?: string | null;
+    chat_id?: string;
+    // Le fil joint le persona (`persona:personas(id, …)`) sans sa colonne.
+    persona_id?: string | null;
+    persona?: { id: string } | null;
+    metadata?: ChatMessageMeta | null;
+  };
   chatroomKey?: string | null;
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
   onAnchorEdited?: (messageId: number, label: string) => void;
@@ -252,6 +261,11 @@ export function GameBlockRenderer({
           />
         </div>
       );
+
+    // Transfert (migration 251) : rien d'éditable, il a déjà eu lieu ; le
+    // message se supprime comme un autre, le transfert reste.
+    case "transfer":
+      return <TransferBlockView id={block.id} authorPersonaId={message.persona?.id ?? message.persona_id} />;
 
     case "anchor":
       return (

@@ -47,14 +47,14 @@ import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import { WorldInventorySettings } from "./WorldInventorySettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, UserRound, type LucideIcon } from "lucide-react";
+import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, ArrowRightLeft, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
  * Les pages « Fonctions » des réglages d'un monde : carte, wiki, personas
  * (fiche modèle, compétences, faceclaims), chronologie, chatbox, et la
- * sous-catégorie Économie (devises, objets, boutiques). Le menu de gauche de WorldSettingsView choisit la page
+ * sous-catégorie Économie (devises, objets, boutiques, échanges). Le menu de gauche de WorldSettingsView choisit la page
  * (`section`) ; ce composant lui rend l'état de chacune (`onStatusChange`)
  * pour les pastilles Actif / Off.
  *
@@ -230,6 +230,30 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableShops(enabled);
         onUpdated?.({ ...world, enable_shops: enabled } as World);
+    }
+
+    // Les échanges (migration 251) : coupés par défaut, possibles dès qu'il y
+    // a de quoi échanger (la monnaie ou les objets).
+    const [enableTrades, setEnableTrades] = React.useState(world.enable_trades === true);
+    const [tradesSameAccount, setTradesSameAccount] = React.useState(world.trades_same_account === true);
+    const [togglingTrades, setTogglingTrades] = React.useState(false);
+    const tradesPossible = enableEconomy || enableInventory;
+    const tradesOpen = enableTrades && tradesPossible;
+
+    async function handleTradesToggle(field: "enable_trades" | "trades_same_account", enabled: boolean) {
+        setTogglingTrades(true);
+        const res = await setWorldFeature(world.id, field, enabled);
+        setTogglingTrades(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        if (field === "enable_trades") {
+            setEnableTrades(enabled);
+            // L'action retombe aussi l'option du même compte (RESTRICTION_LIEE).
+            if (!enabled) setTradesSameAccount(false);
+            onUpdated?.({ ...world, enable_trades: enabled, ...(enabled ? {} : { trades_same_account: false }) } as World);
+        } else {
+            setTradesSameAccount(enabled);
+            onUpdated?.({ ...world, trades_same_account: enabled } as World);
+        }
     }
 
     async function handleWikiToggle(enabled: boolean) {
@@ -538,6 +562,43 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 ),
             }]
             : []),
+        ...(world_economy
+            ? [{
+                id: "trades" as const,
+                icon: ArrowRightLeft,
+                label: tSettings("trades"),
+                active: tradesOpen,
+                page: (
+                    <FeaturePage
+                        title={tSettings("trades")}
+                        help={tSettings("tradesHelp")}
+                        toggle={{
+                            label: tSettings(enableTrades ? "enabledM" : "disabledM"),
+                            ariaLabel: tSettings("enableTrades"),
+                            checked: enableTrades,
+                            // Sans monnaie ni objets, rien à échanger.
+                            disabled: togglingTrades || !tradesPossible,
+                            onCheckedChange: v => void handleTradesToggle("enable_trades", v),
+                        }}
+                    >
+                        {!tradesPossible && (
+                            <p className="text-sm text-muted-foreground">{tSettings("tradesNeedSomething")}</p>
+                        )}
+                        <InactiveOptions inactive={!tradesOpen}>
+                            <ToggleList>
+                                <ToggleItem
+                                    title={tSettings("tradesSameAccount")}
+                                    help={tSettings("tradesSameAccountHelp")}
+                                    checked={tradesSameAccount}
+                                    disabled={!tradesOpen || togglingTrades}
+                                    onCheckedChange={v => void handleTradesToggle("trades_same_account", v)}
+                                />
+                            </ToggleList>
+                        </InactiveOptions>
+                    </FeaturePage>
+                ),
+            }]
+            : []),
     ];
 
     // Les pastilles du menu de gauche (WorldSettingsView).
@@ -551,8 +612,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             currency: enableEconomy,
             items: enableInventory,
             shops: shopsOpen,
+            trades: tradesOpen,
         });
-    }, [onStatusChange, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen]);
+    }, [onStatusChange, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen, tradesOpen]);
 
   return (
     <>

@@ -175,6 +175,9 @@ export type World = {
   enable_economy?: boolean | null;
   /** Option Boutiques (migration 250) ; coupée par défaut. */
   enable_shops?: boolean | null;
+  /** Échanges entre personas, et entre personas d'un même compte (migration 251) ; coupés par défaut. */
+  enable_trades?: boolean | null;
+  trades_same_account?: boolean | null;
   currency_units?: unknown;
   /** Inventaire des personas (migration 247), voir lib/personaInventory. */
   inventory_mode?: "free" | "catalog" | "held" | null;

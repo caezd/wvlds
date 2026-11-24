@@ -57,6 +57,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { BlocksDropdown, type MapPinOption } from "./BlocksDropdown";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
+import { usePersonaTransfer } from "@/hooks/usePersonaTransfer";
 
 type ChatroomComposerProps = {
     /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
@@ -270,7 +271,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         }, 500);
         return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
     }, [value, DRAFT_KEY]);
-    const { chatroom_media } = useFeatureFlags();
+    const { chatroom_media, world_economy } = useFeatureFlags();
     const [pendingMedia, setPendingMedia] = useState<File[]>([]);
     // Aperçus des images en attente d'envoi, mémorisés par fichier.
     //
@@ -319,6 +320,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     // client (canSend dépend de selectedPersona). Même garde-fou que `value`
     // ci-dessus.
     const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+    // Le bloc Transférer (migration 251) : le persona choisi donne. Rien
+    // n'est lu sans le drapeau de l'économie.
+    const transfer = usePersonaTransfer(world_economy ? worldId : null, selectedPersona?.id);
     // Ids des personas utilisables pour poster (plan gratuit : les 5 plus
     // anciens du monde, cf. migration 090 / lib/personaEligibility.ts). `null`
     // tant que non résolu — on ne bloque alors pas l'envoi par prudence (la
@@ -993,6 +997,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         mapPins={mapPins}
                         mapPinId={mapPinId ?? null}
                         onMapPinChange={onMapPinChange}
+                        transfer={transfer}
                     />
                 </span>
 

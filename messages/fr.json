@@ -1238,7 +1238,13 @@
       "enableItems": "Activer les objets",
       "enableShops": "Activer les boutiques",
       "shopsHelp": "Des boutiques où les personas achètent des objets du catalogue, et les revendent si la boutique l’accepte.",
-      "shopsManage": "Les boutiques, leurs articles, prix et stocks se gèrent depuis la vue Boutiques du monde."
+      "shopsManage": "Les boutiques, leurs articles, prix et stocks se gèrent depuis la vue Boutiques du monde.",
+      "trades": "Échanges",
+      "enableTrades": "Activer les échanges",
+      "tradesHelp": "Un persona donne de l’argent ou des objets à un autre depuis le composeur d’un salon, avec le bloc Transférer. Le transfert est immédiat.",
+      "tradesNeedSomething": "Activez d’abord les devises ou les objets.",
+      "tradesSameAccount": "Échanges entre personas d’un même compte",
+      "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre."
     },
     "timelinePicker": {
       "year": "Année",
@@ -1489,7 +1495,8 @@
         "adjust": "Ajustement",
         "slots": "Emplacement d'inventaire",
         "purchase": "Achat",
-        "sale": "Revente"
+        "sale": "Revente",
+        "transfer": "Échange"
       }
     },
     "inventory": {
@@ -2932,5 +2939,32 @@
     "buybackPriceIn": "Prix de rachat en {unit}",
     "editItem": "Modifier l’article : {name}",
     "removeItem": "Retirer de la vente : {name}"
+  },
+  "trades": {
+    "menu": "Transférer",
+    "menuHint": "Donner de l’argent ou des objets à un autre persona.",
+    "title": "Transférer",
+    "description": "Le transfert est immédiat : le destinataire reçoit tout dès l’envoi.",
+    "to": "Destinataire",
+    "search": "Chercher un persona",
+    "noRecipient": "Aucun persona à qui donner dans ce monde.",
+    "amount": "Argent",
+    "amountIn": "Montant en {unit}",
+    "balance": "Solde : {amount}",
+    "items": "Objets",
+    "noItems": "Ce persona ne porte aucun objet.",
+    "quantityOf": "Quantité de {name}",
+    "submit": "Transférer",
+    "given": "{from} a donné à {to}",
+    "missing": "Transfert introuvable.",
+    "errors": {
+      "funds": "Solde insuffisant.",
+      "full": "L’inventaire du destinataire est plein.",
+      "max": "Le destinataire dépasserait la quantité maximale de cet objet.",
+      "insufficient": "Quantité insuffisante.",
+      "sameAccount": "Les échanges entre vos propres personas sont désactivés dans ce monde.",
+      "off": "Les échanges sont désactivés dans ce monde.",
+      "failed": "Le transfert a échoué."
+    }
   }
 }

@@ -81,11 +81,11 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
     const fonctions = within(nav).getByRole("group", { name: "Fonctions" });
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Carte", "Wiki", "Personas", "Devises", "Objets", "Boutiques"],
+      ["Carte", "Wiki", "Personas", "Devises", "Objets", "Boutiques", "Échanges"],
     );
     const economie = within(fonctions).getByRole("list", { name: "Économie" });
     expect(within(economie).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Devises", "Objets", "Boutiques"],
+      ["Devises", "Objets", "Boutiques", "Échanges"],
     );
   });
 
@@ -117,5 +117,28 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const page = screen.getByRole("region", { name: "Boutiques" });
     await userEvent.click(within(page).getByRole("switch", { name: "Activer les boutiques" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_shops", true));
+  });
+
+  it("Échanges : inerte sans devises ni objets", async () => {
+    monter({ enable_economy: false, enable_inventory: false, enable_trades: false } as Partial<World>);
+    await ouvrir("Échanges");
+    const page = screen.getByRole("region", { name: "Échanges" });
+    expect(within(page).getByRole("switch", { name: "Activer les échanges" })).toBeDisabled();
+    expect(within(page).getByText("Activez d’abord les devises ou les objets.")).toBeInTheDocument();
+  });
+
+  it("Échanges : l'option et les échanges entre personas d'un même compte", async () => {
+    monter({ enable_economy: true, enable_inventory: true, enable_trades: false, trades_same_account: false } as Partial<World>);
+    await ouvrir("Échanges");
+    const page = screen.getByRole("region", { name: "Échanges" });
+    // Grisée tant que l'option est coupée ; l'interrupteur est remonté à l'activation.
+    const memeCompte = () => within(page).getByRole("switch", { name: "Échanges entre personas d’un même compte" });
+    expect(memeCompte()).toBeDisabled();
+
+    await userEvent.click(within(page).getByRole("switch", { name: "Activer les échanges" }));
+    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_trades", true));
+    await waitFor(() => expect(memeCompte()).toBeEnabled());
+    await userEvent.click(memeCompte());
+    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "trades_same_account", true));
   });
 });

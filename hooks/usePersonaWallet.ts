@@ -10,7 +10,7 @@ export type WalletMovement = {
   id: string;
   delta: number;
   balance_after: number;
-  kind: "adjust" | "slots" | "purchase" | "sale";
+  kind: "adjust" | "slots" | "purchase" | "sale" | "transfer";
   note: string | null;
   created_at: string;
 };
