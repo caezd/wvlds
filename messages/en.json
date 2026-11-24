@@ -2207,7 +2207,7 @@
     "typesCount": "{count, plural, one {# type} other {# types}}",
     "groupName": "Group name",
     "typeName": "Type name",
-    "deleteGroup": "Delete the group {name}",
+    "deleteGroup": "Delete group",
     "deleteType": "Delete the type {name}",
     "dashFor": "Line of {name}",
     "reciprocityFor": "Reciprocity of {name}",

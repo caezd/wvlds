@@ -169,7 +169,7 @@ describe("WorldGroupsSettings", () => {
     const mock = monter([{ data: null }]);
     const user = userEvent.setup();
     await ouvrirMenu(user, "Maison");
-    await user.click(await screen.findByRole("menuitem", { name: "Supprimer le groupe Maison" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer le groupe" }));
     const ecriture = mock.buildersFor("world_persona_groups").at(-1)!;
     expect(ecriture.delete).toHaveBeenCalled();
     expect(ecriture.eq).toHaveBeenCalledWith("id", "maison");

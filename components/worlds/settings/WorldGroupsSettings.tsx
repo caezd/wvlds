@@ -362,7 +362,7 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
                         onClick={() => void remove(g.id)}
                         className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="mr-2 size-4" /> {t("deleteGroup", { name: g.name })}
+                        <Trash2 className="mr-2 size-4" /> {t("deleteGroup")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

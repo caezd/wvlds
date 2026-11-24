@@ -45,7 +45,7 @@ async function supprimer(page: Page, nom: string) {
   const bouton = page.getByRole("button", { name: `Actions du groupe ${nom}`, exact: true });
   if (!(await bouton.count())) return;
   await bouton.click();
-  await page.getByRole("menuitem", { name: `Supprimer le groupe ${nom}` }).click();
+  await page.getByRole("menuitem", { name: "Supprimer le groupe", exact: true }).click();
   await expect(page.getByRole("button", { name: `Actions du groupe ${nom}`, exact: true })).toHaveCount(0);
 }
 
