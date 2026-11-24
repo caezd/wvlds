@@ -130,7 +130,6 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             case "currency":
             case "shops":
             case "trades":
-            case "gains":
                 return settings && world_economy;
             case "community":
                 return public_worlds && settings;

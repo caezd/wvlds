@@ -83,7 +83,9 @@
     "formatToolbar": "Formato",
     "rename": "Renombrar",
     "help": "Ayuda",
-    "helpFor": "Ayuda: {title}"
+    "helpFor": "Ayuda: {title}",
+    "increase": "Aumentar",
+    "decrease": "Disminuir"
   },
   "colorPicker": {
     "presets": "Colores predefinidos",
@@ -1245,12 +1247,11 @@
       "tradesNeedSomething": "Active primero las divisas o los objetos.",
       "tradesSameAccount": "Intercambios entre personas de una misma cuenta",
       "tradesSameAccountHelp": "Permite a un jugador pasar dinero y objetos de uno de sus personas a otro.",
-      "gains": "Ganancias",
-      "enableGains": "Activar las ganancias",
-      "gainsHelp": "La moneda del mundo que se gana jugando: por mensaje, por escena a la que se une, creada o terminada, y en la primera visita del día.",
-      "gainsNeedEconomy": "Las ganancias requieren las monedas.",
       "gainsForm": {
-        "title": "Importes",
+        "title": "Ganancias",
+        "help": "La moneda del mundo que se gana jugando: por mensaje, por escena a la que se une, creada o terminada, y en la primera visita del día.",
+        "enable": "Activar las ganancias",
+        "events": "Lo que se gana",
         "amountIn": "{label} en {unit}",
         "message": "Por mensaje",
         "messageHelp": "Cada mensaje en persona, visible para todos.",

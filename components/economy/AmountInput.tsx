@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { amountFromCounts, splitAmount, type CurrencyUnit } from "@/lib/worldCurrency";
 
@@ -24,6 +25,7 @@ export function AmountInput({
   onChange,
   idPrefix,
   labelOf,
+  stepper = false,
 }: {
   units: CurrencyUnit[];
   value: number | null;
@@ -31,6 +33,8 @@ export function AmountInput({
   idPrefix: string;
   /** Le nom accessible d'une case (« Prix en Or »). */
   labelOf: (unit: CurrencyUnit) => string;
+  /** Des boutons −/+ à côté de chaque case (NumberInput). */
+  stepper?: boolean;
 }) {
   const [counts, setCounts] = useState<number[]>(() => countsOf(value, units));
 
@@ -44,20 +48,30 @@ export function AmountInput({
   return (
     <div className="flex flex-wrap gap-3">
       {units.map((unit, i) => (
-        <div key={unit.value} className="w-28 space-y-1">
+        <div key={unit.value} className={stepper ? "space-y-1" : "w-28 space-y-1"}>
           <Label htmlFor={`${idPrefix}-${unit.value}`} className="text-xs text-muted-foreground">
             {unit.name}
           </Label>
-          <Input
-            id={`${idPrefix}-${unit.value}`}
-            type="number"
-            min={0}
-            step={1}
-            inputMode="numeric"
-            aria-label={labelOf(unit)}
-            value={Number.isFinite(counts[i]) ? counts[i] : ""}
-            onChange={(e) => update(i, e.target.valueAsNumber)}
-          />
+          {stepper ? (
+            <NumberInput
+              id={`${idPrefix}-${unit.value}`}
+              min={0}
+              aria-label={labelOf(unit)}
+              value={Number.isFinite(counts[i]) ? counts[i] : null}
+              onValueChange={(v) => update(i, v === null ? NaN : v)}
+            />
+          ) : (
+            <Input
+              id={`${idPrefix}-${unit.value}`}
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              aria-label={labelOf(unit)}
+              value={Number.isFinite(counts[i]) ? counts[i] : ""}
+              onChange={(e) => update(i, e.target.valueAsNumber)}
+            />
+          )}
         </div>
       ))}
     </div>

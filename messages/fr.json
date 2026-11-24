@@ -83,7 +83,9 @@
     "formatToolbar": "Mise en forme",
     "rename": "Renommer",
     "help": "Aide",
-    "helpFor": "Aide : {title}"
+    "helpFor": "Aide : {title}",
+    "increase": "Augmenter",
+    "decrease": "Diminuer"
   },
   "colorPicker": {
     "presets": "Couleurs prédéfinies",
@@ -1245,12 +1247,11 @@
       "tradesNeedSomething": "Activez d’abord les devises ou les objets.",
       "tradesSameAccount": "Échanges entre personas d’un même compte",
       "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre.",
-      "gains": "Gains",
-      "enableGains": "Activer les gains",
-      "gainsHelp": "La monnaie du monde gagnée en jouant : par message, par scène rejointe, créée ou terminée, et à la première visite du jour.",
-      "gainsNeedEconomy": "Les gains demandent les devises.",
       "gainsForm": {
-        "title": "Montants",
+        "title": "Gains",
+        "help": "La monnaie du monde gagnée en jouant : par message, par scène rejointe, créée ou terminée, et à la première visite du jour.",
+        "enable": "Activer les gains",
+        "events": "Ce qui rapporte",
         "amountIn": "{label} en {unit}",
         "message": "Par message",
         "messageHelp": "Chaque message en persona, visible de tous.",

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const setWorldGains = vi.fn();
+const setWorldFeature = vi.fn();
 vi.mock("@/app/actions/worldCatalog", () => ({
   setWorldGains: (...args: unknown[]) => setWorldGains(...args),
+  setWorldFeature: (...args: unknown[]) => setWorldFeature(...args),
 }));
 
 import { WorldGainsSettings } from "@/components/worlds/settings/WorldGainsSettings";
@@ -37,9 +39,41 @@ const enregistrer = () => screen.getByRole("button", { name: "Enregistrer les ga
 beforeEach(() => {
   vi.clearAllMocks();
   setWorldGains.mockResolvedValue({ ok: true });
+  setWorldFeature.mockResolvedValue({ ok: true });
 });
 
 describe("WorldGainsSettings (migration 252)", () => {
+  it("une section Gains, avec son interrupteur ; montants grisés tant qu'elle est coupée", async () => {
+    const user = userEvent.setup();
+    const onUpdated = vi.fn();
+    render(<WorldGainsSettings world={monde({ enable_gains: false })} onUpdated={onUpdated} />);
+    const section = screen.getByRole("region", { name: "Gains" });
+    expect(champ("Par message en Argent")).toBeDisabled();
+    await user.click(within(section).getByRole("switch", { name: "Activer les gains" }));
+    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_gains", true));
+    expect(onUpdated).toHaveBeenCalledWith({ enable_gains: true });
+    await waitFor(() => expect(champ("Par message en Argent")).toBeEnabled());
+  });
+
+  it("le délai suit « Par message » ; le plafond, à part de la liste des gains", () => {
+    render(<WorldGainsSettings world={monde()} />);
+    const gains = screen.getByRole("group", { name: "Ce qui rapporte" });
+    const lignes = within(gains)
+      .getAllByRole("spinbutton")
+      .map((c) => c.getAttribute("aria-label"))
+      .filter((n) => !n?.endsWith(" en Or"));
+    expect(lignes).toEqual([
+      "Par message en Argent",
+      "Délai entre deux messages payés (minutes)",
+      "Par scène rejointe en Argent",
+      "Par scène créée en Argent",
+      "Par scène terminée en Argent",
+      "Connexion du jour en Argent",
+    ]);
+    expect(within(gains).queryByRole("spinbutton", { name: "Plafond par jour en Or" })).toBeNull();
+    expect(within(screen.getByRole("group", { name: "Plafond par jour" })).getByRole("spinbutton", { name: "Plafond par jour en Or" })).toBeInTheDocument();
+  });
+
   it("chaque gain, palier par palier, avec les montants du monde", () => {
     render(<WorldGainsSettings world={monde()} />);
     expect(champ("Par message en Argent")).toHaveValue(5);
@@ -66,6 +100,17 @@ describe("WorldGainsSettings (migration 252)", () => {
         gain_message_cooldown: 2,
         gain_daily_cap: null,
       }),
+    );
+  });
+
+  it("les montants et le délai se règlent aussi aux boutons −/+", async () => {
+    const user = userEvent.setup();
+    render(<WorldGainsSettings world={monde()} />);
+    await user.click(screen.getByRole("button", { name: "Augmenter : Par message en Argent" }));
+    await user.click(screen.getByRole("button", { name: "Diminuer : Délai entre deux messages payés (minutes)" }));
+    await user.click(enregistrer());
+    await waitFor(() =>
+      expect(setWorldGains).toHaveBeenCalledWith("w1", expect.objectContaining({ gain_message: 6, gain_message_cooldown: 1 })),
     );
   });
 

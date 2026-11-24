@@ -5,23 +5,22 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { AmountInput } from "@/components/economy/AmountInput";
-import { setWorldGains } from "@/app/actions/worldCatalog";
+import { setWorldFeature, setWorldGains } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { cn } from "@/lib/utils";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, gainSettingsOf, gainSettingsSchema, type GainKind, type GainSettings } from "@/lib/worldGains";
 import type { World } from "@/types/worlds";
-import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 const columnOf = (kind: GainKind) => `gain_${kind}` as const;
 
 /**
- * Les montants des gains automatiques (Paramètres › Fonctions › Économie ›
- * Gains, migration 252) : un par déclencheur, saisi palier par palier ; le
- * délai entre deux messages payés et le plafond par jour. Enregistrés d'un
- * bouton ; la base paie.
+ * Les gains automatiques (migration 252), dans la page Devises : leur
+ * interrupteur (enregistré aussitôt), puis un montant par déclencheur, saisi
+ * palier par palier, le délai entre deux messages payés et le plafond par
+ * jour (enregistrés d'un bouton). La base paie.
  */
 export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdated?: (patch: Partial<World>) => void }) {
   const t = useTranslations("worlds.settings.gainsForm");
@@ -29,15 +28,26 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
   const units = React.useMemo(() => currencyUnitsOf(world.currency_units), [world.currency_units]);
   const [saved, setSaved] = React.useState<GainSettings>(() => gainSettingsOf(world));
   const [draft, setDraft] = React.useState<GainSettings>(saved);
-  const [cooldown, setCooldown] = React.useState(String(saved.gain_message_cooldown));
+  const [cooldown, setCooldown] = React.useState<number | null>(saved.gain_message_cooldown);
   const [saving, setSaving] = React.useState(false);
+  const [enabled, setEnabled] = React.useState(world.enable_gains === true);
+  const [toggling, setToggling] = React.useState(false);
 
-  const settings: GainSettings = {
-    ...draft,
-    gain_message_cooldown: cooldown.trim() === "" ? 0 : Number(cooldown),
-  };
+  const settings: GainSettings = { ...draft, gain_message_cooldown: cooldown ?? 0 };
   const valid = gainSettingsSchema.safeParse(settings).success;
   const dirty = (Object.keys(settings) as (keyof GainSettings)[]).some((k) => settings[k] !== saved[k]);
+
+  async function toggle(next: boolean) {
+    setToggling(true);
+    const res = await setWorldFeature(world.id, "enable_gains", next);
+    setToggling(false);
+    if (!res.ok) {
+      toast.error(messageErreurAction(res.error, tCommon));
+      return;
+    }
+    setEnabled(next);
+    onUpdated?.({ enable_gains: next });
+  }
 
   async function save() {
     setSaving(true);
@@ -54,6 +64,7 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
 
   const amount = (label: string, id: string, value: number | null, onChange: (v: number | null) => void) => (
     <AmountInput
+      stepper
       units={units}
       value={value}
       onChange={onChange}
@@ -63,47 +74,57 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
   );
 
   return (
-    <SettingsSection title={t("title")}>
+    <SettingsSection title={t("title")} help={t("help")}>
       <ToggleList>
-        {GAIN_KINDS.map((kind) => (
-          <ToggleItem
-            key={kind}
-            title={t(kind)}
-            help={t(`${kind}Help`)}
-            control={amount(t(kind), `gain-${kind}`, draft[columnOf(kind)] || null, (v) =>
-              setDraft((d) => ({ ...d, [columnOf(kind)]: v ?? 0 })),
-            )}
-          />
-        ))}
-        <ToggleItem
-          title={t("cooldown")}
-          help={t("cooldownHelp")}
-          control={
-            <Input
-              type="number"
-              min={0}
-              max={MAX_GAIN_COOLDOWN_MINUTES}
-              step={1}
-              inputMode="numeric"
-              aria-label={t("cooldown")}
-              value={cooldown}
-              onChange={(e) => setCooldown(e.target.value)}
-              className={cn("h-9 w-28 shrink-0 rounded-md text-sm", FIELD)}
-            />
-          }
-        />
-        <ToggleItem
-          title={t("cap")}
-          help={t("capHelp")}
-          control={amount(t("cap"), "gain-cap", draft.gain_daily_cap, (v) => setDraft((d) => ({ ...d, gain_daily_cap: v })))}
-        />
+        <ToggleItem title={t("enable")} checked={enabled} disabled={toggling} onCheckedChange={(v) => void toggle(v)} />
       </ToggleList>
-      <div className="mt-3 flex items-center gap-3">
-        {dirty && !valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
-        <Button type="button" size="sm" className="ml-auto" disabled={!dirty || !valid || saving} onClick={() => void save()}>
-          {t("save")}
-        </Button>
-      </div>
+      {/* Grisés tant que les gains sont coupés : on voit ce qu'ils offrent. */}
+      <InactiveOptions inactive={!enabled}>
+        <ToggleList label={t("events")}>
+          {GAIN_KINDS.map((kind) => (
+            <React.Fragment key={kind}>
+              <ToggleItem
+                title={t(kind)}
+                help={t(`${kind}Help`)}
+                control={amount(t(kind), `gain-${kind}`, draft[columnOf(kind)] || null, (v) =>
+                  setDraft((d) => ({ ...d, [columnOf(kind)]: v ?? 0 })),
+                )}
+              />
+              {/* Le délai ne règle que le gain par message : sa sous-option. */}
+              {kind === "message" && (
+                <ToggleItem
+                  indent
+                  title={t("cooldown")}
+                  help={t("cooldownHelp")}
+                  control={
+                    <NumberInput
+                      min={0}
+                      max={MAX_GAIN_COOLDOWN_MINUTES}
+                      aria-label={t("cooldown")}
+                      value={cooldown}
+                      onValueChange={setCooldown}
+                    />
+                  }
+                />
+              )}
+            </React.Fragment>
+          ))}
+        </ToggleList>
+        {/* Le plafond borne tous les gains à la fois : hors de la liste. */}
+        <ToggleList label={t("cap")} className="mt-3">
+          <ToggleItem
+            title={t("cap")}
+            help={t("capHelp")}
+            control={amount(t("cap"), "gain-cap", draft.gain_daily_cap, (v) => setDraft((d) => ({ ...d, gain_daily_cap: v })))}
+          />
+        </ToggleList>
+        <div className="mt-3 flex items-center gap-3">
+          {dirty && !valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
+          <Button type="button" size="sm" className="ml-auto" disabled={!dirty || !valid || saving} onClick={() => void save()}>
+            {t("save")}
+          </Button>
+        </div>
+      </InactiveOptions>
     </SettingsSection>
   );
 }

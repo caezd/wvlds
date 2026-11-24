@@ -87,11 +87,11 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
     const fonctions = within(nav).getByRole("group", { name: "Fonctions" });
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Carte", "Wiki", "Personas", "Devises", "Objets", "Boutiques", "Échanges", "Gains"],
+      ["Carte", "Wiki", "Personas", "Devises", "Objets", "Boutiques", "Échanges"],
     );
     const economie = within(fonctions).getByRole("list", { name: "Économie" });
     expect(within(economie).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Devises", "Objets", "Boutiques", "Échanges", "Gains"],
+      ["Devises", "Objets", "Boutiques", "Échanges"],
     );
   });
 
@@ -151,20 +151,17 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "trades_same_account", true));
   });
 
-  it("Gains : inerte sans les devises", async () => {
-    monter({ enable_economy: false, enable_gains: false } as Partial<World>);
-    await ouvrir("Gains");
-    const page = screen.getByRole("region", { name: "Gains" });
-    expect(within(page).getByRole("switch", { name: "Activer les gains" })).toBeDisabled();
-    expect(within(page).getByText("Les gains demandent les devises.")).toBeInTheDocument();
+  it("Devises : les gains, sous la monnaie, grisés sans l'économie", async () => {
+    monter({ enable_economy: false } as Partial<World>);
+    await ouvrir("Devises");
+    const page = screen.getByRole("region", { name: "Devises" });
+    expect(within(page).getByText("montants des gains").closest("fieldset")).toBeDisabled();
   });
 
-  it("Gains : l'interrupteur, puis les montants", async () => {
-    monter({ enable_economy: true, enable_gains: false } as Partial<World>);
-    await ouvrir("Gains");
-    const page = screen.getByRole("region", { name: "Gains" });
-    await userEvent.click(within(page).getByRole("switch", { name: "Activer les gains" }));
-    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_gains", true));
-    expect(within(page).getByText("montants des gains")).toBeInTheDocument();
+  it("Devises : les gains, actifs avec l'économie", async () => {
+    monter({ enable_economy: true } as Partial<World>);
+    await ouvrir("Devises");
+    const page = screen.getByRole("region", { name: "Devises" });
+    expect(within(page).getByText("montants des gains").closest("fieldset")).toBeNull();
   });
 });

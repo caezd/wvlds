@@ -83,7 +83,9 @@
     "formatToolbar": "Formatting",
     "rename": "Rename",
     "help": "Help",
-    "helpFor": "Help: {title}"
+    "helpFor": "Help: {title}",
+    "increase": "Increase",
+    "decrease": "Decrease"
   },
   "colorPicker": {
     "presets": "Preset colors",
@@ -1245,12 +1247,11 @@
       "tradesNeedSomething": "Enable currencies or items first.",
       "tradesSameAccount": "Trades between personas of the same account",
       "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another.",
-      "gains": "Earnings",
-      "enableGains": "Enable earnings",
-      "gainsHelp": "World currency earned by playing: per message, per scene joined, created or completed, and on the first visit of the day.",
-      "gainsNeedEconomy": "Earnings need the currency.",
       "gainsForm": {
-        "title": "Amounts",
+        "title": "Earnings",
+        "help": "World currency earned by playing: per message, per scene joined, created or completed, and on the first visit of the day.",
+        "enable": "Enable earnings",
+        "events": "What earns",
         "amountIn": "{label} in {unit}",
         "message": "Per message",
         "messageHelp": "Each in-character message visible to everyone.",

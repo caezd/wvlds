@@ -122,9 +122,9 @@ export function SettingsSection({
 }
 
 /** Une liste bordée de réglages, une ligne chacun. */
-export function ToggleList({ children, className }: { children: React.ReactNode; className?: string }) {
+export function ToggleList({ children, className, label }: { children: React.ReactNode; className?: string; /** Nomme la liste (groupe) quand une page en a plusieurs. */ label?: string }) {
   return (
-    <div className={cn("divide-y divide-border rounded-md", SURFACE, className)}>
+    <div role={label ? "group" : undefined} aria-label={label} className={cn("divide-y divide-border rounded-md", SURFACE, className)}>
       {children}
     </div>
   );
