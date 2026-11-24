@@ -58,6 +58,9 @@ export const ERR_RYTHME_SIGNALEMENTS = "bugReportRateLimit";
 /** Le pseudo choisi est déjà porté par quelqu'un d'autre. */
 export const ERR_NOM_UTILISATEUR_PRIS = "usernameTaken";
 
+/** L'objet est déjà en vente dans cette boutique (migration 249). */
+export const ERR_ARTICLE_EN_DOUBLE = "shopItemDuplicate";
+
 /** Un personnage du même nom existe déjà dans ce monde. */
 export const ERR_NOM_PERSONA_PRIS = "personaNameTaken";
 

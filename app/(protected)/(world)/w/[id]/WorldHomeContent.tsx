@@ -63,6 +63,7 @@ export default async function WorldHomeContent({
     enableMap: world.enable_map,
     worldMapFlag: flags.world_map,
     hasTimeline: flags.world_timeline && !!world.timeline_enabled && !!world.timeline_config,
+    hasShops: flags.world_economy && !!world.enable_economy && world.enable_inventory !== false,
     canOpenSettings: SETTINGS_PERMISSIONS.some((perm) => membership.permissions.has(perm)),
   });
 

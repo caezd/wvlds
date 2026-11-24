@@ -6,6 +6,7 @@ const ctx: WorldPanelContext = {
   enableMap: true,
   worldMapFlag: true,
   hasTimeline: true,
+  hasShops: true,
   canOpenSettings: true,
 };
 
@@ -32,6 +33,11 @@ describe("resolveWorldPanel", () => {
     expect(resolveWorldPanel("map", ctx)).toBe("map");
     expect(resolveWorldPanel("map", { ...ctx, enableMap: false })).toBe("home");
     expect(resolveWorldPanel("map", { ...ctx, worldMapFlag: false })).toBe("home");
+  });
+
+  it("boutiques : exigent le drapeau, l'économie et l'inventaire (migration 249)", () => {
+    expect(resolveWorldPanel("shops", ctx)).toBe("shops");
+    expect(resolveWorldPanel("shops", { ...ctx, hasShops: false })).toBe("home");
   });
 
   it("chronologie et réglages : conditionnés", () => {

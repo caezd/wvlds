@@ -16,6 +16,7 @@ export type WorldPanel =
   | "wiki"
   | "map"
   | "timeline"
+  | "shops"
   | "members"
   | "home";
 
@@ -28,6 +29,8 @@ export type WorldPanelContext = {
   worldMapFlag: boolean;
   /** Drapeau `world_timeline` ET chronologie activée et configurée sur le monde. */
   hasTimeline: boolean;
+  /** Drapeau `world_economy` ET économie et inventaire activés sur le monde (migration 249). */
+  hasShops: boolean;
   canOpenSettings: boolean;
 };
 
@@ -48,6 +51,8 @@ export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPan
       return ctx.enableMap !== false && ctx.worldMapFlag ? "map" : "home";
     case "timeline":
       return ctx.hasTimeline ? "timeline" : "home";
+    case "shops":
+      return ctx.hasShops ? "shops" : "home";
     default:
       return "home";
   }

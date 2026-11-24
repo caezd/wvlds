@@ -396,7 +396,8 @@
       "relations": "Relaciones",
       "map": "Mapa",
       "timeline": "Línea de tiempo",
-      "catalogue": "Catálogo"
+      "catalogue": "Catálogo",
+      "shops": "Tiendas"
     },
     "community": {
       "title": "Jugadores y personas",
@@ -1480,7 +1481,9 @@
       "noHistory": "Ningún movimiento.",
       "kinds": {
         "adjust": "Ajuste",
-        "slots": "Espacio de inventario"
+        "slots": "Espacio de inventario",
+        "purchase": "Compra",
+        "sale": "Reventa"
       }
     },
     "inventory": {
@@ -2865,5 +2868,63 @@
     "systemJoin": "{name} se unió al chat",
     "systemLeave": "{name} salió del chat",
     "systemIdle": "{name} salió del chat (inactividad)"
+  },
+  "shops": {
+    "title": "Tiendas",
+    "off": "Las tiendas requieren la economía y el inventario, que se activan en Ajustes › Funciones.",
+    "empty": "Todavía no hay tiendas.",
+    "create": "Nueva tienda",
+    "closed": "Cerrada",
+    "closedHint": "Cerrada: solo la ven quienes gestionan la economía.",
+    "buysBack": "Recompra sus objetos",
+    "buyer": "Persona comprador",
+    "noPersona": "Cree un persona en este mundo para comprar.",
+    "noItems": "Nada a la venta.",
+    "addItem": "Poner a la venta",
+    "inStock": "{count} en existencias",
+    "soldOut": "Agotado",
+    "buybackAt": "Recompra {price}",
+    "held": "{count} en su poder",
+    "buy": "Comprar",
+    "sell": "Revender",
+    "buyTitle": "Comprar: {name}",
+    "sellTitle": "Revender: {name}",
+    "tradeDescription": "Para {name}, que tiene {balance}.",
+    "quantity": "Cantidad",
+    "total": "Total",
+    "bought": "Compra realizada.",
+    "sold": "Objeto revendido.",
+    "errors": {
+      "stock": "Existencias insuficientes.",
+      "funds": "Saldo insuficiente.",
+      "full": "Inventario lleno.",
+      "max": "Cantidad máxima alcanzada para este objeto.",
+      "insufficient": "No tiene tantos.",
+      "failed": "La operación ha fallado.",
+      "duplicate": "Este objeto ya está a la venta aquí."
+    },
+    "editShop": "Editar la tienda",
+    "name": "Nombre",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Opcional",
+    "open": "Abierta",
+    "openHelp": "Cerrada, la tienda solo es visible para quienes gestionan la economía.",
+    "buyback": "Reventa",
+    "buybackHelp": "La tienda recompra los objetos que vende. Un objeto revendido vuelve a sus existencias si son limitadas.",
+    "buybackPercent": "Recompra por defecto (% del precio)",
+    "buybackPercentHelp": "Para los artículos sin precio de recompra propio. Vacío: solo se recompran esos artículos.",
+    "deleteShop": "Eliminar la tienda",
+    "deleteTitle": "¿Eliminar {name}?",
+    "deleteDescription": "La tienda y sus artículos desaparecen. Los objetos ya comprados se quedan con los personas.",
+    "itemTitle": "Artículo: {name}",
+    "price": "Precio",
+    "priceIn": "Precio en {unit}",
+    "stock": "Existencias",
+    "stockPlaceholder": "Ilimitadas",
+    "buybackPrice": "Precio de recompra",
+    "buybackPriceHelp": "Vacío: el porcentaje de la tienda.",
+    "buybackPriceIn": "Precio de recompra en {unit}",
+    "editItem": "Editar el artículo: {name}",
+    "removeItem": "Retirar de la venta: {name}"
   }
 }

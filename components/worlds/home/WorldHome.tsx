@@ -38,6 +38,7 @@ const RelationsCanvas = dynamic(() => import("../relations/RelationsCanvas").the
 const WorldCatalogue = dynamic(() => import("../catalogue/WorldCatalogue").then((m) => m.WorldCatalogue));
 const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap));
 const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
+const WorldShops = dynamic(() => import("../shops/WorldShops").then((m) => m.WorldShops));
 const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").then((m) => m.WorldMembersPanel));
 const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
 const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
@@ -95,7 +96,7 @@ export function WorldHome({
   /** Lieu sur lequel ouvrir le composeur d'emblée (`?play=…`, depuis la carte). */
   initialPlayPinId?: string | null;
 }) {
-  const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
+  const { create_chatroom, world_map, world_catalogue, world_timeline, world_economy } = useFeatureFlags();
   const router = useRouter();
 
   const can = (perm: WorldPermission) => permissionListHas(permissions, perm);
@@ -169,6 +170,7 @@ export function WorldHome({
     enableMap: world.enable_map,
     worldMapFlag: world_map,
     hasTimeline,
+    hasShops: world_economy && !!world.enable_economy && world.enable_inventory !== false,
     canOpenSettings,
   });
   const showCanvas = panel === "canvas";
@@ -176,6 +178,7 @@ export function WorldHome({
   const showWiki = panel === "wiki";
   const showMap = panel === "map";
   const showTimeline = panel === "timeline";
+  const showShops = panel === "shops";
   const showMembers = panel === "members";
   const showPersonas = panel === "personas";
   const showSettings = panel === "settings";
@@ -245,6 +248,8 @@ export function WorldHome({
             initialPinId={initialPinId}
             timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : null}
           />
+        ) : showShops ? (
+          <WorldShops worldId={worldId} canManage={can("economy.manage")} />
         ) : showTimeline ? (
           <WorldTimeline
             worldId={worldId}

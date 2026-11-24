@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Boutiques : une vue **Boutiques** dans le menu du monde, quand l’économie et l’inventaire sont activés.\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte : prix de rachat propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, prix et stocks gérés par qui gère l’économie, en mode modification ; une boutique fermée ne se voit que d’eux",
+  },
+  {
+    date: "2026-11-24",
     category: "Correctif",
     area: "Catalogue",
     text: "Les catégories du catalogue s’affichent de nouveau.",

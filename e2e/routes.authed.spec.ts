@@ -184,7 +184,7 @@ test.describe("Toutes les routes connectées rendent", () => {
   // montent pourtant les composants les plus lourds de l'application — le
   // canevas de relations, la carte, le wiki, le catalogue. Sans ce balayage,
   // une seule d'entre elles était chargée par les tests : la vue par défaut.
-  const VUES = ["canvas", "catalogue", "wiki", "map", "timeline", "members", "personas", "settings"];
+  const VUES = ["canvas", "catalogue", "wiki", "map", "timeline", "shops", "members", "personas", "settings"];
 
   test("/w/[id] — la page d'un monde et toutes ses vues", async ({ page }) => {
     const base = await trouverUnMonde(page);

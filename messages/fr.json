@@ -396,7 +396,8 @@
       "relations": "Relations",
       "map": "Carte",
       "timeline": "Chronologie",
-      "catalogue": "Catalogue"
+      "catalogue": "Catalogue",
+      "shops": "Boutiques"
     },
     "community": {
       "title": "Joueurs & personas",
@@ -1480,7 +1481,9 @@
       "noHistory": "Aucun mouvement.",
       "kinds": {
         "adjust": "Ajustement",
-        "slots": "Emplacement d'inventaire"
+        "slots": "Emplacement d'inventaire",
+        "purchase": "Achat",
+        "sale": "Revente"
       }
     },
     "inventory": {
@@ -2865,5 +2868,63 @@
     "systemJoin": "{name} a rejoint la chatbox",
     "systemLeave": "{name} a quitté la chatbox",
     "systemIdle": "{name} a quitté la chatbox (inactivité)"
+  },
+  "shops": {
+    "title": "Boutiques",
+    "off": "Les boutiques demandent l’économie et l’inventaire, à activer dans Paramètres › Fonctions.",
+    "empty": "Aucune boutique pour l’instant.",
+    "create": "Nouvelle boutique",
+    "closed": "Fermée",
+    "closedHint": "Fermée : seuls ceux qui gèrent l’économie la voient.",
+    "buysBack": "Rachète ses objets",
+    "buyer": "Persona acheteur",
+    "noPersona": "Créez un persona dans ce monde pour acheter.",
+    "noItems": "Rien en vente.",
+    "addItem": "Mettre en vente",
+    "inStock": "{count} en stock",
+    "soldOut": "Épuisé",
+    "buybackAt": "Rachat {price}",
+    "held": "{count} sur vous",
+    "buy": "Acheter",
+    "sell": "Revendre",
+    "buyTitle": "Acheter : {name}",
+    "sellTitle": "Revendre : {name}",
+    "tradeDescription": "Pour {name}, qui a {balance}.",
+    "quantity": "Quantité",
+    "total": "Total",
+    "bought": "Achat effectué.",
+    "sold": "Objet revendu.",
+    "errors": {
+      "stock": "Stock insuffisant.",
+      "funds": "Solde insuffisant.",
+      "full": "Inventaire plein.",
+      "max": "Quantité maximale atteinte pour cet objet.",
+      "insufficient": "Vous n’en avez pas autant.",
+      "failed": "L’opération a échoué.",
+      "duplicate": "Cet objet est déjà en vente ici."
+    },
+    "editShop": "Modifier la boutique",
+    "name": "Nom",
+    "description": "Description",
+    "descriptionPlaceholder": "Facultatif",
+    "open": "Ouverte",
+    "openHelp": "Fermée, la boutique n’est visible que de ceux qui gèrent l’économie.",
+    "buyback": "Revente",
+    "buybackHelp": "La boutique rachète les objets qu’elle vend. Un objet revendu revient dans son stock s’il est limité.",
+    "buybackPercent": "Rachat par défaut (% du prix)",
+    "buybackPercentHelp": "Pour les articles sans prix de rachat propre. Vide : seuls ces articles sont rachetés.",
+    "deleteShop": "Supprimer la boutique",
+    "deleteTitle": "Supprimer {name} ?",
+    "deleteDescription": "La boutique et ses articles disparaissent. Les objets déjà achetés restent aux personas.",
+    "itemTitle": "Article : {name}",
+    "price": "Prix",
+    "priceIn": "Prix en {unit}",
+    "stock": "Stock",
+    "stockPlaceholder": "Illimité",
+    "buybackPrice": "Prix de rachat",
+    "buybackPriceHelp": "Vide : le pourcentage de la boutique.",
+    "buybackPriceIn": "Prix de rachat en {unit}",
+    "editItem": "Modifier l’article : {name}",
+    "removeItem": "Retirer de la vente : {name}"
   }
 }

@@ -396,7 +396,8 @@
       "relations": "Relations",
       "map": "Map",
       "timeline": "Timeline",
-      "catalogue": "Catalogue"
+      "catalogue": "Catalogue",
+      "shops": "Shops"
     },
     "community": {
       "title": "Players & personas",
@@ -1480,7 +1481,9 @@
       "noHistory": "No movements.",
       "kinds": {
         "adjust": "Adjustment",
-        "slots": "Inventory slot"
+        "slots": "Inventory slot",
+        "purchase": "Purchase",
+        "sale": "Sale"
       }
     },
     "inventory": {
@@ -2865,5 +2868,63 @@
     "systemJoin": "{name} joined the chat",
     "systemLeave": "{name} left the chat",
     "systemIdle": "{name} left the chat (inactive)"
+  },
+  "shops": {
+    "title": "Shops",
+    "off": "Shops need the economy and the inventory, enabled in Settings › Features.",
+    "empty": "No shops yet.",
+    "create": "New shop",
+    "closed": "Closed",
+    "closedHint": "Closed: only those who manage the economy can see it.",
+    "buysBack": "Buys back its items",
+    "buyer": "Buying persona",
+    "noPersona": "Create a persona in this world to buy.",
+    "noItems": "Nothing for sale.",
+    "addItem": "Put up for sale",
+    "inStock": "{count} in stock",
+    "soldOut": "Sold out",
+    "buybackAt": "Buyback {price}",
+    "held": "{count} carried",
+    "buy": "Buy",
+    "sell": "Sell",
+    "buyTitle": "Buy: {name}",
+    "sellTitle": "Sell: {name}",
+    "tradeDescription": "For {name}, who has {balance}.",
+    "quantity": "Quantity",
+    "total": "Total",
+    "bought": "Purchase complete.",
+    "sold": "Item sold.",
+    "errors": {
+      "stock": "Not enough stock.",
+      "funds": "Insufficient balance.",
+      "full": "Inventory full.",
+      "max": "Maximum quantity reached for this item.",
+      "insufficient": "You don’t have that many.",
+      "failed": "The operation failed.",
+      "duplicate": "This item is already for sale here."
+    },
+    "editShop": "Edit shop",
+    "name": "Name",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional",
+    "open": "Open",
+    "openHelp": "When closed, the shop is only visible to those who manage the economy.",
+    "buyback": "Buyback",
+    "buybackHelp": "The shop buys back the items it sells. A sold item returns to its stock if limited.",
+    "buybackPercent": "Default buyback (% of price)",
+    "buybackPercentHelp": "For items without their own buyback price. Empty: only those items are bought back.",
+    "deleteShop": "Delete shop",
+    "deleteTitle": "Delete {name}?",
+    "deleteDescription": "The shop and its items disappear. Items already bought stay with the personas.",
+    "itemTitle": "Item: {name}",
+    "price": "Price",
+    "priceIn": "Price in {unit}",
+    "stock": "Stock",
+    "stockPlaceholder": "Unlimited",
+    "buybackPrice": "Buyback price",
+    "buybackPriceHelp": "Empty: the shop’s percentage.",
+    "buybackPriceIn": "Buyback price in {unit}",
+    "editItem": "Edit item: {name}",
+    "removeItem": "Remove from sale: {name}"
   }
 }

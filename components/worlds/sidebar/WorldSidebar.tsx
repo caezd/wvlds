@@ -21,6 +21,7 @@ import {
   Map as MapIcon,
   Waypoints,
   Settings,
+  Store,
   Users,
 } from "lucide-react";
 import { WorldSidebarChatrooms } from "./WorldSidebarChatrooms";
@@ -82,6 +83,8 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   // est NOT NULL DEFAULT true.
   const hasWiki = world.enable_wiki !== false;
   const hasMap = featureFlags.world_map && world.enable_map !== false;
+  // Les boutiques vendent des objets contre la monnaie du monde (migration 249).
+  const hasShops = featureFlags.world_economy && !!world.enable_economy && world.enable_inventory !== false;
 
   const worldBase = `/w/${worldId}`;
 
@@ -123,6 +126,9 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       )}
       {hasCatalogue && (
         <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Library size={14} />} label={t("nav.catalogue")} />
+      )}
+      {hasShops && (
+        <WorldSidebarNavLink href={`${worldBase}?view=shops`} icon={<Store size={14} />} label={t("nav.shops")} />
       )}
       {canAdmin && (
         <WorldSidebarNavLink href={`${worldBase}?view=settings`} icon={<Settings size={14} />} label={tNav("settings")} />
