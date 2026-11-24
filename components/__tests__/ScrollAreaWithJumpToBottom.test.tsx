@@ -32,7 +32,7 @@ describe("ScrollAreaWithJumpToBottom — bouton « descendre »", () => {
 
     const button = getByLabelText("Descendre");
     await waitFor(() => {
-      expect(button.className).toContain("pointer-events-none");
+      expect(button.classList).toContain("pointer-events-none");
     });
     expect(button).toHaveAttribute("tabindex", "-1");
     expect(button).toHaveAttribute("aria-hidden", "true");
@@ -50,7 +50,7 @@ describe("ScrollAreaWithJumpToBottom — bouton « descendre »", () => {
 
     const button = getByLabelText("Descendre");
     await waitFor(() => {
-      expect(button.className).toContain("pointer-events-auto");
+      expect(button.classList).toContain("pointer-events-auto");
     });
     expect(button).toHaveAttribute("tabindex", "0");
     expect(button).toHaveAttribute("aria-hidden", "false");
@@ -66,11 +66,11 @@ describe("ScrollAreaWithJumpToBottom — bouton « descendre »", () => {
     const button = getByLabelText("Descendre");
 
     setScrollMetrics(viewport, { scrollTop: 0, scrollHeight: 1000, clientHeight: 200 });
-    await waitFor(() => expect(button.className).toContain("pointer-events-auto"));
+    await waitFor(() => expect(button.classList).toContain("pointer-events-auto"));
 
     // Retour tout en bas : distance à zéro, sous le seuil.
     setScrollMetrics(viewport, { scrollTop: 800, scrollHeight: 1000, clientHeight: 200 });
-    await waitFor(() => expect(button.className).toContain("pointer-events-none"));
+    await waitFor(() => expect(button.classList).toContain("pointer-events-none"));
     expect(button).toHaveAttribute("tabindex", "-1");
   });
 

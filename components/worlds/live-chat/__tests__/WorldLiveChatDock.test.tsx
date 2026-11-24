@@ -44,9 +44,17 @@ vi.mock("@/hooks/useWorldLiveChat", () => ({
   },
 }));
 
-// Le profil s'ouvre dans un tiroir : hors sujet ici.
+// Le profil et la fiche s'ouvrent dans un tiroir : hors sujet ici. Un repère
+// dit seulement ce qu'ouvre chaque nom.
 vi.mock("@/components/profile/UserProfileSheetTrigger", () => ({
-  UserProfileSheetTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  UserProfileSheetTrigger: ({ children, userId }: { children: React.ReactNode; userId?: string | null }) => (
+    <span data-user-sheet={userId ?? ""}>{children}</span>
+  ),
+}));
+vi.mock("@/components/personas/PersonaProfileSheetTrigger", () => ({
+  PersonaProfileSheetTrigger: ({ children, personaId }: { children: React.ReactNode; personaId?: string | null }) => (
+    <span data-persona-sheet={personaId ?? ""}>{children}</span>
+  ),
 }));
 
 const toastError = vi.hoisted(() => vi.fn());
@@ -203,18 +211,22 @@ describe("WorldLiveChatDock", () => {
     expect(row.className).not.toMatch(/hover:bg-/);
   });
 
-  it("les actions se calent sur le texte, avec ou sans en-tête", async () => {
-    // b suit a du même auteur à une minute : regroupé, sans en-tête.
+  it("répondre et supprimer suivent l'heure, avec ou sans en-tête", async () => {
+    // b suit a du même auteur à une minute : regroupé, sans en-tête ; son heure
+    // apparaît au survol, avec les boutons.
     chat.messages = [
       msg("a", "u1", "alice", "premier", "2026-11-09T10:00:00Z"),
       msg("b", "u1", "alice", "ok", "2026-11-09T10:01:00Z"),
     ];
     render(<WorldLiveChatDock />);
     await userEvent.setup().click(screen.getByTestId("world-live-chat-bar"));
-    const actions = screen.getAllByTestId("world-live-chat-actions");
-    expect(actions).toHaveLength(2);
-    expect(actions.map((a) => a.parentElement!.querySelector("p")!.textContent)).toEqual(["premier", "ok"]);
-    for (const a of actions) expect(a).toHaveClass("top-0", "h-5");
+    const row = (id: string) => screen.getByRole("log").querySelector<HTMLElement>(`[data-live-message='${id}']`)!;
+    for (const [id, at] of [["a", "2026-11-09T10:00:00Z"], ["b", "2026-11-09T10:01:00Z"]]) {
+      const time = row(id).querySelector("time")!;
+      expect(time).toHaveAttribute("dateTime", at);
+      expect(time.nextElementSibling).toBe(within(row(id)).getByTestId("world-live-chat-actions"));
+    }
+    expect(within(row("a")).getByTestId("world-live-chat-author").parentElement).toContainElement(row("a").querySelector("time"));
   });
 
   it("garde le texte et prévient quand le rythme est dépassé", async () => {
@@ -462,6 +474,30 @@ describe("WorldLiveChatDock — options du monde (migration 241)", () => {
     expect(within(screen.getByTestId("world-live-chat-action")).getByText("Lyra")).toHaveStyle({ color: "#22c55e" });
   });
 
+  it("le pseudo ouvre le profil du joueur, le nom du persona (et son avatar) sa fiche", async () => {
+    optionsMock.value = { ...optionsMock.value, personas: true, actions: true };
+    chat.messages = [
+      avecPersona(msg("a", "u1", "alice", "bonjour")),
+      { ...avecPersona(msg("b", "u1", "alice", "salue.", "2026-11-09T10:10:00Z")), is_action: true },
+      msg("c", "u2", "bob", "salut", "2026-11-09T10:20:00Z"),
+    ];
+    await ouvrir();
+    const row = (id: string) => screen.getByRole("log").querySelector<HTMLElement>(`[data-live-message='${id}']`)!;
+    const auteur = within(row("a")).getByTestId("world-live-chat-author");
+    expect(within(auteur).getByText("alice").closest("[data-user-sheet]")).toHaveAttribute("data-user-sheet", "u1");
+    expect(within(auteur).getByText("alice").closest("[data-persona-sheet]")).toBeNull();
+    expect(within(auteur).getByText("Lyra").closest("[data-persona-sheet]")).toHaveAttribute("data-persona-sheet", "p1");
+    expect(within(auteur).getByText("Lyra").closest("[data-user-sheet]")).toBeNull();
+    // L'avatar montre le persona : il ouvre sa fiche.
+    expect(row("a").querySelector("[data-persona-sheet='p1'] [data-slot=avatar]")).not.toBeNull();
+    // Action /me jouée par le persona : son nom ouvre sa fiche.
+    expect(within(screen.getByTestId("world-live-chat-action")).getByText("Lyra").closest("[data-persona-sheet]"))
+      .toHaveAttribute("data-persona-sheet", "p1");
+    // Sans persona : le pseudo et l'avatar ouvrent le profil.
+    expect(within(row("c")).getByText("bob").closest("[data-user-sheet]")).toHaveAttribute("data-user-sheet", "u2");
+    expect(row("c").querySelector("[data-user-sheet='u2'] [data-slot=avatar]")).not.toBeNull();
+  });
+
   it("personas : sans couleur de groupe, le nom garde la couleur du texte", async () => {
     optionsMock.value = { ...optionsMock.value, personas: true };
     tintsMock.value = { autre: "#22c55e" };
@@ -555,7 +591,7 @@ describe("WorldLiveChatDock — options du monde (migration 241)", () => {
       .toEqual(row("a").className.split(" ").filter((c) => /^(gap|mt|pt|pb|py|pr)-/.test(c)).sort());
     const action = screen.getByTestId("world-live-chat-action");
     expect(action).toHaveClass("px-3", "py-1.5");
-    expect(within(row("b")).getByTestId("world-live-chat-actions")).toHaveClass("left-full");
+    expect(row("b").querySelector("time")!.nextElementSibling).toBe(within(row("b")).getByTestId("world-live-chat-actions"));
   });
 
   it("actions : /me part en action jouée", async () => {
@@ -618,7 +654,7 @@ describe("WorldLiveChatDock — options du monde (migration 241)", () => {
     expect(screen.getByTestId("world-live-chat-action")).toHaveClass("py-1.5");
     expect(within(row("b")).getByTestId("world-live-chat-author").closest("div")).toHaveClass("pt-1.5");
     for (const id of ["a", "b"]) expect(row(id)).toHaveClass("mt-2", "py-0.5");
-    expect(within(row("a")).getByTestId("world-live-chat-actions")).toHaveClass("top-1.5");
+    expect(within(screen.getByTestId("world-live-chat-action")).getByTestId("world-live-chat-actions")).toBeInTheDocument();
   });
 
   it("choisir un persona l'envoie avec sa couleur de dialogue, et le choix reste pour le monde", async () => {
@@ -764,12 +800,12 @@ describe("isGrouped", () => {
       });
     });
 
-    it("un clic sur un message y répond ; l'envoi porte la réponse, Échap l'annule", async () => {
+    it("« Répondre » cite le message ; l'envoi porte la réponse, Échap l'annule", async () => {
       const user = userEvent.setup();
       chat.messages = [msg("m1", "u2", "bob", "On joue ce soir ?")];
       render(<WorldLiveChatDock />);
       await user.click(screen.getByTestId("world-live-chat-bar"));
-      await user.click(screen.getByText("On joue ce soir ?"));
+      await user.click(screen.getByRole("button", { name: "Répondre à bob" }));
       expect(screen.getByTestId("world-live-chat-replying")).toHaveTextContent("Réponse à bob");
       const input = screen.getByRole("textbox", { name: "Écrire dans le chat du monde…" });
       await user.keyboard("{Escape}");

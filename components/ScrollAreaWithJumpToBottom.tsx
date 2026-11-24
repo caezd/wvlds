@@ -133,7 +133,7 @@ export function JumpToBottomButton({ visible, onClick }: { visible: boolean; onC
         size="icon"
         variant="outline"
         // Posé sur les messages : un fond plein pour rester lisible.
-        className="pointer-events-auto bg-background shadow"
+        className={`${visible ? "pointer-events-auto" : "pointer-events-none"} bg-background shadow`}
         tabIndex={visible ? 0 : -1}
         aria-hidden={!visible}
         onClick={onClick}

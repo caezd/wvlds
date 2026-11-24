@@ -53,7 +53,13 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Interface",
     area: "Monde",
-    text: "Chatbox :\n- reste ouverte ou fermée d’une visite à l’autre, selon le dernier choix\n- **Plein écran** : elle prend la place de la page\n- en bas ou à droite de la page, au choix\n- taille réglable en glissant l’espace qui la sépare de la page, retenue d’une visite à l’autre\n- remonté dans le fil, le bouton **Descendre** des salons ramène aux derniers messages\n- étroite (à droite, sur mobile) : les salles passent dans un menu, avec leurs pastilles de nouveaux messages ; les présents se réduisent à leur nombre",
+    text: "Chatbox :\n- reste ouverte ou fermée d’une visite à l’autre, selon le dernier choix\n- **Plein écran** : elle prend la place de la page\n- en bas ou à droite de la page, au choix\n- taille réglable en glissant l’espace qui la sépare de la page, retenue d’une visite à l’autre\n- remonté dans le fil, le bouton **Descendre** des salons ramène aux derniers messages\n- étroite (à droite, sur mobile) : les salles passent dans un menu, avec leurs pastilles de nouveaux messages ; les présents se réduisent à leur nombre\n- **Répondre** et **Supprimer** apparaissent au survol, juste après l’heure ; un clic sur le message ne répond plus\n- le pseudo ouvre le profil du joueur, le nom du persona (et son avatar) sa fiche",
+  },
+  {
+    date: "2026-11-24",
+    category: "Correctif",
+    area: "Salons",
+    text: "Le bouton **Descendre**, caché, ne bloque plus les clics au bas du fil des salons et de la chatbox.",
   },
   {
     date: "2026-11-24",

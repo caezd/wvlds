@@ -10,6 +10,7 @@ import { JumpToBottomButton } from "@/components/ScrollAreaWithJumpToBottom";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
+import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLiveChatContext, type LiveChatRoom } from "@/lib/worldLiveChatStore";
 import {
@@ -724,17 +725,12 @@ function MessageRow({
   // Le nom du persona prend la couleur de son groupe, comme dans les salons.
   const personaStyle = persona && personaTint ? { color: personaTint } : undefined;
 
+  // Répondre, et supprimer le sien : juste après l'heure, au survol (ou au
+  // clavier).
   const actions = (
-    <div
+    <span
       data-testid="world-live-chat-actions"
-      className={cn(
-        "absolute flex h-5 items-center gap-0.5 opacity-0 focus-within:opacity-100 group-hover:opacity-100",
-        // Ligne : dans la marge de droite (`pr-16`), sur la première ligne du
-        // texte. Bulle : juste à côté d'elle, à mi-hauteur.
-        !bubbles
-          ? cn("-right-14", action ? "top-1.5" : "top-0")
-          : "left-full top-1/2 ml-1 -translate-y-1/2",
-      )}
+      className="inline-flex h-5 items-center gap-0.5 align-middle not-italic opacity-0 focus-within:opacity-100 group-hover:opacity-100"
     >
       <Button variant="ghost" size="icon-sm" className="size-6" onClick={onReply} aria-label={t("replyTo", { name })}>
         <Reply className="size-3.5" />
@@ -744,41 +740,55 @@ function MessageRow({
           <Trash2 className="size-3.5" />
         </Button>
       )}
-    </div>
+    </span>
+  );
+  const timeTag = (className?: string) => (
+    <time dateTime={message.created_at} className={cn("text-xs not-italic text-muted-foreground", className)}>{time}</time>
+  );
+
+  // Le pseudo ouvre le profil du joueur ; le nom du persona, sa fiche.
+  const userLink = (children: ReactNode) => (
+    <UserProfileSheetTrigger userId={message.user_id} label={name}>{children}</UserProfileSheetTrigger>
+  );
+  const personaLink = (children: ReactNode, className?: string) =>
+    persona ? (
+      <PersonaProfileSheetTrigger
+        personaId={persona.id}
+        userId={message.user_id}
+        label={persona.name}
+        triggerClassName={cn("text-left", className)}
+      >
+        {children}
+      </PersonaProfileSheetTrigger>
+    ) : (
+      userLink(children)
+    );
+  const avatar = (
+    <Avatar className="size-8 rounded-full">
+      {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+      <AvatarFallback className="rounded-full text-xs">{speaker.slice(0, 1).toUpperCase()}</AvatarFallback>
+    </Avatar>
   );
 
   return (
     <li
       data-live-message={message.id}
       data-mine={mine || undefined}
-      // Un clic sur le message y répond — pas sur un lien, un bouton, ni
-      // quand on vient de sélectionner du texte pour le copier.
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button, a, [role=button]")) return;
-        if (window.getSelection?.()?.toString()) return;
-        onReply();
-      }}
       className={cn(
-        // Pas de fond au survol : seuls les boutons d'action apparaissent.
-        "group relative flex cursor-pointer gap-3 px-4 data-[highlight=true]:bg-primary/10",
+        // Pas de fond au survol : seuls l'heure (regroupé) et les boutons apparaissent.
+        "group relative flex gap-3 px-4 data-[highlight=true]:bg-primary/10",
         bubbles
           ? // Bulles serrées ; l'avatar en haut du groupe, à hauteur du pseudo.
             // Les actions /me suivent le même espacement.
             cn("gap-2", grouped ? "pt-0.5" : "mt-2 pt-1")
           : // En-tête et action se centrent sur l'avatar (`pt-1.5`/`py-1.5`) :
             // la ligne n'ajoute qu'une petite marge.
-            cn("pr-16 py-0.5", !grouped && "mt-2"),
+            cn("py-0.5", !grouped && "mt-2"),
       )}
     >
       <div className="w-8 shrink-0">
-        {!grouped && (
-          <UserProfileSheetTrigger userId={message.user_id} label={name}>
-            <Avatar className="size-8 rounded-full">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-              <AvatarFallback className="rounded-full text-xs">{speaker.slice(0, 1).toUpperCase()}</AvatarFallback>
-            </Avatar>
-          </UserProfileSheetTrigger>
-        )}
+        {/* L'avatar montre qui parle : le persona ouvre sa fiche, le joueur son profil. */}
+        {!grouped && personaLink(avatar, "block rounded-full")}
       </div>
       <div className="min-w-0 flex-1">
         {message.reply_to_id && (
@@ -809,21 +819,21 @@ function MessageRow({
               bubble ? "mb-0.5 px-3 pt-2 text-muted-foreground" : "pt-1.5",
             )}
           >
-            <UserProfileSheetTrigger userId={message.user_id} label={name}>
-              <span className={cn("hover:underline", bubble ? "text-xs" : "text-sm")} data-testid="world-live-chat-author">
-                {persona ? (
-                  t.rich("withPersona", {
-                    user: (chunks) => <span className="font-semibold">{chunks}</span>,
-                    persona: (chunks) => <span className="font-semibold" style={personaStyle}>{chunks}</span>,
-                    userName: name,
-                    personaName: persona.name,
-                  })
-                ) : (
-                  <span className="font-semibold">{name}</span>
-                )}
-              </span>
-            </UserProfileSheetTrigger>
-            <time dateTime={message.created_at} className="text-xs text-muted-foreground">{time}</time>
+            <span className={bubble ? "text-xs" : "text-sm"} data-testid="world-live-chat-author">
+              {persona ? (
+                t.rich("withPersona", {
+                  user: (chunks) => userLink(<span className="font-semibold hover:underline">{chunks}</span>),
+                  persona: (chunks) =>
+                    personaLink(<span className="font-semibold hover:underline" style={personaStyle}>{chunks}</span>),
+                  userName: name,
+                  personaName: persona.name,
+                })
+              ) : (
+                userLink(<span className="font-semibold hover:underline">{name}</span>)
+              )}
+            </span>
+            {timeTag()}
+            {actions}
           </div>
         )}
         <div className={cn("relative", bubbles && "w-fit max-w-[80%]")}>
@@ -836,8 +846,12 @@ function MessageRow({
               style={{ color: readableOnPage(color) }}
               data-testid="world-live-chat-action"
             >
-              <span className="font-semibold" style={persona ? personaStyle : undefined}>{speaker}</span> <LiveChatText text={message.content} />
-              <time dateTime={message.created_at} className="ml-2 text-xs not-italic text-muted-foreground">{time}</time>
+              {personaLink(
+                <span className="font-semibold hover:underline" style={persona ? personaStyle : undefined}>{speaker}</span>,
+              )}{" "}
+              <LiveChatText text={message.content} />
+              {timeTag("ml-2")}
+              {actions}
             </p>
           ) : bubble ? (
             <p
@@ -857,9 +871,22 @@ function MessageRow({
           ) : (
             <p className="whitespace-pre-wrap break-words text-sm" style={{ color: readableOnPage(color) }}>
               <LiveChatText text={message.content} />
+              {grouped && (
+                // Sans en-tête : l'heure suit le texte au survol, avec les boutons.
+                <span className="ml-2 whitespace-nowrap opacity-0 focus-within:opacity-100 group-hover:opacity-100">
+                  {timeTag()}
+                  {actions}
+                </span>
+              )}
             </p>
           )}
-          {actions}
+          {grouped && bubble && (
+            // Sans en-tête : l'heure apparaît au survol à côté de la bulle, avec les boutons.
+            <span className="absolute left-full top-1/2 ml-1 flex -translate-y-1/2 items-center gap-1 whitespace-nowrap opacity-0 focus-within:opacity-100 group-hover:opacity-100">
+              {timeTag()}
+              {actions}
+            </span>
+          )}
         </div>
       </div>
     </li>
