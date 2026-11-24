@@ -217,6 +217,8 @@ describe("WorldGroupsSettings — page d'un groupe", () => {
     await ouvrirPage(user, "Ordre");
     const bascule = screen.getByRole("switch", { name: "Appliquer la couleur de Ordre" });
     expect(bascule).toHaveAttribute("data-state", "unchecked");
+    // La couleur et son interrupteur partagent une ligne.
+    expect(screen.getByRole("button", { name: "Choisir une couleur" }).closest("[data-group-color]")).toContainElement(bascule);
     await user.click(bascule);
     expect(bascule).toHaveAttribute("data-state", "checked");
     const ecriture = mock.buildersFor("world_persona_groups").at(-1)!;

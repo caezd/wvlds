@@ -199,7 +199,7 @@ export function WorldGroupDetail({
         </SettingsSection>
 
         <SettingsSection title={t("groupColor")}>
-          <div className={SETTINGS_ROW}>
+          <div className={cn(SETTINGS_ROW, "pr-3")} data-group-color>
             <div
               className={cn("flex rounded-md", inherited && "outline-1 outline-offset-2 outline-dashed outline-muted-foreground/60")}
               data-inherited={inherited || undefined}
@@ -217,23 +217,25 @@ export function WorldGroupDetail({
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
+                size="icon-sm"
+                className="size-8 text-muted-foreground"
+                aria-label={t("inheritColor", { name: parent.name })}
+                title={t("inheritColor", { name: parent.name })}
                 onClick={() => (creating ? change({ color: null }) : void commit({ color: null }, { color: values.color }))}
               >
                 <Pipette className="size-4" aria-hidden />
-                {t("inheritColor", { name: parent.name })}
               </Button>
             )}
+            <span className="h-5 w-px shrink-0 bg-border" aria-hidden />
+            <label className="flex shrink-0 cursor-pointer items-center gap-3 text-sm">
+              {t("applyColor")}
+              <Switch
+                checked={values.apply_color}
+                aria-label={t("applyColorFor", { name: values.name })}
+                onCheckedChange={(on) => (creating ? change({ apply_color: on }) : void commit({ apply_color: on }, { apply_color: !on }))}
+              />
+            </label>
           </div>
-          <label className={cn(SETTINGS_ROW, "cursor-pointer justify-between pr-3 text-sm")}>
-            {t("applyColor")}
-            <Switch
-              checked={values.apply_color}
-              aria-label={t("applyColorFor", { name: values.name })}
-              onCheckedChange={(on) => (creating ? change({ apply_color: on }) : void commit({ apply_color: on }, { apply_color: !on }))}
-            />
-          </label>
         </SettingsSection>
 
         {creating ? (
