@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { inviteeKey, type ChatroomInvitee } from "@/lib/chatroomAccess";
 import { PERSONA_GROUP_COLUMNS, groupChoices, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupRow } from "@/lib/personaGroups";
 
-type PersonaOption = { id: string; name: string; avatar_url: string | null };
+export type PersonaOption = { id: string; name: string; avatar_url: string | null };
 type GroupOption = { id: string; name: string; color: string | null };
 
 /** Normalise pour une recherche sans accents ni casse. */
@@ -25,7 +25,7 @@ function plain(s: string): string {
   return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
 
-function PersonaThumb({ persona, size }: { persona: PersonaOption; size: number }) {
+export function PersonaThumb({ persona, size }: { persona: PersonaOption; size: number }) {
   return (
     <span aria-hidden className="relative shrink-0 overflow-hidden rounded-md bg-muted" style={{ width: size, height: size }}>
       {persona.avatar_url ? (

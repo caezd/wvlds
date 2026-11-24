@@ -28,6 +28,10 @@ import { HelpHint } from "@/components/ui/help-hint";
 export const SURFACE = "border border-border bg-card";
 /** Un champ dans une carte ou sur la page : saisie, sélecteur, petite case. */
 export const FIELD = "border-border bg-background shadow-none hover:bg-background";
+/** La largeur de toutes les pages des paramètres d'un monde. */
+export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
+/** Une ligne d'une liste d'éléments (salles, groupes, relations, catégories). */
+export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
 
 /** Un titre suivi de son aide. */
 function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {

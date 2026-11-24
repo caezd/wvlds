@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowDown, ArrowLeft, ArrowUp, CornerDownRight, FolderInput, Loader2, MoreHorizontal, Pipette, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, CornerDownRight, FolderInput, Loader2, MoreHorizontal, Pipette, Plus, Trash2, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -19,18 +19,22 @@ import {
 import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { keyboardMoves, planMove, type MoveCommand, type TreeNode } from "@/lib/wikiTreeMove";
 import {
+  PERSONA_ASSIGNMENT_COLUMNS,
   PERSONA_GROUP_COLUMNS,
   childrenOf,
   groupSubtreeIds,
+  indexAssignments,
   normalizeGroupRow,
   resolvePersonaGroups,
+  type PersonaGroupAssignment,
   type PersonaGroupRow,
 } from "@/lib/personaGroups";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FeaturePage, SURFACE, SettingsSection } from "./FeatureLayout";
+import { WorldGroupDetail, type GroupPersona } from "./WorldGroupDetail";
+import { FeaturePage, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
 
 /** Une ligne de la liste : bordée, sur le fond des cartes. */
-const ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
+const ROW = SETTINGS_ROW;
 /** La ligne d'ajout, en pointillés. */
 const ADD_ROW = "flex min-h-12 flex-wrap items-center gap-3 rounded-md border border-dashed border-border py-1.5 pl-3 pr-1.5";
 /** Un champ sans cadre, dans une ligne. */
@@ -59,7 +63,8 @@ function asTree(rows: readonly PersonaGroupRow[]): TreeNode[] {
  * couleur appliquée ou non — et s'enregistre à la sortie du champ (la
  * couleur, un instant après le dernier réglage). Le menu d'une ligne ajoute
  * un sous-groupe, déplace d'un cran (même règle que l'arbre du wiki), rend la
- * couleur héritée ou supprime.
+ * couleur héritée ou supprime. Le nombre de membres d'une ligne ouvre la fiche
+ * du groupe (`WorldGroupDetail`) : description et membres (migration 242).
  *
  * Un sous-groupe sans couleur propre prend celle de son parent ; supprimer un
  * groupe fait remonter ses sous-groupes d'un niveau (la base fait de même).
@@ -71,22 +76,50 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
   const supabase = React.useMemo(() => createClient(), []);
 
   const [rows, setRows] = React.useState<PersonaGroupRow[] | null>(null);
+  const [assignments, setAssignments] = React.useState<PersonaGroupAssignment[]>([]);
+  const [personas, setPersonas] = React.useState<GroupPersona[]>([]);
+  // Le groupe dont la fiche est ouverte.
+  const [openId, setOpenId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { data } = await supabase
-        .from("world_persona_groups")
-        .select(PERSONA_GROUP_COLUMNS)
-        .eq("world_id", worldId)
-        .order("sort_index");
-      if (!cancelled) setRows(((data ?? []) as PersonaGroupRow[]).map(normalizeGroupRow));
+      const [{ data }, { data: assignRows }, { data: personaRows }] = await Promise.all([
+        supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
+        supabase.from("persona_group_assignments").select(PERSONA_ASSIGNMENT_COLUMNS).eq("world_id", worldId),
+        supabase
+          .from("personas")
+          .select("id, name, avatar_url, user_id, is_npc")
+          .eq("world_id", worldId)
+          .is("deleted_at", null)
+          .not("is_template", "is", true)
+          .order("name"),
+      ]);
+      if (cancelled) return;
+      setRows(((data ?? []) as PersonaGroupRow[]).map(normalizeGroupRow));
+      setAssignments((assignRows ?? []) as PersonaGroupAssignment[]);
+      const raw = (personaRows ?? []) as Omit<GroupPersona, "username">[];
+      // Le pseudo du joueur de chaque persona : la recherche porte aussi sur lui.
+      const userIds = [...new Set(raw.map((p) => p.user_id))];
+      const { data: profileRows } = userIds.length > 0
+        ? await supabase.from("profiles").select("id, username").in("id", userIds)
+        : { data: [] };
+      if (cancelled) return;
+      const usernames = new Map(((profileRows ?? []) as { id: string; username: string | null }[]).map((u) => [u.id, u.username]));
+      setPersonas(raw.map((p) => ({ ...p, is_npc: !!p.is_npc, username: usernames.get(p.user_id) ?? null })));
     })();
     return () => { cancelled = true; };
   }, [supabase, worldId]);
 
   const groups = React.useMemo(() => resolvePersonaGroups(rows ?? []), [rows]);
   const byId = React.useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
+  const index = React.useMemo(() => indexAssignments(assignments), [assignments]);
+  // Les membres directs de chaque groupe.
+  const memberCount = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const ids of index.groupsByPersona.values()) for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+    return counts;
+  }, [index]);
 
   // Un nouveau groupe à la racine, ou un sous-groupe sous `addingUnder`.
   const [newName, setNewName] = React.useState("");
@@ -117,13 +150,13 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     setRows((prev) => prev?.map((g) => (g.id === id ? { ...g, ...patch } : g)) ?? null);
   }
 
-  async function save(id: string, patch: Partial<Pick<PersonaGroupRow, "name" | "color" | "apply_color">>) {
+  async function save(id: string, patch: Partial<Pick<PersonaGroupRow, "name" | "description" | "color" | "apply_color">>) {
     const { error } = await supabase.from("world_persona_groups").update(patch).eq("id", id);
     if (error) { toast.error(tCommon("saveError")); return false; }
     return true;
   }
 
-  async function insert(values: Omit<PersonaGroupRow, "id">) {
+  async function insert(values: Omit<PersonaGroupRow, "id" | "description">) {
     const { data, error } = await supabase
       .from("world_persona_groups")
       .insert({ world_id: worldId, ...values })
@@ -197,6 +230,23 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     );
   }
 
+  const open = openId ? byId.get(openId) : undefined;
+  if (open) {
+    return (
+      <WorldGroupDetail
+        worldId={worldId}
+        group={open}
+        groupsById={byId}
+        personas={personas}
+        index={index}
+        onBack={() => setOpenId(null)}
+        onEdit={(patch) => edit(open.id, patch)}
+        onSave={(patch) => save(open.id, patch)}
+        onAssignmentsChange={setAssignments}
+      />
+    );
+  }
+
   const tree = asTree(rows);
   // La ligne d'ajout d'un sous-groupe se pose après toute la descendance de son parent.
   const subtree = addingUnder ? groupSubtreeIds(rows, addingUnder) : null;
@@ -253,6 +303,15 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
                     onChange={(e) => edit(g.id, { name: e.target.value })}
                     onBlur={(e) => { if (e.target.value.trim()) void save(g.id, { name: e.target.value.trim() }); }}
                   />
+                  <button
+                    type="button"
+                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground")}
+                    aria-label={t("openGroup", { name: g.name })}
+                    onClick={() => setOpenId(g.id)}
+                  >
+                    <Users className="size-3.5" aria-hidden />
+                    {t("memberCount", { count: memberCount.get(g.id) ?? 0 })}
+                  </button>
                   <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
                     {t("applyColor")}
                     <Switch
@@ -307,6 +366,9 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  {g.description && (
+                    <p className="w-full truncate pb-1 pl-9 text-xs text-muted-foreground">{g.description}</p>
+                  )}
                 </li>
                 {addingUnder && addAfter === g.id && (
                   <li

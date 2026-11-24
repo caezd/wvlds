@@ -69,7 +69,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   const tStatus = useTranslations("personas.narrativeStatus");
   const data = useRelationsData(worldId, userId, canAdmin);
   const {
-    loading, personas, members, groups, relTypes, groupByPersona, relations,
+    loading, personas, members, groups, relTypes, groupsByPersona, primaryByPersona, relations,
     personaMap, relTypeMap, myPersonaIds, userList, canEditFrom,
   } = data;
   const fallback: CRelType = React.useMemo(() => ({ ...FALLBACK_TYPE, name: t("unknown") }), [t]);
@@ -111,13 +111,16 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   };
-  // Masquer un groupe masque aussi ses sous-groupes (migration 232).
+  // Masquer un groupe masque aussi ses sous-groupes (migration 232). Un
+  // persona de plusieurs groupes (migration 242) reste tant que l'un d'eux
+  // est visible.
   const lineage = React.useMemo(() => groupLineages(groups), [groups]);
   const personaHidden = React.useCallback((pid: string) => {
-    const gid = groupByPersona.get(pid);
-    if (gid && [...(lineage.get(gid) ?? [gid])].some((id) => hiddenGroups.has(id))) return true;
+    const own = groupsByPersona.get(pid) ?? [];
+    const groupHidden = (gid: string) => [...(lineage.get(gid) ?? [gid])].some((id) => hiddenGroups.has(id));
+    if (own.length > 0 && own.every(groupHidden)) return true;
     return hideRetired && isRetiredStatus(personaMap.get(pid)?.narrative_status);
-  }, [groupByPersona, lineage, hiddenGroups, hideRetired, personaMap]);
+  }, [groupsByPersona, lineage, hiddenGroups, hideRetired, personaMap]);
   const hasRetired = React.useMemo(() => personas.some((p) => isRetiredStatus(p.narrative_status)), [personas]);
   const relationVisible = React.useCallback(
     (r: CRelation) => !hiddenTypes.has(r.type) && !personaHidden(r.from_persona_id) && !personaHidden(r.to_persona_id),
@@ -196,14 +199,15 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   // ── Couleur de groupe ──
   const groupColor = React.useMemo(() => {
     const m = new Map<string, string>();
-    // La teinte, et non la pastille : un groupe peut ne pas appliquer sa couleur.
+    // La teinte du groupe principal, et non la pastille : un groupe peut ne
+    // pas appliquer sa couleur.
     const gMap = new Map(groups.map((g) => [g.id, g.tint]));
-    for (const [pid, gid] of groupByPersona) {
+    for (const [pid, gid] of primaryByPersona) {
       const c = gMap.get(gid);
       if (c) m.set(pid, c);
     }
     return m;
-  }, [groupByPersona, groups]);
+  }, [primaryByPersona, groups]);
   const groupColorOf = React.useCallback((pid: string) => groupColor.get(pid), [groupColor]);
 
   // ── Vue et réglages d'affichage : retenus par monde, dans ce navigateur ──
@@ -251,10 +255,10 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   // Les arcs du cercle et les îlots des constellations : même découpage.
   const arcsInput = React.useMemo(
     () => ringArcsInput(
-      effectiveGroupBy, userList, groups, groupByPersona,
+      effectiveGroupBy, userList, groups, primaryByPersona,
       (id) => !personaHidden(id) && (!hideIsolated || connected.has(id)),
     ),
-    [effectiveGroupBy, userList, groups, groupByPersona, personaHidden, hideIsolated, connected],
+    [effectiveGroupBy, userList, groups, primaryByPersona, personaHidden, hideIsolated, connected],
   );
   const ring = React.useMemo(() => ringLayout(arcsInput), [arcsInput]);
   const constellationInput = React.useMemo<ConstellationInput>(() => {
@@ -620,7 +624,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             personaMap={personaMap}
             typeOf={typeOf}
             groups={groups}
-            groupByPersona={groupByPersona}
+            groupsByPersona={groupsByPersona}
+            primaryByPersona={primaryByPersona}
             groupColorOf={groupColorOf}
             handleOf={handleOf}
             statusOf={statusOf}
@@ -633,7 +638,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             userId={userId}
             canAdmin={canAdmin}
             canEditFrom={canEditFrom}
-            onAssignGroup={(pid, gid) => void data.assignGroup(pid, gid)}
+            onToggleGroup={(pid, gid, member) => void data.toggleGroup(pid, gid, member)}
+            onSetPrimaryGroup={(pid, gid) => void data.setPrimaryGroup(pid, gid)}
             onClose={closePanel}
             onBack={() => setSelectedPersonaId(null)}
             onOpenPersona={openPersona}

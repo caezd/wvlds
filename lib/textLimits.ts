@@ -64,6 +64,7 @@ export const DB_TEXT_LIMITS = {
   "world_map_regions.description": 5_000,
   "world_map_regions.label": 200,
   "world_maps.label": 200,
+  "world_persona_groups.description": 1_000,
   "world_persona_groups.name": 200,
   "world_relation_types.name": 200,
   "world_roles.lucide_icon": 100,

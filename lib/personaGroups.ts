@@ -1,5 +1,7 @@
 /**
- * Les groupes de personas d'un monde, en arbre (migration 232).
+ * Les groupes de personas d'un monde, en arbre (migration 232). Un persona
+ * peut en rejoindre plusieurs ; l'un d'eux est son groupe principal, celui
+ * dont il montre la couleur (migration 242).
  *
  * Un groupe peut en contenir d'autres, sans limite de profondeur. Il hérite de
  * son parent :
@@ -20,6 +22,7 @@
 export type PersonaGroupRow = {
   id: string;
   name: string;
+  description: string | null;
   /** NULL : hérite de la couleur de son parent. */
   color: string | null;
   parent_id: string | null;
@@ -29,7 +32,18 @@ export type PersonaGroupRow = {
 };
 
 /** Les colonnes à lire pour `PersonaGroupRow`. */
-export const PERSONA_GROUP_COLUMNS = "id, name, color, parent_id, sort_index, apply_color";
+export const PERSONA_GROUP_COLUMNS = "id, name, description, color, parent_id, sort_index, apply_color";
+
+/** Une ligne de `persona_group_assignments` : un persona dans un groupe. */
+export type PersonaGroupAssignment = {
+  persona_id: string;
+  group_id: string;
+  /** Son groupe principal ? Absent des lignes d'avant la migration 242. */
+  is_primary?: boolean;
+};
+
+/** Les colonnes à lire pour `PersonaGroupAssignment`. */
+export const PERSONA_ASSIGNMENT_COLUMNS = "persona_id, group_id, is_primary";
 
 /** Un groupe placé dans l'arbre, avec ce qu'il hérite. */
 export type ResolvedPersonaGroup = PersonaGroupRow & {
@@ -51,11 +65,12 @@ export function groupPathLabel(group: Pick<ResolvedPersonaGroup, "path">): strin
   return group.path.join(GROUP_PATH_SEPARATOR);
 }
 
-/** Accepte les lignes d'avant la migration 232 (ni parent ni `apply_color`). */
+/** Accepte les lignes d'avant les migrations 232 et 242 (ni parent, ni `apply_color`, ni description). */
 export function normalizeGroupRow(row: Partial<PersonaGroupRow> & { id: string; name: string }): PersonaGroupRow {
   return {
     id: row.id,
     name: row.name,
+    description: row.description ?? null,
     color: row.color ?? null,
     parent_id: row.parent_id ?? null,
     sort_index: row.sort_index ?? 0,
@@ -135,26 +150,52 @@ export function groupLineages(rows: readonly Pick<PersonaGroupRow, "id" | "paren
   return out;
 }
 
-/** Un persona affecté à `personaGroupId` est-il membre de `groupId` (directement ou par un sous-groupe) ? */
+/** Un persona des groupes `personaGroupIds` est-il membre de `groupId` (directement ou par un sous-groupe) ? */
 export function isInGroup(
   lineages: ReadonlyMap<string, ReadonlySet<string>>,
-  personaGroupId: string | undefined,
+  personaGroupIds: readonly string[] | undefined,
   groupId: string,
 ): boolean {
-  if (!personaGroupId) return false;
-  return lineages.get(personaGroupId)?.has(groupId) ?? personaGroupId === groupId;
+  return (personaGroupIds ?? []).some((id) => lineages.get(id)?.has(groupId) ?? id === groupId);
 }
 
-/** La teinte de chaque persona affecté à un groupe qui applique sa couleur. */
+/** Les affectations d'un monde, rangées par persona. */
+export type PersonaGroupIndex = {
+  /** Tous les groupes d'un persona, son groupe principal en tête. */
+  groupsByPersona: Map<string, string[]>;
+  /** Son groupe principal. */
+  primaryByPersona: Map<string, string>;
+};
+
+/**
+ * Range les affectations par persona. Sans groupe marqué principal (lignes
+ * d'avant la migration 242), le premier lu en tient lieu, comme le faisait
+ * la base quand il n'y en avait qu'un.
+ */
+export function indexAssignments(rows: readonly PersonaGroupAssignment[]): PersonaGroupIndex {
+  const groupsByPersona = new Map<string, string[]>();
+  const primaryByPersona = new Map<string, string>();
+  for (const a of rows) {
+    const list = groupsByPersona.get(a.persona_id) ?? [];
+    if (list.includes(a.group_id)) continue;
+    if (a.is_primary) list.unshift(a.group_id); else list.push(a.group_id);
+    groupsByPersona.set(a.persona_id, list);
+  }
+  for (const a of rows) if (a.is_primary) primaryByPersona.set(a.persona_id, a.group_id);
+  for (const [pid, list] of groupsByPersona) if (!primaryByPersona.has(pid)) primaryByPersona.set(pid, list[0]);
+  return { groupsByPersona, primaryByPersona };
+}
+
+/** La teinte de chaque persona dont le groupe principal applique sa couleur. */
 export function personaTints(
   groups: readonly ResolvedPersonaGroup[],
-  assignments: readonly { persona_id: string; group_id: string }[],
+  assignments: readonly PersonaGroupAssignment[],
 ): Record<string, string> {
   const tintOf = new Map(groups.map((g) => [g.id, g.tint]));
   const out: Record<string, string> = {};
-  for (const a of assignments) {
-    const tint = tintOf.get(a.group_id);
-    if (tint) out[a.persona_id] = tint;
+  for (const [pid, gid] of indexAssignments(assignments).primaryByPersona) {
+    const tint = tintOf.get(gid);
+    if (tint) out[pid] = tint;
   }
   return out;
 }

@@ -554,13 +554,15 @@ export function usePersonaProfile({
         setWorldId(row.world_id ?? null);
         worldIdOfPersona = row.world_id ?? null;
 
-        // La couleur de son groupe, si ce groupe l'applique ; celle de son
-        // parent s'il n'en a pas (migration 232, `persona_group_tint`).
+        // La couleur de son groupe principal (migration 242), si ce groupe
+        // l'applique ; celle de son parent s'il n'en a pas (migration 232,
+        // `persona_group_tint`).
         if (row.world_id) {
           const { data: assignRow } = await supabase
             .from("persona_group_assignments")
             .select("group_id")
             .eq("persona_id", personaId!)
+            .eq("is_primary", true)
             .maybeSingle();
           const groupId = (assignRow as { group_id?: string | null } | null)?.group_id ?? null;
           const { data: tint } = groupId

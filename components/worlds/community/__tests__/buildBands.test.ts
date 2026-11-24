@@ -38,7 +38,7 @@ function bands(f: Partial<CommunityFilters> = {}, extra: Partial<Parameters<type
     npcs: NPCS,
     meId: "me",
     filters: filters(f),
-    groupByPersona: new Map(),
+    groupsByPersona: new Map(),
     hoistedRoleIds: [GM.id],
     presenceOf: (id) => PRESENCE[id] ?? "offline",
     showNpcBand: true,

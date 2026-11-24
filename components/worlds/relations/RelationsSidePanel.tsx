@@ -13,8 +13,11 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -114,7 +117,10 @@ export type SidePanelProps = {
   personaMap: ReadonlyMap<string, CPersona>;
   typeOf: (id: string) => CRelType;
   groups: CGroup[];
-  groupByPersona: ReadonlyMap<string, string>;
+  /** Tous les groupes de chaque persona, son groupe principal en tête (migration 242). */
+  groupsByPersona: ReadonlyMap<string, readonly string[]>;
+  /** Le groupe principal, qui donne sa couleur au persona. */
+  primaryByPersona: ReadonlyMap<string, string>;
   groupColorOf: (personaId: string) => string | undefined;
   handleOf: (userId: string) => string;
   statusOf: (persona: CPersona) => string;
@@ -128,7 +134,9 @@ export type SidePanelProps = {
   userId: string;
   canAdmin: boolean;
   canEditFrom: (personaId: string) => boolean;
-  onAssignGroup: (personaId: string, groupId: string | null) => void;
+  /** Fait entrer le persona dans un groupe, ou l'en fait sortir. */
+  onToggleGroup: (personaId: string, groupId: string, member: boolean) => void;
+  onSetPrimaryGroup: (personaId: string, groupId: string) => void;
   onClose: () => void;
   onBack: () => void;
   onOpenPersona: (id: string) => void;
@@ -263,14 +271,17 @@ function PlayerSheet({
 }
 
 function PersonaSheet({
-  persona, playerId, relations, relTypes, personaMap, typeOf, groups, groupByPersona, groupColorOf, handleOf, statusOf,
-  userId, canAdmin, canEditFrom, onAssignGroup, onClose, onBack, onOpenPersona, onHoverRelation, onAccept, onDelete, onEdit, onAdd,
+  persona, playerId, relations, relTypes, personaMap, typeOf, groups, groupsByPersona, primaryByPersona, groupColorOf, handleOf, statusOf,
+  userId, canAdmin, canEditFrom, onToggleGroup, onSetPrimaryGroup, onClose, onBack, onOpenPersona, onHoverRelation, onAccept, onDelete, onEdit, onAdd,
 }: SidePanelProps & { persona: CPersona }) {
   const t = useTranslations("relations");
   const tCommon = useTranslations("common");
-  const groupId = groupByPersona.get(persona.id);
-  const group = groupId ? groups.find((g) => g.id === groupId) : undefined;
-  // La teinte du persona : la couleur de son groupe, si ce groupe l'applique.
+  const groupById = new Map(groups.map((g) => [g.id, g]));
+  // Ses groupes, le principal en tête ; un groupe disparu entre deux lectures est ignoré.
+  const own = (groupsByPersona.get(persona.id) ?? []).map((id) => groupById.get(id)).filter((g): g is CGroup => !!g);
+  const primaryId = primaryByPersona.get(persona.id);
+  const group = primaryId ? groupById.get(primaryId) : undefined;
+  // La teinte du persona : la couleur de son groupe principal, si ce groupe l'applique.
   const color = group?.tint;
   const rows = React.useMemo(
     () => personaRows(persona, relations, personaMap, typeOf, userId),
@@ -310,27 +321,47 @@ function PersonaSheet({
               <Button variant="ghost" size="xs" aria-label={t("changeGroup")}>
                 <BadgeDot color={color} className="size-[7px] rounded-full" />
                 {group?.name ?? t("noGroup")}
+                {own.length > 1 && <span className="text-muted-foreground">+{own.length - 1}</span>}
                 <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="min-w-40">
+            <DropdownMenuContent align="center" className="min-w-48">
+              {/* Le menu reste ouvert d'une case à l'autre. */}
               {groups.map((g) => (
-                <DropdownMenuItem key={g.id} onSelect={() => onAssignGroup(persona.id, g.id)}>
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: g.color ?? undefined }} />
+                <DropdownMenuCheckboxItem
+                  key={g.id}
+                  checked={own.some((o) => o.id === g.id)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(on) => onToggleGroup(persona.id, g.id, on)}
+                >
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: g.color ?? undefined }} aria-hidden />
                   {g.name}
-                </DropdownMenuItem>
+                </DropdownMenuCheckboxItem>
               ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => onAssignGroup(persona.id, null)} className="text-muted-foreground">
-                {t("noGroup")}
-              </DropdownMenuItem>
+              {own.length > 1 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{t("primaryGroup")}</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={primaryId} onValueChange={(gid) => onSetPrimaryGroup(persona.id, gid)}>
+                    {own.map((g) => (
+                      <DropdownMenuRadioItem key={g.id} value={g.id} onSelect={(e) => e.preventDefault()}>
+                        {g.name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : group ? (
-          <Badge>
-            <BadgeDot color={group.color ?? undefined} />
-            {group.name}
-          </Badge>
+        ) : own.length > 0 ? (
+          <div className="flex flex-wrap justify-center gap-1">
+            {own.map((g) => (
+              <Badge key={g.id}>
+                <BadgeDot color={g.color ?? undefined} />
+                {g.name}
+              </Badge>
+            ))}
+          </div>
         ) : null}
       </div>
 

@@ -93,7 +93,7 @@ async function pickFilter(user: ReturnType<typeof userEvent.setup>, dimension: s
 
 describe("applyPersonaFilters / sortPersonas", () => {
   const base = { query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL };
-  const groups = new Map([["p2", "g1"]]);
+  const groups = new Map([["p2", ["g1"]]]);
 
   it("filtre par joueur, groupe (dont « sans groupe ») et statut", () => {
     expect(applyPersonaFilters(OTHERS, { ...base, player: "u1" }, groups).map((p) => p.id)).toEqual(["p1", "p3"]);
@@ -102,6 +102,13 @@ describe("applyPersonaFilters / sortPersonas", () => {
     expect(applyPersonaFilters(OTHERS, { ...base, status: "dead" }, groups).map((p) => p.id)).toEqual(["p2"]);
     const retired = { ...OTHERS[0], id: "p5", narrative_status: "retired" as const };
     expect(applyPersonaFilters([...OTHERS, retired], { ...base, status: OFFSTAGE }, groups).map((p) => p.id)).toEqual(["p2", "p5"]);
+  });
+
+  it("un persona de plusieurs groupes passe le filtre de chacun d'eux", () => {
+    const several = new Map([["p1", ["g2", "g1"]], ["p2", ["g1"]]]);
+    expect(applyPersonaFilters(OTHERS, { ...base, group: "g1" }, several).map((p) => p.id)).toEqual(["p1", "p2"]);
+    expect(applyPersonaFilters(OTHERS, { ...base, group: "g2" }, several).map((p) => p.id)).toEqual(["p1"]);
+    expect(applyPersonaFilters(OTHERS, { ...base, group: NO_GROUP }, several).map((p) => p.id)).toEqual(["p3"]);
   });
 
   it("filtre par état de fiche : en relecture, validée, incomplète", () => {
@@ -125,7 +132,7 @@ describe("applyPersonaFilters / sortPersonas", () => {
 
   it("filtrer sur un groupe montre aussi les personas de ses sous-groupes (migration 232)", () => {
     // g1 › g1a › g1b ; p1 dans g1b, p2 dans g1, p3 dans g2.
-    const assignments = new Map([["p1", "g1b"], ["p2", "g1"], ["p3", "g2"]]);
+    const assignments = new Map([["p1", ["g1b"]], ["p2", ["g1"]], ["p3", ["g2"]]]);
     const lineage = groupLineages([
       { id: "g1", parent_id: null }, { id: "g1a", parent_id: "g1" }, { id: "g1b", parent_id: "g1a" }, { id: "g2", parent_id: null },
     ]);

@@ -13,7 +13,7 @@ import { fetchWorldMemberActivity, fetchWorldMembers, type WorldMemberActivity, 
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { MaritalStatus, PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
 import type { PersonaActivity } from "@/components/personas/shelves/buildShelves";
-import { PERSONA_GROUP_COLUMNS, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupRow, type ResolvedPersonaGroup } from "@/lib/personaGroups";
+import { PERSONA_ASSIGNMENT_COLUMNS, PERSONA_GROUP_COLUMNS, indexAssignments, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupAssignment, type PersonaGroupIndex, type PersonaGroupRow, type ResolvedPersonaGroup } from "@/lib/personaGroups";
 
 /** Un persona du monde tel que la page des membres l'affiche et le filtre. */
 export type CommunityPersona = {
@@ -78,7 +78,8 @@ export function useCommunityData({
   const [npcs, setNpcs] = useState<CommunityPersona[]>([]);
   const [npcSections, setNpcSections] = useState<Map<string, PersonaSectionWithFields[]>>(new Map());
   const [groups, setGroups] = useState<PersonaGroup[]>([]);
-  const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
+  // Tous les groupes de chaque persona, et son groupe principal (migration 242).
+  const [{ groupsByPersona, primaryByPersona }, setGroupIndex] = useState<PersonaGroupIndex>(() => indexAssignments([]));
   const [memberActivity, setMemberActivity] = useState<Map<string, WorldMemberActivity>>(new Map());
   const [personaActivity, setPersonaActivity] = useState<Map<string, PersonaActivity>>(new Map());
   const [loading, setLoading] = useState(enabled);
@@ -107,7 +108,7 @@ export function useCommunityData({
           .eq("is_template", false)
           .is("deleted_at", null),
         supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
-        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
+        supabase.from("persona_group_assignments").select(PERSONA_ASSIGNMENT_COLUMNS).eq("world_id", worldId),
       ]);
 
       const raw = (personaRows ?? []) as RawPersona[];
@@ -162,7 +163,7 @@ export function useCommunityData({
       setNpcs(npcRows.map(toPersona));
       setNpcSections(sectionsByNpc);
       setGroups(resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)));
-      setGroupByPersona(new Map(((assignRows ?? []) as { persona_id: string; group_id: string }[]).map((a) => [a.persona_id, a.group_id])));
+      setGroupIndex(indexAssignments((assignRows ?? []) as PersonaGroupAssignment[]));
       setLoading(false);
 
       const [memberAct, personaAct] = await Promise.all([memberActivityPromise, personaActivityPromise]);
@@ -182,5 +183,5 @@ export function useCommunityData({
     setRows((prev) => prev.filter((x) => x.user_id !== userId));
   }, []);
 
-  return { rows, patchRow, removeRow, personas, npcs, npcSections, groups, groupByPersona, memberActivity, personaActivity, loading };
+  return { rows, patchRow, removeRow, personas, npcs, npcSections, groups, groupsByPersona, primaryByPersona, memberActivity, personaActivity, loading };
 }

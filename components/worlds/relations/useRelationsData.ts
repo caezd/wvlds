@@ -14,12 +14,21 @@ import {
 } from "@/app/actions/personaRelations";
 import type { CGroup, CMember, CPersona, CRelType, CRelation } from "./types";
 import {
+  PERSONA_ASSIGNMENT_COLUMNS,
   PERSONA_GROUP_COLUMNS,
   groupPathLabel,
+  indexAssignments,
   normalizeGroupRow,
   resolvePersonaGroups,
+  type PersonaGroupAssignment,
   type PersonaGroupRow,
 } from "@/lib/personaGroups";
+import {
+  addPersonasToGroup,
+  fetchGroupAssignments,
+  removePersonaFromGroup,
+  setPrimaryGroup as writePrimaryGroup,
+} from "@/lib/personaGroupMembership";
 
 /** Les groupes du monde pour le canevas : dans l'ordre de l'arbre, sous leur chemin. */
 export function toCanvasGroups(rows: PersonaGroupRow[]): CGroup[] {
@@ -59,7 +68,7 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
   const [members, setMembers] = React.useState<CMember[]>([]);
   const [groups, setGroups] = React.useState<CGroup[]>([]);
   const [relTypes, setRelTypes] = React.useState<CRelType[]>([]);
-  const [groupByPersona, setGroupByPersona] = React.useState<Map<string, string>>(new Map());
+  const [assignments, setAssignments] = React.useState<PersonaGroupAssignment[]>([]);
   const [relations, setRelations] = React.useState<CRelation[]>([]);
   const [ownerId, setOwnerId] = React.useState<string | null>(null);
 
@@ -79,7 +88,7 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
         supabase.from("world_members").select("user_id").eq("world_id", worldId),
         supabase.from("worlds").select("owner_id").eq("id", worldId).single(),
         supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
-        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
+        supabase.from("persona_group_assignments").select(PERSONA_ASSIGNMENT_COLUMNS).eq("world_id", worldId),
         supabase.from("persona_relations").select(RELATION_COLUMNS).eq("world_id", worldId),
         supabase.from("world_relation_types").select(TYPE_COLUMNS).eq("world_id", worldId).order("sort_index"),
       ]);
@@ -105,9 +114,7 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
       }
       setRelTypes(loadedTypes);
 
-      const gbp = new Map<string, string>();
-      for (const a of (aRows ?? []) as { persona_id: string; group_id: string }[]) gbp.set(a.persona_id, a.group_id);
-      setGroupByPersona(gbp);
+      setAssignments((aRows ?? []) as PersonaGroupAssignment[]);
 
       const owner = (wRow as { owner_id: string | null } | null)?.owner_id ?? null;
       setOwnerId(owner);
@@ -174,21 +181,31 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
     void reloadRelations();
   }
 
-  async function assignGroup(personaId: string, gid: string | null) {
-    const { error } = !gid
-      ? await supabase.from("persona_group_assignments").delete().eq("persona_id", personaId).eq("world_id", worldId)
-      : await supabase.from("persona_group_assignments").upsert({ persona_id: personaId, world_id: worldId, group_id: gid });
-    if (error) { toast.error(tCommon("saveError"), { description: error.message }); return; }
-    setGroupByPersona((p) => {
-      const n = new Map(p);
-      if (gid) n.set(personaId, gid); else n.delete(personaId);
-      return n;
-    });
+  // ── Groupes d'un persona (migration 242) ──
+  // La base tient le groupe principal (le premier rejoint, le suivant quand on
+  // quitte le principal) : après chaque écriture, on relit les affectations.
+
+  async function afterGroupWrite(ok: boolean) {
+    if (!ok) { toast.error(tCommon("saveError")); return; }
+    const rows = await fetchGroupAssignments(supabase, worldId);
+    if (rows) setAssignments(rows);
+  }
+
+  async function toggleGroup(personaId: string, groupId: string, member: boolean) {
+    await afterGroupWrite(member
+      ? await addPersonasToGroup(supabase, worldId, groupId, [personaId])
+      : await removePersonaFromGroup(supabase, personaId, groupId));
+  }
+
+  async function setPrimaryGroup(personaId: string, groupId: string) {
+    await afterGroupWrite(await writePrimaryGroup(supabase, personaId, groupId));
   }
 
   // ── Dérivés ──
 
   const personaMap = React.useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
+  // Tous les groupes de chaque persona, et son groupe principal.
+  const { groupsByPersona, primaryByPersona } = React.useMemo(() => indexAssignments(assignments), [assignments]);
   const relTypeMap = React.useMemo(() => new Map(relTypes.map((tp) => [tp.id, tp])), [relTypes]);
   const myPersonaIds = React.useMemo(() => new Set(personas.filter((p) => p.user_id === userId).map((p) => p.id)), [personas, userId]);
   const personasByUser = React.useMemo(() => {
@@ -210,9 +227,9 @@ export function useRelationsData(worldId: string, userId: string, canAdmin: bool
   const canEditFrom = React.useCallback((personaId: string) => canAdmin || myPersonaIds.has(personaId), [canAdmin, myPersonaIds]);
 
   return {
-    loading, personas, members, groups, relTypes, groupByPersona, relations, ownerId,
+    loading, personas, members, groups, relTypes, groupsByPersona, primaryByPersona, relations, ownerId,
     personaMap, relTypeMap, myPersonaIds, personasByUser, userList, canEditFrom,
-    createRelation, updateRelation, deleteRelation, acceptRelation, assignGroup,
+    createRelation, updateRelation, deleteRelation, acceptRelation, toggleGroup, setPrimaryGroup,
   };
 }
 

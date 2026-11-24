@@ -48,7 +48,7 @@ import { ShelfGroupingToggle } from "./shelves/ShelfGroupingToggle";
 import { AlphaIndex } from "./shelves/AlphaIndex";
 import type { MiniFace } from "./shelves/MiniAvatarStack";
 import { usePersonasChangedVersion } from "@/hooks/usePersonasChanged";
-import { PERSONA_GROUP_COLUMNS, groupChoices, groupLineages, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupRow, type ResolvedPersonaGroup } from "@/lib/personaGroups";
+import { PERSONA_ASSIGNMENT_COLUMNS, PERSONA_GROUP_COLUMNS, groupChoices, groupLineages, indexAssignments, normalizeGroupRow, resolvePersonaGroups, type PersonaGroupAssignment, type PersonaGroupIndex, type PersonaGroupRow, type ResolvedPersonaGroup } from "@/lib/personaGroups";
 
 type OtherPersona = {
   id: string;
@@ -186,7 +186,8 @@ export function WorldPersonasPanel({
   const [groups, setGroups] = useState<ResolvedPersonaGroup[]>([]);
   const choices = useMemo(() => groupChoices(groups), [groups]);
   const lineage = useMemo(() => groupLineages(groups), [groups]);
-  const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
+  // Tous les groupes de chaque persona, et son groupe principal (migration 242).
+  const [{ groupsByPersona, primaryByPersona }, setGroupIndex] = useState<PersonaGroupIndex>(() => indexAssignments([]));
   const [avatarByUser, setAvatarByUser] = useState<Map<string, string | null>>(new Map());
   // L'activité récente de chaque persona : elle choisit la vedette de chaque étagère.
   // Chargée à part, elle ne retarde pas la liste.
@@ -242,7 +243,7 @@ export function WorldPersonasPanel({
           .eq("is_template", false)
           .is("deleted_at", null),
         supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", worldId).order("sort_index"),
-        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
+        supabase.from("persona_group_assignments").select(PERSONA_ASSIGNMENT_COLUMNS).eq("world_id", worldId),
       ]);
 
       type RawPersona = {
@@ -278,9 +279,7 @@ export function WorldPersonasPanel({
 
       if (cancelled) return;
       setGroups(resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)));
-      setGroupByPersona(
-        new Map(((assignRows ?? []) as { persona_id: string; group_id: string }[]).map((a) => [a.persona_id, a.group_id])),
-      );
+      setGroupIndex(indexAssignments((assignRows ?? []) as PersonaGroupAssignment[]));
       const toOther = (r: RawPersona): OtherPersona => {
         const member = statusByUser.get(r.user_id);
         return {
@@ -337,17 +336,17 @@ export function WorldPersonasPanel({
       narrative_status: narrativeStatusOf(p.narrative_status),
       is_npc: false,
     }));
-    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupByPersona, lineage), "name");
-  }, [myPersonas, meId, myUsername, effectiveFilters, groupByPersona, lineage]);
+    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupsByPersona, lineage), "name");
+  }, [myPersonas, meId, myUsername, effectiveFilters, groupsByPersona, lineage]);
 
   const filteredOthers = useMemo(
-    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupByPersona, lineage), "name"),
-    [others, effectiveFilters, groupByPersona, lineage],
+    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupsByPersona, lineage), "name"),
+    [others, effectiveFilters, groupsByPersona, lineage],
   );
 
   const filteredNpcs = useMemo(
-    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupByPersona, lineage), "name"),
-    [npcs, effectiveFilters, groupByPersona, lineage],
+    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupsByPersona, lineage), "name"),
+    [npcs, effectiveFilters, groupsByPersona, lineage],
   );
 
   // Les fiches des autres qui attendent un relecteur — un raccourci vers le filtre.
@@ -379,7 +378,7 @@ export function WorldPersonasPanel({
       others: showPlayers ? filteredOthers.map((p) => ({ ...p, source: "other" as const })) : [],
       npcs: showNpcs ? filteredNpcs.map((p) => ({ ...p, source: "npc" as const })) : [],
       groups: choices,
-      groupByPersona,
+      groupsByPersona,
       mode: effectiveMode,
       sort: "name",
       meId,
@@ -388,7 +387,7 @@ export function WorldPersonasPanel({
       keepNpcs: showNpcs && canManageNpc && !filtering,
       canCreateNpc: canManageNpc,
     }),
-    [mine, filteredOthers, filteredNpcs, showPlayers, showNpcs, choices, groupByPersona, effectiveMode, meId, myUsername, filtering, canManageNpc],
+    [mine, filteredOthers, filteredNpcs, showPlayers, showNpcs, choices, groupsByPersona, effectiveMode, meId, myUsername, filtering, canManageNpc],
   );
 
   // ── Cartes de tête : chacune bascule un filtre existant ──
@@ -453,7 +452,8 @@ export function WorldPersonasPanel({
   );
 
   const renderTile = (p: Item, featured = false) => {
-    const groupId = groupByPersona.get(p.id);
+    // Son groupe principal : il donne la teinte et le nom sous la tuile.
+    const groupId = primaryByPersona.get(p.id);
     const group = groupId ? groupById.get(groupId) : undefined;
     // Sous le nom : le groupe quand on range par joueur, le joueur sinon (le PNJ a déjà son badge).
     const line2 = effectiveMode === "player" ? group?.name ?? null : p.is_npc ? null : memberLabel(p.user_id, p.username);

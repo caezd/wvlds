@@ -14,6 +14,11 @@ const MONDE = "Monde E2E";
 const GROUPE = `E2E groupe ${Date.now()}`;
 const SOUS_GROUPE = `${GROUPE} — sous`;
 
+/** La section « Groupes » du menu des paramètres. */
+function sectionGroupes(page: Page) {
+  return page.getByRole("navigation", { name: "Sections des paramètres" }).getByRole("button", { name: "Groupes", exact: true });
+}
+
 async function ouvrirOngletGroupes(page: Page) {
   // Les noms accessibles ci-dessous sont ceux du français ; la langue du
   // compte de test, elle, peut changer.
@@ -32,7 +37,7 @@ async function ouvrirOngletGroupes(page: Page) {
     await expect(selecteur).toContainText(MONDE, { timeout: 20_000 });
   }
   await page.goto(`${new URL(page.url()).pathname}?view=settings`);
-  await page.getByRole("tab", { name: "Groupes" }).click();
+  await sectionGroupes(page).click();
   await expect(page.getByRole("region", { name: "Groupes de personas" })).toBeVisible({ timeout: 20_000 });
 }
 
@@ -70,7 +75,7 @@ test("Groupes : créer un groupe et un sous-groupe, couper sa couleur, et les re
 
     // Tout est en base : le rechargement rend le même arbre.
     await page.reload();
-    await page.getByRole("tab", { name: "Groupes" }).click();
+    await sectionGroupes(page).click();
     await expect(ligne).toHaveAttribute("data-depth", "1");
     await expect(page.getByRole("switch", { name: `Appliquer la couleur de ${SOUS_GROUPE}` })).toHaveAttribute("data-state", "unchecked");
 
@@ -80,5 +85,48 @@ test("Groupes : créer un groupe et un sous-groupe, couper sa couleur, et les re
   } finally {
     await supprimer(page, SOUS_GROUPE);
     await supprimer(page, GROUPE);
+  }
+});
+
+test("Fiche d'un groupe : description, ajout d'un persona, groupe principal, retrouvés au rechargement", async ({ page }) => {
+  const nom = `E2E fiche ${Date.now()}`;
+  await ouvrirOngletGroupes(page);
+  try {
+    await page.getByRole("textbox", { name: "Nom du groupe…" }).fill(nom);
+    await page.getByRole("button", { name: "Ajouter ce groupe" }).click();
+    const ouvrir = page.getByRole("button", { name: `Gérer le groupe ${nom}`, exact: true });
+    await expect(ouvrir).toHaveText(/Aucun membre/);
+    await ouvrir.click();
+    await expect(page.getByRole("heading", { level: 3, name: nom })).toBeVisible();
+
+    // La description s'enregistre en quittant le champ.
+    const description = page.getByRole("textbox", { name: "Description" });
+    await description.fill("Groupe de test E2E");
+    await description.blur();
+
+    // Le premier persona proposé rejoint le groupe ; un premier groupe ne
+    // devient pas forcément son principal (il peut en avoir déjà un).
+    const choix = page.getByRole("list", { name: "Ajouter des personas" }).getByRole("button");
+    test.skip((await choix.count()) === 0, "« Monde E2E » n'a aucun persona à ajouter");
+    const persona = ((await choix.first().locator("span.truncate").first().textContent()) ?? "").trim();
+    await choix.first().click();
+    await page.getByRole("button", { name: "Ajouter 1 persona" }).click();
+    const membres = page.getByRole("list", { name: "Membres" });
+    await expect(membres.getByText(persona, { exact: true })).toBeVisible();
+
+    // En faire son groupe principal, s'il ne l'est pas déjà.
+    const principal = page.getByRole("button", { name: `En faire le groupe principal de ${persona}` });
+    if (await principal.count()) await principal.click();
+    await expect(membres.getByText("Principal")).toBeVisible();
+
+    // Tout est en base : le rechargement rend le même groupe.
+    await page.reload();
+    await sectionGroupes(page).click();
+    await expect(page.getByRole("button", { name: `Gérer le groupe ${nom}`, exact: true })).toHaveText(/1 membre/);
+    await expect(page.getByRole("button", { name: `Actions du groupe ${nom}`, exact: true }).locator("xpath=ancestor::li[1]"))
+      .toContainText("Groupe de test E2E");
+  } finally {
+    // Supprimer le groupe emporte ses affectations ; le persona retrouve son ancien principal.
+    await supprimer(page, nom);
   }
 });

@@ -62,7 +62,7 @@ export function buildShelves<T extends ShelfPersona>({
   others,
   npcs,
   groups,
-  groupByPersona,
+  groupsByPersona,
   mode,
   sort,
   meId,
@@ -76,7 +76,8 @@ export function buildShelves<T extends ShelfPersona>({
   npcs: T[];
   /** Dans l'ordre du monde (`sort_index`). */
   groups: Group[];
-  groupByPersona: Map<string, string>;
+  /** Un persona de plusieurs groupes figure sur l'étagère de chacun. */
+  groupsByPersona: ReadonlyMap<string, readonly string[]>;
   mode: ShelfMode;
   sort: PersonaSortKey;
   meId: string | null;
@@ -99,11 +100,12 @@ export function buildShelves<T extends ShelfPersona>({
     const byGroup = new Map<string, T[]>();
     const loose: T[] = [];
     for (const p of all) {
-      const g = groupByPersona.get(p.id);
-      if (g && known.has(g)) {
+      const own = (groupsByPersona.get(p.id) ?? []).filter((g) => known.has(g));
+      for (const g of own) {
         if (!byGroup.has(g)) byGroup.set(g, []);
         byGroup.get(g)!.push(p);
-      } else loose.push(p);
+      }
+      if (own.length === 0) loose.push(p);
     }
     const shelves = groups
       .filter((g) => byGroup.has(g.id))

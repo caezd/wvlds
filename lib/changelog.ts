@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-23",
     category: "Fonctionnalité",
+    area: "Personas",
+    text: "Groupes de personas : un persona peut appartenir à plusieurs groupes.\n- son **groupe principal** donne sa couleur ; le premier groupe rejoint le devient, un autre se choisit ensuite\n- Paramètres › Groupes : chaque groupe montre son nombre de membres et ouvre sa fiche — description, membres, ajout de plusieurs personas d’un coup, choix du groupe principal, retrait\n- Relations : la fiche d’un persona coche ses groupes et désigne le principal",
+  },
+  {
+    date: "2026-11-23",
+    category: "Fonctionnalité",
     area: "Monde",
     text: "Chatbox : nombre de messages conservés par salle réglable dans Paramètres › Fonctions › Chatbox — 25, 50 ou 100 (le maximum, et le défaut). Au-delà, les plus anciens sont effacés automatiquement ; baisser le réglage efface le surplus tout de suite. Tout ce qui est conservé se relit avec « Messages précédents », en haut du fil.",
   },

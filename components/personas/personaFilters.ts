@@ -60,7 +60,8 @@ export function applyPersonaFilters<
 >(
   list: T[],
   filters: PersonaFilters,
-  groupByPersona: Map<string, string>,
+  /** Les groupes de chaque persona (migration 242 : plusieurs par persona). */
+  groupsByPersona: ReadonlyMap<string, readonly string[]>,
   /** Chaque groupe et ses ancêtres (`groupLineages`) : filtrer sur un groupe
    *  montre aussi les personas de ses sous-groupes (migration 232). Sans
    *  elle, seule l'affectation directe compte. */
@@ -71,10 +72,10 @@ export function applyPersonaFilters<
     if (filters.kind === "npc" && !p.is_npc) return false;
     if (filters.kind === "player" && p.is_npc) return false;
     if (filters.player !== ALL && p.user_id !== filters.player) return false;
-    if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
+    if (filters.group === NO_GROUP && (groupsByPersona.get(p.id)?.length ?? 0) > 0) return false;
     if (filters.group !== ALL && filters.group !== NO_GROUP) {
-      const own = groupByPersona.get(p.id);
-      if (groupLineage ? !isInGroup(groupLineage, own, filters.group) : own !== filters.group) return false;
+      const own = groupsByPersona.get(p.id);
+      if (groupLineage ? !isInGroup(groupLineage, own, filters.group) : !own?.includes(filters.group)) return false;
     }
     if (filters.status === OFFSTAGE) {
       if (!isRetiredStatus(p.narrative_status)) return false;

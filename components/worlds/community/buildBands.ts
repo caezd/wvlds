@@ -64,7 +64,7 @@ export function buildBands<M extends BandMember, P extends BandPersona>({
   npcs,
   meId,
   filters,
-  groupByPersona,
+  groupsByPersona,
   groupLineage,
   hoistedRoleIds,
   presenceOf,
@@ -76,7 +76,7 @@ export function buildBands<M extends BandMember, P extends BandPersona>({
   npcs: P[];
   meId: string | null;
   filters: CommunityFilters;
-  groupByPersona: Map<string, string>;
+  groupsByPersona: ReadonlyMap<string, readonly string[]>;
   /** Filtrer sur un groupe montre aussi ses sous-groupes (`groupLineages`). */
   groupLineage?: ReadonlyMap<string, ReadonlySet<string>>;
   /** Les rôles « hoist » du monde, du plus haut au plus bas. */
@@ -94,7 +94,7 @@ export function buildBands<M extends BandMember, P extends BandPersona>({
 
   const bandOf = (m: M): Band<M, P> | null => {
     if (filters.online && presenceOf(m.user_id) !== "online") return null;
-    const passing = applyPersonaFilters(personasByUser.get(m.user_id) ?? [], withoutQuery, groupByPersona, groupLineage);
+    const passing = applyPersonaFilters(personasByUser.get(m.user_id) ?? [], withoutQuery, groupsByPersona, groupLineage);
     const memberMatches = !q
       || normalize(m.username ?? m.user_id).includes(q)
       || m.roles.some((r) => normalize(r.name).includes(q));
@@ -140,7 +140,7 @@ export function buildBands<M extends BandMember, P extends BandPersona>({
   }
 
   if (!filters.online) {
-    const passing = applyPersonaFilters(npcs, withoutQuery, groupByPersona, groupLineage);
+    const passing = applyPersonaFilters(npcs, withoutQuery, groupsByPersona, groupLineage);
     const found = passing.filter(matchesQuery);
     if (found.length > 0 || (showNpcBand && !narrowed && !q)) {
       bands.push({ key: "__npc__", kind: "npc", member: null, personas: found, hidden: 0 });

@@ -95,6 +95,8 @@ describe("PersonaProfileSheetTrigger", () => {
     await waitFor(() => expect(document.querySelector("[data-group-ring]")).toHaveAttribute("data-group-ring", "#ff0000"));
     expect(mock.rpc).toHaveBeenCalledWith("persona_group_tint", { p_group: "g-cadette" });
     expect(mock.buildersFor("persona_group_assignments")[0].eq).toHaveBeenCalledWith("persona_id", "p1");
+    // Plusieurs groupes possibles (migration 242) : seul le principal teinte.
+    expect(mock.buildersFor("persona_group_assignments")[0].eq).toHaveBeenCalledWith("is_primary", true);
   });
 
   it("n'affiche pas de pastille de couleur de dialogue quand elle n'est pas définie", async () => {

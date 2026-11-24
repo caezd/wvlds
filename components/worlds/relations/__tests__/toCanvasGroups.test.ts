@@ -13,9 +13,9 @@ import { toCanvasGroups } from "../useRelationsData";
 describe("toCanvasGroups", () => {
   it("l'ordre de l'arbre, le chemin pour nom, la pastille héritée et la teinte seulement si le groupe l'applique", () => {
     const groups = toCanvasGroups([
-      { id: "ordre", name: "Ordre", color: "#0000ff", parent_id: null, sort_index: 1, apply_color: false },
-      { id: "cadette", name: "Cadette", color: null, parent_id: "maison", sort_index: 0, apply_color: true },
-      { id: "maison", name: "Maison", color: "#ff0000", parent_id: null, sort_index: 0, apply_color: true },
+      { id: "ordre", name: "Ordre", description: null, color: "#0000ff", parent_id: null, sort_index: 1, apply_color: false },
+      { id: "cadette", name: "Cadette", description: null, color: null, parent_id: "maison", sort_index: 0, apply_color: true },
+      { id: "maison", name: "Maison", description: null, color: "#ff0000", parent_id: null, sort_index: 0, apply_color: true },
     ]);
     expect(groups).toEqual([
       { id: "maison", name: "Maison", color: "#ff0000", sort_index: 0, parent_id: null, tint: "#ff0000" },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createSupabaseMock } from "@/test/supabaseMock";
+import { createSupabaseMock, type QueryResult } from "@/test/supabaseMock";
 
 // Le localStorage de Node (sans fichier) masque celui de jsdom : une
 // implémentation complète, comme dans les autres tests qui s'en servent.
@@ -44,20 +44,25 @@ const R1 = { id: "r1", from_persona_id: "p1", to_persona_id: "p2", type: "t1", l
 function mockSetup({
   relations = [R1],
   personas = BASE_PERSONAS,
-}: { relations?: object[]; personas?: object[] } = {}) {
+  groups = [{ id: "g1", name: "Garde", color: "#3b82f6", sort_index: 0 }],
+  assignments = [{ persona_id: "p2", group_id: "g1", is_primary: true }],
+  afterLoad = [],
+}: { relations?: object[]; personas?: object[]; groups?: object[]; assignments?: object[]; afterLoad?: QueryResult[] } = {}) {
   const mock = createSupabaseMock({
     results: [
       { data: personas },
       { data: [{ user_id: "u1" }, { user_id: "u2" }] },
       { data: { owner_id: "u1" } },
-      { data: [{ id: "g1", name: "Garde", color: "#3b82f6", sort_index: 0 }] },
-      { data: [{ persona_id: "p2", group_id: "g1" }] },
+      { data: groups },
+      { data: assignments },
       { data: relations },
       { data: TYPES },
       { data: [
         { id: "u1", username: "alice", avatar_url: null },
         { id: "u2", username: "bob", avatar_url: null },
       ] },
+      // Les écritures faites pendant le test, dans l'ordre.
+      ...afterLoad,
     ],
   });
   mockCreateClient.mockReturnValue(mock.client);
@@ -76,11 +81,11 @@ const edges = () => document.querySelectorAll("[data-relation-edge]");
 const viewRadio = (name: string) => screen.getByRole("radio", { name });
 
 async function mount(opts?: Parameters<typeof mockSetup>[0]) {
-  mockSetup(opts);
+  const mock = mockSetup(opts);
   const user = userEvent.setup();
   const utils = render(<RelationsCanvas worldId="w1" userId="u1" canAdmin={false} />);
   await canvas().findByRole("button", { name: "Adhi" });
-  return { user, ...utils };
+  return { user, mock, ...utils };
 }
 
 beforeEach(() => {
@@ -251,9 +256,55 @@ describe("RelationsCanvas — fiche d'un persona", () => {
     await user.click(node("p2"));
     const p = panel("Astérion");
     expect(p.queryByRole("button", { name: "Ajouter une relation" })).toBeNull();
-    expect(p.queryByRole("button", { name: "Changer le groupe" })).toBeNull();
+    expect(p.queryByRole("button", { name: "Changer les groupes" })).toBeNull();
     expect(p.getByText("Garde")).toBeInTheDocument();
     expect(p.getByText("· de sa part")).toBeInTheDocument();
+  });
+
+  it("mon persona rejoint et quitte plusieurs groupes, et choisit son groupe principal", async () => {
+    const GROUPS = [
+      { id: "g1", name: "Garde", color: "#3b82f6", sort_index: 0 },
+      { id: "g2", name: "Cour", color: "#ef4444", sort_index: 1 },
+    ];
+    const both = (primary: string) => [
+      { persona_id: "p1", group_id: "g1", is_primary: primary === "g1" },
+      { persona_id: "p1", group_id: "g2", is_primary: primary === "g2" },
+    ];
+    const { user, mock } = await mount({
+      groups: GROUPS,
+      assignments: [{ persona_id: "p1", group_id: "g1", is_primary: true }],
+      afterLoad: [
+        {}, { data: both("g1") }, // rejoindre Cour, puis relire
+        { data: [{ group_id: "g2" }] }, { data: both("g2") }, // Cour devient principal
+        {}, { data: [{ persona_id: "p1", group_id: "g2", is_primary: true }] }, // quitter Garde
+      ],
+    });
+    const writes = () => mock.buildersFor("persona_group_assignments").slice(1);
+
+    await user.click(node("p1"));
+    await user.click(panel("Adhi").getByRole("button", { name: "Changer les groupes" }));
+    expect(await screen.findByRole("menuitemcheckbox", { name: "Garde" })).toHaveAttribute("aria-checked", "true");
+
+    // Le menu reste ouvert d'une case à l'autre.
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Cour" }));
+    await waitFor(() => expect(writes()[0].upsert).toHaveBeenCalledWith(
+      [{ persona_id: "p1", world_id: "w1", group_id: "g2" }],
+      { onConflict: "persona_id,group_id", ignoreDuplicates: true },
+    ));
+    expect(await screen.findByRole("menuitemcheckbox", { name: "Cour" })).toHaveAttribute("aria-checked", "true");
+
+    // Deux groupes : on choisit lequel donne sa couleur.
+    expect(screen.getByRole("menuitemradio", { name: "Garde" })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("menuitemradio", { name: "Cour" }));
+    await waitFor(() => expect(writes()[2].update).toHaveBeenCalledWith({ is_primary: true }));
+    expect(writes()[2].eq).toHaveBeenCalledWith("group_id", "g2");
+    await waitFor(() => expect(screen.getByRole("menuitemradio", { name: "Cour" })).toHaveAttribute("aria-checked", "true"));
+
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Garde" }));
+    await waitFor(() => expect(writes()[4].delete).toHaveBeenCalled());
+    expect(writes()[4].eq).toHaveBeenCalledWith("group_id", "g1");
+    // Un seul groupe : plus de choix du principal.
+    await waitFor(() => expect(screen.queryByRole("menuitemradio")).toBeNull());
   });
 
   it("une ligne de la fiche met sa corde en avant au survol", async () => {

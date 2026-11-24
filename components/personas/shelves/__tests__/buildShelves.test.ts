@@ -14,10 +14,10 @@ const OTHERS = [
 ];
 const NPCS = [p("Aubergiste", { user_id: "u2", is_npc: true })];
 const GROUPS = [{ id: "g2", name: "Garde", color: "#f00" }, { id: "g1", name: "Cour", color: "#00f" }];
-const GROUP_OF = new Map([["Bea", "g1"], ["Zed", "g2"], ["Aubergiste", "g1"]]);
+const GROUP_OF = new Map([["Bea", ["g1"]], ["Zed", ["g2"]], ["Aubergiste", ["g1"]]]);
 
 const base = {
-  mine: MINE, others: OTHERS, npcs: NPCS, groups: GROUPS, groupByPersona: GROUP_OF,
+  mine: MINE, others: OTHERS, npcs: NPCS, groups: GROUPS, groupsByPersona: GROUP_OF,
   sort: "name" as const, meId: "me", myUsername: "moi", keepMine: true, keepNpcs: false, canCreateNpc: false,
 };
 
@@ -52,8 +52,15 @@ describe("buildShelves", () => {
   });
 
   it("par groupe : une affectation à un groupe inconnu tombe dans « Sans groupe »", () => {
-    const shelves = buildShelves({ ...base, mode: "group", groupByPersona: new Map([["Bea", "ghost"]]) });
+    const shelves = buildShelves({ ...base, mode: "group", groupsByPersona: new Map([["Bea", ["ghost"]]]) });
     expect(shelves.map((s) => s.kind)).toEqual(["noGroup"]);
+  });
+
+  it("par groupe : un persona de plusieurs groupes figure sur l'étagère de chacun", () => {
+    const shelves = buildShelves({ ...base, mode: "group", groupsByPersona: new Map([["Bea", ["g1", "g2", "ghost"]]]) });
+    expect(shelves.map((s) => [s.kind, s.items.map((i) => i.id)])).toEqual([
+      ["group", ["Bea"]], ["group", ["Bea"]], ["noGroup", ["Aubergiste", "Cid", "Moa", "Zed"]],
+    ]);
   });
 
   it("liste : une seule étagère, tout le monde trié", () => {

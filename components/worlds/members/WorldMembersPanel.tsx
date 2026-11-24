@@ -98,7 +98,7 @@ export function WorldMembersPanel({
   const focusPersonaId = useSearchParams()?.get("persona") ?? null;
 
   const data = useCommunityData({ worldId, ownerId, enabled: isShared, canManageNpc });
-  const { rows, patchRow, removeRow, groups, groupByPersona } = data;
+  const { rows, patchRow, removeRow, groups, groupsByPersona, primaryByPersona } = data;
   const roleById = useMemo(() => new Map(worldRoles.map((r) => [r.id, r])), [worldRoles]);
   const groupById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
   // Les groupes en arbre (migration 232) : sous leur chemin dans les listes,
@@ -166,27 +166,27 @@ export function WorldMembersPanel({
       npcs,
       meId,
       filters: personaFilters,
-      groupByPersona,
+      groupsByPersona,
       groupLineage: lineage,
       hoistedRoleIds,
       presenceOf: getUserPresence,
       showNpcBand: npcs.length > 0 || canManageNpc,
       expanded,
     }),
-    [members, personasByUser, npcs, meId, personaFilters, groupByPersona, lineage, hoistedRoleIds, getUserPresence, canManageNpc, expanded],
+    [members, personasByUser, npcs, meId, personaFilters, groupsByPersona, lineage, hoistedRoleIds, getUserPresence, canManageNpc, expanded],
   );
 
   // Les vues « Personas » : tous les personas filtrés, rangés par groupe ou de A à Z.
   const shelves = useMemo(() => {
     const online = (p: CommunityPersona) => !filters.online || getUserPresence(p.user_id) === "online";
-    const players = applyPersonaFilters(data.personas, personaFilters, groupByPersona, lineage).filter(online);
-    const npcList = filters.online ? [] : applyPersonaFilters(data.npcs, personaFilters, groupByPersona, lineage);
+    const players = applyPersonaFilters(data.personas, personaFilters, groupsByPersona, lineage).filter(online);
+    const npcList = filters.online ? [] : applyPersonaFilters(data.npcs, personaFilters, groupsByPersona, lineage);
     return buildShelves<CommunityPersona>({
       mine: [],
       others: players,
       npcs: npcList,
       groups: choices,
-      groupByPersona,
+      groupsByPersona,
       mode: effectiveView === "groups" ? "group" : "list",
       sort: "name",
       meId,
@@ -195,7 +195,7 @@ export function WorldMembersPanel({
       keepNpcs: false,
       canCreateNpc: false,
     });
-  }, [data.personas, data.npcs, personaFilters, groupByPersona, lineage, choices, effectiveView, meId, filters.online, getUserPresence]);
+  }, [data.personas, data.npcs, personaFilters, groupsByPersona, lineage, choices, effectiveView, meId, filters.online, getUserPresence]);
 
   // ── Cartes de tête : chacune bascule un filtre ──
   const everyone = useMemo(() => [...data.personas, ...data.npcs], [data.personas, data.npcs]);
@@ -255,7 +255,8 @@ export function WorldMembersPanel({
   );
 
   const renderTile = (p: CommunityPersona, { onShelf, featured = false }: { onShelf: boolean; featured?: boolean }) => {
-    const groupId = groupByPersona.get(p.id);
+    // Son groupe principal : il donne la teinte et le nom sous la tuile.
+    const groupId = primaryByPersona.get(p.id);
     const group = groupId ? groupById.get(groupId) : undefined;
     // Sous le nom : le groupe sur l'étagère de son joueur, le joueur ailleurs (le PNJ a déjà son badge).
     const line2 = onShelf ? group?.name ?? null : p.is_npc ? null : memberLabel(p.user_id, p.username);

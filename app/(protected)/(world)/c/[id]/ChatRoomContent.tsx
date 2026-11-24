@@ -10,7 +10,7 @@ import { fetchTurn } from "@/lib/chatroomTurns";
 import { fetchPostAccess, isChatroomVisibility } from "@/lib/chatroomAccess";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
-import { PERSONA_GROUP_COLUMNS, normalizeGroupRow, personaTints, resolvePersonaGroups, type PersonaGroupRow } from "@/lib/personaGroups";
+import { PERSONA_ASSIGNMENT_COLUMNS, PERSONA_GROUP_COLUMNS, normalizeGroupRow, personaTints, resolvePersonaGroups, type PersonaGroupAssignment, type PersonaGroupRow } from "@/lib/personaGroups";
 
 export default async function ChatRoomContent({
   id,
@@ -56,13 +56,14 @@ export default async function ChatRoomContent({
       if (!chatroom.world_id) return {};
       // Chaque groupe décide s'il teinte ses personas, et un sous-groupe sans
       // couleur prend celle de son parent (migration 232) : il faut l'arbre.
+      // Seul le groupe principal d'un persona le teinte (migration 242).
       const [{ data: groupRows }, { data: assignRows }] = await Promise.all([
         supabase.from("world_persona_groups").select(PERSONA_GROUP_COLUMNS).eq("world_id", chatroom.world_id),
-        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", chatroom.world_id),
+        supabase.from("persona_group_assignments").select(PERSONA_ASSIGNMENT_COLUMNS).eq("world_id", chatroom.world_id),
       ]);
       return personaTints(
         resolvePersonaGroups(((groupRows ?? []) as PersonaGroupRow[]).map(normalizeGroupRow)),
-        (assignRows ?? []) as { persona_id: string; group_id: string }[],
+        (assignRows ?? []) as PersonaGroupAssignment[],
       );
     })(),
     // Ordre de passage du salon (migration 211), s'il en a un.

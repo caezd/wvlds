@@ -25,13 +25,15 @@ export function groupIdOfKey(key: string): string | null {
  * Les arcs de la couronne, dans l'ordre : les joueurs tels quels, ou les
  * groupes (dans leur ordre de réglage) puis « sans groupe ». Dans un arc, les
  * personas gardent l'ordre de la liste des joueurs. `keep` écarte les
- * personas masqués (filtres, personas sans relation).
+ * personas masqués (filtres, personas sans relation). Un persona n'occupe
+ * qu'une place : celle de son groupe principal (migration 242).
  */
 export function ringArcsInput(
   groupBy: RingGroupBy,
   userList: ReadonlyArray<{ member: { user_id: string }; ps: ReadonlyArray<CPersona> }>,
   groups: ReadonlyArray<CGroup>,
-  groupByPersona: ReadonlyMap<string, string>,
+  /** Le groupe principal de chaque persona. */
+  primaryByPersona: ReadonlyMap<string, string>,
   keep: (personaId: string) => boolean,
 ): RingPlayer[] {
   if (groupBy === "player") {
@@ -41,11 +43,11 @@ export function ringArcsInput(
   const known = new Set(groups.map((g) => g.id));
   const arcs: RingPlayer[] = [...groups]
     .sort((a, b) => a.sort_index - b.sort_index)
-    .map((g) => ({ userId: GROUP_KEY_PREFIX + g.id, personaIds: ordered.filter((id) => groupByPersona.get(id) === g.id) }));
+    .map((g) => ({ userId: GROUP_KEY_PREFIX + g.id, personaIds: ordered.filter((id) => primaryByPersona.get(id) === g.id) }));
   arcs.push({
     userId: GROUPLESS_KEY,
     personaIds: ordered.filter((id) => {
-      const gid = groupByPersona.get(id);
+      const gid = primaryByPersona.get(id);
       return !gid || !known.has(gid);
     }),
   });
