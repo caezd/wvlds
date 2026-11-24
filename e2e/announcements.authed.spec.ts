@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
 // envoi écrirait des messages privés ou des notifications réels.
 //
 // Rien n'y dépend de la langue du compte : sélecteurs par identifiant de test,
-// et l'onglet par sa valeur Radix (`…-trigger-announcements`).
+// et la section ouverte par l'adresse (`&section=announcements`).
 
 const MONDE = "Monde E2E";
 
@@ -35,10 +35,12 @@ test.describe("Annonces d'un monde", () => {
     const erreurs: string[] = [];
     page.on("pageerror", (e) => erreurs.push(e.message));
 
-    await page.goto(`${monde}?view=settings`);
-    await page.locator('[role="tab"][id$="-trigger-announcements"]').click();
+    await page.goto(`${monde}?view=settings&section=announcements`);
 
-    const onglet = page.getByTestId("announcements-tab");
+    // Le rendu en flux laisse un instant, dans un <div hidden> du body, la
+    // copie serveur de la section avant que React ne la mette en place :
+    // seule la copie visible compte.
+    const onglet = page.getByTestId("announcements-tab").filter({ visible: true });
     await expect(onglet).toBeVisible();
     // Le compte revient de la base (« aucun destinataire » compris : le monde
     // de test n'a parfois que son propriétaire, qui ne se compte pas).
@@ -58,12 +60,15 @@ test.describe("Annonces d'un monde", () => {
 
     await page.getByTestId("announcement-title").fill("Essai {world}");
     await page.getByTestId("announcement-text").fill("Bonjour {username}, bienvenue dans {world}.");
-    await page.getByTestId("announcement-preview-toggle").click();
-
-    const apercu = page.getByTestId("announcement-preview");
+    // L'aperçu s'ouvre dans une fenêtre.
+    await page.getByTestId("announcement-preview-open").click();
+    const fenetre = page.getByTestId("announcement-preview-dialog");
+    const apercu = fenetre.getByTestId("announcement-preview");
     await expect(apercu).toContainText(`Essai ${MONDE}`);
     await expect(apercu).toContainText(`bienvenue dans ${MONDE}`);
     await expect(apercu).not.toContainText("{username}");
+    await page.keyboard.press("Escape");
+    await expect(fenetre).toBeHidden();
     // L'essai (migration 228) est prêt, sans être cliqué : il déposerait une
     // vraie notification chez le compte de test.
     await expect(page.getByTestId("announcement-test")).toBeEnabled();
@@ -72,10 +77,13 @@ test.describe("Annonces d'un monde", () => {
     // durée et la signature apparaissent ; l'aperçu montre le bandeau.
     await page.getByTestId("announcement-kind-banner").click();
     await expect(page.getByTestId("announcement-kind-banner")).toHaveAttribute("aria-checked", "true");
-    await expect(page.getByTestId("announcement-preview-banner")).toContainText(`Essai ${MONDE}`);
+    await page.getByTestId("announcement-preview-open").click();
+    await expect(fenetre.getByTestId("announcement-preview-banner")).toContainText(`Essai ${MONDE}`);
+    await page.keyboard.press("Escape");
+    await expect(fenetre).toBeHidden();
     await page.locator('[data-testid="banner-days"][data-days="7"]').click();
     await expect(page.locator('[data-testid="banner-days"][data-days="7"]')).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("announcements-tab").getByRole("switch").first()).toBeEnabled();
+    await expect(onglet.getByRole("switch").first()).toBeEnabled();
 
     // La programmation propose une date à venir, sans être confirmée ici.
     await page.getByTestId("announcement-schedule").click();
