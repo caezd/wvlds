@@ -12,15 +12,17 @@ import {
 } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import { canOpenWorldSettings } from "@/lib/worldPermissions";
+import { worldHasShops } from "@/lib/worldShops";
 import {
   BookOpenText,
   Clock,
   Drama,
   Home,
-  Library,
   Map as MapIcon,
+  Package,
   Waypoints,
   Settings,
+  Sparkles,
   Store,
   Users,
 } from "lucide-react";
@@ -40,11 +42,12 @@ type ParticipatedRoom = {
 
 export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const supabase = await createClient();
-  const [userId, featureFlags, t, tNav] = await Promise.all([
+  const [userId, featureFlags, t, tNav, tCatalogue] = await Promise.all([
     getCurrentUserId(),
     getCachedFeatureFlags(),
     getTranslations("worlds"),
     getTranslations("nav"),
+    getTranslations("catalogue"),
   ]);
 
   // `getChatroomsNav`, `getWorldMembership` et `getWorldsQuota` sont mémoïsés pour
@@ -73,9 +76,9 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
 
   const participated = (participatedResult.data ?? []) as ParticipatedRoom[];
 
-  const hasCatalogue =
-    featureFlags.world_catalogue &&
-    (world.enable_inventory !== false || world.enable_skills !== false || world.enable_faceclaims !== false);
+  // Le catalogue se lit en deux vues, chacune derrière son réglage.
+  const hasItems = featureFlags.world_catalogue && world.enable_inventory !== false;
+  const hasSkills = featureFlags.world_catalogue && world.enable_skills !== false;
   const hasTimeline =
     featureFlags.world_timeline && !!world.timeline_enabled;
   // Réglages par monde, indépendants des drapeaux globaux. `!== false` : la
@@ -84,7 +87,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const hasWiki = world.enable_wiki !== false;
   const hasMap = featureFlags.world_map && world.enable_map !== false;
   // Les boutiques vendent des objets contre la monnaie du monde (migration 249).
-  const hasShops = featureFlags.world_economy && !!world.enable_economy && world.enable_inventory !== false;
+  const hasShops = featureFlags.world_economy && worldHasShops(world);
 
   const worldBase = `/w/${worldId}`;
 
@@ -124,8 +127,11 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       {hasTimeline && (
         <WorldSidebarNavLink href={`${worldBase}?view=timeline`} icon={<Clock size={14} />} label={t("nav.timeline")} />
       )}
-      {hasCatalogue && (
-        <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Library size={14} />} label={t("nav.catalogue")} />
+      {hasItems && (
+        <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Package size={14} />} label={tCatalogue("items")} />
+      )}
+      {hasSkills && (
+        <WorldSidebarNavLink href={`${worldBase}?view=skills`} icon={<Sparkles size={14} />} label={tCatalogue("skills")} />
       )}
       {hasShops && (
         <WorldSidebarNavLink href={`${worldBase}?view=shops`} icon={<Store size={14} />} label={t("nav.shops")} />

@@ -46,6 +46,17 @@ export type WorldShopItem = {
   sort_index: number;
 };
 
+/**
+ * Les boutiques sont-elles ouvertes dans ce monde ? Il faut l'économie,
+ * l'inventaire et l'option Boutiques (migration 250). `enable_inventory`
+ * est NOT NULL DEFAULT true : non chargée, elle vaut activée.
+ */
+export function worldHasShops(
+  world: { enable_economy?: boolean | null; enable_inventory?: boolean | null; enable_shops?: boolean | null } | null | undefined,
+): boolean {
+  return !!world && world.enable_economy === true && world.enable_inventory !== false && world.enable_shops === true;
+}
+
 type BuybackShop = Pick<WorldShop, "buyback_enabled" | "buyback_percent">;
 type PricedItem = Pick<WorldShopItem, "price" | "stock" | "buyback_price">;
 

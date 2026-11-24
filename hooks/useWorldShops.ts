@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_CURRENCY_UNITS, currencyUnitsOf, type CurrencyUnit } from "@/lib/worldCurrency";
-import type { WorldShop, WorldShopItem } from "@/lib/worldShops";
+import { worldHasShops, type WorldShop, type WorldShopItem } from "@/lib/worldShops";
 import type { InventoryCatalogEntry } from "@/hooks/usePersonaInventory";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
 
@@ -39,8 +39,8 @@ function errorOf(error: { message?: string } | null): ShopError {
  * chacun porte déjà, pour la revente. La RLS ne rend les boutiques fermées
  * qu'à qui gère l'économie ; achats et reventes sont tranchés par la base.
  *
- * `off` tant que le monde n'a pas l'économie ET l'inventaire : rien d'autre
- * n'est lu.
+ * `off` tant que le monde n'a pas l'économie, l'inventaire et l'option
+ * Boutiques (`worldHasShops`) : rien d'autre n'est lu.
  */
 export function useWorldShops(worldId: string, userId: string | null, canManage: boolean) {
   const supabase = useMemo(() => createClient(), []);
@@ -101,12 +101,14 @@ export function useWorldShops(worldId: string, userId: string | null, canManage:
     (async () => {
       const { data: world } = await supabase
         .from("worlds")
-        .select("enable_economy, enable_inventory, currency_units")
+        .select("enable_economy, enable_inventory, enable_shops, currency_units")
         .eq("id", worldId)
         .maybeSingle();
       if (cancelled) return;
-      const row = world as { enable_economy?: boolean | null; enable_inventory?: boolean | null; currency_units?: unknown } | null;
-      if (!row?.enable_economy || !row.enable_inventory) {
+      const row = world as
+        | { enable_economy?: boolean | null; enable_inventory?: boolean | null; enable_shops?: boolean | null; currency_units?: unknown }
+        | null;
+      if (!row || !worldHasShops(row)) {
         setStatus("off");
         return;
       }

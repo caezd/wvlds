@@ -13,6 +13,7 @@ export type WorldPanel =
   | "personas"
   | "canvas"
   | "catalogue"
+  | "skills"
   | "wiki"
   | "map"
   | "timeline"
@@ -29,7 +30,7 @@ export type WorldPanelContext = {
   worldMapFlag: boolean;
   /** Drapeau `world_timeline` ET chronologie activée et configurée sur le monde. */
   hasTimeline: boolean;
-  /** Drapeau `world_economy` ET économie et inventaire activés sur le monde (migration 249). */
+  /** Drapeau `world_economy` ET `worldHasShops` (économie, inventaire, option Boutiques). */
   hasShops: boolean;
   canOpenSettings: boolean;
 };
@@ -41,6 +42,7 @@ export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPan
     case "personas":
     case "canvas":
     case "catalogue":
+    case "skills":
     case "members":
       return view;
     // Masquer le lien ne suffit pas : `?view=wiki` reste tapable dans la barre

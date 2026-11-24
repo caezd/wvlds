@@ -25,6 +25,7 @@ import { toggleWorldFavorite } from "@/app/(protected)/(world)/w/actions";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 import { permissionListHas, type WorldPermission } from "@/lib/worldPermissions";
 import { inventoryModeOf } from "@/lib/personaInventory";
+import { worldHasShops } from "@/lib/worldShops";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.
 const SearchCenter = dynamic(() =>
   import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
@@ -170,11 +171,11 @@ export function WorldHome({
     enableMap: world.enable_map,
     worldMapFlag: world_map,
     hasTimeline,
-    hasShops: world_economy && !!world.enable_economy && world.enable_inventory !== false,
+    hasShops: world_economy && worldHasShops(world),
     canOpenSettings,
   });
   const showCanvas = panel === "canvas";
-  const showCatalogue = panel === "catalogue";
+  const showCatalogue = panel === "catalogue" || panel === "skills";
   const showWiki = panel === "wiki";
   const showMap = panel === "map";
   const showTimeline = panel === "timeline";
@@ -219,15 +220,27 @@ export function WorldHome({
             canAdmin={can("relations.manage")}
           />
         ) : showCatalogue ? (
-          <WorldCatalogue
-            worldId={worldId}
-            canEdit={can("catalog.edit")}
-            inventoryEnabled={world.enable_inventory !== false}
-            inventoryRestricted={inventoryModeOf(world) !== "free"}
-            skillsEnabled={world.enable_skills !== false}
-            skillsRestricted={!!world.restrict_skills}
-            faceclaimsEnabled={world.enable_faceclaims !== false}
-          />
+          // Objets et Compétences : deux vues, une même coque. La clé remonte
+          // la vue au passage de l'une à l'autre (mode édition, décompte).
+          panel === "skills" ? (
+            <WorldCatalogue
+              key="skills"
+              worldId={worldId}
+              type="skills"
+              canEdit={can("catalog.edit")}
+              enabled={world.enable_skills !== false}
+              restricted={!!world.restrict_skills}
+            />
+          ) : (
+            <WorldCatalogue
+              key="inventory"
+              worldId={worldId}
+              type="inventory"
+              canEdit={can("catalog.edit")}
+              enabled={world.enable_inventory !== false}
+              restricted={inventoryModeOf(world) !== "free"}
+            />
+          )
         ) : showWiki ? (
           <WorldWiki
             worldId={worldId}

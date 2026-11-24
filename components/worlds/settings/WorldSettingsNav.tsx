@@ -17,6 +17,7 @@ import {
   Package,
   Shield,
   SlidersHorizontal,
+  Store,
   UserRound,
   UsersRound,
   Waypoints,
@@ -28,23 +29,26 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { StatusPill } from "./FeatureLayout";
 import {
   isFeatureSection,
+  subgroupOf,
   UNTITLED_SETTINGS_GROUPS,
   type FeatureSectionId,
   type SettingsGroupId,
   type SettingsSectionId,
+  type SettingsSubgroupId,
 } from "./worldSettingsSections";
 
 const ICONS: Record<SettingsSectionId, LucideIcon> = {
   general: SlidersHorizontal,
   home: House,
   community: Globe,
-  catalogue: Package,
   map: MapIcon,
   wiki: BookOpen,
   personas: UserRound,
   timeline: Clock,
   chatbox: MessagesSquare,
-  economy: Coins,
+  currency: Coins,
+  items: Package,
+  shops: Store,
   categories: FolderTree,
   groups: UsersRound,
   relations: Waypoints,
@@ -57,19 +61,22 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
 export function useSettingsSectionLabel() {
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
+  const tCatalogue = useTranslations("catalogue");
+  const tShops = useTranslations("shops");
   return React.useCallback(
     (id: SettingsSectionId): string => {
       switch (id) {
         case "general": return tSettings("menu.general");
         case "home": return t("tabHome");
         case "community": return t("tabCommunity");
-        case "catalogue": return t("nav.catalogue");
         case "map": return t("nav.map");
         case "wiki": return tSettings("wiki");
         case "personas": return t("nav.personas");
         case "timeline": return t("nav.timeline");
         case "chatbox": return tSettings("chatbox");
-        case "economy": return tSettings("economy.title");
+        case "currency": return tSettings("economy.currencies");
+        case "items": return tCatalogue("items");
+        case "shops": return tShops("title");
         case "categories": return t("tabCategories");
         case "groups": return t("tabGroups");
         case "relations": return t("tabRelations");
@@ -78,8 +85,20 @@ export function useSettingsSectionLabel() {
         case "reports": return t("tabReports");
       }
     },
-    [t, tSettings],
+    [t, tSettings, tCatalogue, tShops],
   );
+}
+
+/** Les sections d'un groupe en suites : hors sous-catégorie, ou réunies sous la leur. */
+function runsOf(sections: SettingsSectionId[]): { subgroup: SettingsSubgroupId | null; sections: SettingsSectionId[] }[] {
+  const runs: { subgroup: SettingsSubgroupId | null; sections: SettingsSectionId[] }[] = [];
+  for (const id of sections) {
+    const sub = subgroupOf(id);
+    const last = runs[runs.length - 1];
+    if (last && last.subgroup === sub) last.sections.push(id);
+    else runs.push({ subgroup: sub, sections: [id] });
+  }
+  return runs;
 }
 
 /**
@@ -111,6 +130,39 @@ export function WorldSettingsNav({
   const on = tSettings("statusOn");
   const off = tSettings("statusOff");
 
+  function entry(id: SettingsSectionId) {
+    const Icon = ICONS[id];
+    const isSelected = id === selected;
+    const status = isFeatureSection(id) ? featureStatus[id] : undefined;
+    return (
+      <li key={id}>
+        <button
+          type="button"
+          onClick={() => onSelect(id)}
+          aria-current={isSelected ? "page" : undefined}
+          // Nommé par sa section ; l'état éventuel se lit en description.
+          aria-label={label(id)}
+          aria-describedby={status === undefined ? undefined : `settings-status-${id}`}
+          data-section={id}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-left text-sm transition-colors md:py-1.5",
+            isSelected && !selectedOnDesktopOnly
+              ? "bg-muted font-medium text-foreground"
+              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            isSelected && selectedOnDesktopOnly && "md:bg-muted md:font-medium md:text-foreground",
+          )}
+        >
+          <Icon className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1 truncate">{label(id)}</span>
+          {status !== undefined && (
+            <StatusPill id={`settings-status-${id}`} active={status} onLabel={on} offLabel={off} />
+          )}
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground md:hidden" aria-hidden />
+        </button>
+      </li>
+    );
+  }
+
   return (
     <nav aria-label={tSettings("menu.label")} className="space-y-5 p-3 md:p-4" data-testid="settings-nav">
       {groups.map((group) => {
@@ -129,38 +181,24 @@ export function WorldSettingsNav({
             </SectionLabel>
           )}
           <ul className="space-y-0.5">
-            {group.sections.map((id) => {
-              const Icon = ICONS[id];
-              const isSelected = id === selected;
-              const status = isFeatureSection(id) ? featureStatus[id] : undefined;
-              return (
-                <li key={id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelect(id)}
-                    aria-current={isSelected ? "page" : undefined}
-                    // Nommé par sa section ; l'état éventuel se lit en description.
-                    aria-label={label(id)}
-                    aria-describedby={status === undefined ? undefined : `settings-status-${id}`}
-                    data-section={id}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-left text-sm transition-colors md:py-1.5",
-                      isSelected && !selectedOnDesktopOnly
-                        ? "bg-muted font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                      isSelected && selectedOnDesktopOnly && "md:bg-muted md:font-medium md:text-foreground",
-                    )}
+            {runsOf(group.sections).map((run) =>
+              run.subgroup ? (
+                // Une sous-catégorie (Économie) : son titre, puis ses pages en retrait.
+                <li key={run.subgroup} className="pt-2">
+                  <p
+                    id={`settings-subgroup-${run.subgroup}`}
+                    className="px-2.5 pb-1 text-xs font-medium text-muted-foreground"
                   >
-                    <Icon className="size-4 shrink-0" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">{label(id)}</span>
-                    {status !== undefined && (
-                      <StatusPill id={`settings-status-${id}`} active={status} onLabel={on} offLabel={off} />
-                    )}
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground md:hidden" aria-hidden />
-                  </button>
+                    {tSettings(`menu.subgroups.${run.subgroup}`)}
+                  </p>
+                  <ul aria-labelledby={`settings-subgroup-${run.subgroup}`} className="space-y-0.5 md:pl-2">
+                    {run.sections.map(entry)}
+                  </ul>
                 </li>
-              );
-            })}
+              ) : (
+                run.sections.map(entry)
+              ),
+            )}
           </ul>
         </div>
         );

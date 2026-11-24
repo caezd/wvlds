@@ -47,14 +47,14 @@ import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import { WorldInventorySettings } from "./WorldInventorySettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, UserRound, type LucideIcon } from "lucide-react";
+import { BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
- * Les pages « Fonctions » des réglages d'un monde : catalogue (inventaire,
- * compétences, faceclaims), carte, wiki, fiche modèle des personas,
- * chronologie. Le menu de gauche de WorldSettingsView choisit la page
+ * Les pages « Fonctions » des réglages d'un monde : carte, wiki, personas
+ * (fiche modèle, compétences, faceclaims), chronologie, chatbox, et la
+ * sous-catégorie Économie (devises, objets, boutiques). Le menu de gauche de WorldSettingsView choisit la page
  * (`section`) ; ce composant lui rend l'état de chacune (`onStatusChange`)
  * pour les pastilles Actif / Off.
  *
@@ -82,6 +82,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
   const tSettings = useTranslations("worlds.settings");
   const tCatalogue = useTranslations("catalogue");
   const tCommon = useTranslations("common");
+  const tShops = useTranslations("shops");
   const { world_timeline, world_live_chat, world_economy } = useFeatureFlags();
 
     const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
@@ -216,6 +217,21 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         onUpdated?.({ ...world, enable_economy: enabled } as World);
     }
 
+    // Les boutiques (migration 250) : coupées par défaut, ouvertes seulement
+    // avec l'économie et les objets.
+    const [enableShops, setEnableShops] = React.useState(world.enable_shops === true);
+    const [togglingShops, setTogglingShops] = React.useState(false);
+    const shopsOpen = enableShops && enableEconomy && enableInventory;
+
+    async function handleShopsToggle(enabled: boolean) {
+        setTogglingShops(true);
+        const res = await setWorldFeature(world.id, "enable_shops", enabled);
+        setTogglingShops(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setEnableShops(enabled);
+        onUpdated?.({ ...world, enable_shops: enabled } as World);
+    }
+
     async function handleWikiToggle(enabled: boolean) {
         setTogglingWiki(true);
         const res = await setWorldFeature(world.id, "enable_wiki", enabled);
@@ -244,72 +260,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         else onUpdated?.({ ...world, timeline_config: next } as World);
     }
 
-    const catalogueActive = enableInventory || enableSkills || enableFaceclaims;
     const sections: { id: FeatureSectionId; icon: LucideIcon; label: string; active: boolean; page: React.ReactNode }[] = [
-        {
-            id: "catalogue",
-            icon: Package,
-            label: t("nav.catalogue"),
-            active: catalogueActive,
-            page: (
-                <FeaturePage title={t("nav.catalogue")} help={tSettings("catalogueHelp")}>
-                    <ToggleList>
-                        <ToggleItem
-                            title={tSettings("inventoryItems")}
-                            help={tSettings("inventoryItemsHelp")}
-                            checked={enableInventory}
-                            disabled={togglingEnable}
-                            onCheckedChange={v => void handleEnableToggle("inventory", v)}
-                        />
-                        <ToggleItem
-                            title={t("tabSkills")}
-                            help={tSettings("skillsHelp")}
-                            checked={enableSkills}
-                            disabled={togglingEnable}
-                            onCheckedChange={v => void handleEnableToggle("skills", v)}
-                        />
-                        <ToggleItem
-                            indent
-                            dimmed={!enableSkills}
-                            title={t("restrictToCatalogue")}
-                            help={tSettings("restrictSkillsHelp")}
-                            control={
-                                <Switch
-                                    checked={restrictSkills}
-                                    disabled={!enableSkills || togglingRestriction}
-                                    onCheckedChange={v => void handleRestrictionToggle("skills", v)}
-                                    aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
-                                    className="shrink-0"
-                                />
-                            }
-                        />
-                        <ToggleItem
-                            title={tCatalogue("faceclaims")}
-                            help={tSettings("faceclaimsHelp")}
-                            checked={enableFaceclaims}
-                            disabled={togglingFaceclaims}
-                            onCheckedChange={v => void handleFaceclaimsToggle(v)}
-                        />
-                        <ToggleItem
-                            indent
-                            dimmed={!enableFaceclaims}
-                            title={tSettings("requireFaceclaim")}
-                            help={tSettings("requireFaceclaimHelp")}
-                            checked={requireFaceclaim}
-                            disabled={!enableFaceclaims || togglingRequireFaceclaim}
-                            onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
-                        />
-                    </ToggleList>
-                    {/* L'inventaire des personas (migration 247) : grisé tant que les objets sont coupés. */}
-                    <InactiveOptions inactive={!enableInventory}>
-                        <WorldInventorySettings
-                            world={world}
-                            onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
-                        />
-                    </InactiveOptions>
-                </FeaturePage>
-            ),
-        },
         {
             id: "map",
             icon: MapIcon,
@@ -382,6 +333,47 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             active: personasActive,
             page: (
                 <FeaturePage title={t("nav.personas")} help={tSettings("personasHelp")}>
+                    {/* Compétences et faceclaims : sortis du catalogue, ils règlent la fiche. */}
+                    <ToggleList>
+                        <ToggleItem
+                            title={t("tabSkills")}
+                            help={tSettings("skillsHelp")}
+                            checked={enableSkills}
+                            disabled={togglingEnable}
+                            onCheckedChange={v => void handleEnableToggle("skills", v)}
+                        />
+                        <ToggleItem
+                            indent
+                            dimmed={!enableSkills}
+                            title={t("restrictToCatalogue")}
+                            help={tSettings("restrictSkillsHelp")}
+                            control={
+                                <Switch
+                                    checked={restrictSkills}
+                                    disabled={!enableSkills || togglingRestriction}
+                                    onCheckedChange={v => void handleRestrictionToggle("skills", v)}
+                                    aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
+                                    className="shrink-0"
+                                />
+                            }
+                        />
+                        <ToggleItem
+                            title={tCatalogue("faceclaims")}
+                            help={tSettings("faceclaimsHelp")}
+                            checked={enableFaceclaims}
+                            disabled={togglingFaceclaims}
+                            onCheckedChange={v => void handleFaceclaimsToggle(v)}
+                        />
+                        <ToggleItem
+                            indent
+                            dimmed={!enableFaceclaims}
+                            title={tSettings("requireFaceclaim")}
+                            help={tSettings("requireFaceclaimHelp")}
+                            checked={requireFaceclaim}
+                            disabled={!enableFaceclaims || togglingRequireFaceclaim}
+                            onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
+                        />
+                    </ToggleList>
                     <WorldPersonaTemplateSection
                         worldId={world.id}
                         restrictSkills={restrictSkills}
@@ -463,16 +455,17 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 ),
             }]
             : []),
-        // L'économie (migration 246) : la monnaie du monde et la bourse des personas.
+        // Fonctions › Économie : la monnaie et la bourse des personas (migration
+        // 246), les objets et l'inventaire (247), les boutiques (249, 250).
         ...(world_economy
             ? [{
-                id: "economy" as const,
+                id: "currency" as const,
                 icon: Coins,
-                label: tSettings("economy.title"),
+                label: tSettings("economy.currencies"),
                 active: enableEconomy,
                 page: (
                     <FeaturePage
-                        title={tSettings("economy.title")}
+                        title={tSettings("economy.currencies")}
                         help={tSettings("economy.help")}
                         toggle={{
                             label: tSettings(enableEconomy ? "enabledF" : "disabledF"),
@@ -492,20 +485,74 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 ),
             }]
             : []),
+        {
+            id: "items" as const,
+            icon: Package,
+            label: tCatalogue("items"),
+            active: enableInventory,
+            page: (
+                <FeaturePage
+                    title={tCatalogue("items")}
+                    help={tSettings("inventoryItemsHelp")}
+                    toggle={{
+                        label: tSettings(enableInventory ? "enabledM" : "disabledM"),
+                        ariaLabel: tSettings("enableItems"),
+                        checked: enableInventory,
+                        disabled: togglingEnable,
+                        onCheckedChange: v => void handleEnableToggle("inventory", v),
+                    }}
+                >
+                    {/* L'inventaire des personas (migration 247) : grisé tant que les objets sont coupés. */}
+                    <InactiveOptions inactive={!enableInventory}>
+                        <WorldInventorySettings
+                            world={world}
+                            onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
+                        />
+                    </InactiveOptions>
+                </FeaturePage>
+            ),
+        },
+        ...(world_economy
+            ? [{
+                id: "shops" as const,
+                icon: Store,
+                label: tShops("title"),
+                active: shopsOpen,
+                page: (
+                    <FeaturePage
+                        title={tShops("title")}
+                        help={tSettings("shopsHelp")}
+                        toggle={{
+                            label: tSettings(enableShops ? "enabledF" : "disabledF"),
+                            ariaLabel: tSettings("enableShops"),
+                            checked: enableShops,
+                            // Sans monnaie ni objets, une boutique n'aurait rien à vendre.
+                            disabled: togglingShops || !enableEconomy || !enableInventory,
+                            onCheckedChange: v => void handleShopsToggle(v),
+                        }}
+                    >
+                        <p className="text-sm text-muted-foreground">
+                            {enableEconomy && enableInventory ? tSettings("shopsManage") : tShops("off")}
+                        </p>
+                    </FeaturePage>
+                ),
+            }]
+            : []),
     ];
 
     // Les pastilles du menu de gauche (WorldSettingsView).
     React.useEffect(() => {
         onStatusChange?.({
-            catalogue: catalogueActive,
             map: enableMap,
             wiki: enableWiki,
             personas: personasActive,
             timeline: timelineEnabled,
             chatbox: enableLiveChat,
-            economy: enableEconomy,
+            currency: enableEconomy,
+            items: enableInventory,
+            shops: shopsOpen,
         });
-    }, [onStatusChange, catalogueActive, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy]);
+    }, [onStatusChange, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen]);
 
   return (
     <>

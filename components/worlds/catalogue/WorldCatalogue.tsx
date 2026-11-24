@@ -2,22 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Ban, Library, Lock, LockOpen, Pencil } from "lucide-react";
+import { Ban, Lock, LockOpen, Package, Pencil, Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { getWorldCatalogUsage } from "@/app/actions/worldCatalog";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 // Le catalogue se lit en couches : `catalogueTypes` porte les types et le
 // découpage en colonnes, `CataloguePieces` les briques d'une ligne,
 // `CatalogueSections` les conteneurs, `CatalogueList` la mécanique de
-// glisser-déposer. Ce fichier n'est plus que la coque à onglets.
+// glisser-déposer. Ce fichier n'est plus que la coque d'une vue : Objets
+// ou Compétences, chacune son lien dans la navigation du monde.
 import { CatalogueList } from "./CatalogueList";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
-import { FaceclaimList } from "./FaceclaimList";
 import { buttonVariants } from "@/components/ui/button";
 
 /**
@@ -29,7 +27,7 @@ import { buttonVariants } from "@/components/ui/button";
  * consulte rarement, et ne paraissait justement PAS quand le catalogue était
  * restreint, l'état qui compte le plus.
  *
- * Le cadenas tient dans l'onglet, à côté du mot qu'il qualifie — c'est cette
+ * Le cadenas tient à côté du titre qu'il qualifie — c'est cette
  * proximité qui le rend lisible sans légende. Fermé : seules les entrées du
  * catalogue. Ouvert : chacun saisit ce qu'il veut dans sa fiche. Barré : la
  * fonctionnalité est éteinte pour ce monde. La phrase complète reste, au
@@ -77,26 +75,24 @@ function CatalogLock({
 
 export type WorldCatalogueProps = {
   worldId: string;
+  /** Objets (`?view=catalogue`) ou compétences (`?view=skills`) : deux vues du monde. */
+  type: "inventory" | "skills";
   canEdit: boolean;
-  inventoryEnabled: boolean;
-  inventoryRestricted: boolean;
-  skillsEnabled: boolean;
-  skillsRestricted: boolean;
-  faceclaimsEnabled: boolean;
+  /** La fonction est-elle activée pour ce monde ? */
+  enabled: boolean;
+  /** Seules les entrées du catalogue entrent dans les fiches. */
+  restricted: boolean;
 };
 
-export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRestricted, skillsEnabled, skillsRestricted, faceclaimsEnabled }: WorldCatalogueProps) {
+export function WorldCatalogue({ worldId, type, canEdit, enabled, restricted }: WorldCatalogueProps) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const [editMode, setEditMode] = useState(false);
-  const defaultTab = inventoryEnabled ? "inventory" : "skills";
+  const items = type === "inventory";
+  const Icon = items ? Package : Sparkles;
 
   /**
-   * Le décompte d'usage, chargé ici et non dans chaque onglet.
-   *
-   * Les deux listes sont montées ensemble (les onglets gardent leur contenu) :
-   * une par onglet aurait appelé deux fois la même RPC, qui ne distingue pas
-   * les objets des compétences et balaie le JSONB de toutes les fiches du
+   * Le décompte d'usage : la RPC balaie le JSONB de toutes les fiches du
    * monde. `null` tant qu'on ne sait pas — aucun nombre ne s'affiche alors.
    */
   const [usage, setUsage] = useState<Record<string, number> | null>(null);
@@ -113,8 +109,8 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
     <WikiLinkProvider worldId={worldId}>
     <div className="flex h-full w-full flex-col">
       <WorldPanelHeader
-        icon={<Library className="h-4 w-4 shrink-0 text-muted-foreground" />}
-        title={t("title")}
+        icon={<Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={items ? t("items") : t("skills")}
         right={
           canEdit && (
             // Une bascule d'affichage : `outline`, enfoncée (aria-pressed) en mode édition.
@@ -132,58 +128,21 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
             </button>
           )
         }
-      />
+      >
+        <span className="ml-1.5 text-muted-foreground">
+          <CatalogLock
+            enabled={enabled}
+            restricted={restricted}
+            disabledLabel={t(items ? "itemsDisabled" : "skillsDisabled")}
+            freeLabel={t(items ? "itemsUnrestricted" : "skillsUnrestricted")}
+            restrictedLabel={t(items ? "itemsRestricted" : "skillsRestricted")}
+          />
+        </span>
+      </WorldPanelHeader>
 
-      {/* Body — always show both tabs for editors */}
-      <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
-        {/* Onglets en soulignement, comme les fiches de persona et les
-            paramètres d'un monde — la pastille pleine était le seul reste du
-            style par défaut dans un panneau de monde. `TabBar` porte déjà sa
-            ligne de base : le conteneur n'a plus de bordure à ajouter, et la
-            liste s'aligne sur le retrait du corps (p-4) plutôt que sur son
-            px-6 par défaut. */}
-        <div className="shrink-0">
-          <TabBar listClassName="px-4">
-            <TabBarTrigger value="inventory" className="flex items-center gap-1.5">
-              {t("items")}
-              <CatalogLock
-                enabled={inventoryEnabled}
-                restricted={inventoryRestricted}
-                disabledLabel={t("itemsDisabled")}
-                freeLabel={t("itemsUnrestricted")}
-                restrictedLabel={t("itemsRestricted")}
-              />
-            </TabBarTrigger>
-            <TabBarTrigger value="skills" className="flex items-center gap-1.5">
-              {t("skills")}
-              <CatalogLock
-                enabled={skillsEnabled}
-                restricted={skillsRestricted}
-                disabledLabel={t("skillsDisabled")}
-                freeLabel={t("skillsUnrestricted")}
-                restrictedLabel={t("skillsRestricted")}
-              />
-            </TabBarTrigger>
-            {faceclaimsEnabled && (
-              <TabBarTrigger value="faceclaims">{t("faceclaims")}</TabBarTrigger>
-            )}
-          </TabBar>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          <TabsContent value="inventory" className="mt-0">
-            <CatalogueList type="inventory" worldId={worldId} canEdit={canEdit && editMode} usage={usage} />
-          </TabsContent>
-          {faceclaimsEnabled && (
-            <TabsContent value="faceclaims" className="mt-0">
-              <FaceclaimList worldId={worldId} />
-            </TabsContent>
-          )}
-          <TabsContent value="skills" className="mt-0">
-            <CatalogueList type="skills" worldId={worldId} canEdit={canEdit && editMode} usage={usage} />
-          </TabsContent>
-        </div>
-      </Tabs>
-
+      <div className="flex-1 overflow-y-auto p-4">
+        <CatalogueList type={type} worldId={worldId} canEdit={canEdit && editMode} usage={usage} />
+      </div>
     </div>
     </WikiLinkProvider>
   );

@@ -7,6 +7,7 @@ import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient
 import { EMBEDDED_SECTIONS_COLUMNS, fetchSectionsByPersona, normalizeEmbeddedSections } from "@/lib/personaSections";
 import { getCachedFeatureFlags, getChatroomCategories, getChatroomsNav, type WorldWithMembership } from "@/lib/currentRequest";
 import { resolveWorldPanel, SETTINGS_PERMISSIONS } from "@/components/worlds/home/worldView";
+import { worldHasShops } from "@/lib/worldShops";
 import { getWorldMaps } from "@/app/actions/worldMap";
 import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
@@ -63,7 +64,7 @@ export default async function WorldHomeContent({
     enableMap: world.enable_map,
     worldMapFlag: flags.world_map,
     hasTimeline: flags.world_timeline && !!world.timeline_enabled && !!world.timeline_config,
-    hasShops: flags.world_economy && !!world.enable_economy && world.enable_inventory !== false,
+    hasShops: flags.world_economy && worldHasShops(world),
     canOpenSettings: SETTINGS_PERMISSIONS.some((perm) => membership.permissions.has(perm)),
   });
 

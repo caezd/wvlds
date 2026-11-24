@@ -127,7 +127,7 @@ describe("WorldSettingsView — carte et wiki", () => {
     const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
     const fonctions = within(nav).getByRole("group", { name: "Fonctions" });
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Catalogue", "Carte", "Wiki", "Personas"],
+      ["Carte", "Wiki", "Personas", "Objets"],
     );
     // L'état se lit en description : « Actif » ou « Off ».
     expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAccessibleDescription("Actif");
@@ -135,11 +135,11 @@ describe("WorldSettingsView — carte et wiki", () => {
 
     // « Général » d'emblée : aucune page « Fonctions » visible.
     expect(within(nav).getByRole("button", { name: "Général" })).toHaveAttribute("aria-current", "page");
-    expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Objets" })).toBeNull();
 
-    await userEvent.click(within(nav).getByRole("button", { name: "Catalogue" }));
-    expect(within(nav).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("region", { name: "Catalogue" })).toBeVisible();
+    await userEvent.click(within(nav).getByRole("button", { name: "Objets" }));
+    expect(within(nav).getByRole("button", { name: "Objets" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("region", { name: "Objets" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "Carte" })).toBeNull();
 
     await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
@@ -147,16 +147,22 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(carte).getByRole("heading", { name: /Carte/ })).toBeInTheDocument();
     // L'interrupteur encadré de l'en-tête dit l'état, et le change.
     expect(within(carte).getByText("Activée")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Catalogue" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Objets" })).toBeNull();
   });
 
-  it("catalogue : les options d'une fonction coupée restent visibles, grisées et inertes", async () => {
-    monter({ enable_inventory: false, enable_skills: true, enable_faceclaims: false } as Partial<World>);
-    await userEvent.click(screen.getByRole("button", { name: "Catalogue" }));
-    const page = screen.getByRole("region", { name: "Catalogue" });
-    // Inventaire coupé : ses réglages restent en vue, inertes ; compétences actives : leur restriction non.
+  it("objets : les options d'une fonction coupée restent visibles, grisées et inertes", async () => {
+    monter({ enable_inventory: false } as Partial<World>);
+    await userEvent.click(screen.getByRole("button", { name: "Objets" }));
+    const page = screen.getByRole("region", { name: "Objets" });
+    expect(within(page).getByRole("switch", { name: "Activer les objets" })).toHaveAttribute("aria-checked", "false");
     expect(within(page).getByRole("radio", { name: /^Libre/ })).toBeDisabled();
     expect(within(page).getByRole("spinbutton", { name: "Emplacements de départ" })).toBeDisabled();
+  });
+
+  it("personas : compétences et faceclaims s'y règlent", async () => {
+    monter({ enable_skills: true, enable_faceclaims: false } as Partial<World>);
+    await userEvent.click(screen.getByRole("button", { name: "Personas" }));
+    const page = screen.getByRole("region", { name: "Personas" });
     expect(within(page).getByRole("switch", { name: "Compétences : Restreindre au catalogue du monde" })).toBeEnabled();
     // Faceclaims coupés : « Faceclaim obligatoire » visible, inerte.
     expect(within(page).getByRole("switch", { name: "Faceclaim obligatoire" })).toBeDisabled();

@@ -5,6 +5,7 @@ import {
   urlWithSection,
   visibleSettingsGroups,
   UNTITLED_SETTINGS_GROUPS,
+  subgroupOf,
   type SettingsSectionId,
 } from "../worldSettingsSections";
 
@@ -21,6 +22,22 @@ describe("worldSettingsSections", () => {
       { id: "world", sections: ["home"] },
     ]);
     expect(UNTITLED_SETTINGS_GROUPS).toEqual(["top"]);
+  });
+
+  it("Fonctions : les pages, puis la sous-catégorie Économie (devises, objets, boutiques)", () => {
+    const features = visibleSettingsGroups(() => true).find((g) => g.id === "features");
+    expect(features?.sections).toEqual(["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops"]);
+    expect(subgroupOf("currency")).toBe("economy");
+    expect(subgroupOf("items")).toBe("economy");
+    expect(subgroupOf("shops")).toBe("economy");
+    expect(subgroupOf("map")).toBeNull();
+  });
+
+  it("les anciennes adresses mènent à leur nouvelle page", () => {
+    const all = () => true;
+    expect(requestedSection("catalogue", all)).toBe("items");
+    expect(requestedSection("economy", all)).toBe("currency");
+    expect(requestedSection("economy", (id) => id !== "currency")).toBeNull();
   });
 
   it("la section demandée : connue et permise, sinon rien", () => {

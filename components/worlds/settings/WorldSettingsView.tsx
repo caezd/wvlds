@@ -115,7 +115,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         switch (id) {
             case "general":
             case "home":
-            case "catalogue":
+            case "items":
             case "map":
             case "wiki":
             case "personas":
@@ -125,8 +125,10 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             // La chatbox : proposée aux mondes une fois ouverte au site.
             case "chatbox":
                 return settings && world_live_chat;
-            // L'économie (migration 246) : idem, derrière son drapeau.
-            case "economy":
+            // L'économie (migrations 246, 249) : idem, derrière son drapeau.
+            // Les objets, eux, vivent sans monnaie.
+            case "currency":
+            case "shops":
                 return settings && world_economy;
             case "community":
                 return public_worlds && settings;

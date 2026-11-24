@@ -42,7 +42,7 @@ const ROUTES = ["/explore", "/p", "/settings", "/shop", "/changelog", "/quests",
 // mesurés propres, restent hors de ce balayage — la suite E2E ne tourne pas
 // en CI, faute de secrets, et sa durée se paie donc à chaque exécution
 // locale ; ils sont déjà visités par `routes.authed.spec.ts`.
-const VUES = ["wiki", "canvas", "map", "members", "personas", "catalogue", "timeline", "settings"];
+const VUES = ["wiki", "canvas", "map", "members", "personas", "catalogue", "skills", "timeline", "settings"];
 
 test.describe("accessibilité des pages rendues", () => {
   // Chaque page est un chargement complet ; même raison que le balayage de

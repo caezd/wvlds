@@ -396,7 +396,6 @@
       "relations": "Relations",
       "map": "Map",
       "timeline": "Timeline",
-      "catalogue": "Catalogue",
       "shops": "Shops"
     },
     "community": {
@@ -1010,7 +1009,7 @@
       "inventoryItemsHelp": "Personas can manage an inventory of items.",
       "skillsHelp": "Personas can list their skills.",
       "restrictSkillsHelp": "Personas can only have skills defined in the catalogue — free entry is disabled.",
-      "faceclaimsHelp": "Lets personas name the actor or character their avatar is based on, and shows a directory in the Catalogue.",
+      "faceclaimsHelp": "Lets personas name the actor or character their avatar is based on.",
       "requireFaceclaim": "Faceclaim required",
       "requireFaceclaimHelp": "A sheet without a faceclaim doesn't count as finished, and its persona can't play.",
       "wiki": "Wiki",
@@ -1089,7 +1088,6 @@
       "disabledF": "Disabled",
       "enabledM": "Enabled",
       "disabledM": "Disabled",
-      "catalogueHelp": "What personas can own, learn and embody.",
       "personasHelp": "The starting point of persona sheets in this world.",
       "monthProgress": "Month {current} / {total}",
       "daysPerYear": "{days, plural, one {# day} other {# days}} per year",
@@ -1114,6 +1112,9 @@
           "features": "Features",
           "rooms": "Rooms & personas",
           "members": "Members"
+        },
+        "subgroups": {
+          "economy": "Economy"
         }
       },
       "chatbox": "Chatbox",
@@ -1161,7 +1162,8 @@
           "save": "Save the currency",
           "saved": "Currency saved.",
           "invalid": "Each tier needs a name and must be worth at least 2 of the next tier."
-        }
+        },
+        "currencies": "Currencies"
       },
       "inventory": {
         "title": "Persona inventory",
@@ -1232,7 +1234,11 @@
           "title": "/me actions",
           "help": "A message starting with /me becomes a roleplayed action: in italics, preceded by the player's name, or their persona's."
         }
-      }
+      },
+      "enableItems": "Enable items",
+      "enableShops": "Enable shops",
+      "shopsHelp": "Shops where personas buy catalogue items, and sell them back if the shop allows it.",
+      "shopsManage": "Shops, their items, prices and stock are managed from the world’s Shops view."
     },
     "timelinePicker": {
       "year": "Year",

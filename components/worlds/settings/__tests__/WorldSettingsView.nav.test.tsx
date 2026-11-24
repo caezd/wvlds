@@ -80,7 +80,7 @@ describe("WorldSettingsView — menu de gauche", () => {
     expect(enTete()).toEqual(["Général", "Communauté"]);
     expect(groupes()).toEqual(["settings-group-world", "settings-group-features", "settings-group-rooms", "settings-group-members"]);
     expect(entrees("Monde")).toEqual(["Page d'accueil"]);
-    expect(entrees("Fonctions")).toEqual(["Catalogue", "Carte", "Wiki", "Personas", "Chronologie"]);
+    expect(entrees("Fonctions")).toEqual(["Carte", "Wiki", "Personas", "Chronologie", "Objets"]);
     expect(entrees("Salons & personas")).toEqual(["Catégories", "Groupes", "Relations"]);
     expect(entrees("Membres")).toEqual(["Rôles", "Annonces", "Signalements"]);
   });

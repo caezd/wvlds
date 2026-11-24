@@ -173,6 +173,8 @@ export type World = {
   live_chat_offline_view?: "none" | "read" | null;
   /** Économie (migration 246) : la monnaie et ses paliers, voir lib/worldCurrency. */
   enable_economy?: boolean | null;
+  /** Option Boutiques (migration 250) ; coupée par défaut. */
+  enable_shops?: boolean | null;
   currency_units?: unknown;
   /** Inventaire des personas (migration 247), voir lib/personaInventory. */
   inventory_mode?: "free" | "catalog" | "held" | null;

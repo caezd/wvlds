@@ -8,8 +8,32 @@
  */
 
 /** Les sous-pages de l'ancien onglet « Fonctions ». */
-export const FEATURE_SECTIONS = ["catalogue", "map", "wiki", "personas", "timeline", "chatbox", "economy"] as const;
+export const FEATURE_SECTIONS = ["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops"] as const;
 export type FeatureSectionId = (typeof FEATURE_SECTIONS)[number];
+
+/**
+ * Les sous-catégories d'un groupe : des sections qui se suivent, rangées sous
+ * un titre à elles dans le menu. L'économie réunit devises, objets et
+ * boutiques (demande du 2026-11-24).
+ */
+export const SETTINGS_SUBGROUPS = {
+  economy: ["currency", "items", "shops"],
+} as const satisfies Record<string, readonly FeatureSectionId[]>;
+export type SettingsSubgroupId = keyof typeof SETTINGS_SUBGROUPS;
+
+/** La sous-catégorie d'une section, ou `null`. */
+export function subgroupOf(id: string): SettingsSubgroupId | null {
+  for (const [sub, sections] of Object.entries(SETTINGS_SUBGROUPS)) {
+    if ((sections as readonly string[]).includes(id)) return sub as SettingsSubgroupId;
+  }
+  return null;
+}
+
+/** Les anciennes sections, que des liens peuvent encore désigner. */
+const LEGACY_SECTIONS: Record<string, SettingsSectionId> = {
+  catalogue: "items",
+  economy: "currency",
+};
 
 export const SETTINGS_GROUPS = [
   // En tête du menu, sans titre de groupe.
@@ -58,7 +82,8 @@ export function requestedSection(
   param: string | null | undefined,
   allowed: (id: SettingsSectionId) => boolean,
 ): SettingsSectionId | null {
-  return isSettingsSection(param) && allowed(param) ? param : null;
+  const id = (param && LEGACY_SECTIONS[param]) ?? param;
+  return isSettingsSection(id) && allowed(id) ? id : null;
 }
 
 /** L'adresse courante avec cette section (ou sans section). */

@@ -45,9 +45,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-24",
+    category: "Interface",
+    area: "Monde",
+    text: "Paramètres › Fonctions : une sous-catégorie **Économie** (Devises, Objets, Boutiques) ; le catalogue se sépare en deux vues.\n- **Objets** et **Compétences** : une vue chacune dans le menu du monde, à la place du Catalogue\n- réglages des compétences et des faceclaims dans Fonctions › Personas\n- faceclaims retirés du catalogue",
+  },
+  {
+    date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Boutiques : une vue **Boutiques** dans le menu du monde, quand l’économie et l’inventaire sont activés.\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte : prix de rachat propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, prix et stocks gérés par qui gère l’économie, en mode modification ; une boutique fermée ne se voit que d’eux",
+    text: "Boutiques : une vue **Boutiques** dans le menu du monde, à activer dans Paramètres › Fonctions › Économie › Boutiques (avec la monnaie et les objets).\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte : prix de rachat propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, prix et stocks gérés par qui gère l’économie, en mode modification ; une boutique fermée ne se voit que d’eux",
   },
   {
     date: "2026-11-24",
@@ -65,13 +71,13 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Catalogue",
-    text: "Inventaire des personas : un onglet **Inventaire** sur la fiche, avec la bourse et les objets ; réglages dans Paramètres › Fonctions › Catalogue.\n- ajout d’objets, à cocher : libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé sur la bourse du persona\n- un objet empilable prend un emplacement, un objet unique un par exemplaire\n- qui gère l’économie donne ou reprend un objet du catalogue\n- un clic sur un objet du catalogue ouvre sa fiche\n- le champ de fiche « Inventaire » disparaît : ses objets sont passés dans l’onglet",
+    text: "Inventaire des personas : un onglet **Inventaire** sur la fiche, avec la bourse et les objets ; réglages dans Paramètres › Fonctions › Économie › Objets.\n- ajout d’objets, à cocher : libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé sur la bourse du persona\n- un objet empilable prend un emplacement, un objet unique un par exemplaire\n- qui gère l’économie donne ou reprend un objet du catalogue\n- un clic sur un objet du catalogue ouvre sa fiche\n- le champ de fiche « Inventaire » disparaît : ses objets sont passés dans l’onglet",
   },
   {
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Économie : une monnaie propre au monde et une bourse pour chaque persona, dans Paramètres › Fonctions › Économie.\n- monnaie divisée en paliers (or, argent, cuivre…), chacun valant un nombre entier du suivant ; les montants se convertissent d’eux-mêmes\n- bourse dans l’onglet **Inventaire** de la fiche du persona : solde et derniers mouvements\n- permission **Gérer l’économie** : créditer ou débiter une bourse, avec un motif",
+    text: "Économie : une monnaie propre au monde et une bourse pour chaque persona, dans Paramètres › Fonctions › Économie › Devises.\n- monnaie divisée en paliers (or, argent, cuivre…), chacun valant un nombre entier du suivant ; les montants se convertissent d’eux-mêmes\n- bourse dans l’onglet **Inventaire** de la fiche du persona : solde et derniers mouvements\n- permission **Gérer l’économie** : créditer ou débiter une bourse, avec un motif",
   },
   {
     date: "2026-11-24",

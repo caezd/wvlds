@@ -59,6 +59,7 @@ export type WorldFeatureField =
   | "enable_wiki"
   | "enable_live_chat"
   | "enable_economy"
+  | "enable_shops"
   | "live_chat_colors"
   | "live_chat_bubbles"
   | "live_chat_personas"

@@ -18,7 +18,7 @@ describe("resolveWorldPanel", () => {
   });
 
   it("ouvre les onglets toujours disponibles", () => {
-    for (const v of ["members", "personas", "canvas", "catalogue"]) {
+    for (const v of ["members", "personas", "canvas", "catalogue", "skills"]) {
       expect(resolveWorldPanel(v, ctx)).toBe(v);
     }
   });

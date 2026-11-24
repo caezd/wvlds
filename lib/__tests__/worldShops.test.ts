@@ -11,6 +11,7 @@ import {
   maxPurchasable,
   shopInputSchema,
   shopItemInputSchema,
+  worldHasShops,
 } from "@/lib/worldShops";
 import { MAX_CURRENCY_VALUE } from "@/lib/worldCurrency";
 import { MAX_ITEM_QUANTITY } from "@/lib/personaInventory";
@@ -108,5 +109,27 @@ describe("migration 249", () => {
       }
     }
     expect(sql.match(/'economy\.manage'/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe("worldHasShops", () => {
+  it("il faut l'économie, l'inventaire et l'option Boutiques", () => {
+    expect(worldHasShops({ enable_economy: true, enable_inventory: true, enable_shops: true })).toBe(true);
+    // L'inventaire est NOT NULL DEFAULT true : une colonne non chargée vaut activé.
+    expect(worldHasShops({ enable_economy: true, enable_shops: true })).toBe(true);
+    expect(worldHasShops({ enable_economy: false, enable_inventory: true, enable_shops: true })).toBe(false);
+    expect(worldHasShops({ enable_economy: true, enable_inventory: false, enable_shops: true })).toBe(false);
+    expect(worldHasShops({ enable_economy: true, enable_inventory: true, enable_shops: false })).toBe(false);
+    expect(worldHasShops({ enable_economy: true, enable_inventory: true })).toBe(false);
+    expect(worldHasShops(null)).toBe(false);
+  });
+});
+
+describe("migration 250", () => {
+  const sql = readFileSync(path.join(process.cwd(), "migrations/250_world_shops_option.sql"), "utf8");
+
+  it("l'option est coupée par défaut, et la base la vérifie à chaque achat ou revente", () => {
+    expect(sql).toMatch(/enable_shops\s+boolean\s+NOT NULL DEFAULT false/);
+    expect(sql).toMatch(/w\.enable_economy AND w\.enable_inventory AND w\.enable_shops/);
   });
 });

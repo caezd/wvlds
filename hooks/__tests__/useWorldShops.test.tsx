@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 import { useWorldShops } from "@/hooks/useWorldShops";
 import { createClient } from "@/lib/supabase/client";
 
-const WORLD = { enable_economy: true, enable_inventory: true, currency_units: [{ name: "Or", short: "po", value: 1 }] };
+const WORLD = { enable_economy: true, enable_inventory: true, enable_shops: true, currency_units: [{ name: "Or", short: "po", value: 1 }] };
 const forge = { id: "s1", world_id: "w1", name: "Forge", description: null, lucide_icon: null, is_open: true, buyback_enabled: true, buyback_percent: 50, sort_index: 0 };
 const herbo = { ...forge, id: "s2", name: "Herboriste", sort_index: 1 };
 const epee = { id: "c1", name: "Épée", deleted_at: null };
@@ -35,6 +35,14 @@ function charger(extra: Record<string, unknown>[] = []) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("useWorldShops (migration 249)", () => {
+  it("option Boutiques coupée : rien d'autre n'est lu", async () => {
+    const mock = createSupabaseMock({ results: [{ data: { ...WORLD, enable_shops: false } }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const { result } = renderHook(() => useWorldShops("w1", "u1", false));
+    await waitFor(() => expect(result.current.status).toBe("off"));
+    expect(mock.buildersFor("world_shops")).toHaveLength(0);
+  });
+
   it("économie ou inventaire coupés : rien d'autre n'est lu", async () => {
     const mock = createSupabaseMock({ results: [{ data: { ...WORLD, enable_inventory: false } }] });
     vi.mocked(createClient).mockReturnValue(mock.client as never);

@@ -396,7 +396,6 @@
       "relations": "Relaciones",
       "map": "Mapa",
       "timeline": "Línea de tiempo",
-      "catalogue": "Catálogo",
       "shops": "Tiendas"
     },
     "community": {
@@ -1010,7 +1009,7 @@
       "inventoryItemsHelp": "Los personajes pueden gestionar un inventario de objetos.",
       "skillsHelp": "Los personajes pueden listar sus habilidades.",
       "restrictSkillsHelp": "Los personajes solo pueden tener habilidades definidas en el catálogo; la entrada libre está desactivada.",
-      "faceclaimsHelp": "Permite a los personajes indicar el actor o personaje en que se basa su avatar, y muestra un directorio en el Catálogo.",
+      "faceclaimsHelp": "Permite a los personas indicar el actor o el personaje en el que se basa su avatar.",
       "requireFaceclaim": "Faceclaim obligatorio",
       "requireFaceclaimHelp": "Una ficha sin faceclaim no se considera terminada, y su personaje no puede jugar.",
       "wiki": "Wiki",
@@ -1089,7 +1088,6 @@
       "disabledF": "Desactivada",
       "enabledM": "Activado",
       "disabledM": "Desactivado",
-      "catalogueHelp": "Lo que los personajes pueden poseer, aprender y encarnar.",
       "personasHelp": "El punto de partida de las fichas de personaje en este mundo.",
       "monthProgress": "Mes {current} / {total}",
       "daysPerYear": "{days, plural, one {# día} other {# días}} al año",
@@ -1114,6 +1112,9 @@
           "features": "Funciones",
           "rooms": "Salas y personajes",
           "members": "Miembros"
+        },
+        "subgroups": {
+          "economy": "Economía"
         }
       },
       "chatbox": "Chatbox",
@@ -1161,7 +1162,8 @@
           "save": "Guardar la moneda",
           "saved": "Moneda guardada.",
           "invalid": "Cada escalón debe tener un nombre y valer al menos 2 del escalón siguiente."
-        }
+        },
+        "currencies": "Divisas"
       },
       "inventory": {
         "title": "Inventario de las personas",
@@ -1232,7 +1234,11 @@
           "title": "Acciones /me",
           "help": "Un mensaje que empieza por /me se convierte en una acción interpretada: en cursiva, precedida del nombre del jugador o de su persona."
         }
-      }
+      },
+      "enableItems": "Activar los objetos",
+      "enableShops": "Activar las tiendas",
+      "shopsHelp": "Tiendas donde los personas compran objetos del catálogo, y los revenden si la tienda lo acepta.",
+      "shopsManage": "Las tiendas, sus artículos, precios y existencias se gestionan desde la vista Tiendas del mundo."
     },
     "timelinePicker": {
       "year": "Año",

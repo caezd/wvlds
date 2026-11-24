@@ -396,7 +396,6 @@
       "relations": "Relations",
       "map": "Carte",
       "timeline": "Chronologie",
-      "catalogue": "Catalogue",
       "shops": "Boutiques"
     },
     "community": {
@@ -1010,7 +1009,7 @@
       "inventoryItemsHelp": "Les personas peuvent gérer un inventaire d'objets.",
       "skillsHelp": "Les personas peuvent lister leurs compétences.",
       "restrictSkillsHelp": "Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.",
-      "faceclaimsHelp": "Permet aux personas d'indiquer l'acteur ou le personnage sur lequel leur avatar est basé, et affiche un annuaire dans le Catalogue.",
+      "faceclaimsHelp": "Permet aux personas d'indiquer l'acteur ou le personnage sur lequel leur avatar est basé.",
       "requireFaceclaim": "Faceclaim obligatoire",
       "requireFaceclaimHelp": "Une fiche sans faceclaim n'est pas considérée comme terminée, et son persona ne peut pas jouer.",
       "wiki": "Wiki",
@@ -1089,7 +1088,6 @@
       "disabledF": "Désactivée",
       "enabledM": "Activé",
       "disabledM": "Désactivé",
-      "catalogueHelp": "Ce que les personas peuvent posséder, apprendre et incarner.",
       "personasHelp": "Le point de départ des fiches de persona dans ce monde.",
       "monthProgress": "Mois {current} / {total}",
       "daysPerYear": "{days, plural, one {# jour} other {# jours}} par an",
@@ -1114,6 +1112,9 @@
           "features": "Fonctions",
           "rooms": "Salons & personas",
           "members": "Membres"
+        },
+        "subgroups": {
+          "economy": "Économie"
         }
       },
       "chatbox": "Chatbox",
@@ -1161,7 +1162,8 @@
           "save": "Enregistrer la monnaie",
           "saved": "Monnaie enregistrée.",
           "invalid": "Chaque palier doit porter un nom et valoir au moins 2 du palier suivant."
-        }
+        },
+        "currencies": "Devises"
       },
       "inventory": {
         "title": "Inventaire des personas",
@@ -1232,7 +1234,11 @@
           "title": "Actions /me",
           "help": "Un message qui commence par /me devient une action jouée : en italique, précédée du nom du joueur, ou de son persona."
         }
-      }
+      },
+      "enableItems": "Activer les objets",
+      "enableShops": "Activer les boutiques",
+      "shopsHelp": "Des boutiques où les personas achètent des objets du catalogue, et les revendent si la boutique l’accepte.",
+      "shopsManage": "Les boutiques, leurs articles, prix et stocks se gèrent depuis la vue Boutiques du monde."
     },
     "timelinePicker": {
       "year": "Année",
