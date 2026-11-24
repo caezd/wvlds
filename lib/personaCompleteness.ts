@@ -9,7 +9,6 @@ import type { PersonaFieldData, PersonaFieldType, PersonaSectionWithFields } fro
 const ARRAY_KEYS: Partial<Record<PersonaFieldType, keyof PersonaFieldData>> = {
   stats: "items",
   "image-grid": "images",
-  inventory: "inventoryItems",
   skills: "skillItems",
   gauges: "gaugeItems",
   traits: "traitItems",

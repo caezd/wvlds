@@ -86,9 +86,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
 
     const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
     const [enableSkills, setEnableSkills] = React.useState(world.enable_skills !== false);
-    const [restrictInventory, setRestrictInventory] = React.useState(!!world.restrict_inventory);
     const [restrictSkills, setRestrictSkills] = React.useState(!!world.restrict_skills);
-    const [pendingRestriction, setPendingRestriction] = React.useState<"inventory" | "skills" | null>(null);
+    const [pendingRestriction, setPendingRestriction] = React.useState<"skills" | null>(null);
     const [togglingRestriction, setTogglingRestriction] = React.useState(false);
     const [togglingEnable, setTogglingEnable] = React.useState(false);
 
@@ -128,7 +127,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         if (field === "inventory") {
             setEnableInventory(enabled);
-            if (!enabled) setRestrictInventory(false);
         } else {
             setEnableSkills(enabled);
             if (!enabled) setRestrictSkills(false);
@@ -136,11 +134,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         onUpdated?.({
             ...world,
             [`enable_${field}`]: enabled,
-            ...(!enabled ? { [`restrict_${field}`]: false } : {}),
+            ...(!enabled && field === "skills" ? { restrict_skills: false } : {}),
         } as World);
     }
 
-    async function handleRestrictionToggle(field: "inventory" | "skills", enabled: boolean) {
+    async function handleRestrictionToggle(field: "skills", enabled: boolean) {
         if (enabled) {
             setPendingRestriction(field);
             return;
@@ -149,8 +147,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         const res = await setWorldRestriction(world.id, `restrict_${field}`, false);
         setTogglingRestriction(false);
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-        if (field === "inventory") setRestrictInventory(false);
-        else setRestrictSkills(false);
+        setRestrictSkills(false);
         onUpdated?.({ ...world, [`restrict_${field}`]: false } as World);
     }
 
@@ -162,8 +159,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         const res = await setWorldRestriction(world.id, `restrict_${field}`, true);
         setTogglingRestriction(false);
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-        if (field === "inventory") setRestrictInventory(true);
-        else setRestrictSkills(true);
+        setRestrictSkills(true);
         onUpdated?.({ ...world, [`restrict_${field}`]: true } as World);
     }
 
@@ -308,10 +304,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                     <InactiveOptions inactive={!enableInventory}>
                         <WorldInventorySettings
                             world={world}
-                            onUpdated={(patch) => {
-                                if (patch.restrict_inventory !== undefined) setRestrictInventory(!!patch.restrict_inventory);
-                                onUpdated?.({ ...world, ...patch } as World);
-                            }}
+                            onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
                         />
                     </InactiveOptions>
                 </FeaturePage>
@@ -391,7 +384,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 <FeaturePage title={t("nav.personas")} help={tSettings("personasHelp")}>
                     <WorldPersonaTemplateSection
                         worldId={world.id}
-                        restrictInventory={restrictInventory}
                         restrictSkills={restrictSkills}
                         reviewEnabled={!!world.persona_review_enabled}
                         onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
@@ -538,7 +530,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         <AlertDialogTitle>{t("enableRestrictionTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
                             {t("restrictionPurgeDescription", {
-                                items: t(pendingRestriction === "inventory" ? "restrictionPurgeInventory" : "restrictionPurgeSkills"),
+                                items: t("restrictionPurgeSkills"),
                             })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>

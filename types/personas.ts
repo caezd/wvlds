@@ -1,4 +1,4 @@
-export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid" | "inventory" | "skills" | "gauges" | "quote" | "traits" | "timeline" | "dl";
+export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid" | "skills" | "gauges" | "quote" | "traits" | "timeline" | "dl";
 
 /** Une stat individuelle dans un champ de type "stats". */
 export interface PersonaStat {
@@ -24,16 +24,6 @@ export interface PersonaGridImage {
   y?: number;
   w?: number;
   bg?: boolean;
-}
-
-/** Un item dans un champ de type "inventory". */
-export interface InventoryItem {
-  id: string;
-  catalog_id?: string; // défini quand le monde a restrict_inventory
-  name: string;
-  quantity: number;
-  description?: string;
-  icon?: string; // chemin relatif depuis /rpg_icons/, ex: "sword.svg"
 }
 
 /** Une compétence dans un champ de type "skills". */
@@ -83,7 +73,6 @@ export interface PersonaFieldData {
   value?: string;
   items?: PersonaStat[];
   images?: PersonaGridImage[];
-  inventoryItems?: InventoryItem[];
   skillItems?: SkillItem[];
   gaugeItems?: GaugeItem[];
   quoteText?: string;

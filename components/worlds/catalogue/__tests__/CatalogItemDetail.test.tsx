@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
-import { indexCatalog } from "@/lib/worldCatalog";
 import type { WorldCatalogItem } from "@/types/worlds";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
@@ -15,7 +14,7 @@ const wikiLinks = vi.hoisted(() => ({ value: null as null | { resolve: (m: strin
 vi.mock("@/components/worlds/wiki/WikiLinkContext", () => ({ useWikiLinks: () => wikiLinks.value }));
 
 import { CatalogItemDetail } from "@/components/worlds/catalogue/CatalogItemDetail";
-import { InventoryFieldView } from "@/components/personas/fields/CatalogFieldViews";
+import { PersonaInventorySection, type PersonaInventory } from "@/components/personas/PersonaInventorySection";
 
 const EPEE: WorldCatalogItem = {
   id: "c-epee", world_id: "w1", type: "inventory", name: "Épée longue", rarity: "rare", stackable: false,
@@ -74,19 +73,21 @@ describe("CatalogItemDetail", () => {
   });
 });
 
-describe("fiche de persona → fiche de l'objet", () => {
+describe("inventaire du persona → fiche de l'objet", () => {
   it("un clic sur un objet du catalogue ouvre sa fiche ; une saisie libre n'ouvre rien", async () => {
     setup();
     const user = userEvent.setup();
-    render(
-      <InventoryFieldView
-        items={[
-          { id: "i1", catalog_id: "c-epee", name: "Épée", quantity: 1 },
-          { id: "i2", name: "Corde", quantity: 2 },
-        ]}
-        catalog={indexCatalog([EPEE])}
-      />,
-    );
+    const noop = vi.fn();
+    const inventory = {
+      status: "on", mode: "free", economyOn: false, used: 2, capacity: null, extension: null,
+      items: [
+        { id: "r1", catalog_item_id: "c-epee", name: null, description: null, icon: null, lucide_icon: null, quantity: 1, sort_index: 0, catalog: { ...EPEE, icon: null, lucide_icon: null, image_url: null, max_quantity: null, deleted_at: null } },
+        { id: "r2", catalog_item_id: null, name: "Corde", description: null, icon: null, lucide_icon: null, quantity: 2, sort_index: 1, catalog: null },
+      ],
+      catalog: [EPEE], categories: [],
+      addCustom: noop, addCatalog: noop, setQuantity: noop, removeRow: noop, updateCustom: noop, give: noop, extend: noop,
+    } as unknown as PersonaInventory;
+    render(<PersonaInventorySection personaName="Lia" inventory={inventory} units={[]} canEdit={false} canManage={false} />);
     expect(screen.getByRole("button", { name: /Épée longue/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Corde/ })).toBeNull();
 

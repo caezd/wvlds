@@ -44,14 +44,12 @@ export function WorldPersonaAsideClient({
   worldId,
   personas,
   asideWidth = 192,
-  restrictInventory = false,
   restrictSkills = false,
   faceclaimsEnabled,
 }: {
   worldId: string;
   personas: AsidePersona[];
   asideWidth?: number;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
@@ -75,7 +73,6 @@ export function WorldPersonaAsideClient({
           <TooltipTrigger asChild>
             <PersonaCreateSheet
               worldId={worldId}
-              restrictInventory={restrictInventory}
               restrictSkills={restrictSkills}
               trigger={
                 <Button variant="outline" type="button" size="icon-sm" aria-label={t("newPersona")} className="size-6">
@@ -123,7 +120,6 @@ export function WorldPersonaAsideClient({
                 initialSpousePersonaId={p.spouse_persona_id ?? null}
                 initialSections={p.sections}
                 worldId={worldId}
-                restrictInventory={restrictInventory}
                 restrictSkills={restrictSkills}
                 faceclaimsEnabled={faceclaimsEnabled}
               />

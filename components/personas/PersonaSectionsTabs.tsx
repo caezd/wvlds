@@ -41,7 +41,6 @@ type PersonaSectionsTabsProps = {
   sections: PersonaSectionWithFields[];
   onSectionsChange: (sections: PersonaSectionWithFields[]) => void;
   worldId?: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   /** Édition de la fiche modèle d'un monde : permet de verrouiller des champs. */
   isTemplate?: boolean;
@@ -55,7 +54,6 @@ export function PersonaSectionsTabs({
   sections,
   onSectionsChange,
   worldId,
-  restrictInventory,
   restrictSkills,
   isTemplate,
   deferred,
@@ -278,7 +276,6 @@ export function PersonaSectionsTabs({
                 initialFields={section.fields ?? []}
                 onFieldsChange={(fields) => handleFieldsChange(section.id, fields)}
                 worldId={worldId}
-                restrictInventory={restrictInventory}
                 restrictSkills={restrictSkills}
                 isTemplate={isTemplate}
               />

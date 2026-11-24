@@ -10,7 +10,7 @@ export type WalletMovement = {
   id: string;
   delta: number;
   balance_after: number;
-  kind: "adjust";
+  kind: "adjust" | "slots";
   note: string | null;
   created_at: string;
 };
@@ -103,5 +103,15 @@ export function usePersonaWallet(personaId: string | null, worldId: string | nul
     [supabase, personaId, loadLedger],
   );
 
-  return { status, units, balance, ledger, adjust };
+  /** Relit solde et mouvements, quand la bourse a bougé ailleurs (achat d'emplacement). */
+  const refresh = useCallback(async () => {
+    if (!personaId) return;
+    const [{ data: wallet }] = await Promise.all([
+      supabase.from("persona_wallets").select("balance").eq("persona_id", personaId).maybeSingle(),
+      loadLedger(),
+    ]);
+    setBalance(Number((wallet as { balance?: number | string } | null)?.balance ?? 0));
+  }, [supabase, personaId, loadLedger]);
+
+  return { status, units, balance, ledger, adjust, refresh };
 }

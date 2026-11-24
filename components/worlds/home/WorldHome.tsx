@@ -24,6 +24,7 @@ import type { InitialWorldMap } from "../map/WorldMap";
 import { toggleWorldFavorite } from "@/app/(protected)/(world)/w/actions";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 import { permissionListHas, type WorldPermission } from "@/lib/worldPermissions";
+import { inventoryModeOf } from "@/lib/personaInventory";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.
 const SearchCenter = dynamic(() =>
   import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
@@ -102,7 +103,7 @@ export function WorldHome({
   const canOpenSettings = SETTINGS_PERMISSIONS.some((perm) => can(perm));
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
-  const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || can("catalog.edit"));
+  const _hasCatalogue = world_catalogue && (inventoryModeOf(world) !== "free" || !!world.restrict_skills || can("catalog.edit"));
 
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -198,7 +199,6 @@ export function WorldHome({
             canManage={can("members.manage")}
             isShared={isShared}
             myPersonas={initialPersonas}
-            restrictInventory={!!world.restrict_inventory}
             restrictSkills={!!world.restrict_skills}
             faceclaimsEnabled={world.enable_faceclaims !== false}
           />
@@ -206,7 +206,6 @@ export function WorldHome({
           <WorldPersonasPanel
             worldId={worldId}
             myPersonas={initialPersonas}
-            restrictInventory={!!world.restrict_inventory}
             restrictSkills={!!world.restrict_skills}
             faceclaimsEnabled={world.enable_faceclaims !== false}
           />
@@ -221,7 +220,7 @@ export function WorldHome({
             worldId={worldId}
             canEdit={can("catalog.edit")}
             inventoryEnabled={world.enable_inventory !== false}
-            inventoryRestricted={!!world.restrict_inventory}
+            inventoryRestricted={inventoryModeOf(world) !== "free"}
             skillsEnabled={world.enable_skills !== false}
             skillsRestricted={!!world.restrict_skills}
             faceclaimsEnabled={world.enable_faceclaims !== false}

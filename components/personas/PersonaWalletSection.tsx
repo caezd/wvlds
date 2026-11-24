@@ -29,6 +29,8 @@ export type PersonaWallet = {
   balance: number;
   ledger: WalletMovement[];
   adjust: (delta: number, note: string) => Promise<AdjustResult>;
+  /** Relit la bourse quand elle a bougé ailleurs. */
+  refresh?: () => Promise<void>;
 };
 
 /**

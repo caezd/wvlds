@@ -37,13 +37,11 @@ import { notifyPersonasChanged } from "@/hooks/usePersonasChanged";
 export function PersonaCreateSheet({
   worldId,
   trigger,
-  restrictInventory,
   restrictSkills,
   defaultNpc = false,
 }: {
   worldId?: string | null;
   trigger?: ReactNode;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   /** Précoche « PNJ partagé » (bouton « Nouveau PNJ » de la section PNJ). */
   defaultNpc?: boolean;
@@ -197,7 +195,6 @@ export function PersonaCreateSheet({
               personaName={createdName}
               sections={sections}
               worldId={worldId ?? undefined}
-              restrictInventory={restrictInventory}
               restrictSkills={restrictSkills}
               onSectionsChange={setSections}
             />

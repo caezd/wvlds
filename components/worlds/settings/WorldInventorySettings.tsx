@@ -79,7 +79,7 @@ export function WorldInventorySettings({
       toast.error(messageErreurAction(res.error, tCommon));
       return;
     }
-    onUpdated?.({ inventory_mode: next, restrict_inventory: next !== "free" });
+    onUpdated?.({ inventory_mode: next });
   }
 
   async function saveSlots() {

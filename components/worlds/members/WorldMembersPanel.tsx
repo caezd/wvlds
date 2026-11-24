@@ -67,7 +67,6 @@ export function WorldMembersPanel({
   canManage,
   isShared,
   myPersonas = [],
-  restrictInventory = false,
   restrictSkills = false,
   faceclaimsEnabled,
 }: {
@@ -78,7 +77,6 @@ export function WorldMembersPanel({
   isShared: boolean;
   /** Mes personas avec leurs sections, pour l'éditeur (chargés par la page serveur). */
   myPersonas?: AsidePersona[];
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
@@ -240,7 +238,7 @@ export function WorldMembersPanel({
 
   // ── Rendu des personas ──
   const createSheet = (trigger: ReactNode, npc = false) => (
-    <PersonaCreateSheet worldId={worldId} restrictInventory={restrictInventory} restrictSkills={restrictSkills} defaultNpc={npc} trigger={trigger} />
+    <PersonaCreateSheet worldId={worldId} restrictSkills={restrictSkills} defaultNpc={npc} trigger={trigger} />
   );
   // Un carré aligné sur les images des tuiles, sans s'étirer à la hauteur du nom.
   const newTile = (label: string, npc: boolean) => createSheet(
@@ -275,7 +273,6 @@ export function WorldMembersPanel({
         openOnMount={p.id === focusPersonaId}
         reviewActive={reviewActive}
         worldId={worldId}
-        restrictInventory={restrictInventory}
         restrictSkills={restrictSkills}
         faceclaimsEnabled={faceclaimsEnabled}
       />

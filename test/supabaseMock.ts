@@ -230,6 +230,8 @@ export function createSupabaseMock(opts: {
     channels,
     channelNamed: (name: string) => channels.find((c) => c.name === name),
     lastChannel: () => channels[channels.length - 1],
+    /** Ajoute des résultats en fin de file, pour les appels à venir. */
+    enqueue: (...more: QueryResult[]) => { results.push(...more); },
     /** Tous les builders créés, dans l'ordre. */
     builders,
     /** Builders créés pour une table donnée. */

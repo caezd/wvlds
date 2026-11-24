@@ -44,14 +44,12 @@ import { messageErreurAction } from "@/lib/actionErrors";
  */
 export function WorldPersonaTemplateSection({
   worldId,
-  restrictInventory,
   restrictSkills,
   reviewEnabled = false,
   onReviewEnabledChange,
   onActiveChange,
 }: {
   worldId: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   /** Validation des fiches (migration 184) : option complémentaire de la fiche par défaut. */
   reviewEnabled?: boolean;
@@ -225,7 +223,6 @@ export function WorldPersonaTemplateSection({
                 sections={sections}
                 onSectionsChange={setSections}
                 worldId={worldId}
-                restrictInventory={restrictInventory}
                 restrictSkills={restrictSkills}
                 isTemplate
               />

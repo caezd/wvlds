@@ -97,4 +97,21 @@ describe("usePersonaWallet (migration 246)", () => {
     expect(res).toEqual({ ok: false, error: "insufficient" });
     expect(result.current.balance).toBe(100);
   });
+  it("relit solde et mouvements à la demande (achat d'emplacement)", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: { enable_economy: true, currency_units: OR } },
+        { data: { balance: 500 } },
+        { data: [] },
+        { data: { balance: 250 } },
+        { data: [mouvement("m3", -250, 250)] },
+      ],
+    });
+    use(mock);
+    const { result } = renderHook(() => usePersonaWallet("p1", "w1"));
+    await waitFor(() => expect(result.current.status).toBe("on"));
+    await act(async () => { await result.current.refresh(); });
+    expect(result.current.balance).toBe(250);
+    expect(result.current.ledger.map((m) => m.id)).toEqual(["m3"]);
+  });
 });

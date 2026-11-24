@@ -102,6 +102,7 @@ export function CatalogPicker({
   type,
   onSelect,
   disabledReason,
+  label,
 }: {
   available: WorldCatalogItem[];
   categories?: WorldCatalogCategory[];
@@ -109,6 +110,8 @@ export function CatalogPicker({
   onSelect: (item: WorldCatalogItem) => void;
   /** Pourquoi une entrée ne se choisit pas (prérequis manquant, migration 187) ; `null` si elle se choisit. */
   disabledReason?: (item: WorldCatalogItem) => string | null;
+  /** Le libellé du bouton, s'il ne s'agit pas d'ajouter (« Donner un objet »). */
+  label?: string;
 }) {
   const t = useTranslations("catalogue");
   const [open, setOpen] = useState(false);
@@ -158,7 +161,7 @@ export function CatalogPicker({
         <Plus className="h-3.5 w-3.5" />
         {empty
           ? (type === "inventory" ? t("allItemsAdded") : t("allSkillsAdded"))
-          : t("addFromCatalog")}
+          : label ?? t("addFromCatalog")}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

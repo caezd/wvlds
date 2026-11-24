@@ -24,7 +24,6 @@ const FIELD_KEYS: FlagKey[] = [
   "persona_field_stats",
   "persona_field_separator",
   "persona_field_image_grid",
-  "persona_field_inventory",
   "persona_field_skills",
   "persona_field_gauges",
   "persona_field_quote",

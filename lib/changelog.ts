@@ -47,13 +47,13 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Catalogue",
-    text: "Inventaire des personas, dans Paramètres › Fonctions › Catalogue.\n- ajout d’objets libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé dans la monnaie du monde\n- un objet empilable prend un emplacement, un objet unique un par exemplaire",
+    text: "Inventaire des personas : un onglet **Inventaire** sur la fiche, avec la bourse et les objets ; réglages dans Paramètres › Fonctions › Catalogue.\n- ajout d’objets libre, pioché dans le catalogue, ou tenu (objets donnés, achetés ou échangés)\n- emplacements de départ, plafond et prix d’un emplacement ajouté, payé sur la bourse du persona\n- un objet empilable prend un emplacement, un objet unique un par exemplaire\n- qui gère l’économie donne ou reprend un objet du catalogue\n- un clic sur un objet du catalogue ouvre sa fiche\n- le champ de fiche « Inventaire » disparaît : ses objets sont passés dans l’onglet",
   },
   {
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Économie : une monnaie propre au monde et une bourse pour chaque persona, dans Paramètres › Fonctions › Économie.\n- monnaie divisée en paliers (or, argent, cuivre…), chacun valant un nombre entier du suivant ; les montants se convertissent d’eux-mêmes\n- onglet **Bourse** sur la fiche du persona : solde et derniers mouvements\n- permission **Gérer l’économie** : créditer ou débiter une bourse, avec un motif",
+    text: "Économie : une monnaie propre au monde et une bourse pour chaque persona, dans Paramètres › Fonctions › Économie.\n- monnaie divisée en paliers (or, argent, cuivre…), chacun valant un nombre entier du suivant ; les montants se convertissent d’eux-mêmes\n- bourse dans l’onglet **Inventaire** de la fiche du persona : solde et derniers mouvements\n- permission **Gérer l’économie** : créditer ou débiter une bourse, avec un motif",
   },
   {
     date: "2026-11-24",

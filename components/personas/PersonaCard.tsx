@@ -38,7 +38,6 @@ type PersonaCardProps = {
   reviewActive?: boolean;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
   /** Remplace la tuile par défaut (étagères de la liste du monde) ; l'éditeur reste le même. */
@@ -64,7 +63,6 @@ export function PersonaCard({
   reviewActive = true,
   initialSections,
   worldId,
-  restrictInventory,
   restrictSkills,
   faceclaimsEnabled,
   trigger,
@@ -86,7 +84,6 @@ export function PersonaCard({
       initialReviewStatus={reviewStatus ?? null}
       openOnMount={openOnMount}
       worldId={worldId}
-      restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
       faceclaimsEnabled={faceclaimsEnabled}
       trigger={trigger ?? (

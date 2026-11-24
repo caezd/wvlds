@@ -32,13 +32,13 @@ import { useWorldMembership } from "@/components/providers/WorldMembershipProvid
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { PersonaJournalSection } from "@/components/personas/PersonaJournalSection";
-import { PersonaWalletSection } from "@/components/personas/PersonaWalletSection";
+import { PersonaInventoryTab } from "@/components/personas/PersonaInventorySection";
 import { usePersonaWallet } from "@/hooks/usePersonaWallet";
+import { usePersonaInventory } from "@/hooks/usePersonaInventory";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { indexCatalog } from "@/lib/worldCatalog";
 // Inventaire et compétences (fiches d'objets du catalogue) : chargés à
 // l'ouverture d'une fiche qui en a, plutôt qu'avec chaque salon.
-const InventoryFieldView = dynamic(() => import("@/components/personas/fields/CatalogFieldViews").then((m) => m.InventoryFieldView));
 const SkillsFieldView = dynamic(() => import("@/components/personas/fields/CatalogFieldViews").then((m) => m.SkillsFieldView));
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
 import type { WorldCatalogItem } from "@/types/worlds";
@@ -108,9 +108,6 @@ function FieldView({
   }
   if (type === "image-grid") {
     return <ImageGridView images={data?.images ?? []} />;
-  }
-  if (type === "inventory") {
-    return <InventoryFieldView items={data?.inventoryItems ?? []} catalog={catalog} />;
   }
   if (type === "gauges") {
     const items: GaugeItem[] = data?.gaugeItems ?? [];
@@ -366,10 +363,16 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
     return () => { cancelled = true; };
   }, [persona?.id, selfId, plan, supabase, canPlayNpc, reviewActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // La bourse (migration 246) : un onglet tant que l'économie du monde est active.
+  // L'onglet Inventaire : la bourse (migration 246) tant que l'économie du
+  // monde est active, les objets (migration 247) tant que son inventaire l'est.
   const { world_economy } = useFeatureFlags();
   const wallet = usePersonaWallet(world_economy && persona ? persona.id : null, world_economy ? worldId : null);
+  const inventory = usePersonaInventory(persona?.id ?? null, worldId ?? null);
+  const showInventory = wallet.status === "on" || inventory.status === "on";
   const canManageWallet = !!worldId && membershipWorldId === worldId && can("economy.manage");
+  const canEditInventory = !!persona && (persona.is_npc
+    ? !!worldId && membershipWorldId === worldId && can("npc.manage")
+    : !!selfId && persona.user_id === selfId);
 
   const userPresence = persona ? getUserPresence(persona.user_id) : "offline";
   const _isOnline = userPresence === "online";
@@ -478,8 +481,8 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                           {s.name}
                         </TabBarTrigger>
                       ))}
-                      {wallet.status === "on" && (
-                        <TabBarTrigger value="__wallet__">{t("wallet.tab")}</TabBarTrigger>
+                      {showInventory && (
+                        <TabBarTrigger value="__inventory__">{t("inventory.tab")}</TabBarTrigger>
                       )}
                       {worldId && (
                         <TabBarTrigger value="__relations__">{t("relations.tab")}</TabBarTrigger>
@@ -507,9 +510,15 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                       )}
                     </TabsContent>
                   ))}
-                  {wallet.status === "on" && (
-                    <TabsContent value="__wallet__" className="px-5 py-4">
-                      <PersonaWalletSection personaName={persona.name} wallet={wallet} canManage={canManageWallet} />
+                  {showInventory && (
+                    <TabsContent value="__inventory__" className="px-5 py-4">
+                      <PersonaInventoryTab
+                        personaName={persona.name}
+                        wallet={wallet}
+                        inventory={inventory}
+                        canEdit={canEditInventory}
+                        canManage={canManageWallet}
+                      />
                     </TabsContent>
                   )}
                   {worldId && (

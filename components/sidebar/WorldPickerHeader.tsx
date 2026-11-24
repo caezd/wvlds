@@ -41,7 +41,6 @@ export type WorldItem = {
   banner_url?: string | null;
   color?: string | null;
   visibility?: string | null;
-  restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   is_favorite?: boolean;
 };

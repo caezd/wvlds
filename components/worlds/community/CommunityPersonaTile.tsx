@@ -99,7 +99,6 @@ export function CommunityPersonaTile({
   openOnMount,
   reviewActive,
   worldId,
-  restrictInventory,
   restrictSkills,
   faceclaimsEnabled,
 }: {
@@ -117,7 +116,6 @@ export function CommunityPersonaTile({
   openOnMount?: boolean;
   reviewActive: boolean;
   worldId: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
@@ -185,7 +183,6 @@ export function CommunityPersonaTile({
       openOnMount={openOnMount}
       initialSections={mine?.sections ?? npcSections ?? []}
       worldId={worldId}
-      restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
       faceclaimsEnabled={faceclaimsEnabled}
       trigger={

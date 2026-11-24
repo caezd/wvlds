@@ -81,7 +81,7 @@ describe("WorldCatalogue — onglets", () => {
     render(<WorldCatalogue {...BASE} inventoryRestricted={false} skillsEnabled={false} />);
 
     const [objets, competences] = screen.getAllByRole("tab");
-    expect(objets).toContainElement(screen.getByRole("img", { name: "Objets : saisie libre (catalogue non restreint)" }));
+    expect(objets).toContainElement(screen.getByRole("img", { name: "Objets : les joueurs créent aussi leurs propres objets." }));
     expect(competences).toContainElement(screen.getByRole("img", { name: "Compétences désactivées dans ce monde" }));
   });
 

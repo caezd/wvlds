@@ -579,7 +579,6 @@ type PersonaEditSheetProps = {
   openOnMount?: boolean;
   trigger?: ReactNode;
   worldId?: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 };
@@ -605,7 +604,6 @@ type PersonaEditorContentProps = {
   initialSpousePersonaId?: string | null;
   initialNarrativeStatus?: PersonaNarrativeStatus | null;
   worldId?: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 };
@@ -632,7 +630,6 @@ export function PersonaEditorContent({
   initialSpousePersonaId,
   initialNarrativeStatus,
   worldId,
-  restrictInventory,
   restrictSkills,
   faceclaimsEnabled,
 }: PersonaEditorContentProps) {
@@ -988,7 +985,6 @@ export function PersonaEditorContent({
           sections={sections}
           onSectionsChange={onSectionsChange}
           worldId={worldId}
-          restrictInventory={restrictInventory}
           restrictSkills={restrictSkills}
           deferred={deferred}
         />
@@ -1020,7 +1016,6 @@ export function PersonaEditSheet({
   openOnMount = false,
   trigger,
   worldId,
-  restrictInventory,
   restrictSkills,
   faceclaimsEnabled,
 }: PersonaEditSheetProps) {
@@ -1098,7 +1093,6 @@ export function PersonaEditSheet({
               initialAvatarConfig={initialAvatarConfig}
               initialBannerUrl={initialBannerUrl}
               worldId={worldId}
-              restrictInventory={restrictInventory}
               restrictSkills={restrictSkills}
               initialFrameId={initialFrameId}
               initialFrameUrl={initialFrameUrl}

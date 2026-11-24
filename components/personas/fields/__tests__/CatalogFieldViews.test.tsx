@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
-import { InventoryFieldView, SkillsFieldView } from "../CatalogFieldViews";
+import { SkillsFieldView } from "../CatalogFieldViews";
 import { indexCatalog } from "@/lib/worldCatalog";
 import type { WorldCatalogItem } from "@/types/worlds";
 
@@ -29,21 +28,6 @@ describe("propriétés sur la fiche du persona", () => {
     );
     expect(screen.getByText("Prérequis")).toBeInTheDocument();
     expect(screen.getByText("Force 12")).toBeInTheDocument();
-  });
-
-  it("un objet montre les siennes dans son infobulle, avec la description", async () => {
-    const user = userEvent.setup();
-    render(
-      <InventoryFieldView items={[{ id: "i1", catalog_id: "c-epee", name: "Épée", quantity: 1 }]} catalog={catalogue} />,
-    );
-    expect(screen.queryByText("Poids")).toBeNull();
-
-    await user.hover(screen.getByText("Épée longue"));
-    const bulle = await screen.findByRole("tooltip");
-    expect(bulle).toHaveTextContent("Une lame fiable.");
-    expect(bulle).toHaveTextContent("Poids");
-    expect(bulle).toHaveTextContent("1,5 kg");
-    expect(bulle).toHaveTextContent("Dégâts");
   });
 
   it("sans catalogue chargé, la copie de la fiche n'a pas de propriétés", () => {

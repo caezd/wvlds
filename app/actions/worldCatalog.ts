@@ -49,7 +49,6 @@ const MAX_TAG_LENGTH = 24;
 
 /** Sous-option à retomber quand on désactive la fonctionnalité principale. */
 const RESTRICTION_LIEE: Partial<Record<WorldFeatureField, string>> = {
-  enable_inventory: "restrict_inventory",
   enable_skills: "restrict_skills",
 };
 
@@ -151,17 +150,14 @@ export async function setWorldCurrency(worldId: string, units: CurrencyUnit[]) {
   return { ok: true as const };
 }
 
-/**
- * Qui fait entrer des objets dans l'inventaire des personas (migration 247).
- * `restrict_inventory` suit, pour ce qui le lit encore.
- */
+/** Qui fait entrer des objets dans l'inventaire des personas (migration 247). */
 export async function setWorldInventoryMode(worldId: string, mode: InventoryMode) {
   const input = parseInput(z.strictObject({ worldId: idSchema, mode: z.enum(INVENTORY_MODES) }), { worldId, mode });
   if (!input.ok) return { ok: false as const, error: input.error };
   const supabase = await createClient();
   const { error } = await supabase
     .from("worlds")
-    .update({ inventory_mode: input.data.mode, restrict_inventory: input.data.mode !== "free" })
+    .update({ inventory_mode: input.data.mode })
     .eq("id", worldId);
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldInventoryMode", error) };
   return { ok: true as const };
@@ -198,7 +194,7 @@ export async function setWorldAgeRestricted(worldId: string, enabled: boolean) {
 
 export async function setWorldRestriction(
   worldId: string,
-  field: "restrict_inventory" | "restrict_skills",
+  field: "restrict_skills",
   enabled: boolean,
 ) {
   const supabase = await createClient();
@@ -211,8 +207,8 @@ export async function setWorldRestriction(
   if (error) return { ok: false as const, error: echecEnregistrement("setWorldRestriction", error) };
 
   if (enabled) {
-    const dataKey = field === "restrict_inventory" ? "inventoryItems" : "skillItems";
-    const fieldType = field === "restrict_inventory" ? "inventory" : "skills";
+    const dataKey = "skillItems";
+    const fieldType = "skills";
 
     const { data: personas } = await supabase
       .from("personas")

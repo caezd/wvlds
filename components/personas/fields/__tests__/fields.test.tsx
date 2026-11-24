@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { StatsField } from "../StatsField";
-import { InventoryField } from "../InventoryField";
 import { SkillsField } from "../SkillsField";
 import { GaugesField } from "../GaugesField";
 import { TraitsField } from "../TraitsField";
@@ -77,79 +76,6 @@ describe("StatsField", () => {
   });
 });
 
-describe("InventoryField", () => {
-  it("en mode libre, ajoute et retire un objet", async () => {
-    const onSave = vi.fn();
-    render(<InventoryField initialItems={[]} onSave={onSave} />);
-
-    await userEvent.click(screen.getByRole("button", { name: /ajouter un objet/i }));
-    expect(onSave).toHaveBeenLastCalledWith([
-      expect.objectContaining({ name: "", quantity: 1 }),
-    ]);
-
-    await userEvent.click(screen.getByRole("button", { name: "Retirer" }));
-    expect(onSave).toHaveBeenLastCalledWith([]);
-  });
-
-  it("en mode catalogue, n'offre que les objets non encore pris", async () => {
-    const catalogue: WorldCatalogItem[] = [
-      { id: "c1", name: "Épée", description: null, icon: null },
-      { id: "c2", name: "Bouclier", description: null, icon: null },
-    ] as WorldCatalogItem[];
-    const onSave = vi.fn();
-
-    render(
-      <InventoryField
-        initialItems={[{ id: "i1", catalog_id: "c1", name: "Épée", quantity: 1 }]}
-        onSave={onSave}
-        catalogItems={catalogue}
-      />,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /ajouter depuis le catalogue/i }));
-
-    // « Épée » est déjà pris : il ne doit rester que « Bouclier » à choisir.
-    // L'absence d'« Épée » est l'assertion qui compte — sans elle, retirer le
-    // filtre du catalogue passerait inaperçu ici.
-    const dialogue = screen.getByRole("dialog");
-    expect(dialogue).toHaveTextContent("Bouclier");
-    expect(dialogue).not.toHaveTextContent("Épée");
-    const choix = screen.getAllByRole("button").filter((b) => b.textContent?.includes("Bouclier"));
-    expect(choix).toHaveLength(1);
-
-    await userEvent.click(choix[0]);
-
-    // L'objet ajouté garde son lien vers le catalogue : c'est ce lien qui
-    // empêche de le reprendre une seconde fois.
-    expect(onSave).toHaveBeenLastCalledWith([
-      expect.objectContaining({ catalog_id: "c1" }),
-      expect.objectContaining({ catalog_id: "c2", name: "Bouclier", quantity: 1 }),
-    ]);
-  });
-
-  it("en mode catalogue, désactive l'ajout quand tout est déjà pris", () => {
-    const catalogue = [
-      { id: "c1", name: "Épée", description: null, icon: null },
-    ] as WorldCatalogItem[];
-
-    render(
-      <InventoryField
-        initialItems={[{ id: "i1", catalog_id: "c1", name: "Épée", quantity: 1 }]}
-        onSave={vi.fn()}
-        catalogItems={catalogue}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: /catalogue sont ajoutés/i })).toBeDisabled();
-  });
-
-  it("en mode catalogue, ne propose pas la saisie libre", () => {
-    render(<InventoryField initialItems={[]} onSave={vi.fn()} catalogItems={[]} />);
-    expect(screen.queryByRole("button", { name: /ajouter un objet/i })).toBeNull();
-    expect(screen.queryByPlaceholderText("Nom de l'objet")).toBeNull();
-  });
-});
-
 describe("SkillsField", () => {
   it("en mode catalogue, écarte les compétences déjà prises", async () => {
     const catalogue = [
@@ -186,79 +112,6 @@ describe("SkillsField", () => {
 // le catalogue ne changeait rien nulle part, et le supprimer laissait dans
 // chaque fiche un fantôme que rien ne distinguait d'une entrée valide.
 // ──────────────────────────────────────────────────────────────────────────
-
-describe("InventoryField, résolution contre le catalogue", () => {
-  it("affiche le nom du catalogue, pas la copie rangée dans la fiche", () => {
-    const catalogue = [
-      { id: "c1", name: "Épée longue", description: null, icon: null },
-    ] as WorldCatalogItem[];
-
-    render(
-      <InventoryField
-        initialItems={[{ id: "i1", catalog_id: "c1", name: "Épée", quantity: 1 }]}
-        onSave={vi.fn()}
-        catalogItems={catalogue}
-      />,
-    );
-
-    expect(screen.getByText("Épée longue")).toBeInTheDocument();
-    expect(screen.queryByText("Épée")).toBeNull();
-  });
-
-  it("signale une entrée dont l'objet a quitté le catalogue", () => {
-    render(
-      <InventoryField
-        initialItems={[{ id: "i1", catalog_id: "disparu", name: "Relique", quantity: 1 }]}
-        onSave={vi.fn()}
-        catalogItems={[]}
-      />,
-    );
-
-    // Le nom copié reste affiché — il vaut mieux que rien — mais il porte
-    // désormais sa mise en garde.
-    expect(screen.getByText("Relique")).toBeInTheDocument();
-    expect(screen.getAllByText(/retiré du catalogue/i).length).toBeGreaterThan(0);
-  });
-
-  it("interdit d'empiler un objet unique", () => {
-    const catalogue = [
-      { id: "c1", name: "Couronne", description: null, icon: null, stackable: false },
-    ] as WorldCatalogItem[];
-
-    render(
-      <InventoryField
-        initialItems={[{ id: "i1", catalog_id: "c1", name: "Couronne", quantity: 1 }]}
-        onSave={vi.fn()}
-        catalogItems={catalogue}
-      />,
-    );
-
-    expect(screen.getByRole("spinbutton")).toBeDisabled();
-  });
-
-  it("ramène la quantité au plafond de l'objet", async () => {
-    const catalogue = [
-      { id: "c1", name: "Fiole", description: null, icon: null, max_quantity: 3 },
-    ] as WorldCatalogItem[];
-    const onSave = vi.fn();
-
-    render(
-      <InventoryField
-        initialItems={[{ id: "i1", catalog_id: "c1", name: "Fiole", quantity: 1 }]}
-        onSave={onSave}
-        catalogItems={catalogue}
-      />,
-    );
-
-    const champ = screen.getByRole("spinbutton");
-    await userEvent.clear(champ);
-    await userEvent.type(champ, "9");
-
-    expect(onSave).toHaveBeenLastCalledWith([
-      expect.objectContaining({ catalog_id: "c1", quantity: 3 }),
-    ]);
-  });
-});
 
 describe("GaugesField", () => {
   it("plafonne la barre à 100 % quand la valeur dépasse le maximum", () => {

@@ -60,7 +60,6 @@ export type PersonaWorldGroup = {
   worldId: string | null;
   worldName: string | null;
   /** Restrictions de catalogue du monde, appliquées par l'éditeur de fiche. */
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   /** Le monde autorise les faceclaims (activé par défaut). */
   faceclaimsEnabled?: boolean;
@@ -108,7 +107,6 @@ function PersonaCardFor({
       initialSpousePersonaId={persona.spouse_persona_id ?? null}
       initialSections={persona.sections}
       worldId={persona.world_id ?? undefined}
-      restrictInventory={group?.restrictInventory}
       restrictSkills={group?.restrictSkills}
       faceclaimsEnabled={group?.faceclaimsEnabled}
     />

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useTranslations } from "next-intl";
 import {
   ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, ImageIcon,
-  Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen, List, Asterisk,
+  Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen, List, Asterisk,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type {
-  PersonaSectionField, PersonaFieldType, PersonaStat, PersonaGridImage, InventoryItem,
+  PersonaSectionField, PersonaFieldType, PersonaStat, PersonaGridImage,
   SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem,
 } from "@/types/personas";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
@@ -34,7 +34,6 @@ import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
 import { DlField } from "./fields/DlField";
 import { GaugesField } from "./fields/GaugesField";
 import { ImageGridField } from "./fields/ImageGridField";
-import { InventoryField } from "./fields/InventoryField";
 import { MarkdownTextField } from "./fields/MarkdownTextField";
 import { QuoteField } from "./fields/QuoteField";
 import { SkillsField } from "./fields/SkillsField";
@@ -50,7 +49,6 @@ type SectionFieldsEditorProps = {
   /** Remonte l'état courant des champs au parent (source de vérité locale). */
   onFieldsChange?: (fields: PersonaSectionField[]) => void;
   worldId?: string;
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   /** Édition de la fiche modèle d'un monde : permet de verrouiller des champs. */
   isTemplate?: boolean;
@@ -58,7 +56,7 @@ type SectionFieldsEditorProps = {
   deferred?: boolean;
 };
 
-export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills, isTemplate, deferred }: SectionFieldsEditorProps) {
+export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictSkills, isTemplate, deferred }: SectionFieldsEditorProps) {
   const tCommon = useTranslations("common");
   const tPersonas = useTranslations("personas");
   const client = createClient();
@@ -72,7 +70,6 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const persona_field_stats = fieldsEnabled && flags.persona_field_stats;
   const persona_field_separator = fieldsEnabled && flags.persona_field_separator;
   const persona_field_image_grid = fieldsEnabled && flags.persona_field_image_grid;
-  const persona_field_inventory = fieldsEnabled && flags.persona_field_inventory;
   const persona_field_skills = fieldsEnabled && flags.persona_field_skills;
   const persona_field_gauges = fieldsEnabled && flags.persona_field_gauges;
   const persona_field_quote = fieldsEnabled && flags.persona_field_quote;
@@ -81,7 +78,6 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const persona_field_dl = fieldsEnabled && flags.persona_field_dl;
   const [fields, setFields] = useState<PersonaSectionField[]>(initialFields);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [inventoryCatalog, setInventoryCatalog] = useState<WorldCatalogItem[] | undefined>(undefined);
   const [skillsCatalog, setSkillsCatalog] = useState<WorldCatalogItem[] | undefined>(undefined);
   const [catalogCategories, setCatalogCategories] = useState<WorldCatalogCategory[]>([]);
 
@@ -93,7 +89,6 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     // sélecteur les affiche, une fiche fournie s'y perdrait sans elles.
     async function fetchCatalog() {
       const wanted: ("inventory" | "skills")[] = [];
-      if (restrictInventory) wanted.push("inventory");
       if (restrictSkills) wanted.push("skills");
       if (wanted.length === 0) return;
 
@@ -118,13 +113,12 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       ]);
 
       const all = ((itemRes as { data: WorldCatalogItem[] | null }).data) ?? [];
-      if (restrictInventory) setInventoryCatalog(all.filter((i) => i.type === "inventory"));
       if (restrictSkills) setSkillsCatalog(all.filter((i) => i.type === "skills"));
       setCatalogCategories(((catRes as { data: WorldCatalogCategory[] | null }).data) ?? []);
     }
     void fetchCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, restrictInventory, restrictSkills]);
+  }, [worldId, restrictSkills]);
 
   // Synchronise l'état local vers le parent à chaque changement (sauf au montage
   // initial, où les données sont déjà identiques à celles du parent).
@@ -166,9 +160,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
             ? {}
             : type === "image-grid"
               ? { images: [] }
-              : type === "inventory"
-                ? { inventoryItems: [] }
-                : type === "skills"
+              : type === "skills"
                   ? { skillItems: [] }
                   : type === "gauges"
                     ? { gaugeItems: [] }
@@ -266,28 +258,6 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [fields],
-  );
-
-  const inventoryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const saveInventoryItems = useCallback(
-    (fieldId: string, inventoryItems: InventoryItem[]) => {
-      setFields((prev) =>
-        prev.map((f) =>
-          f.id === fieldId ? { ...f, data: { ...f.data, inventoryItems } } : f,
-        ),
-      );
-      if (inventoryTimer.current) clearTimeout(inventoryTimer.current);
-      inventoryTimer.current = setTimeout(async () => {
-        const { error } = await supabase
-          .from("persona_section_fields")
-          .update({ data: { inventoryItems } })
-          .eq("id", fieldId);
-        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde inventaire.");
-      }, 800);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
   );
 
   const skillsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -503,7 +473,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
               <Quote className="mr-2 h-4 w-4" /> Citation
             </DropdownMenuItem>
           )}
-          {(persona_field_stats || persona_field_gauges || persona_field_inventory || persona_field_skills) && <DropdownMenuSeparator />}
+          {(persona_field_stats || persona_field_gauges || persona_field_skills) && <DropdownMenuSeparator />}
           {persona_field_stats && (
             <DropdownMenuItem onClick={() => handleAddField("stats", insertAt)}>
               <BarChart3 className="mr-2 h-4 w-4" /> Stats
@@ -512,11 +482,6 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
           {persona_field_gauges && (
             <DropdownMenuItem onClick={() => handleAddField("gauges", insertAt)}>
               <Gauge className="mr-2 h-4 w-4" /> Jauges
-            </DropdownMenuItem>
-          )}
-          {persona_field_inventory && (
-            <DropdownMenuItem onClick={() => handleAddField("inventory", insertAt)}>
-              <Backpack className="mr-2 h-4 w-4" /> Inventaire
             </DropdownMenuItem>
           )}
           {persona_field_skills && (
@@ -691,15 +656,6 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                       personaId={personaId}
                       userId={userId}
                       onSave={(images) => saveImageGrid(field.id, images)}
-                    />
-                  )}
-
-                  {field.type === "inventory" && (
-                    <InventoryField
-                      initialItems={field.data?.inventoryItems ?? []}
-                      onSave={(items) => saveInventoryItems(field.id, items)}
-                      catalogItems={inventoryCatalog}
-                      catalogCategories={catalogCategories.filter((c) => c.type === "inventory")}
                     />
                   )}
 

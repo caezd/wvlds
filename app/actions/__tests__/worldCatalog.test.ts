@@ -58,11 +58,11 @@ describe("setWorldFeature", () => {
     it("désactiver une fonctionnalité retire aussi sa restriction", async () => {
         const mock = createSupabaseMock({ results: [{ error: null }] });
         use(mock);
-        const res = await setWorldFeature("w1", "enable_inventory", false);
+        const res = await setWorldFeature("w1", "enable_skills", false);
         expect(res).toEqual({ ok: true });
         expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
-            enable_inventory: false,
-            restrict_inventory: false,
+            enable_skills: false,
+            restrict_skills: false,
         });
     });
 
@@ -238,11 +238,11 @@ describe("setWorldCurrency", () => {
 describe("setWorldInventoryMode", () => {
     const id = "11111111-1111-4111-8111-111111111111";
 
-    it("enregistre le mode ; la restriction au catalogue suit", async () => {
+    it("enregistre le mode", async () => {
         const mock = createSupabaseMock({ results: [{ error: null }] });
         use(mock);
         expect(await setWorldInventoryMode(id, "held")).toEqual({ ok: true });
-        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ inventory_mode: "held", restrict_inventory: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ inventory_mode: "held" });
     });
 
     it("refuse un mode inconnu sans appeler Supabase", async () => {
@@ -472,7 +472,7 @@ describe("setWorldRestriction", () => {
     it("active la restriction sans purge quand aucun persona", async () => {
         const mock = createSupabaseMock({ results: [{ error: null }, { data: [] }] });
         use(mock);
-        const res = await setWorldRestriction("w1", "restrict_inventory", true);
+        const res = await setWorldRestriction("w1", "restrict_skills", true);
         expect(res).toEqual({ ok: true });
         expect(mock.from).toHaveBeenCalledWith("personas");
         expect(mock.from).not.toHaveBeenCalledWith("persona_section_fields");
@@ -483,24 +483,6 @@ describe("setWorldRestriction", () => {
         use(mock);
         await setWorldRestriction("w1", "restrict_skills", false);
         expect(mock.from).toHaveBeenCalledTimes(1);
-    });
-
-    it("purge les champs inventory quand des personas + sections existent", async () => {
-        const mock = createSupabaseMock({
-            results: [
-                { error: null },                            // worlds.update
-                { data: [{ id: "p1" }, { id: "p2" }] },   // personas.select
-                { data: [{ id: "s1" }] },                  // persona_sections.select
-                { error: null },                            // persona_section_fields.update
-            ],
-        });
-        use(mock);
-        const res = await setWorldRestriction("w1", "restrict_inventory", true);
-        expect(res).toEqual({ ok: true });
-        expect(mock.buildersFor("persona_section_fields")[0].update)
-            .toHaveBeenCalledWith({ data: { inventoryItems: [] } });
-        expect(mock.buildersFor("persona_section_fields")[0].eq)
-            .toHaveBeenCalledWith("type", "inventory");
     });
 
     it("purge les champs skills (dataKey = skillItems)", async () => {
@@ -529,7 +511,7 @@ describe("setWorldRestriction", () => {
             ],
         });
         use(mock);
-        await setWorldRestriction("w1", "restrict_inventory", true);
+        await setWorldRestriction("w1", "restrict_skills", true);
         expect(mock.from).not.toHaveBeenCalledWith("persona_section_fields");
     });
 });

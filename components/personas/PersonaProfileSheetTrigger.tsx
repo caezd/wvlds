@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import * as React from "react";
-import { ClipboardCheck, Coins, NotebookText, Waypoints, type LucideIcon } from "lucide-react";
+import { Backpack, ClipboardCheck, NotebookText, Waypoints, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -33,8 +33,9 @@ import { PersonaNpcBadge } from "./PersonaNpcBadge";
 // chargée à ce moment-là plutôt qu'avec chaque salon.
 const PersonaReviewSection = dynamic(() => import("./PersonaReviewPanel").then((m) => m.PersonaReviewSection));
 import { PersonaJournalSection } from "./PersonaJournalSection";
-import { PersonaWalletSection } from "./PersonaWalletSection";
+import { PersonaInventoryTab } from "./PersonaInventorySection";
 import { usePersonaWallet } from "@/hooks/usePersonaWallet";
+import { usePersonaInventory } from "@/hooks/usePersonaInventory";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
@@ -47,7 +48,7 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn, formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
-import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
+import { SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
 import { indexCatalog } from "@/lib/worldCatalog";
 import type { WorldCatalogItem } from "@/types/worlds";
@@ -117,9 +118,6 @@ export function FieldView({
   }
   if (type === "image-grid") {
     return <ImageGridView images={data?.images ?? []} />;
-  }
-  if (type === "inventory") {
-    return <InventoryFieldView items={data?.inventoryItems ?? []} catalog={catalog} />;
   }
   if (type === "skills") {
     return <SkillsFieldView items={data?.skillItems ?? []} catalog={catalog} />;
@@ -489,7 +487,7 @@ export function usePersonaProfile({
   const tRelations = useTranslations("personas.relations");
   const tReview = useTranslations("personas.review");
   const tJournal = useTranslations("personas.journal");
-  const tWallet = useTranslations("personas.wallet");
+  const tInventory = useTranslations("personas.inventory");
   const { world_economy } = useFeatureFlags();
   // Relire exige `personas.review` dans le monde du persona — le contexte
   // n'est celui de ce monde que sous `/w/[id]` ou dans un de ses salons.
@@ -519,6 +517,7 @@ export function usePersonaProfile({
   // La bourse (migration 246) : lue une fois le monde du persona connu, si
   // le site a ouvert l'économie ; un onglet tant que le monde l'active.
   const wallet = usePersonaWallet(world_economy ? personaId ?? null : null, world_economy ? worldId : null);
+  const inventory = usePersonaInventory(personaId ?? null, worldId);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState<boolean | null>(null);
@@ -736,14 +735,17 @@ export function usePersonaProfile({
         icon: NotebookText,
         content: <PersonaJournalSection personaId={personaId} worldId={worldId} ownerId={userId} isNpc={isNpc} />,
       },
-      ...(wallet.status === "on" ? [{
-        id: "__wallet__",
-        label: tWallet("tab"),
-        icon: Coins,
+      // La bourse et les objets (migrations 246-247).
+      ...(wallet.status === "on" || inventory.status === "on" ? [{
+        id: "__inventory__",
+        label: tInventory("tab"),
+        icon: Backpack,
         content: (
-          <PersonaWalletSection
+          <PersonaInventoryTab
             personaName={name ?? label ?? ""}
             wallet={wallet}
+            inventory={inventory}
+            canEdit={isNpc ? membershipWorldId === worldId && can("npc.manage") : !!viewerId && viewerId === userId}
             canManage={membershipWorldId === worldId && can("economy.manage")}
           />
         ),

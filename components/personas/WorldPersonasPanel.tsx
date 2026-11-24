@@ -154,13 +154,11 @@ function shelfModeKey(worldId: string) {
 export function WorldPersonasPanel({
   worldId,
   myPersonas,
-  restrictInventory = false,
   restrictSkills = false,
   faceclaimsEnabled,
 }: {
   worldId: string;
   myPersonas: AsidePersona[];
-  restrictInventory?: boolean;
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
@@ -426,7 +424,6 @@ export function WorldPersonasPanel({
   const createSheet = (trigger: ReactNode, npc = false) => (
     <PersonaCreateSheet
       worldId={worldId}
-      restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
       defaultNpc={npc}
       trigger={trigger}
@@ -496,7 +493,6 @@ export function WorldPersonasPanel({
         openOnMount={p.id === focusPersonaId}
         initialSections={p.source === "mine" ? p.sections : npcSections.get(p.id) ?? []}
         worldId={worldId}
-        restrictInventory={restrictInventory}
         restrictSkills={restrictSkills}
         faceclaimsEnabled={faceclaimsEnabled}
         trigger={

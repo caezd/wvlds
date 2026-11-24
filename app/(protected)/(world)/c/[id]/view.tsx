@@ -101,7 +101,7 @@ function ChatroomHeader({
   rooms,
   rightSlot,
 }: {
-  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null } | null;
+  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
   rightSlot?: React.ReactNode;
@@ -216,7 +216,7 @@ export default function ChatRoomView({
     category_id: string | null;
     visibility: ChatroomVisibility;
     synopsis: string | null;
-    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null;
+    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null;
   };
   initialMessages: ChatMessageWithPersona[];
   initialHasMore: boolean;

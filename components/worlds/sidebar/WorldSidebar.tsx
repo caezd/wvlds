@@ -100,7 +100,6 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
           banner_url: world.banner_url,
           color: world.color,
           visibility: world.visibility,
-          restrict_inventory: world.restrict_inventory,
           restrict_skills: world.restrict_skills,
         },
         ...userWorlds,

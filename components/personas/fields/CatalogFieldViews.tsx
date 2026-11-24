@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { RARITY_COLORS, resolveCatalogEntry } from "@/lib/worldCatalog";
-import type { InventoryItem, SkillItem } from "@/types/personas";
+import { resolveCatalogEntry } from "@/lib/worldCatalog";
+import type { SkillItem } from "@/types/personas";
 import type { WorldCatalogItem, WorldCatalogProperty } from "@/types/worlds";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
 import { CatalogItemDetail } from "@/components/worlds/catalogue/CatalogItemDetail";
@@ -15,7 +14,7 @@ import { CatalogItemDetail } from "@/components/worlds/catalogue/CatalogItemDeta
  * fiche de persona (migration 186). Seule une entrée retrouvée dans le
  * catalogue en a une : une saisie libre ou un objet retiré n'ouvrent rien.
  */
-function useCatalogDetail(catalog: Map<string, WorldCatalogItem> | undefined) {
+export function useCatalogDetail(catalog: Map<string, WorldCatalogItem> | undefined) {
   const [detail, setDetail] = useState<WorldCatalogItem | null>(null);
   const open = (catalogId: string | undefined) => {
     const item = catalogId ? catalog?.get(catalogId) : undefined;
@@ -28,7 +27,7 @@ function useCatalogDetail(catalog: Map<string, WorldCatalogItem> | undefined) {
 }
 
 /**
- * L'inventaire et les compétences d'une fiche, en lecture.
+ * Les compétences d'une fiche, en lecture.
  *
  * Ces deux rendus existaient en double, mot pour mot, dans
  * `PersonaProfileSheet` et `PersonaProfileSheetTrigger` — deux fichiers de
@@ -75,62 +74,6 @@ export function EntryProperties({ properties, className }: { properties: WorldCa
         </div>
       ))}
     </dl>
-  );
-}
-
-export function InventoryFieldView({
-  items,
-  catalog,
-}: {
-  items: InventoryItem[];
-  catalog?: Map<string, WorldCatalogItem>;
-}) {
-  const detail = useCatalogDetail(catalog);
-  const visible = items
-    .map((item) => ({ item, resolved: resolveCatalogEntry(item, catalog) }))
-    .filter(({ resolved }) => resolved.name);
-  if (!visible.length) return null;
-
-  return (
-    <div className="rounded-lg border border-border bg-muted/30 p-3">
-      <div className="flex flex-wrap gap-2">
-        {visible.map(({ item, resolved }) => (
-          <Tooltip key={item.id}>
-            <TooltipTrigger asChild>
-              <div
-                role={item.catalog_id && !resolved.orphaned ? "button" : undefined}
-                tabIndex={item.catalog_id && !resolved.orphaned ? 0 : undefined}
-                onClick={() => detail.open(item.catalog_id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); detail.open(item.catalog_id); } }}
-                className={cn(
-                  "flex select-none items-center gap-1.5 rounded-md border bg-background px-2 py-1.5",
-                  item.catalog_id && !resolved.orphaned ? "cursor-pointer hover:bg-muted/40" : "cursor-default",
-                  resolved.orphaned ? "border-destructive/40" : "border-border",
-                )}
-                // La rareté colore la bordure ; un objet retiré garde la
-                // sienne, plus parlante que la couleur d'une rareté périmée.
-                style={
-                  resolved.rarity && !resolved.orphaned
-                    ? { borderColor: `${RARITY_COLORS[resolved.rarity]}66` }
-                    : undefined
-                }
-              >
-                <EntryImage icon={resolved.icon} lucideIcon={resolved.lucide_icon} imageUrl={resolved.image_url} size={28} />
-                <span className="text-sm font-medium leading-none">{resolved.name}</span>
-                <span className="text-xs tabular-nums text-muted-foreground">x {item.quantity ?? 1}</span>
-              </div>
-            </TooltipTrigger>
-            {(resolved.description || resolved.properties.length > 0) && (
-              <TooltipContent side="top" className="max-w-[240px] space-y-1.5 text-center">
-                {resolved.description && <p>{resolved.description}</p>}
-                <EntryProperties properties={resolved.properties} className="justify-center" />
-              </TooltipContent>
-            )}
-          </Tooltip>
-        ))}
-      </div>
-      {detail.sheet}
-    </div>
   );
 }
 
