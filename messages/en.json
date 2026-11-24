@@ -1155,9 +1155,9 @@
           "hours": "After {count, plural, one {# hour} other {# hours}}"
         },
         "offline": {
-          "title": "Without connection",
+          "title": "Reading while disconnected",
           "help": "What a player who isn't connected sees: only the Join button, or the messages read-only.",
-          "none": "Nothing",
+          "none": "Can't read anything",
           "read": "Read only"
         }
       },

@@ -27,17 +27,24 @@ beforeEach(() => {
 });
 
 describe("WorldLiveChatConnectionSettings (migration 244)", () => {
-  it("par défaut : connexion à l'arrivée, jamais déconnecté, rien sans connexion (sans objet)", () => {
+  it("par défaut : connexion à l'arrivée, jamais déconnecté, ne peut rien lire déconnecté (sans objet)", () => {
     render(<WorldLiveChatConnectionSettings world={monde()} />);
     expect(champ("Connexion")).toHaveTextContent("Dès l'arrivée dans le monde");
     expect(champ("Déconnexion pour inactivité")).toHaveTextContent("Jamais");
-    expect(champ("Sans connexion")).toHaveTextContent("Rien");
-    // Personne n'est jamais déconnecté : ce réglage n'a pas lieu d'être.
-    expect(champ("Sans connexion")).toBeDisabled();
+    expect(champ("Lecture déconnecté")).toHaveTextContent("Ne peut rien lire");
+    // Connecté dès l'arrivée : ni déconnexion, ni vue sans connexion.
+    expect(champ("Déconnexion pour inactivité")).toBeDisabled();
+    expect(champ("Lecture déconnecté")).toBeDisabled();
+  });
+
+  it("dès l'arrivée, un délai enregistré reste affiché mais grisé", () => {
+    render(<WorldLiveChatConnectionSettings world={monde({ live_chat_idle_minutes: 30 })} />);
+    expect(champ("Déconnexion pour inactivité")).toHaveTextContent("Après 30 minutes");
+    expect(champ("Déconnexion pour inactivité")).toBeDisabled();
   });
 
   it("propose les délais d'inactivité", async () => {
-    render(<WorldLiveChatConnectionSettings world={monde()} />);
+    render(<WorldLiveChatConnectionSettings world={monde({ live_chat_join_mode: "button" })} />);
     await userEvent.setup().click(champ("Déconnexion pour inactivité"));
     const options = await screen.findAllByRole("option");
     expect(options.map((o) => o.textContent)).toEqual([
@@ -51,21 +58,21 @@ describe("WorldLiveChatConnectionSettings (migration 244)", () => {
     ]);
   });
 
-  it("le bouton Rejoindre s'enregistre, et rend la vue sans connexion réglable", async () => {
+  it("le bouton Rejoindre s'enregistre, et rend la déconnexion et la vue sans connexion réglables", async () => {
     const onUpdated = vi.fn();
     render(<WorldLiveChatConnectionSettings world={monde()} onUpdated={onUpdated} />);
     await choisir("Connexion", "En cliquant sur Rejoindre");
     expect(setWorldLiveChatConnection).toHaveBeenCalledWith("w1", { live_chat_join_mode: "button" });
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ live_chat_join_mode: "button" }));
-    expect(champ("Sans connexion")).toBeEnabled();
-    await choisir("Sans connexion", "Lecture seule");
+    expect(champ("Déconnexion pour inactivité")).toBeEnabled();
+    expect(champ("Lecture déconnecté")).toBeEnabled();
+    await choisir("Lecture déconnecté", "Lecture seule");
     expect(setWorldLiveChatConnection).toHaveBeenLastCalledWith("w1", { live_chat_offline_view: "read" });
   });
 
   it("un délai, puis « Jamais »", async () => {
-    render(<WorldLiveChatConnectionSettings world={monde({ live_chat_idle_minutes: 30 })} />);
+    render(<WorldLiveChatConnectionSettings world={monde({ live_chat_join_mode: "button", live_chat_idle_minutes: 30 })} />);
     expect(champ("Déconnexion pour inactivité")).toHaveTextContent("Après 30 minutes");
-    expect(champ("Sans connexion")).toBeEnabled();
     await choisir("Déconnexion pour inactivité", "Jamais");
     expect(setWorldLiveChatConnection).toHaveBeenCalledWith("w1", { live_chat_idle_minutes: null });
   });
@@ -73,7 +80,7 @@ describe("WorldLiveChatConnectionSettings (migration 244)", () => {
   it("revient à la valeur précédente si l'enregistrement échoue", async () => {
     setWorldLiveChatConnection.mockResolvedValue({ ok: false, error: "saveFailed" });
     const onUpdated = vi.fn();
-    render(<WorldLiveChatConnectionSettings world={monde()} onUpdated={onUpdated} />);
+    render(<WorldLiveChatConnectionSettings world={monde({ live_chat_join_mode: "button" })} onUpdated={onUpdated} />);
     await choisir("Déconnexion pour inactivité", "Après 15 minutes");
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(champ("Déconnexion pour inactivité")).toHaveTextContent("Jamais");

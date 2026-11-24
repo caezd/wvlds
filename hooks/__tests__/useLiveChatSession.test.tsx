@@ -76,13 +76,10 @@ describe("useLiveChatSession", () => {
     expect(callsOf(mock, "join_world_live_chat")).toHaveLength(0);
   });
 
-  it("connexion à l'arrivée avec un délai : connecté sans message", async () => {
-    const { result, mock } = setup(
-      { live_chat_join_mode: "auto", live_chat_idle_minutes: 10, live_chat_offline_view: "none" },
-      { world_live_chat_session: () => ({ data: null }), join_world_live_chat: () => ({ data: now() }) },
-    );
-    await waitFor(() => expect(result.current.status).toBe("joined"));
-    expect(mock.rpc).toHaveBeenCalledWith("join_world_live_chat", { p_world: "w1", p_announce: false });
+  it("connexion à l'arrivée : un délai enregistré ne compte pas, rien n'est tenu", async () => {
+    const { result, mock } = setup({ live_chat_join_mode: "auto", live_chat_idle_minutes: 10, live_chat_offline_view: "read" });
+    await waitFor(() => expect(result.current.status).toBe("off"));
+    expect(mock.rpc).not.toHaveBeenCalled();
   });
 
   it("« Quitter » ferme la connexion", async () => {

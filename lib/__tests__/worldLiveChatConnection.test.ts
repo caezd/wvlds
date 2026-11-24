@@ -27,10 +27,10 @@ describe("liveChatConnectionOf", () => {
 });
 
 describe("liveChatSessionsOn", () => {
-  it("la connexion n'est tenue qu'avec le bouton Rejoindre ou un délai d'inactivité", () => {
+  it("la connexion n'est tenue qu'avec le bouton Rejoindre ; un délai seul n'y suffit pas", () => {
     expect(liveChatSessionsOn(DEFAULT_LIVE_CHAT_CONNECTION)).toBe(false);
     expect(liveChatSessionsOn({ ...DEFAULT_LIVE_CHAT_CONNECTION, joinMode: "button" })).toBe(true);
-    expect(liveChatSessionsOn({ ...DEFAULT_LIVE_CHAT_CONNECTION, idleMinutes: 10 })).toBe(true);
+    expect(liveChatSessionsOn({ ...DEFAULT_LIVE_CHAT_CONNECTION, idleMinutes: 10 })).toBe(false);
   });
 });
 

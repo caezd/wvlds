@@ -80,8 +80,9 @@ export function WorldLiveChatConnectionSettings({
     </Select>
   );
 
-  // Personne n'est jamais déconnecté : ce que voit un absent est sans objet.
-  const offlineRelevant = liveChatSessionsOn(value);
+  // Connecté dès l'arrivée, personne ne l'est par « Rejoindre » : la
+  // déconnexion et ce que voit un absent sont sans objet (grisés, gardés).
+  const sessionsOn = liveChatSessionsOn(value);
 
   return (
     <SettingsSection title={t("title")}>
@@ -105,6 +106,8 @@ export function WorldLiveChatConnectionSettings({
         <ToggleItem
           title={t("idle.title")}
           help={t("idle.help")}
+          indent
+          dimmed={!sessionsOn}
           control={select(
             t("idle.title"),
             value.idleMinutes === null ? NEVER : String(value.idleMinutes),
@@ -116,12 +119,14 @@ export function WorldLiveChatConnectionSettings({
               const preset = LIVE_CHAT_IDLE_PRESETS.find((m) => String(m) === v) ?? null;
               void save({ ...value, idleMinutes: preset }, { live_chat_idle_minutes: preset });
             },
+            !sessionsOn,
           )}
         />
         <ToggleItem
           title={t("offline.title")}
           help={t("offline.help")}
-          dimmed={!offlineRelevant}
+          indent
+          dimmed={!sessionsOn}
           control={select(
             t("offline.title"),
             value.offlineView,
@@ -133,7 +138,7 @@ export function WorldLiveChatConnectionSettings({
               const offlineView = v === "read" ? "read" : "none";
               void save({ ...value, offlineView }, { live_chat_offline_view: offlineView });
             },
-            !offlineRelevant,
+            !sessionsOn,
           )}
         />
       </ToggleList>

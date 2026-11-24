@@ -10,8 +10,9 @@ import { z } from "zod";
  * - `offlineView` : ce que voit un joueur non connecté, rien (`none`) ou les
  *   messages en lecture seule (`read`).
  *
- * `auto` sans délai : la connexion n'est pas tenue, tout le monde est présent
- * d'office (le comportement d'avant la migration).
+ * Les deux derniers ne valent qu'avec « Rejoindre » (migration 245) : en
+ * `auto`, la connexion n'est pas tenue, tout le monde est présent d'office
+ * (le comportement d'avant la migration 244) ; un délai enregistré attend.
  */
 export const LIVE_CHAT_CONNECTION_FIELDS = [
   "live_chat_join_mode",
@@ -55,9 +56,9 @@ export function liveChatConnectionOf(row: ConnectionRow | null | undefined): Liv
   };
 }
 
-/** La connexion est-elle tenue : bouton Rejoindre, ou délai d'inactivité ? */
+/** La connexion est-elle tenue ? Seulement avec le bouton Rejoindre. */
 export function liveChatSessionsOn(c: LiveChatConnection): boolean {
-  return c.joinMode === "button" || c.idleMinutes !== null;
+  return c.joinMode === "button";
 }
 
 /** L'heure (ms) où la connexion tombe sans nouvelle activité ; `null` : jamais. */

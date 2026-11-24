@@ -1155,9 +1155,9 @@
           "hours": "Tras {count, plural, one {# hora} other {# horas}}"
         },
         "offline": {
-          "title": "Sin conexión",
+          "title": "Lectura sin conexión",
           "help": "Lo que ve un jugador que no está conectado: solo el botón Unirse, o los mensajes en solo lectura.",
-          "none": "Nada",
+          "none": "No puede leer nada",
           "read": "Solo lectura"
         }
       },

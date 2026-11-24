@@ -53,7 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Chatbox : connexion des joueurs, dans Paramètres › Fonctions › Chatbox.\n- connexion dès l’arrivée dans le monde, ou en cliquant sur **Rejoindre**\n- déconnexion pour inactivité au choix, de 5 minutes à 2 heures : seuls l’écriture et l’envoi de messages comptent\n- sans connexion : rien, ou les messages en lecture seule\n- **Quitter** dans l’en-tête ; arrivées et départs annoncés dans **Général**",
+    text: "Chatbox : connexion des joueurs, dans Paramètres › Fonctions › Chatbox.\n- connexion dès l’arrivée dans le monde, ou en cliquant sur **Rejoindre**\n- avec **Rejoindre**, déconnexion pour inactivité au choix, de 5 minutes à 2 heures : seuls l’écriture et l’envoi de messages comptent\n- avec **Rejoindre**, **Lecture déconnecté** : ne peut rien lire, ou lecture seule\n- **Quitter** dans l’en-tête ; arrivées et départs annoncés dans **Général**",
   },
   {
     date: "2026-11-24",

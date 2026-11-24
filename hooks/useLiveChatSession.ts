@@ -27,15 +27,14 @@ export type LiveChatSessionResult = "ok" | "too_fast" | "error";
 const TOUCH_EVERY_MS = 60_000;
 
 /**
- * La connexion du joueur à la chatbox d'un monde (migration 244). Elle est
- * tenue par la base, une ligne par joueur et par monde : elle survit à un
- * rechargement, et la base annonce dans le fil l'arrivée par « Rejoindre » et
- * chaque départ.
+ * La connexion du joueur à la chatbox d'un monde (migrations 244 et 245),
+ * tenue seulement en mode « Rejoindre » : par la base, une ligne par joueur et
+ * par monde ; elle survit à un rechargement, et la base annonce dans le fil
+ * l'arrivée et chaque départ. En mode `auto`, rien n'est tenu (`off`).
  *
- * À l'arrivée dans le monde, en mode `auto` : connecté sans message. Une
- * déconnexion pour inactivité (minuteur ici, ou tâche planifiée en base pour
- * qui a fermé l'onglet) et les connexions d'un autre onglet arrivent par les
- * messages système du fil, sur le canal du monde.
+ * Une déconnexion pour inactivité (minuteur ici, ou tâche planifiée en base
+ * pour qui a fermé l'onglet) et les connexions d'un autre onglet arrivent par
+ * les messages système du fil, sur le canal du monde.
  */
 export function useLiveChatSession(worldId: string | null) {
   const supabase = useMemo(() => createClient(), []);
@@ -47,8 +46,6 @@ export function useLiveChatSession(worldId: string | null) {
   // La dernière activité connue ; `null` : pas connecté ; `undefined` : pas encore lu.
   const [lastActive, setLastActive] = useState<{ worldId: string; at: string | null } | null>(null);
   const at = lastActive && lastActive.worldId === worldId ? lastActive.at : undefined;
-  // Connexion silencieuse à l'arrivée : une fois par monde, pas à chaque reconnexion.
-  const arrivedRef = useRef<string | null>(null);
   const lastTouchRef = useRef(0);
 
   useEffect(() => {
@@ -71,26 +68,18 @@ export function useLiveChatSession(worldId: string | null) {
   const refresh = useCallback(() => setRefreshes((n) => n + 1), []);
 
   // L'état de la connexion : à l'arrivée, à chaque reconnexion, sur demande.
-  const joinMode = connection?.joinMode;
   useEffect(() => {
     if (!worldId || !userId || !sessionsOn) return;
     let cancelled = false;
-    void (async () => {
-      const { data, error } = await supabase.rpc("world_live_chat_session", { p_world: worldId });
-      if (cancelled || error) return;
-      let current = (data as string | null) ?? null;
-      if (!current && joinMode === "auto" && arrivedRef.current !== worldId) {
-        const joined = await supabase.rpc("join_world_live_chat", { p_world: worldId, p_announce: false });
-        if (cancelled) return;
-        current = joined.error ? null : ((joined.data as string | null) ?? null);
-      }
-      arrivedRef.current = worldId;
-      setLastActive({ worldId, at: current });
-    })();
+    void supabase
+      .rpc("world_live_chat_session", { p_world: worldId })
+      .then(({ data, error }: { data: unknown; error: unknown }) => {
+        if (!cancelled && !error) setLastActive({ worldId, at: (data as string | null) ?? null });
+      });
     return () => {
       cancelled = true;
     };
-  }, [supabase, worldId, userId, sessionsOn, joinMode, reconnectEpoch, refreshes]);
+  }, [supabase, worldId, userId, sessionsOn, reconnectEpoch, refreshes]);
 
   // À l'échéance, la base dit si la connexion est tombée (elle écrit alors le
   // message d'inactivité).
