@@ -64,7 +64,6 @@ export type WorldFeatureField =
   | "enable_shops"
   | "enable_trades"
   | "trades_same_account"
-  | "enable_gains"
   | "live_chat_colors"
   | "live_chat_bubbles"
   | "live_chat_personas"

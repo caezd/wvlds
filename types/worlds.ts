@@ -178,8 +178,7 @@ export type World = {
   /** Échanges entre personas, et entre personas d'un même compte (migration 251) ; coupés par défaut. */
   enable_trades?: boolean | null;
   trades_same_account?: boolean | null;
-  /** Gains automatiques (migration 252), en unités de base ; voir lib/worldGains. */
-  enable_gains?: boolean | null;
+  /** Gains automatiques (migrations 252, 253), en unités de base ; voir lib/worldGains. */
   gain_message?: number | null;
   gain_scene_joined?: number | null;
   gain_scene_created?: number | null;

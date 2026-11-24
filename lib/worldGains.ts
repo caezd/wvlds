@@ -3,9 +3,10 @@ import { z } from "zod";
 import { MAX_CURRENCY_VALUE } from "@/lib/worldCurrency";
 
 /**
- * Les gains automatiques d'un monde (migration 252) : la base crédite les
- * personas quand ils jouent — un message, une scène créée, rejointe ou
- * terminée, la première visite du jour. Réglés par monde ; un délai entre
+ * Les gains automatiques d'un monde (migrations 252, 253) : la base crédite
+ * les personas quand ils jouent — un message, une scène créée, rejointe ou
+ * terminée, la première visite du jour. Réglés par monde dans la page
+ * Devises, sans interrupteur : un montant à zéro ne paie rien. Un délai entre
  * deux messages payés et un plafond par jour tiennent les abus.
  *
  * Fonctions pures, voir `lib/__tests__/worldGains.test.ts`. Les bornes sont
@@ -63,8 +64,9 @@ export const gainSettingsSchema = z.strictObject({
   gain_daily_cap: amount.nullable(),
 });
 
-export function worldHasGains(world: { enable_economy?: boolean | null; enable_gains?: boolean | null } | null | undefined): boolean {
-  return !!world && world.enable_economy === true && world.enable_gains === true;
+/** Les gains ne demandent que l'économie : ce sont leurs montants qui décident. */
+export function worldHasGains(world: { enable_economy?: boolean | null } | null | undefined): boolean {
+  return !!world && world.enable_economy === true;
 }
 
 /** Ce qu'un gain crédite vraiment, une fois le plafond du jour appliqué. Miroir de `economy_gain`. */

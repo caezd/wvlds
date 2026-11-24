@@ -12,10 +12,9 @@ import {
 } from "@/lib/worldGains";
 
 describe("worldHasGains", () => {
-  it("exige l'économie et l'option Gains", () => {
-    expect(worldHasGains({ enable_economy: true, enable_gains: true })).toBe(true);
-    expect(worldHasGains({ enable_economy: false, enable_gains: true })).toBe(false);
-    expect(worldHasGains({ enable_economy: true, enable_gains: false })).toBe(false);
+  it("l'économie suffit : un gain à zéro ne paie rien", () => {
+    expect(worldHasGains({ enable_economy: true })).toBe(true);
+    expect(worldHasGains({ enable_economy: false })).toBe(false);
     expect(worldHasGains(null)).toBe(false);
   });
 });
@@ -103,5 +102,21 @@ describe("migration 252", () => {
   it("le gain quotidien n'est ouvert qu'aux connectés", () => {
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.claim_daily_gain\(uuid\) FROM PUBLIC, anon;/);
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.claim_daily_gain\(uuid\) TO authenticated;/);
+  });
+});
+
+describe("migration 253", () => {
+  const sql = readFileSync(path.join(process.cwd(), "migrations/253_world_gains_amounts_only.sql"), "utf8");
+
+  it("redéfinit les quatre fonctions des gains", () => {
+    for (const fn of ["economy_gain", "tg_chat_message_gains", "tg_chatroom_gains", "claim_daily_gain"]) {
+      expect(sql).toMatch(new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\(`));
+    }
+  });
+
+  it("un gain ne bloque toujours ni un message ni un salon", () => {
+    const triggers = sql.match(/CREATE OR REPLACE FUNCTION public\.tg_[a-z_]*gains?[a-z_]*\(\)[\s\S]*?\$\$;/g) ?? [];
+    expect(triggers.length).toBe(2);
+    for (const body of triggers) expect(body).toMatch(/EXCEPTION WHEN OTHERS THEN\s+RAISE WARNING/);
   });
 });

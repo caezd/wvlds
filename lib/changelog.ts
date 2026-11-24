@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Gains : la monnaie du monde se gagne en jouant, à activer dans Paramètres › Fonctions › Économie › Devises.\n- montant par message, par scène rejointe, créée ou terminée\n- gain de la première visite du jour, pour chacun de vos personas du monde\n- délai entre deux messages payés, sous le gain par message\n- plafond par jour, à part\n- montants réglables au clavier ou aux boutons −/+\n- chaque gain apparaît dans l’historique de la bourse",
+    text: "Gains : la monnaie du monde se gagne en jouant, à régler dans Paramètres › Fonctions › Économie › Devises ; un montant à zéro ne rapporte rien.\n- montant par message\n- gain de la première visite du jour, pour chacun de vos personas du monde\n- délai entre deux messages payés, sous le gain par message\n- plafond par jour, à part\n- montants réglables au clavier ou aux boutons −/+\n- chaque gain apparaît dans l’historique de la bourse",
   },
   {
     date: "2026-11-24",

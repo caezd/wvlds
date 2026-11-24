@@ -1249,8 +1249,7 @@
       "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre.",
       "gainsForm": {
         "title": "Gains",
-        "help": "La monnaie du monde gagnée en jouant : par message, par scène rejointe, créée ou terminée, et à la première visite du jour.",
-        "enable": "Activer les gains",
+        "help": "La monnaie du monde gagnée en jouant : par message et à la première visite du jour. Un montant à zéro ne rapporte rien.",
         "events": "Ce qui rapporte",
         "amountIn": "{label} en {unit}",
         "message": "Par message",

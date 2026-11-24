@@ -4,10 +4,8 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const setWorldGains = vi.fn();
-const setWorldFeature = vi.fn();
 vi.mock("@/app/actions/worldCatalog", () => ({
   setWorldGains: (...args: unknown[]) => setWorldGains(...args),
-  setWorldFeature: (...args: unknown[]) => setWorldFeature(...args),
 }));
 
 import { WorldGainsSettings } from "@/components/worlds/settings/WorldGainsSettings";
@@ -22,7 +20,6 @@ const monde = (patch: Record<string, unknown> = {}) =>
     id: "w1",
     name: "Monde",
     enable_economy: true,
-    enable_gains: true,
     currency_units: UNITS,
     gain_message: 5,
     gain_scene_joined: 0,
@@ -39,23 +36,10 @@ const enregistrer = () => screen.getByRole("button", { name: "Enregistrer les ga
 beforeEach(() => {
   vi.clearAllMocks();
   setWorldGains.mockResolvedValue({ ok: true });
-  setWorldFeature.mockResolvedValue({ ok: true });
 });
 
 describe("WorldGainsSettings (migration 252)", () => {
-  it("une section Gains, avec son interrupteur ; montants grisés tant qu'elle est coupée", async () => {
-    const user = userEvent.setup();
-    const onUpdated = vi.fn();
-    render(<WorldGainsSettings world={monde({ enable_gains: false })} onUpdated={onUpdated} />);
-    const section = screen.getByRole("region", { name: "Gains" });
-    expect(champ("Par message en Argent")).toBeDisabled();
-    await user.click(within(section).getByRole("switch", { name: "Activer les gains" }));
-    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_gains", true));
-    expect(onUpdated).toHaveBeenCalledWith({ enable_gains: true });
-    await waitFor(() => expect(champ("Par message en Argent")).toBeEnabled());
-  });
-
-  it("le délai suit « Par message » ; le plafond, à part de la liste des gains", () => {
+  it("le délai suit « Par message » ; les gains de scène, masqués pour l'instant ; le plafond, à part", () => {
     render(<WorldGainsSettings world={monde()} />);
     const gains = screen.getByRole("group", { name: "Ce qui rapporte" });
     const lignes = within(gains)
@@ -65,9 +49,6 @@ describe("WorldGainsSettings (migration 252)", () => {
     expect(lignes).toEqual([
       "Par message en Argent",
       "Délai entre deux messages payés (minutes)",
-      "Par scène rejointe en Argent",
-      "Par scène créée en Argent",
-      "Par scène terminée en Argent",
       "Connexion du jour en Argent",
     ]);
     expect(within(gains).queryByRole("spinbutton", { name: "Plafond par jour en Or" })).toBeNull();
@@ -77,26 +58,24 @@ describe("WorldGainsSettings (migration 252)", () => {
   it("chaque gain, palier par palier, avec les montants du monde", () => {
     render(<WorldGainsSettings world={monde()} />);
     expect(champ("Par message en Argent")).toHaveValue(5);
-    expect(champ("Par scène terminée en Or")).toHaveValue(1);
-    expect(champ("Par scène terminée en Argent")).toHaveValue(50);
     expect(champ("Délai entre deux messages payés (minutes)")).toHaveValue(2);
     expect(champ("Plafond par jour en Or")).toHaveValue(null);
     expect(enregistrer()).toBeDisabled();
   });
 
-  it("enregistre les montants en unités de base, le plafond vide = sans plafond", async () => {
+  it("enregistre les montants en unités de base, le plafond vide = sans plafond ; les gains de scène masqués gardent leur valeur", async () => {
     const user = userEvent.setup();
     render(<WorldGainsSettings world={monde()} />);
-    await user.type(champ("Par scène rejointe en Or"), "1");
+    await user.type(champ("Connexion du jour en Or"), "1");
     await user.type(champ("Connexion du jour en Argent"), "3");
     await user.click(enregistrer());
     await waitFor(() =>
       expect(setWorldGains).toHaveBeenCalledWith("w1", {
         gain_message: 5,
-        gain_scene_joined: 100,
+        gain_scene_joined: 0,
         gain_scene_created: 0,
         gain_scene_completed: 150,
-        gain_daily_login: 3,
+        gain_daily_login: 103,
         gain_message_cooldown: 2,
         gain_daily_cap: null,
       }),

@@ -1249,8 +1249,7 @@
       "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another.",
       "gainsForm": {
         "title": "Earnings",
-        "help": "World currency earned by playing: per message, per scene joined, created or completed, and on the first visit of the day.",
-        "enable": "Enable earnings",
+        "help": "World currency earned by playing: per message and on the first visit of the day. An amount of zero earns nothing.",
         "events": "What earns",
         "amountIn": "{label} in {unit}",
         "message": "Per message",
