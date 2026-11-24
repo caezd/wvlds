@@ -3,12 +3,10 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowDown, ArrowLeft, ArrowUp, CornerDownRight, FolderInput, Loader2, MoreHorizontal, Pipette, Plus, Trash2, Users } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, CornerDownRight, FolderInput, Loader2, MoreHorizontal, Plus, Trash2, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,25 +20,23 @@ import {
   PERSONA_ASSIGNMENT_COLUMNS,
   PERSONA_GROUP_COLUMNS,
   childrenOf,
-  groupSubtreeIds,
   indexAssignments,
   normalizeGroupRow,
   resolvePersonaGroups,
   type PersonaGroupAssignment,
   type PersonaGroupRow,
 } from "@/lib/personaGroups";
-import { ColorPickerButton } from "./ColorPickerButton";
-import { WorldGroupDetail, type GroupPersona } from "./WorldGroupDetail";
+import { WorldGroupDetail, type GroupFields, type GroupPersona } from "./WorldGroupDetail";
 import { FeaturePage, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
 
-/** Une ligne de la liste : bordée, sur le fond des cartes. */
-const ROW = SETTINGS_ROW;
+/** Une ligne de la liste : bordée, sur le fond des cartes ; le bouton qu'elle contient l'occupe. */
+const ROW = cn(SETTINGS_ROW, "flex-nowrap gap-1 py-1 pl-1");
+/** Le bouton d'une ligne, qui ouvre la page du groupe. */
+const ROW_BUTTON =
+  "flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 /** La ligne d'ajout, en pointillés. */
-const ADD_ROW = "flex min-h-12 flex-wrap items-center gap-3 rounded-md border border-dashed border-border py-1.5 pl-3 pr-1.5";
-/** Un champ sans cadre, dans une ligne. */
-const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0";
-/** La pastille de couleur. */
-const SWATCH = "size-6 rounded-md border-0 shadow-none";
+const ADD_ROW =
+  "flex min-h-12 w-full items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 /** Le retrait d'un sous-groupe, par niveau. */
 const INDENT_REM = 1.5;
 
@@ -57,14 +53,15 @@ function asTree(rows: readonly PersonaGroupRow[]): TreeNode[] {
   return rows.map((g) => ({ id: g.id, parent_id: g.parent_id, is_folder: true, sort_index: g.sort_index }));
 }
 
+/** La page ouverte : celle d'un groupe, ou celle d'un groupe à créer (sous `parentId`). */
+type OpenPage = { id: string } | { parentId: string | null };
+
 /**
  * L'onglet Groupes des réglages d'un monde (migration 232) : les groupes de
- * personas en arbre. Chaque ligne se modifie sur place — couleur, nom,
- * couleur appliquée ou non — et s'enregistre à la sortie du champ (la
- * couleur, un instant après le dernier réglage). Le menu d'une ligne ajoute
- * un sous-groupe, déplace d'un cran (même règle que l'arbre du wiki), rend la
- * couleur héritée ou supprime. Le nombre de membres d'une ligne ouvre la fiche
- * du groupe (`WorldGroupDetail`) : description et membres (migration 242).
+ * personas en arbre. Une ligne ouvre la page du groupe (`WorldGroupDetail`),
+ * où il se règle — nom, description, couleur, membres — et où se crée un
+ * groupe ou un sous-groupe. Le menu d'une ligne garde ce qui se fait vite :
+ * déplacer d'un cran (même règle que l'arbre du wiki) et supprimer.
  *
  * Un sous-groupe sans couleur propre prend celle de son parent ; supprimer un
  * groupe fait remonter ses sous-groupes d'un niveau (la base fait de même).
@@ -78,8 +75,7 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
   const [rows, setRows] = React.useState<PersonaGroupRow[] | null>(null);
   const [assignments, setAssignments] = React.useState<PersonaGroupAssignment[]>([]);
   const [personas, setPersonas] = React.useState<GroupPersona[]>([]);
-  // Le groupe dont la fiche est ouverte.
-  const [openId, setOpenId] = React.useState<string | null>(null);
+  const [page, setPage] = React.useState<OpenPage | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -121,19 +117,6 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     return counts;
   }, [index]);
 
-  // Un nouveau groupe à la racine, ou un sous-groupe sous `addingUnder`.
-  const [newName, setNewName] = React.useState("");
-  const [newColor, setNewColor] = React.useState<string>(DEFAULT_PLAYER_COLOR);
-  const [addingUnder, setAddingUnder] = React.useState<string | null>(null);
-  const [subName, setSubName] = React.useState("");
-  const subInput = React.useRef<HTMLInputElement>(null);
-  React.useEffect(() => {
-    if (!addingUnder) return;
-    // Après la fermeture du menu, qui rend le focus à son bouton.
-    const timer = setTimeout(() => subInput.current?.focus(), 0);
-    return () => clearTimeout(timer);
-  }, [addingUnder]);
-
   // La couleur s'enregistre un instant après le dernier réglage.
   const colorTimers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
   React.useEffect(() => {
@@ -150,41 +133,25 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     setRows((prev) => prev?.map((g) => (g.id === id ? { ...g, ...patch } : g)) ?? null);
   }
 
-  async function save(id: string, patch: Partial<Pick<PersonaGroupRow, "name" | "description" | "color" | "apply_color">>) {
+  async function save(id: string, patch: Partial<GroupFields>) {
     const { error } = await supabase.from("world_persona_groups").update(patch).eq("id", id);
     if (error) { toast.error(tCommon("saveError")); return false; }
     return true;
   }
 
-  async function insert(values: Omit<PersonaGroupRow, "id" | "description">) {
+  /** Crée le groupe à la fin de son parent, puis ouvre sa page. */
+  async function create(parentId: string | null, values: GroupFields) {
+    if (!rows) return false;
     const { data, error } = await supabase
       .from("world_persona_groups")
-      .insert({ world_id: worldId, ...values })
+      .insert({ world_id: worldId, ...values, parent_id: parentId, sort_index: childrenOf(rows, parentId).length })
       .select(PERSONA_GROUP_COLUMNS)
       .single();
     if (error || !data) { toast.error(tCommon("saveError")); return false; }
-    setRows((prev) => [...(prev ?? []), normalizeGroupRow(data as PersonaGroupRow)]);
+    const row = normalizeGroupRow(data as PersonaGroupRow);
+    setRows((prev) => [...(prev ?? []), row]);
+    setPage({ id: row.id });
     return true;
-  }
-
-  async function addRoot() {
-    if (!newName.trim() || !rows) return;
-    const ok = await insert({
-      name: newName.trim(), color: newColor, parent_id: null,
-      sort_index: childrenOf(rows, null).length, apply_color: true,
-    });
-    if (ok) setNewName("");
-  }
-
-  async function addSub(parentId: string) {
-    const parent = byId.get(parentId);
-    if (!subName.trim() || !rows || !parent) return;
-    // Sans couleur propre : il prend celle de son parent, et l'applique comme lui.
-    const ok = await insert({
-      name: subName.trim(), color: null, parent_id: parentId,
-      sort_index: childrenOf(rows, parentId).length, apply_color: parent.apply_color,
-    });
-    if (ok) { setSubName(""); setAddingUnder(null); }
   }
 
   async function remove(id: string) {
@@ -198,7 +165,6 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     setRows((prev) => (prev ?? [])
       .filter((g) => g.id !== id)
       .map((g) => (g.parent_id === id ? { ...g, parent_id: gone.parent_id, color: g.color ?? gone.color } : g)));
-    if (addingUnder === id) setAddingUnder(null);
   }
 
   async function move(id: string, command: MoveCommand) {
@@ -230,27 +196,35 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     );
   }
 
-  const open = openId ? byId.get(openId) : undefined;
-  if (open) {
+  const group = page && "id" in page ? byId.get(page.id) ?? null : null;
+  // La page d'un groupe disparu entre-temps laisse place à la liste.
+  if (page && ("parentId" in page || group)) {
+    const parentId = "parentId" in page ? page.parentId : group?.parent_id ?? null;
     return (
       <WorldGroupDetail
+        // Une autre page repart de zéro (brouillon, champs).
+        key={"id" in page ? page.id : `new:${page.parentId ?? ""}`}
         worldId={worldId}
-        group={open}
+        group={group}
+        parent={parentId ? byId.get(parentId) : undefined}
         groupsById={byId}
         personas={personas}
         index={index}
-        onBack={() => setOpenId(null)}
-        onEdit={(patch) => edit(open.id, patch)}
-        onSave={(patch) => save(open.id, patch)}
+        onBack={() => setPage(null)}
+        onEdit={(patch) => { if (group) edit(group.id, patch); }}
+        onSave={(patch) => (group ? save(group.id, patch) : Promise.resolve(false))}
+        onColorChange={(color) => {
+          if (!group) return;
+          edit(group.id, { color });
+          persistColorSoon(group.id, color);
+        }}
+        onCreate={(values) => create(parentId, values)}
         onAssignmentsChange={setAssignments}
       />
     );
   }
 
   const tree = asTree(rows);
-  // La ligne d'ajout d'un sous-groupe se pose après toute la descendance de son parent.
-  const subtree = addingUnder ? groupSubtreeIds(rows, addingUnder) : null;
-  const addAfter = subtree ? [...groups].reverse().find((g) => subtree.has(g.id))?.id ?? null : null;
 
   return (
     <FeaturePage title={t("groups")}>
@@ -271,167 +245,80 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
               const into = moves.entrer ? byId.get(moves.entrer.targetId) : undefined;
               return t("moveInto", { name: into?.name ?? "" });
             };
-            const inherited = g.color === null;
+            const inherited = g.color === null && !!parent;
             return (
-              <React.Fragment key={g.id}>
-                <li
-                  className={ROW}
-                  style={{ marginLeft: `${g.depth * INDENT_REM}rem` }}
-                  data-group-id={g.id}
-                  data-depth={g.depth}
-                  aria-level={g.depth + 1}
+              <li
+                key={g.id}
+                className={ROW}
+                style={{ marginLeft: `${g.depth * INDENT_REM}rem` }}
+                data-group-id={g.id}
+                data-depth={g.depth}
+                aria-level={g.depth + 1}
+              >
+                <button
+                  type="button"
+                  className={ROW_BUTTON}
+                  aria-label={t("openGroup", { name: g.name })}
+                  onClick={() => setPage({ id: g.id })}
                 >
                   {g.depth > 0 && <CornerDownRight className="-mr-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />}
-                  <div
-                    className={cn("flex rounded-md", inherited && "outline-1 outline-offset-2 outline-dashed outline-muted-foreground/60")}
+                  <span
+                    className={cn(
+                      "size-6 shrink-0 rounded-md",
+                      inherited && "outline-1 outline-offset-2 outline-dashed outline-muted-foreground/60",
+                    )}
+                    style={{ backgroundColor: g.swatch ?? DEFAULT_PLAYER_COLOR }}
                     title={inherited && parent ? t("inheritedColor", { name: parent.name }) : undefined}
+                    data-group-swatch
                     data-inherited={inherited || undefined}
-                  >
-                    <ColorPickerButton
-                      color={g.swatch ?? DEFAULT_PLAYER_COLOR}
-                      className={SWATCH}
-                      onChange={(color) => {
-                        edit(g.id, { color });
-                        persistColorSoon(g.id, color);
-                      }}
-                    />
-                  </div>
-                  <Input
-                    value={g.name}
-                    aria-label={t("groupName")}
-                    className={BARE_INPUT}
-                    onChange={(e) => edit(g.id, { name: e.target.value })}
-                    onBlur={(e) => { if (e.target.value.trim()) void save(g.id, { name: e.target.value.trim() }); }}
                   />
-                  <button
-                    type="button"
-                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground")}
-                    aria-label={t("openGroup", { name: g.name })}
-                    onClick={() => setOpenId(g.id)}
-                  >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium" data-group-name>{g.name}</span>
+                    {g.description && <span className="block truncate text-xs text-muted-foreground">{g.description}</span>}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                     <Users className="size-3.5" aria-hidden />
                     {t("memberCount", { count: memberCount.get(g.id) ?? 0 })}
-                  </button>
-                  <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                    {t("applyColor")}
-                    <Switch
-                      checked={g.apply_color}
-                      aria-label={t("applyColorFor", { name: g.name })}
-                      onCheckedChange={async (on) => {
-                        edit(g.id, { apply_color: on });
-                        if (!(await save(g.id, { apply_color: on }))) edit(g.id, { apply_color: !on });
-                      }}
-                    />
-                  </label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8 text-muted-foreground")}
-                        aria-label={t("groupActions", { name: g.name })}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem onClick={() => { setSubName(""); setAddingUnder(g.id); }}>
-                        <Plus className="mr-2 size-4" /> {t("addSubgroup")}
-                      </DropdownMenuItem>
-                      {MOVES.some(({ command }) => moves[command]) && <DropdownMenuSeparator />}
-                      {MOVES.filter(({ command }) => moves[command]).map(({ command, Icon }) => (
-                        <DropdownMenuItem key={command} onClick={() => void move(g.id, command)}>
-                          <Icon className="mr-2 size-4" /> {moveLabel(command)}
-                        </DropdownMenuItem>
-                      ))}
-                      {parent && !inherited && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={async () => {
-                              const before = g.color;
-                              edit(g.id, { color: null });
-                              if (!(await save(g.id, { color: null }))) edit(g.id, { color: before });
-                            }}
-                          >
-                            <Pipette className="mr-2 size-4" /> {t("inheritColor", { name: parent.name })}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => void remove(g.id)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 size-4" /> {t("deleteGroup")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {g.description && (
-                    <p className="w-full truncate pb-1 pl-9 text-xs text-muted-foreground">{g.description}</p>
-                  )}
-                </li>
-                {addingUnder && addAfter === g.id && (
-                  <li
-                    className={ADD_ROW}
-                    style={{ marginLeft: `${((byId.get(addingUnder)?.depth ?? 0) + 1) * INDENT_REM}rem` }}
-                  >
-                    <CornerDownRight className="-mr-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                    <Input
-                      ref={subInput}
-                      value={subName}
-                      onChange={(e) => setSubName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void addSub(addingUnder);
-                        if (e.key === "Escape") setAddingUnder(null);
-                      }}
-                      placeholder={t("subgroupNamePlaceholder")}
-                      aria-label={t("subgroupNamePlaceholder")}
-                      className={cn(BARE_INPUT, "font-normal")}
-                    />
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setAddingUnder(null)}>
-                      {tCommon("cancel")}
-                    </Button>
-                    <Button
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0"
-                      disabled={!subName.trim()}
-                      aria-label={t("addSubgroupTo", { name: byId.get(addingUnder)?.name ?? "" })}
-                      onClick={() => void addSub(addingUnder)}
+                      className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8 shrink-0 text-muted-foreground")}
+                      aria-label={t("groupActions", { name: g.name })}
                     >
-                      <Plus className="size-3.5" aria-hidden />
-                      {tCommon("add")}
-                    </Button>
-                  </li>
-                )}
-              </React.Fragment>
+                      <MoreHorizontal className="size-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => setPage({ parentId: g.id })}>
+                      <Plus className="mr-2 size-4" /> {t("addSubgroup")}
+                    </DropdownMenuItem>
+                    {MOVES.some(({ command }) => moves[command]) && <DropdownMenuSeparator />}
+                    {MOVES.filter(({ command }) => moves[command]).map(({ command, Icon }) => (
+                      <DropdownMenuItem key={command} onClick={() => void move(g.id, command)}>
+                        <Icon className="mr-2 size-4" /> {moveLabel(command)}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => void remove(g.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 size-4" /> {t("deleteGroup")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </li>
             );
           })}
         </ul>
-        <div className={ADD_ROW}>
-          <ColorPickerButton color={newColor} onChange={setNewColor} className={SWATCH} />
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void addRoot(); }}
-            placeholder={t("groupNamePlaceholder")}
-            aria-label={t("groupNamePlaceholder")}
-            className={cn(BARE_INPUT, "font-normal")}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            disabled={!newName.trim()}
-            aria-label={t("addGroup")}
-            onClick={() => void addRoot()}
-          >
-            <Plus className="size-3.5" aria-hidden />
-            {tCommon("add")}
-          </Button>
-        </div>
+        <button type="button" className={ADD_ROW} onClick={() => setPage({ parentId: null })}>
+          <Plus className="size-4" aria-hidden />
+          {t("newGroup")}
+        </button>
       </SettingsSection>
     </FeaturePage>
   );

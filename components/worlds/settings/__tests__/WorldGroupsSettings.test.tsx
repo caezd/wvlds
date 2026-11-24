@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
@@ -33,9 +34,9 @@ const AFFECTATIONS = [
 const PROFILS = [{ id: "u1", username: "alice" }, { id: "u2", username: "bob" }];
 
 /** Les lectures du montage (groupes, affectations, personas, joueurs), puis les écritures dans l'ordre. */
-function monter(ecritures: { data?: unknown; error?: unknown }[] = []) {
+function monter(ecritures: { data?: unknown; error?: unknown }[] = [], groupes: unknown[] = GROUPES) {
   const mock = createSupabaseMock({
-    results: [{ data: GROUPES }, { data: AFFECTATIONS }, { data: PERSONAS }, { data: PROFILS }, ...ecritures],
+    results: [{ data: groupes }, { data: AFFECTATIONS }, { data: PERSONAS }, { data: PROFILS }, ...ecritures],
   });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   render(<WorldGroupsSettings worldId="w1" />);
@@ -45,84 +46,47 @@ function monter(ecritures: { data?: unknown; error?: unknown }[] = []) {
 /** Les lignes de groupe, dans l'ordre affiché : [nom, profondeur]. */
 function lignes() {
   const liste = screen.getByRole("list", { name: "Groupes" });
-  return within(liste).getAllByRole("textbox", { name: "Nom du groupe" }).map((input) => {
-    const li = input.closest("li")!;
-    return [(input as HTMLInputElement).value, Number(li.getAttribute("data-depth"))];
-  });
+  return Array.from(liste.querySelectorAll<HTMLElement>("li[data-group-id]")).map((li) => [
+    li.querySelector("[data-group-name]")!.textContent,
+    Number(li.getAttribute("data-depth")),
+  ]);
+}
+
+/** La ligne d'un groupe dans la liste. */
+function ligne(nom: string) {
+  return screen.getByRole("button", { name: `Gérer le groupe ${nom}` }).closest("li")!;
 }
 
 async function ouvrirMenu(user: ReturnType<typeof userEvent.setup>, nom: string) {
   await user.click(await screen.findByRole("button", { name: `Actions du groupe ${nom}` }));
 }
 
+/** Ouvre la page d'un groupe depuis sa ligne ; son titre est le chemin du groupe. */
+async function ouvrirPage(user: ReturnType<typeof userEvent.setup>, nom: string, titre = nom) {
+  await user.click(await screen.findByRole("button", { name: `Gérer le groupe ${nom}` }));
+  return screen.findByRole("heading", { level: 3, name: titre });
+}
+
 beforeEach(() => vi.clearAllMocks());
 
-describe("WorldGroupsSettings", () => {
+describe("WorldGroupsSettings — la liste", () => {
   it("l'arbre : un sous-groupe sous son parent, en retrait ; sa couleur héritée est signalée", async () => {
     monter();
     expect(await screen.findByRole("heading", { level: 3, name: "Groupes" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Groupes de personas" })).toHaveTextContent("3 groupes");
     expect(lignes()).toEqual([["Maison", 0], ["Branche cadette", 1], ["Ordre", 0]]);
-    const cadette = screen.getByDisplayValue("Branche cadette").closest("li")!;
-    expect(cadette.querySelector("[data-inherited]")).toHaveAttribute("title", "Couleur héritée de « Maison »");
+    const cadette = ligne("Branche cadette").querySelector("[data-group-swatch]")!;
+    expect(cadette).toHaveAttribute("data-inherited");
+    expect(cadette).toHaveAttribute("title", "Couleur héritée de « Maison »");
     // La pastille montre la couleur héritée.
-    expect(within(cadette).getByRole("button", { name: "Choisir une couleur" })).toHaveStyle({ backgroundColor: "#ff0000" });
+    expect(cadette).toHaveStyle({ backgroundColor: "#ff0000" });
   });
 
-  it("« Couleur appliquée » : un interrupteur par groupe, enregistré à la bascule", async () => {
-    const mock = monter([{ data: null }]);
-    const user = userEvent.setup();
-    const ordre = await screen.findByRole("switch", { name: "Appliquer la couleur de Ordre" });
-    expect(ordre).toHaveAttribute("data-state", "unchecked");
-    expect(screen.getByRole("switch", { name: "Appliquer la couleur de Maison" })).toHaveAttribute("data-state", "checked");
-    await user.click(ordre);
-    expect(ordre).toHaveAttribute("data-state", "checked");
-    const ecriture = mock.buildersFor("world_persona_groups").at(-1)!;
-    expect(ecriture.update).toHaveBeenCalledWith({ apply_color: true });
-    expect(ecriture.eq).toHaveBeenCalledWith("id", "ordre");
-  });
-
-  it("un échec d'enregistrement rétablit l'interrupteur", async () => {
-    monter([{ error: { message: "rls" } }]);
-    const user = userEvent.setup();
-    const maison = await screen.findByRole("switch", { name: "Appliquer la couleur de Maison" });
-    await user.click(maison);
-    await waitFor(() => expect(maison).toHaveAttribute("data-state", "checked"));
-    expect(toast.error).toHaveBeenCalledWith("L'enregistrement a échoué");
-  });
-
-  it("ajouter un sous-groupe : sans couleur propre, il hérite de son parent et l'applique comme lui", async () => {
-    const mock = monter([{
-      data: { id: "gardes", name: "Gardes", color: null, parent_id: "maison", sort_index: 1, apply_color: true },
-    }]);
-    const user = userEvent.setup();
-    await ouvrirMenu(user, "Maison");
-    await user.click(await screen.findByRole("menuitem", { name: "Ajouter un sous-groupe" }));
-    const champ = await screen.findByRole("textbox", { name: "Nom du sous-groupe…" });
-    // La ligne d'ajout se pose après toute la descendance du parent.
-    expect(champ.closest("li")!.previousElementSibling).toHaveAttribute("data-group-id", "cadette");
-    await user.type(champ, "Gardes");
-    await user.click(screen.getByRole("button", { name: "Ajouter ce sous-groupe à Maison" }));
-    expect(mock.buildersFor("world_persona_groups").at(-1)!.insert).toHaveBeenCalledWith({
-      world_id: "w1", name: "Gardes", color: null, parent_id: "maison", sort_index: 1, apply_color: true,
-    });
-    await waitFor(() => expect(lignes()).toEqual([["Maison", 0], ["Branche cadette", 1], ["Gardes", 1], ["Ordre", 0]]));
-    expect(screen.queryByRole("textbox", { name: "Nom du sous-groupe…" })).toBeNull();
-  });
-
-  it("ajouter un groupe à la racine : la ligne en pointillés", async () => {
-    const mock = monter([{
-      data: { id: "g4", name: "Sans-Nom", color: "#818CF8", parent_id: null, sort_index: 2, apply_color: true },
-    }]);
-    const user = userEvent.setup();
-    const ajout = await screen.findByRole("button", { name: "Ajouter ce groupe" });
-    expect(ajout).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: "Nom du groupe…" }), "Sans-Nom");
-    await user.click(ajout);
-    expect(mock.buildersFor("world_persona_groups").at(-1)!.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ world_id: "w1", name: "Sans-Nom", parent_id: null, sort_index: 2, apply_color: true }),
-    );
-    expect(await screen.findByDisplayValue("Sans-Nom")).toBeInTheDocument();
+  it("chaque ligne ouvre la page du groupe, et donne le nombre de ses membres et l'aperçu de sa description", async () => {
+    monter();
+    expect(await screen.findByRole("button", { name: "Gérer le groupe Maison" })).toHaveTextContent("2 membres");
+    expect(screen.getByRole("button", { name: "Gérer le groupe Maison" })).toHaveTextContent("Les gens de la maison");
+    expect(screen.getByRole("button", { name: "Gérer le groupe Branche cadette" })).toHaveTextContent("1 membre");
   });
 
   it("monter d'un cran : le nouvel ordre part en une requête", async () => {
@@ -174,65 +138,109 @@ describe("WorldGroupsSettings", () => {
     expect(ecriture.delete).toHaveBeenCalled();
     expect(ecriture.eq).toHaveBeenCalledWith("id", "maison");
     await waitFor(() => expect(lignes()).toEqual([["Branche cadette", 0], ["Ordre", 0]]));
-    const cadette = screen.getByDisplayValue("Branche cadette").closest("li")!;
-    expect(cadette.querySelector("[data-inherited]")).toBeNull();
-    expect(within(cadette).getByRole("button", { name: "Choisir une couleur" })).toHaveStyle({ backgroundColor: "#ff0000" });
+    const cadette = ligne("Branche cadette").querySelector("[data-group-swatch]")!;
+    expect(cadette).not.toHaveAttribute("data-inherited");
+    expect(cadette).toHaveStyle({ backgroundColor: "#ff0000" });
   });
+});
 
-  it("un sous-groupe qui a sa couleur peut reprendre celle de son parent", async () => {
-    const mock = createSupabaseMock({
-      results: [
-        { data: [GROUPES[0], { ...GROUPES[1], color: "#00ff00" }, GROUPES[2]] },
-        { data: [] }, { data: [] },
-        { data: null },
-      ],
-    });
-    vi.mocked(createClient).mockReturnValue(mock.client as never);
-    render(<WorldGroupsSettings worldId="w1" />);
+describe("WorldGroupsSettings — création sur la page du groupe", () => {
+  it("« Nouveau groupe » ouvre une page vierge ; le groupe créé y montre ensuite ses membres", async () => {
+    const mock = monter([{
+      data: { id: "g4", name: "Sans-Nom", description: "Les oubliés", color: DEFAULT_PLAYER_COLOR, parent_id: null, sort_index: 2, apply_color: true },
+    }]);
     const user = userEvent.setup();
-    // Un groupe racine n'a pas de parent dont hériter.
-    await ouvrirMenu(user, "Maison");
-    expect(screen.queryByRole("menuitem", { name: /^Reprendre la couleur/ })).toBeNull();
-    await user.keyboard("{Escape}");
-    await ouvrirMenu(user, "Branche cadette");
-    await user.click(await screen.findByRole("menuitem", { name: "Reprendre la couleur de « Maison »" }));
-    expect(mock.buildersFor("world_persona_groups").at(-1)!.update).toHaveBeenCalledWith({ color: null });
-    await waitFor(() =>
-      expect(screen.getByDisplayValue("Branche cadette").closest("li")!.querySelector("[data-inherited]")).not.toBeNull(),
-    );
+    await user.click(await screen.findByRole("button", { name: "Nouveau groupe" }));
+    expect(await screen.findByRole("heading", { level: 3, name: "Nouveau groupe" })).toBeInTheDocument();
+    const creer = screen.getByRole("button", { name: "Créer" });
+    expect(creer).toBeDisabled();
+    expect(screen.getByRole("switch", { name: /^Appliquer la couleur/ })).toHaveAttribute("data-state", "checked");
+    await user.type(screen.getByRole("textbox", { name: "Nom du groupe" }), "Sans-Nom");
+    await user.type(screen.getByRole("textbox", { name: "Description" }), "Les oubliés");
+    await user.click(creer);
+    expect(mock.buildersFor("world_persona_groups").at(-1)!.insert).toHaveBeenCalledWith({
+      world_id: "w1", name: "Sans-Nom", description: "Les oubliés", color: DEFAULT_PLAYER_COLOR,
+      parent_id: null, sort_index: 2, apply_color: true,
+    });
+    expect(await screen.findByRole("heading", { level: 3, name: "Sans-Nom" })).toBeInTheDocument();
+    expect(screen.getByText("Aucun persona dans ce groupe.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Groupes" }));
+    await waitFor(() => expect(lignes()).toEqual([["Maison", 0], ["Branche cadette", 1], ["Ordre", 0], ["Sans-Nom", 0]]));
   });
 
-  it("un groupe se renomme sur place, et s'enregistre en quittant le champ", async () => {
+  it("« Ajouter un sous-groupe » : il hérite de la couleur de son parent et l'applique comme lui", async () => {
+    const mock = monter([{
+      data: { id: "gardes", name: "Gardes", description: null, color: null, parent_id: "maison", sort_index: 1, apply_color: true },
+    }]);
+    const user = userEvent.setup();
+    await ouvrirMenu(user, "Maison");
+    await user.click(await screen.findByRole("menuitem", { name: "Ajouter un sous-groupe" }));
+    expect(await screen.findByRole("heading", { level: 3, name: "Nouveau sous-groupe de « Maison »" })).toBeInTheDocument();
+    expect(screen.getByText("Couleur héritée de « Maison »")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choisir une couleur" })).toHaveStyle({ backgroundColor: "#ff0000" });
+    await user.type(screen.getByRole("textbox", { name: "Nom du groupe" }), "Gardes");
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+    expect(mock.buildersFor("world_persona_groups").at(-1)!.insert).toHaveBeenCalledWith({
+      world_id: "w1", name: "Gardes", description: null, color: null, parent_id: "maison", sort_index: 1, apply_color: true,
+    });
+    expect(await screen.findByRole("heading", { level: 3, name: "Maison › Gardes" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Groupes" }));
+    await waitFor(() => expect(lignes()).toEqual([["Maison", 0], ["Branche cadette", 1], ["Gardes", 1], ["Ordre", 0]]));
+  });
+});
+
+describe("WorldGroupsSettings — page d'un groupe", () => {
+  it("le nom se modifie sur la page, et s'enregistre en quittant le champ ; vide, il revient", async () => {
     const mock = monter([{ data: null }]);
     const user = userEvent.setup();
-    const nom = await screen.findByDisplayValue("Ordre");
+    await ouvrirPage(user, "Ordre");
+    const nom = screen.getByRole("textbox", { name: "Nom du groupe" });
+    expect(nom).toHaveValue("Ordre");
     await user.clear(nom);
     await user.type(nom, "Ordre des Cendres");
     await user.tab();
     const ecriture = mock.buildersFor("world_persona_groups").at(-1)!;
     expect(ecriture.update).toHaveBeenCalledWith({ name: "Ordre des Cendres" });
     expect(ecriture.eq).toHaveBeenCalledWith("id", "ordre");
-  });
-});
+    expect(screen.getByRole("heading", { level: 3, name: "Ordre des Cendres" })).toBeInTheDocument();
 
-describe("WorldGroupsSettings — fiche d'un groupe", () => {
-  /** Ouvre la fiche d'un groupe depuis le nombre de ses membres. */
-  async function ouvrirFiche(user: ReturnType<typeof userEvent.setup>, nom: string) {
-    await user.click(await screen.findByRole("button", { name: `Gérer le groupe ${nom}` }));
-    return screen.findByRole("heading", { level: 3, name: nom });
-  }
-
-  it("chaque ligne donne le nombre de ses membres et l'aperçu de sa description", async () => {
-    monter();
-    expect(await screen.findByRole("button", { name: "Gérer le groupe Maison" })).toHaveTextContent("2 membres");
-    expect(screen.getByRole("button", { name: "Gérer le groupe Branche cadette" })).toHaveTextContent("1 membre");
-    expect(screen.getByDisplayValue("Maison").closest("li")).toHaveTextContent("Les gens de la maison");
+    const ecritures = mock.buildersFor("world_persona_groups").length;
+    await user.clear(nom);
+    await user.tab();
+    expect(nom).toHaveValue("Ordre des Cendres");
+    expect(mock.buildersFor("world_persona_groups")).toHaveLength(ecritures);
   });
 
-  it("la fiche liste ses membres, leur joueur, et dit quel groupe donne leur couleur", async () => {
+  it("« Couleur appliquée » s'enregistre à la bascule ; un échec la rétablit", async () => {
+    const mock = monter([{ data: null }, { error: { message: "rls" } }]);
+    const user = userEvent.setup();
+    await ouvrirPage(user, "Ordre");
+    const bascule = screen.getByRole("switch", { name: "Appliquer la couleur de Ordre" });
+    expect(bascule).toHaveAttribute("data-state", "unchecked");
+    await user.click(bascule);
+    expect(bascule).toHaveAttribute("data-state", "checked");
+    const ecriture = mock.buildersFor("world_persona_groups").at(-1)!;
+    expect(ecriture.update).toHaveBeenCalledWith({ apply_color: true });
+    expect(ecriture.eq).toHaveBeenCalledWith("id", "ordre");
+    await user.click(bascule);
+    await waitFor(() => expect(bascule).toHaveAttribute("data-state", "checked"));
+    expect(toast.error).toHaveBeenCalledWith("L'enregistrement a échoué");
+  });
+
+  it("un sous-groupe qui a sa couleur peut reprendre celle de son parent", async () => {
+    const mock = monter([{ data: null }], [GROUPES[0], { ...GROUPES[1], color: "#00ff00" }, GROUPES[2]]);
+    const user = userEvent.setup();
+    await ouvrirPage(user, "Branche cadette", "Maison › Branche cadette");
+    await user.click(screen.getByRole("button", { name: "Reprendre la couleur de « Maison »" }));
+    expect(mock.buildersFor("world_persona_groups").at(-1)!.update).toHaveBeenCalledWith({ color: null });
+    expect(await screen.findByText("Couleur héritée de « Maison »")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choisir une couleur" })).toHaveStyle({ backgroundColor: "#ff0000" });
+  });
+
+  it("la page liste ses membres, leur joueur, et dit quel groupe donne leur couleur", async () => {
     monter();
     const user = userEvent.setup();
-    await ouvrirFiche(user, "Maison");
+    await ouvrirPage(user, "Maison");
     const membres = within(screen.getByRole("list", { name: "Membres" }));
     expect(membres.getAllByRole("listitem").map((li) => li.querySelector("[data-member-name]")!.textContent)).toEqual(["Kael", "Lysa"]);
     const kael = membres.getByText("Kael").closest("li")!;
@@ -248,7 +256,7 @@ describe("WorldGroupsSettings — fiche d'un groupe", () => {
   it("la description s'enregistre en quittant le champ ; vide, elle s'efface", async () => {
     const mock = monter([{ data: null }, { data: null }]);
     const user = userEvent.setup();
-    await ouvrirFiche(user, "Ordre");
+    await ouvrirPage(user, "Ordre");
     const champ = screen.getByRole("textbox", { name: "Description" });
     await user.type(champ, "  Les gardiens du feu ");
     await user.tab();
@@ -267,7 +275,7 @@ describe("WorldGroupsSettings — fiche d'un groupe", () => {
       { data: [...AFFECTATIONS, { persona_id: "p3", group_id: "maison", is_primary: true }, { persona_id: "p4", group_id: "maison", is_primary: false }] },
     ]);
     const user = userEvent.setup();
-    await ouvrirFiche(user, "Maison");
+    await ouvrirPage(user, "Maison");
     const choix = within(screen.getByRole("list", { name: "Ajouter des personas" }));
     // Les membres n'y figurent pas.
     expect(choix.queryByRole("button", { name: /Kael/ })).toBeNull();
@@ -299,7 +307,7 @@ describe("WorldGroupsSettings — fiche d'un groupe", () => {
       { data: AFFECTATIONS.filter((a) => a.persona_id !== "p1") },
     ]);
     const user = userEvent.setup();
-    await ouvrirFiche(user, "Maison");
+    await ouvrirPage(user, "Maison");
     await user.click(screen.getByRole("button", { name: "En faire le groupe principal de Lysa" }));
     const principal = mock.buildersFor("persona_group_assignments")[1];
     expect(principal.update).toHaveBeenCalledWith({ is_primary: true });
