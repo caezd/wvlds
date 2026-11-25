@@ -95,9 +95,14 @@ test.describe("Annonces d'un monde", () => {
 
     // L'historique se charge (vide ou non).
     await expect(page.getByTestId("announcements-empty").or(page.getByTestId("announcement-row").first())).toBeVisible({ timeout: 15_000 });
-    // Le message de bienvenue se charge, sans être enregistré ici.
-    await expect(page.getByTestId("welcome-section")).toBeVisible();
-    await expect(page.getByTestId("welcome-section").getByRole("switch")).toBeEnabled({ timeout: 15_000 });
+    // Le message de bienvenue a sa page, dans Communications ; il se
+    // charge, sans être enregistré ici.
+    await expect(page.getByTestId("welcome-section")).toHaveCount(0);
+    await page.getByTestId("settings-nav").filter({ visible: true }).locator('[data-section="welcome"]').click();
+    await expect(page).toHaveURL(/section=welcome/);
+    const bienvenue = page.getByTestId("welcome-section").filter({ visible: true });
+    await expect(bienvenue).toBeVisible();
+    await expect(bienvenue.getByRole("switch")).toBeEnabled({ timeout: 15_000 });
     expect(erreurs).toEqual([]);
   });
 });
