@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { ToggleItem, ToggleList } from "./FeatureLayout";
+import { FeaturePage, InactiveOptions, ToggleItem, ToggleList } from "./FeatureLayout";
 import {
   Drawer,
   DrawerHeader,
@@ -43,12 +43,17 @@ import { messageErreurAction } from "@/lib/actionErrors";
  * le monde (voir createPersona).
  */
 export function WorldPersonaTemplateSection({
+  title,
+  description,
   worldId,
   restrictSkills,
   reviewEnabled = false,
   onReviewEnabledChange,
   onActiveChange,
 }: {
+  /** Le titre et le sous-titre de la page (Paramètres › Fiche par défaut). */
+  title: string;
+  description?: string;
   worldId: string;
   restrictSkills?: boolean;
   /** Validation des fiches (migration 184) : option complémentaire de la fiche par défaut. */
@@ -141,22 +146,35 @@ export function WorldPersonaTemplateSection({
     if (loaded) onActiveChange?.(!!templateId);
   }, [loaded, templateId, onActiveChange]);
 
-  // La fiche et ses options, en liste de réglages (voir FeatureLayout) ; les
-  // dialogues, hors de la liste, passent par des portails.
+  // Comme les autres fonctions : l'interrupteur de la fiche et son bouton
+  // d'édition dans l'en-tête, ses options dessous (voir FeatureLayout) ; les
+  // dialogues passent par des portails.
   return (
-    <>
-      <ToggleList>
-        <ToggleItem
-          title={t("defaultSheet")}
-          checked={!!templateId}
-          disabled={!loaded || toggling}
-          onCheckedChange={(v) => void handleToggle(v)}
-        />
-        {/* Les options de la fiche restent visibles sans elle, grisées : on voit
-            ce qu'elle permet avant de l'activer. */}
+    <FeaturePage
+      title={title}
+      description={description}
+      toggle={{
+        ariaLabel: t("defaultSheet"),
+        checked: !!templateId,
+        disabled: !loaded || toggling,
+        onCheckedChange: (v) => void handleToggle(v),
+      }}
+      actions={
+        templateId && (
+          <Button type="button" variant="outline" size="sm" onClick={() => void openEditor()}>
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+            {tSettings("editSheet")}
+          </Button>
+        )
+      }
+    >
+      {/* Sans fiche, ses options restent lisibles, repliées sous la tuile. */}
+      <InactiveOptions
+        inactive={loaded && !templateId}
+        feature={{ onActivate: () => void handleToggle(true), disabled: toggling }}
+      >
+        <ToggleList>
           <ToggleItem
-            indent
-            dimmed={!templateId}
             title={t("personaReview.label")}
             description={t("personaReview.description")}
             help={t("personaReview.help")}
@@ -170,25 +188,8 @@ export function WorldPersonaTemplateSection({
               />
             }
           />
-          <ToggleItem
-            indent
-            dimmed={!templateId}
-            title={tSettings("editSheet")}
-            control={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                disabled={!templateId}
-                onClick={() => void openEditor()}
-              >
-                <Pencil className="mr-1 h-3.5 w-3.5" />
-                {tSettings("editSheet")}
-              </Button>
-            }
-          />
-      </ToggleList>
+        </ToggleList>
+      </InactiveOptions>
 
       {/* Confirmation de désactivation */}
       <AlertDialog open={confirmDisable} onOpenChange={setConfirmDisable}>
@@ -233,6 +234,6 @@ export function WorldPersonaTemplateSection({
           </div>
         </SideSheetContent>
       </Drawer>
-    </>
+    </FeaturePage>
   );
 }

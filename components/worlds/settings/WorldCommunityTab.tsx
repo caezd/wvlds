@@ -5,12 +5,12 @@ import { useTranslations } from "next-intl";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
-import { FIELD, SettingsSection } from "./FeatureLayout";
+import { FIELD, SettingsChoiceCards, SettingsSection } from "./FeatureLayout";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
 
 type ProprietesOnglet = {
@@ -19,7 +19,7 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, Users, X, type LucideIcon } from "lucide-react";
+import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, Users, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   setWorldAgeRestricted,
@@ -37,51 +37,6 @@ import { messageErreurAction } from "@/lib/actionErrors";
  * Même principe que l'onglet Fonctions — l'état vit ici, pas chez le parent —
  * et même montage par `key={world.id}`.
  */
-/**
- * Deux choix dans un rail bordé, comme les onglets : le segment retenu se
- * remplit de la couleur d'accent, l'autre reste en retrait.
- *
- * `pressed` plutôt que `checked` : les avatars acceptés ne s'excluent pas —
- * un monde peut prendre les deux styles, donc les deux segments allumés.
- */
-function SegmentedRail({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="inline-flex w-full items-center gap-1 rounded-lg border border-border p-[3px]">{children}</div>
-  );
-}
-
-function Segment({
-  active,
-  disabled,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  active: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  icon: LucideIcon;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
-        active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-      )}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      {label}
-    </button>
-  );
-}
-
 /** Un monde ne porte pas plus de tags que cela. */
 const MAX_TAGS = 10;
 
@@ -195,34 +150,27 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                             <>
                                 <div className="space-y-6">
                                     {/* -- Visibilité ----------------------------- */}
-                                    <SettingsSection title={tSettings("visibility")} description={t("publicWorldHelp")}>
+                                    {/* Des cartes qui disent chacune ce qu'elles font, comme
+                                        la visibilité d'un salon. */}
+                                    <SettingsSection title={tSettings("visibility")}>
                                     <FormField
                                         control={form.control}
                                         name="visibility"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="sr-only">{tSettings("visibility")}</FormLabel>
                                                 <FormControl>
-                                                    <SegmentedRail>
-                                                        <Segment
-                                                            active={field.value === "private"}
-                                                            icon={GlobeLock}
-                                                            label={tSettings("private")}
-                                                            onClick={() => {
-                                                                field.onChange("private");
-                                                                void persistField("visibility", "private");
-                                                            }}
-                                                        />
-                                                        <Segment
-                                                            active={field.value === "public"}
-                                                            icon={Globe}
-                                                            label={tSettings("public")}
-                                                            onClick={() => {
-                                                                field.onChange("public");
-                                                                void persistField("visibility", "public");
-                                                            }}
-                                                        />
-                                                    </SegmentedRail>
+                                                    <SettingsChoiceCards
+                                                        label={tSettings("visibility")}
+                                                        value={[field.value]}
+                                                        options={[
+                                                            { value: "private", icon: GlobeLock, label: tSettings("private"), description: tSettings("privateDescription") },
+                                                            { value: "public", icon: Globe, label: tSettings("public"), description: tSettings("publicDescription") },
+                                                        ]}
+                                                        onToggle={(v) => {
+                                                            field.onChange(v);
+                                                            void persistField("visibility", v);
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -231,45 +179,37 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     </SettingsSection>
 
                                     {/* -- Sécurité ----------------------------- */}
-                                    {/* Deux cartes plutôt qu'un interrupteur : le choix se lit
-                                        d'un coup d'œil, comme Privé / Public juste au-dessus. */}
-                                    <SettingsSection title={t("tabSecurity")} description={tSettings("ageRestrictedHelp")}>
-                                        <SegmentedRail>
-                                            <Segment
-                                                active={!ageRestricted}
-                                                disabled={togglingAgeRestricted}
-                                                icon={Users}
-                                                label={tSettings("allAges")}
-                                                onClick={() => void handleAgeRestrictedToggle(false)}
-                                            />
-                                            <Segment
-                                                active={ageRestricted}
-                                                disabled={togglingAgeRestricted}
-                                                icon={ShieldAlert}
-                                                label={tSettings("adultsOnly")}
-                                                onClick={() => void handleAgeRestrictedToggle(true)}
-                                            />
-                                        </SegmentedRail>
+                                    <SettingsSection title={t("tabSecurity")}>
+                                        <SettingsChoiceCards
+                                            label={t("tabSecurity")}
+                                            value={[ageRestricted ? "adults" : "all"]}
+                                            disabled={togglingAgeRestricted}
+                                            options={[
+                                                { value: "all", icon: Users, label: tSettings("allAges"), description: tSettings("allAgesDescription") },
+                                                { value: "adults", icon: ShieldAlert, label: tSettings("adultsOnly"), description: tSettings("ageRestrictedHelp") },
+                                            ]}
+                                            onToggle={(v) => void handleAgeRestrictedToggle(v === "adults")}
+                                        />
                                     </SettingsSection>
 
                                     {/* -- Avatars acceptés --------------------- */}
+                                    {/* Les deux styles ne s'excluent pas : deux cartes à bascule. */}
                                     <SettingsSection title={t("acceptedAvatarTypes")} description={tSettings("avatarTypesHelp")}>
-                                        <SegmentedRail>
-                                            <Segment
-                                                active={allowsRealAvatars}
-                                                disabled={togglingAvatarType}
-                                                icon={Camera}
-                                                label={tSettings("avatarReal")}
-                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
-                                            />
-                                            <Segment
-                                                active={allowsIllustratedAvatars}
-                                                disabled={togglingAvatarType}
-                                                icon={Palette}
-                                                label={tSettings("avatarIllustrated")}
-                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
-                                            />
-                                        </SegmentedRail>
+                                        <SettingsChoiceCards
+                                            multiple
+                                            label={t("acceptedAvatarTypes")}
+                                            value={[...(allowsRealAvatars ? ["real" as const] : []), ...(allowsIllustratedAvatars ? ["illustrated" as const] : [])]}
+                                            disabled={togglingAvatarType}
+                                            options={[
+                                                { value: "real", icon: Camera, label: tSettings("avatarReal") },
+                                                { value: "illustrated", icon: Palette, label: tSettings("avatarIllustrated") },
+                                            ]}
+                                            onToggle={(v) =>
+                                                v === "real"
+                                                    ? void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)
+                                                    : void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)
+                                            }
+                                        />
                                     </SettingsSection>
 
                                     {/* -- Tags -------------------------------- */}

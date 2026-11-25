@@ -88,8 +88,8 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
     await user.click(screen.getByRole("button", { name: "Communauté" }));
 
-    expect(screen.getByRole("button", { name: "Tout public" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "18 ans et plus" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("radio", { name: /^Tout public/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: /^18 ans et plus/ })).toHaveAttribute("aria-checked", "false");
   });
 
   it("choisir « 18 ans et plus » enregistre la restriction", async () => {
@@ -97,10 +97,10 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
     render(<WorldSettingsView world={BASE_WORLD} />);
     await user.click(screen.getByRole("button", { name: "Communauté" }));
 
-    await user.click(screen.getByRole("button", { name: "18 ans et plus" }));
+    await user.click(screen.getByRole("radio", { name: /^18 ans et plus/ }));
 
     await waitFor(() => expect(setWorldAgeRestricted).toHaveBeenCalledWith("w1", true));
-    await waitFor(() => expect(screen.getByRole("button", { name: "18 ans et plus" })).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(screen.getByRole("radio", { name: /^18 ans et plus/ })).toHaveAttribute("aria-checked", "true"));
   });
 
   it("revenir à « Tout public » lève la restriction", async () => {
@@ -108,8 +108,8 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
     render(<WorldSettingsView world={{ ...BASE_WORLD, is_age_restricted: true }} />);
     await user.click(screen.getByRole("button", { name: "Communauté" }));
 
-    expect(screen.getByRole("button", { name: "18 ans et plus" })).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "Tout public" }));
+    expect(screen.getByRole("radio", { name: /^18 ans et plus/ })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("radio", { name: /^Tout public/ }));
 
     await waitFor(() => expect(setWorldAgeRestricted).toHaveBeenCalledWith("w1", false));
   });

@@ -787,7 +787,6 @@
     "enableMapHelp": "Un mapa del mundo donde situar lugares.",
     "enableWiki": "Activar el wiki",
     "enableWikiHelp": "Las páginas de enciclopedia del mundo.",
-    "publicWorldHelp": "Un mundo público es visible para todos los miembros de la plataforma.",
     "wikiLabelHelp": "El nombre del enlace en la barra lateral.",
     "tagHelp": "Se muestra en la tarjeta del mundo.",
     "restrictionPurgeSkills": "habilidades",
@@ -1078,8 +1077,7 @@
       "dormantDaysHelp": "Sin mensajes durante este número de días. 0: nunca.",
       "featuresNav": "Categorías de funciones",
       "featuresTitle": "Funciones",
-      "statusOn": "Activo",
-      "statusOff": "Off",
+      "statusOff": "Desactivado",
       "personasHelp": "El punto de partida de las fichas de persona del mundo.",
       "monthProgress": "Mes {current} / {total}",
       "daysPerYear": "{days, plural, one {# día} other {# días}} al año",
@@ -1185,7 +1183,8 @@
           "needsEconomy": "Active las monedas para fijar un precio."
         },
         "invalid": "El límite no puede ser inferior al número inicial.",
-        "tabSettings": "Ajustes"
+        "tabSettings": "Ajustes",
+        "slotsTitle": "Espacios"
       },
       "liveChatConnection": {
         "title": "Conexión de los jugadores",
@@ -1321,7 +1320,17 @@
       "timelineAgesMore": "En la cronología, sustituyen los tramos de cinco años. Sin año final, una estación dura hasta la siguiente.",
       "timelineHolidaysMore": "La cronología los recuerda en su fecha. Sin día, una fiesta vale para todo el mes.",
       "identity": "Identidad",
-      "deleteWorldHelp": "El mundo desaparece para todos sus miembros."
+      "deleteWorldHelp": "El mundo desaparece para todos sus miembros.",
+      "featureOff": "Esta función está desactivada.",
+      "featureOffActivate": "Activar",
+      "featureOffPreview": "Ver sus ajustes",
+      "privateDescription": "No aparece en el Explorador.",
+      "publicDescription": "Visible para todos en el Explorador.",
+      "allAgesDescription": "No se pide confirmar la edad.",
+      "explorerPreview": "En el Explorador",
+      "images": "Imágenes",
+      "addIcon": "Añadir un icono",
+      "addBanner": "Añadir un banner"
     },
     "timelinePicker": {
       "year": "Año",

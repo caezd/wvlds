@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -106,7 +106,11 @@ describe("WorldSettingsView — chargement à la demande", () => {
 
   it("l'état de la fiche par défaut vient du serveur, sans monter sa page", () => {
     monter({ hasPersonaTemplate: true });
-    expect(within(nav()).getByRole("button", { name: "Fiche par défaut" })).toHaveAccessibleDescription("Actif");
+    expect(within(nav()).getByRole("button", { name: "Fiche par défaut" })).not.toHaveAttribute("data-off");
+    expect(mounts.template).toBe(0);
+    cleanup();
+    monter({ hasPersonaTemplate: false });
+    expect(within(nav()).getByRole("button", { name: "Fiche par défaut" })).toHaveAccessibleDescription("Désactivé");
     expect(mounts.template).toBe(0);
   });
 });

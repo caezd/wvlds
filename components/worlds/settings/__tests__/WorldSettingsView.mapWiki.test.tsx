@@ -134,9 +134,9 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
       ["Carte", "Wiki", "Catalogue", "Inventaire"],
     );
-    // L'état se lit en description : « Actif » ou « Off ».
-    expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAccessibleDescription("Actif");
-    expect(within(nav).getByRole("button", { name: "Wiki" })).toHaveAccessibleDescription("Off");
+    // Seule l'exception se marque : une fonction désactivée, lue en description.
+    expect(within(nav).getByRole("button", { name: "Carte" })).not.toHaveAccessibleDescription();
+    expect(within(nav).getByRole("button", { name: "Wiki" })).toHaveAccessibleDescription("Désactivé");
 
     // « Général » d'emblée : aucune page « Fonctions » visible.
     expect(within(nav).getByRole("button", { name: "Général" })).toHaveAttribute("aria-current", "page");
@@ -148,21 +148,30 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(screen.queryByRole("region", { name: "Carte" })).toBeNull();
 
     await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
-    const carte = screen.getByRole("region", { name: "Carte" });
-    expect(within(carte).getByRole("heading", { name: /Carte/ })).toBeInTheDocument();
-    // L'interrupteur de l'en-tête porte l'état, sans libellé « Activée ».
-    expect(within(carte).getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
-    expect(within(carte).queryByText("Activée")).toBeNull();
+    expect(screen.getByRole("region", { name: "Carte" })).toBeVisible();
+    // Le titre et l'interrupteur montent dans la barre d'en-tête : « Paramètres › Carte ».
+    const titre = screen.getByTestId("settings-header-title");
+    expect(within(titre).getByRole("heading", { name: "Carte" })).toBeInTheDocument();
+    expect(within(titre).queryByRole("heading", { name: "Inventaire" })).toBeNull();
+    const actions = screen.getByTestId("settings-header-actions");
+    expect(within(actions).getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
+    expect(within(actions).getAllByRole("switch")).toHaveLength(1);
     expect(screen.queryByRole("region", { name: "Inventaire" })).toBeNull();
   });
 
-  it("objets : les options d'une fonction coupée restent visibles, grisées et inertes", async () => {
+  it("objets : une fonction coupée se dit en une tuile, qui l'active ; ses réglages, repliés, restent inertes", async () => {
     monter({ enable_inventory: false } as Partial<World>);
     await userEvent.click(screen.getByRole("button", { name: "Inventaire" }));
     const page = screen.getByRole("region", { name: "Inventaire" });
-    expect(within(page).getByRole("switch", { name: "Activer l’inventaire" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("switch", { name: "Activer l’inventaire" })).toHaveAttribute("aria-checked", "false");
+    const tuile = within(page).getByTestId("feature-off");
+    expect(within(tuile).getByText("Cette fonction est désactivée.")).toBeInTheDocument();
+    // L'aperçu replié : les réglages se lisent, mais ne se changent pas.
+    await userEvent.click(within(tuile).getByText("Voir ses réglages"));
     expect(within(page).getByRole("radio", { name: /^Libre/ })).toBeDisabled();
     expect(within(page).getByRole("spinbutton", { name: "Emplacements de départ" })).toBeDisabled();
+    await userEvent.click(within(tuile).getByRole("button", { name: "Activer" }));
+    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_inventory", true));
   });
 
   it("Personas : une catégorie à part, cinq pages (fiche par défaut, compétences, faceclaims, groupes, relations)", () => {
@@ -172,8 +181,8 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(personas).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
       ["Fiche par défaut", "Compétences", "Faceclaims", "Groupes", "Relations"],
     );
-    // Les pages « Fonctions » y gardent leur état.
-    expect(within(personas).getByRole("button", { name: "Compétences" })).toHaveAccessibleDescription(/Actif|Off/);
+    // Les pages « Fonctions » y gardent leur état : rien pour une fonction active.
+    expect(within(personas).getByRole("button", { name: "Compétences" })).not.toHaveAccessibleDescription();
   });
 
   it("Fiche par défaut : le modèle de fiche, sans les compétences ni les faceclaims", async () => {
@@ -189,10 +198,10 @@ describe("WorldSettingsView — carte et wiki", () => {
     await userEvent.click(screen.getByRole("button", { name: "Compétences" }));
     const page = screen.getByRole("region", { name: "Compétences" });
     expect(page).toHaveAttribute("data-fill-page");
-    expect(within(page).getByRole("switch", { name: "Activer les compétences" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: "Activer les compétences" })).toHaveAttribute("aria-checked", "true");
     expect(within(page).getByRole("switch", { name: "Compétences : Restreindre aux compétences du monde" })).toBeEnabled();
     expect(within(page).getByText("compétences du monde w1")).toBeInTheDocument();
-    await userEvent.click(within(page).getByRole("switch", { name: "Activer les compétences" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Activer les compétences" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_skills", false));
   });
 
@@ -200,7 +209,8 @@ describe("WorldSettingsView — carte et wiki", () => {
     monter({ enable_faceclaims: false } as Partial<World>);
     await userEvent.click(screen.getByRole("button", { name: "Faceclaims" }));
     const page = screen.getByRole("region", { name: "Faceclaims" });
-    expect(within(page).getByRole("switch", { name: "Activer les faceclaims" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("switch", { name: "Activer les faceclaims" })).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(within(page).getByText("Voir ses réglages"));
     expect(within(page).getByRole("switch", { name: "Faceclaim obligatoire" })).toBeDisabled();
   });
 });

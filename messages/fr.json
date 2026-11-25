@@ -787,7 +787,6 @@
     "enableMapHelp": "Une carte du monde où placer des lieux.",
     "enableWiki": "Activer le wiki",
     "enableWikiHelp": "Les pages d’encyclopédie du monde.",
-    "publicWorldHelp": "Un monde public est visible de tous les membres de la plateforme.",
     "wikiLabelHelp": "Le nom du lien dans la barre latérale.",
     "tagHelp": "Affichée sur la carte du monde.",
     "restrictionPurgeSkills": "compétences",
@@ -1078,8 +1077,7 @@
       "dormantDaysHelp": "Sans message depuis ce nombre de jours. 0 : jamais.",
       "featuresNav": "Catégories de fonctions",
       "featuresTitle": "Fonctions",
-      "statusOn": "Actif",
-      "statusOff": "Off",
+      "statusOff": "Désactivé",
       "personasHelp": "Le point de départ des fiches de persona du monde.",
       "monthProgress": "Mois {current} / {total}",
       "daysPerYear": "{days, plural, one {# jour} other {# jours}} par an",
@@ -1185,7 +1183,8 @@
           "needsEconomy": "Activez les devises pour fixer un prix."
         },
         "invalid": "Le plafond ne peut pas être inférieur au nombre de départ.",
-        "tabSettings": "Réglages"
+        "tabSettings": "Réglages",
+        "slotsTitle": "Emplacements"
       },
       "liveChatConnection": {
         "title": "Connexion des joueurs",
@@ -1321,7 +1320,17 @@
       "timelineAgesMore": "Sur la frise, elles remplacent les tranches de cinq ans. Sans année de fin, une saison court jusqu’à la suivante.",
       "timelineHolidaysMore": "La frise les rappelle à leur date. Sans jour, une fête vaut pour tout le mois.",
       "identity": "Identité",
-      "deleteWorldHelp": "Le monde disparaît pour tous ses membres."
+      "deleteWorldHelp": "Le monde disparaît pour tous ses membres.",
+      "featureOff": "Cette fonction est désactivée.",
+      "featureOffActivate": "Activer",
+      "featureOffPreview": "Voir ses réglages",
+      "privateDescription": "Absent de l’Explorateur.",
+      "publicDescription": "Visible de tous dans l’Explorateur.",
+      "allAgesDescription": "Aucune confirmation d’âge demandée.",
+      "explorerPreview": "Dans l’Explorateur",
+      "images": "Images",
+      "addIcon": "Ajouter une icône",
+      "addBanner": "Ajouter une bannière"
     },
     "timelinePicker": {
       "year": "Année",

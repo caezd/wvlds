@@ -31,7 +31,7 @@ export function WorldPanelHeader({
     <div className="flex h-header-height shrink-0 items-center gap-1 bg-canvas lg:bg-background border-b p-2 touch:p-2.5">
       <MobileDrawerOpenButton />
       <div className="h-8 w-8 flex items-center justify-center">{icon}</div>
-      <span className="text-sm font-semibold">{title}</span>
+      <span className="min-w-0 text-sm font-semibold">{title}</span>
       {children}
       {right && <div className="ml-auto flex items-center gap-2">{right}</div>}
     </div>

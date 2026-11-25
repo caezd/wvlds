@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 // temporairement (voir plus bas) — imports retirés en attendant.
 import {
     ChevronLeft,
+    ImagePlus,
     Loader2,
     Settings,
 } from "lucide-react";
@@ -73,7 +74,18 @@ import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { WorldRolesTab } from "./WorldRolesTab";
 import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
 import { WorldWelcomeTab } from "./announcements/WorldWelcomeSection";
-import { FeaturePage, SETTINGS_PAGE_WIDTH, SettingsSection } from "./FeatureLayout";
+import { FIELD, FeaturePage, SETTINGS_PAGE_WIDTH, SettingsHeaderProvider, SettingsSection } from "./FeatureLayout";
+import { ExploreWorldCard } from "@/app/(protected)/explore/ExploreWorldCard";
+
+/** Une image encore absente : sa place en pointillés, cliquable (ImagePickerCropField). */
+function ImagePlaceholder({ label }: { label: string }) {
+    return (
+        <span className="flex size-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-2 text-center text-xs text-muted-foreground transition-colors group-hover:bg-muted/60 group-hover:text-foreground">
+            <ImagePlus className="size-5" aria-hidden />
+            {label}
+        </span>
+    );
+}
 
 /**
  * Une page qui prend toute la hauteur (`data-fill-page`, l'onglet Objets de
@@ -367,6 +379,9 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
 
     const iconUrl = form.watch("icon_url");
     const bannerUrl = form.watch("banner_url");
+    // L'aperçu de la carte de l'Explorateur suit la saisie.
+    const watchedName = form.watch("name");
+    const watchedDescription = form.watch("description");
 
     /** Une page de réglages : titre, puis son contenu, à sa largeur — calée
      *  contre le menu, pour que le titre ne saute pas d'une section à l'autre.
@@ -382,11 +397,27 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
         </div>
     );
 
+    // La barre d'en-tête reçoit le titre de la page ouverte (« Paramètres ›
+    // Chatbox ») et ses actions, comme sur Membres : deux emplacements que
+    // la page remplit (FeaturePage, par portail). Sur mobile, le menu seul
+    // n'y montre que « Paramètres ».
+    const [titleSlot, setTitleSlot] = React.useState<HTMLElement | null>(null);
+    const [actionsSlot, setActionsSlot] = React.useState<HTMLElement | null>(null);
+    const headerSlots = React.useMemo(() => ({ title: titleSlot, actions: actionsSlot }), [titleSlot, actionsSlot]);
+    const slotVisibility = requested ? "flex" : "hidden md:flex";
+
     return (
+        <SettingsHeaderProvider value={headerSlots}>
         <div className="flex h-full w-full flex-col">
             <WorldPanelHeader
                 icon={<Settings className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                title={t("tabSettings")}
+                title={
+                    <span className="flex min-w-0 items-center gap-1.5">
+                        <span className={cn("shrink-0", shown && "md:font-medium md:text-muted-foreground", requested && "max-md:hidden")}>{t("tabSettings")}</span>
+                        <span ref={setTitleSlot} data-testid="settings-header-title" className={cn("min-w-0 items-center gap-1.5", slotVisibility, requested && "max-md:[&>svg:first-child]:hidden")} />
+                    </span>
+                }
+                right={<div ref={setActionsSlot} data-testid="settings-header-actions" className={cn("items-center gap-2", slotVisibility)} />}
             />
 
             <Form {...form}>
@@ -432,8 +463,10 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                 onSubmit={(e) => e.preventDefault()}
                                 className="space-y-6"
                             >
-                                {/* -- Identité : nom, description, icône, bannière ── */}
+                                {/* -- Identité : nom et description, à côté de la carte que
+                                     l'Explorateur en montre — on voit ce qu'on écrit. ── */}
                                 <SettingsSection title={tSettings("identity")}>
+                                <div className="grid gap-5 @xl:grid-cols-[minmax(0,1fr)_14rem]">
                                 <div className="space-y-5">
                                 <FormField
                                     control={form.control}
@@ -444,6 +477,7 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                             <FormControl>
                                                 <Input
                                                     placeholder={t("namePlaceholder")}
+                                                    className={FIELD}
                                                     {...field}
                                                     onBlur={(e) => {
                                                         field.onBlur();
@@ -468,6 +502,7 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                                 <Textarea
                                                     rows={5}
                                                     placeholder={t("descriptionPlaceholder")}
+                                                    className={FIELD}
                                                     {...field}
                                                     onBlur={(e) => {
                                                         field.onBlur();
@@ -479,101 +514,67 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                         </FormItem>
                                     )}
                                 />
+                                </div>
 
+                                {/* L'aperçu vit avec la saisie ; un clic n'ouvre rien. */}
+                                <figure className="space-y-2" data-testid="world-card-preview">
+                                    <figcaption className="text-sm font-medium">{tSettings("explorerPreview")}</figcaption>
+                                    <div
+                                        className="w-56 max-w-full"
+                                        onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                        onKeyDownCapture={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }}
+                                    >
+                                        <ExploreWorldCard
+                                            world={{
+                                                id: world.id,
+                                                name: watchedName || world.name,
+                                                description: watchedDescription || null,
+                                                banner_url: bannerUrl || null,
+                                                icon_url: iconUrl || null,
+                                                color: world.color ?? null,
+                                                allows_real_avatars: world.allows_real_avatars ?? null,
+                                                allows_illustrated_avatars: world.allows_illustrated_avatars ?? null,
+                                                is_age_restricted: world.is_age_restricted ?? null,
+                                            }}
+                                            tags={[]}
+                                        />
+                                    </div>
+                                </figure>
+                                </div>
+                                </SettingsSection>
+
+                                {/* -- Images : une vignette cliquable chacune, plutôt que
+                                     deux grandes zones de dépôt vides. ── */}
+                                <SettingsSection title={tSettings("images")}>
+                                <div className="grid items-start gap-5 @md:grid-cols-[auto_minmax(0,1fr)]">
                                 <FormField
                                     control={form.control}
                                     name="icon_url"
                                     render={() => (
                                         <FormItem>
                                             <FormLabel>{tSettings("worldIcon")}</FormLabel>
-                                            <div className="flex items-start gap-3">
-                                                {iconUrl ? (
-                                                    <div className="flex items-start gap-2">
-                                                        <ImagePickerCropField
-                                                            aspect={1}
-                                                            uploading={uploading === "icon"}
-                                                            previewSrc={iconUrl}
-                                                            previewClassName="h-12 w-12 shrink-0 rounded-lg"
-                                                            changeLabel="Changer"
-                                                            onConfirm={onIconConfirm}
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            disabled={uploading === "icon"}
-                                                            onClick={() => {
-                                                                form.setValue("icon_url", "", { shouldDirty: true });
-                                                                void persistField("icon_url", "");
-                                                            }}
-                                                        >
-                                                            {tCommon("remove")}
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full">
-                                                        <ImagePickerCropField
-                                                            aspect={1}
-                                                            uploading={uploading === "icon"}
-                                                            onConfirm={onIconConfirm}
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {/* Sélecteur de couleur désactivé temporairement
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button type="button" variant="secondary" size="sm">
-                                                            <span
-                                                                className="h-2.5 w-2.5 rounded-full"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        color || "transparent",
-                                                                    boxShadow: color
-                                                                        ? "none"
-                                                                        : "inset 0 0 0 1px var(--color-border)",
-                                                                }}
-                                                            />
-                                                            {colorPreset?.name ??
-                                                                (color ? color : "Couleur")}
-                                                            <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="start" className="w-44">
-                                                        {COLOR_PRESETS.map((c) => (
-                                                            <DropdownMenuItem
-                                                                key={c.value}
-                                                                onClick={() => {
-                                                                    form.setValue("color", c.value, {
-                                                                        shouldDirty: true,
-                                                                        shouldValidate: true,
-                                                                    });
-                                                                    void persistField("color", c.value);
-                                                                }}
-                                                            >
-                                                                <span
-                                                                    className="mr-2 h-2.5 w-2.5 rounded-full"
-                                                                    style={{ backgroundColor: c.value }}
-                                                                />
-                                                                {c.name}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                form.setValue("color", "", {
-                                                                    shouldDirty: true,
-                                                                    shouldValidate: true,
-                                                                });
-                                                                void persistField("color", "");
-                                                            }}
-                                                        >
-                                                            <span className="mr-2 h-2.5 w-2.5 rounded-full border border-border" />
-                                                            {tSettings("noColor")}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                */}
-                                            </div>
+                                            <ImagePickerCropField
+                                                aspect={1}
+                                                uploading={uploading === "icon"}
+                                                previewSrc={iconUrl || null}
+                                                previewClassName="size-24 shrink-0 rounded-xl"
+                                                changeLabel={tCommon("dropToReplace")}
+                                                placeholder={<ImagePlaceholder label={tSettings("addIcon")} />}
+                                                onConfirm={onIconConfirm}
+                                            />
+                                            {iconUrl && (
+                                                <button
+                                                    type="button"
+                                                    disabled={uploading === "icon"}
+                                                    onClick={() => {
+                                                        form.setValue("icon_url", "", { shouldDirty: true });
+                                                        void persistField("icon_url", "");
+                                                    }}
+                                                    className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                                >
+                                                    {tCommon("remove")}
+                                                </button>
+                                            )}
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -589,8 +590,9 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                                 aspect={16 / 7}
                                                 uploading={uploading === "banner"}
                                                 previewSrc={bannerUrl || null}
-                                                previewClassName="aspect-[16/7] w-full rounded-2xl"
+                                                previewClassName="aspect-[16/7] w-full max-w-sm rounded-xl"
                                                 changeLabel={tCommon("dropToReplace")}
+                                                placeholder={<ImagePlaceholder label={tSettings("addBanner")} />}
                                                 onConfirm={onBannerConfirm}
                                             />
                                             {bannerUrl && (
@@ -731,5 +733,6 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                 </div>
             </Form>
         </div>
+        </SettingsHeaderProvider>
     );
 }

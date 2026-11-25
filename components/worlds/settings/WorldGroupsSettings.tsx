@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, CornerDownRight, FolderInput, Loader2, MoreHorizontal, Plus, Trash2, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +37,7 @@ import {
   type PersonaGroupRow,
 } from "@/lib/personaGroups";
 import { WorldGroupDetail, type GroupFields, type GroupPersona } from "./WorldGroupDetail";
-import { FeaturePage, SETTINGS_ROW, SettingsAddRow, SettingsEmpty, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
 
 /** Une ligne de la liste : bordée, sur le fond des cartes ; le bouton qu'elle contient l'occupe. */
 const ROW = cn(SETTINGS_ROW, "flex-nowrap gap-1 py-1 pl-1");
@@ -257,14 +257,26 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
   const tree = asTree(rows);
 
   return (
-    <FeaturePage title={t("groups")}>
+    // « Nouveau groupe » en tête, comme « Nouveau persona » sur Membres : pas
+    // sous une liste qui peut être longue.
+    <FeaturePage
+      title={t("groups")}
+      actions={
+        <Button type="button" variant="outline" size="sm" onClick={() => setPage({ parentId: null })}>
+          <Plus className="size-4" aria-hidden />
+          {t("newGroup")}
+        </Button>
+      }
+    >
       <SettingsSection
         title={t("personaGroups")}
         description={t("groupsDescription")}
         help={t("groupsHelp")}
         count={rows.length}
       >
-        {rows.length === 0 && <SettingsEmpty>{t("noGroupsDefined")}</SettingsEmpty>}
+        {rows.length === 0 && (
+          <SettingsEmpty onAdd={() => setPage({ parentId: null })} addLabel={t("newGroup")}>{t("noGroupsDefined")}</SettingsEmpty>
+        )}
         <ul className="space-y-2" aria-label={t("groups")}>
           {groups.map((g) => {
             const parent = g.parent_id ? byId.get(g.parent_id) : undefined;
@@ -346,7 +358,6 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
             );
           })}
         </ul>
-        <SettingsAddRow label={t("newGroup")} onClick={() => setPage({ parentId: null })} />
       </SettingsSection>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>

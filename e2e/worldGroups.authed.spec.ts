@@ -47,15 +47,15 @@ function ligne(page: Page, nom: string) {
   return page.getByRole("button", { name: `Gérer le groupe ${nom}`, exact: true }).locator("xpath=ancestor::li[1]");
 }
 
-/** De la page d'un groupe à la liste (le menu des paramètres a aussi son « Groupes »). */
+/** De la page d'un groupe à la liste, par le fil d'Ariane de l'en-tête (« Paramètres › Groupes › … »). */
 async function retourALaListe(page: Page) {
-  await page.getByTestId("settings-content").getByRole("button", { name: "Groupes", exact: true }).click();
+  await page.getByTestId("settings-header-title").getByRole("button", { name: "Groupes", exact: true }).click();
   await expect(page.getByRole("region", { name: "Groupes de personas" })).toBeVisible();
 }
 
 async function supprimer(page: Page, nom: string) {
   // Un échec ou un saut peut laisser la page d'un groupe ouverte.
-  const retour = page.getByTestId("settings-content").getByRole("button", { name: "Groupes", exact: true });
+  const retour = page.getByTestId("settings-header-title").getByRole("button", { name: "Groupes", exact: true });
   if (await retour.count()) await retourALaListe(page);
   const bouton = page.getByRole("button", { name: `Actions du groupe ${nom}`, exact: true });
   if (!(await bouton.count())) return;
@@ -75,7 +75,8 @@ test("Groupes : créer un groupe et un sous-groupe, couper sa couleur, et les re
   await ouvrirOngletGroupes(page);
   try {
     // Un groupe à la racine.
-    await page.getByRole("button", { name: "Nouveau groupe", exact: true }).click();
+    // « Nouveau groupe » dans l'en-tête, comme « Nouveau persona » sur Membres.
+    await page.getByTestId("settings-header-actions").getByRole("button", { name: "Nouveau groupe", exact: true }).click();
     await creer(page, GROUPE, GROUPE);
     await retourALaListe(page);
 
@@ -116,7 +117,8 @@ test("Page d'un groupe : nom, description, ajout d'un persona, groupe principal,
   const renomme = `${nom} renommé`;
   await ouvrirOngletGroupes(page);
   try {
-    await page.getByRole("button", { name: "Nouveau groupe", exact: true }).click();
+    // « Nouveau groupe » dans l'en-tête, comme « Nouveau persona » sur Membres.
+    await page.getByTestId("settings-header-actions").getByRole("button", { name: "Nouveau groupe", exact: true }).click();
     await page.getByRole("textbox", { name: "Description" }).fill("Groupe de test E2E");
     await creer(page, nom, nom);
 

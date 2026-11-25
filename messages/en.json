@@ -787,7 +787,6 @@
     "enableMapHelp": "A map of the world to place locations on.",
     "enableWiki": "Enable the wiki",
     "enableWikiHelp": "The world's encyclopedia pages.",
-    "publicWorldHelp": "A public world is visible to every member of the platform.",
     "wikiLabelHelp": "The link's name in the sidebar.",
     "tagHelp": "Shown on the world's card.",
     "restrictionPurgeSkills": "skills",
@@ -1078,8 +1077,7 @@
       "dormantDaysHelp": "No message for this many days. 0: never.",
       "featuresNav": "Feature categories",
       "featuresTitle": "Features",
-      "statusOn": "On",
-      "statusOff": "Off",
+      "statusOff": "Disabled",
       "personasHelp": "The starting point of the world's persona sheets.",
       "monthProgress": "Month {current} / {total}",
       "daysPerYear": "{days, plural, one {# day} other {# days}} per year",
@@ -1185,7 +1183,8 @@
           "needsEconomy": "Turn on currencies to set a price."
         },
         "invalid": "The cap can't be lower than the starting number.",
-        "tabSettings": "Settings"
+        "tabSettings": "Settings",
+        "slotsTitle": "Slots"
       },
       "liveChatConnection": {
         "title": "Player connection",
@@ -1321,7 +1320,17 @@
       "timelineAgesMore": "On the timeline, they replace the five-year ranges. Without an end year, a season runs until the next one.",
       "timelineHolidaysMore": "The timeline recalls them on their date. Without a day, a holiday covers the whole month.",
       "identity": "Identity",
-      "deleteWorldHelp": "The world disappears for all its members."
+      "deleteWorldHelp": "The world disappears for all its members.",
+      "featureOff": "This feature is turned off.",
+      "featureOffActivate": "Turn on",
+      "featureOffPreview": "See its settings",
+      "privateDescription": "Not listed in Explore.",
+      "publicDescription": "Visible to everyone in Explore.",
+      "allAgesDescription": "No age confirmation asked.",
+      "explorerPreview": "In Explore",
+      "images": "Images",
+      "addIcon": "Add an icon",
+      "addBanner": "Add a banner"
     },
     "timelinePicker": {
       "year": "Year",

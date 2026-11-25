@@ -4,33 +4,34 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 import { HelpHint } from "@/components/ui/help-hint";
-import { Plus } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronRight, Plus, PowerOff } from "lucide-react";
+import { InteractiveCard } from "@/components/ui/interactive-card";
 
 /**
- * La mise en page des réglages de fonctions (onglet Fonctions) : une page
- * par catégorie, faite de sections à deux colonnes — titre à gauche,
- * réglages à droite —, avec des listes d'interrupteurs bordées. Pas de
- * description sous les titres : l'explication est derrière l'aide (voir
- * HelpHint), à côté du titre.
+ * La mise en page des paramètres d'un monde, calquée sur les paramètres du
+ * compte : une colonne, une carte par section (titre, phrase, réglages).
+ * Le titre de la page, son interrupteur et ses actions montent dans la barre
+ * d'en-tête du panneau (WorldPanelHeader), comme sur Membres ou Personas :
+ * voir SettingsHeaderProvider.
  *
- * Deux surfaces, partout : les cartes (`SURFACE` : fond des cartes, bordure
- * douce) et les champs qu'elles contiennent (`FIELD` : fond de la page, plus
- * sombre, comme creusés dans la carte, même bordure douce).
- *
- * La page est un conteneur (`@container`) : ses sections passent en deux
- * colonnes selon la place qu'elle a, pas selon la fenêtre — entre les
- * barres latérales de l'application et la colonne des catégories, elle peut
- * être étroite sur un grand écran.
+ * Deux surfaces : les cartes (`SURFACE` : fond des cartes, bordure douce) et
+ * les champs qu'elles contiennent (`FIELD` : fond de la page, plus sombre,
+ * comme creusés dans la carte).
  */
 
 /** Une carte : encadré de réglages, liste, tuile. */
 export const SURFACE = "border border-border bg-card";
 /** Un champ dans une carte ou sur la page : saisie, sélecteur, petite case. */
 export const FIELD = "border-border bg-background shadow-none hover:bg-background";
-/** La largeur de toutes les pages des paramètres d'un monde. */
-export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
+/**
+ * La largeur de toutes les pages des paramètres d'un monde : une colonne de
+ * lecture, plus large pour une page qui tient un tableau (`data-fill-page`).
+ */
+export const SETTINGS_PAGE_WIDTH = "w-full max-w-3xl has-[[data-fill-page]]:max-w-5xl";
 /**
  * Un maillon de la chaîne qui donne toute la hauteur restante à une page
  * (l'onglet Objets de l'Inventaire) : flex en colonne, s'étire, et peut
@@ -39,6 +40,30 @@ export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
 export const FILL = "flex min-h-0 flex-1 flex-col";
 /** Une ligne d'une liste d'éléments (salles, groupes, relations, catégories). */
 export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
+
+/**
+ * Les deux emplacements de la barre d'en-tête où la page ouverte place son
+ * titre (après « Paramètres ») et ses actions (à droite). Sans fournisseur
+ * (une page rendue seule, en test), la page garde son propre en-tête.
+ */
+type HeaderSlots = { title: HTMLElement | null; actions: HTMLElement | null };
+const SettingsHeaderContext = React.createContext<HeaderSlots | null>(null);
+export const SettingsHeaderProvider = SettingsHeaderContext.Provider;
+/**
+ * Une page montée mais cachée (les pages des fonctions restent montées) ne
+ * prend pas la barre d'en-tête : seule la page affichée y écrit.
+ */
+const PageShownContext = React.createContext(true);
+export const SettingsPageShown = PageShownContext.Provider;
+
+/** La page place son titre dans la barre d'en-tête (et n'a plus besoin de son propre retour). */
+export function useSettingsHeaderMode(): boolean {
+  const slots = React.useContext(SettingsHeaderContext);
+  return !!(slots?.title && slots.actions);
+}
+
+/** Les sections d'une carte : ses listes s'étendent jusqu'aux bords, sans second cadre. */
+const InSectionCardContext = React.createContext(false);
 
 /** Un titre suivi de son aide. */
 export function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {
@@ -54,22 +79,28 @@ export function TitleWithHelp({ title, help, className }: { title: string; help?
 const DESCRIPTION = "text-sm text-muted-foreground text-pretty";
 
 /**
- * L'en-tête d'une page : titre, sous-titre (à quoi sert la page) et, pour une
- * fonction, son interrupteur. L'interrupteur n'a pas de libellé visible :
- * l'état se lit dans la pastille du menu, et un « Activée » / « Activé »
- * accordé au genre de chaque fonction n'apprenait rien. Son aide dit ce que
- * la désactivation garde.
+ * Une page : titre, sous-titre (à quoi sert la page), et pour une fonction
+ * son interrupteur. Dans les paramètres d'un monde, le titre, l'interrupteur
+ * et les actions (`actions` : « Nouveau groupe ») montent dans la barre
+ * d'en-tête ; la page ne garde que son sous-titre. L'interrupteur n'a pas de
+ * libellé visible : son aide dit ce que la désactivation garde.
  */
 export function FeaturePage({
   title,
   description,
   toggle,
+  actions,
+  back,
   fill = false,
   children,
 }: {
   title: string;
   /** Une phrase : à quoi sert la page. */
   description?: React.ReactNode;
+  /** Les boutons de la page (en-tête, à droite), en `outline` comme sur Membres. */
+  actions?: React.ReactNode;
+  /** La page parente, dans le fil d'Ariane de l'en-tête (la fiche d'un groupe). */
+  back?: { label: string; onClick: () => void };
   /** La page prend toute la hauteur restante (voir FILL). */
   fill?: boolean;
   toggle?: {
@@ -83,36 +114,72 @@ export function FeaturePage({
   };
   children?: React.ReactNode;
 }) {
+  const slots = React.useContext(SettingsHeaderContext);
+  const shown = React.useContext(PageShownContext);
+  const inHeader = !!(slots?.title && slots.actions);
+
+  const toggleNode = toggle && (
+    <span className="flex shrink-0 items-center gap-2">
+      {toggle.help && <HelpHint title={toggle.ariaLabel}>{toggle.help}</HelpHint>}
+      <Switch
+        checked={toggle.checked}
+        disabled={toggle.disabled}
+        onCheckedChange={toggle.onCheckedChange}
+        aria-label={toggle.ariaLabel}
+      />
+    </span>
+  );
+
   return (
-    <div className={cn("@container min-w-0 space-y-6", fill && FILL)}>
-      <header className="flex shrink-0 items-start justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <h3 className="text-xl font-semibold tracking-tight">{title}</h3>
-          {description && <p className={cn(DESCRIPTION, "max-w-prose")}>{description}</p>}
-        </div>
-        {toggle && (
-          <span className="flex shrink-0 items-center gap-2 pt-1">
-            {toggle.help && <HelpHint title={toggle.ariaLabel}>{toggle.help}</HelpHint>}
-            <Switch
-              checked={toggle.checked}
-              disabled={toggle.disabled}
-              onCheckedChange={toggle.onCheckedChange}
-              aria-label={toggle.ariaLabel}
-            />
-          </span>
-        )}
-      </header>
+    <div className={cn("@container min-w-0 space-y-4", fill && FILL)}>
+      {inHeader ? (
+        shown && (
+          <>
+            {createPortal(
+              <>
+                {back && (
+                  <>
+                    <Crumb />
+                    <button
+                      type="button"
+                      onClick={back.onClick}
+                      className="shrink-0 truncate text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {back.label}
+                    </button>
+                  </>
+                )}
+                <Crumb />
+                <h3 className="min-w-0 truncate text-sm font-semibold">{title}</h3>
+              </>,
+              slots!.title!,
+            )}
+            {(actions || toggleNode) && createPortal(<>{actions}{toggleNode}</>, slots!.actions!)}
+          </>
+        )
+      ) : (
+        <header className="flex shrink-0 items-start justify-between gap-4">
+          <h3 className="min-w-0 text-xl font-semibold tracking-tight">{title}</h3>
+          {(actions || toggleNode) && <span className="flex shrink-0 items-center gap-2 pt-1">{actions}{toggleNode}</span>}
+        </header>
+      )}
+      {description && <p className={cn(DESCRIPTION, "max-w-prose shrink-0")}>{description}</p>}
       {children}
     </div>
   );
 }
 
+/** Le séparateur du fil d'Ariane de l'en-tête. */
+function Crumb() {
+  return <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />;
+}
+
 /**
- * Une section. Par défaut en deux colonnes : titre, compteur et sous-titre à
- * gauche, réglages à droite. `stacked` : le contenu passe sous l'en-tête, pour
- * ce qui a besoin de toute la largeur (tableau, liste maître-détail, journal).
- * L'aide (`help`) reste pour un détail rare ; l'explication utile va dans
- * `description`, visible.
+ * Une section : une carte, comme dans les paramètres du compte — titre,
+ * compteur et phrase en tête, réglages dessous. L'aide (`help`) reste pour un
+ * détail rare ; l'explication utile va dans `description`, visible.
+ * `layout` ne sert plus qu'à marquer la section (`data-layout`) : toutes
+ * s'empilent désormais.
  */
 export function SettingsSection({
   title,
@@ -121,7 +188,7 @@ export function SettingsSection({
   help,
   meta,
   aside,
-  layout = "columns",
+  layout = "stacked",
   className,
   children,
 }: {
@@ -133,7 +200,7 @@ export function SettingsSection({
   help?: string;
   /** Une donnée sous le titre (« 12 mois · 365 jours »), pas une description. */
   meta?: React.ReactNode;
-  /** Sous le titre : une action secondaire ou l'indicateur d'enregistrement. */
+  /** À droite du titre : une action secondaire ou l'indicateur d'enregistrement. */
   aside?: React.ReactNode;
   layout?: "columns" | "stacked";
   className?: string;
@@ -143,24 +210,24 @@ export function SettingsSection({
     <section
       aria-label={title}
       data-layout={layout}
-      className={cn(
-        "grid gap-4 border-t border-border pt-6",
-        layout === "columns" && "@2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10",
-        className,
-      )}
+      className={cn("rounded-lg", SURFACE, className)}
     >
-      <div className="space-y-1">
-        <h4 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-          <TitleWithHelp title={title} help={help} />
-          {count !== undefined && (
-            <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
-          )}
-        </h4>
-        {description && <p className={DESCRIPTION}>{description}</p>}
-        {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
-        {aside}
+      <div className="flex items-start justify-between gap-3 px-5 pt-4">
+        <div className="min-w-0 space-y-0.5">
+          <h4 className="flex min-w-0 items-center gap-2 text-base font-semibold">
+            <TitleWithHelp title={title} help={help} />
+            {count !== undefined && (
+              <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
+            )}
+          </h4>
+          {description && <p className={DESCRIPTION}>{description}</p>}
+          {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
+        </div>
+        {aside && <div className="shrink-0">{aside}</div>}
       </div>
-      <div className="min-w-0 space-y-3">{children}</div>
+      <InSectionCardContext.Provider value={true}>
+        <div className="min-w-0 space-y-3 px-5 pb-5 pt-4">{children}</div>
+      </InSectionCardContext.Provider>
     </section>
   );
 }
@@ -180,12 +247,104 @@ export function SettingsAddRow({ label, onClick, disabled }: { label: string; on
   );
 }
 
-/** Une liste encore vide : une phrase et, souvent, l'action qui la remplit. */
-export function SettingsEmpty({ children, action, testId }: { children: React.ReactNode; action?: React.ReactNode; testId?: string }) {
+/**
+ * Une liste encore vide : une seule tuile en pointillés, comme « + Nouveau
+ * persona » sur Membres — la phrase, et l'action qui la remplit (`action`,
+ * ou `onAdd` + `addLabel` pour un « + » centré).
+ */
+export function SettingsEmpty({
+  children,
+  action,
+  onAdd,
+  addLabel,
+  testId,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+  onAdd?: () => void;
+  addLabel?: string;
+  testId?: string;
+}) {
   return (
-    <div data-testid={testId} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed border-border px-4 py-4 text-sm text-muted-foreground">
-      <span>{children}</span>
+    <div data-testid={testId} className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+      <span className="text-pretty">{children}</span>
+      {onAdd && addLabel && (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Plus className="size-4 shrink-0" aria-hidden />
+          {addLabel}
+        </button>
+      )}
       {action}
+    </div>
+  );
+}
+
+/**
+ * Un choix qui a des conséquences : des cartes avec icône, titre et phrase,
+ * comme la visibilité d'un salon (ChatroomVisibilityField). Une seule
+ * enfoncée (`radio`) ; `multiple` : plusieurs (`aria-pressed`).
+ * Pour une valeur courte, SettingsSegmented.
+ */
+export function SettingsChoiceCards<T extends string>({
+  label,
+  options,
+  value,
+  onToggle,
+  multiple = false,
+  disabled,
+  testIdPrefix,
+}: {
+  /** Le nom du groupe pour les lecteurs d'écran. */
+  label: string;
+  options: readonly { value: T; label: string; description?: string; icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }> }[];
+  /** Les options enfoncées. */
+  value: readonly T[];
+  /** Une option choisie (ou, `multiple`, basculée). */
+  onToggle: (value: T) => void;
+  multiple?: boolean;
+  disabled?: boolean;
+  testIdPrefix?: string;
+}) {
+  return (
+    <div
+      role={multiple ? "group" : "radiogroup"}
+      aria-label={label}
+      className={cn("grid gap-2", options.length >= 3 ? "@md:grid-cols-3" : "@md:grid-cols-2")}
+    >
+      {options.map((o) => {
+        const on = value.includes(o.value);
+        const Icon = o.icon;
+        return (
+          <InteractiveCard
+            key={o.value}
+            {...(multiple ? { active: on } : { role: "radio", "aria-checked": on })}
+            data-testid={testIdPrefix ? `${testIdPrefix}-${o.value}` : undefined}
+            disabled={disabled}
+            onClick={() => { if (multiple || !on) onToggle(o.value); }}
+            className={cn(
+              "flex items-start gap-3 p-3 disabled:opacity-60",
+              on && "border-foreground bg-background",
+            )}
+          >
+            <span
+              className={cn(
+                "grid size-9 shrink-0 place-items-center rounded-full",
+                on ? "bg-muted text-foreground" : "bg-background text-muted-foreground",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+            </span>
+            <span className="min-w-0 space-y-0.5 pt-0.5">
+              <span className="block text-sm font-semibold">{o.label}</span>
+              {o.description && <span className="block text-xs leading-snug text-muted-foreground text-pretty">{o.description}</span>}
+            </span>
+          </InteractiveCard>
+        );
+      })}
     </div>
   );
 }
@@ -236,8 +395,20 @@ export function SettingsSegmented<T extends string>({
 
 /** Une liste bordée de réglages, une ligne chacun. */
 export function ToggleList({ children, className, label }: { children: React.ReactNode; className?: string; /** Nomme la liste (groupe) quand une page en a plusieurs. */ label?: string }) {
+  // Dans la carte d'une section : les lignes vont d'un bord à l'autre, un
+  // trait au-dessus, sans second cadre (dernière de la carte : jusqu'en bas).
+  const inCard = React.useContext(InSectionCardContext);
   return (
-    <div role={label ? "group" : undefined} aria-label={label} className={cn("divide-y divide-border rounded-md", SURFACE, className)}>
+    <div
+      role={label ? "group" : undefined}
+      aria-label={label}
+      data-flush={inCard || undefined}
+      className={cn(
+        "divide-y divide-border",
+        inCard ? "-mx-5 border-y border-border px-1 last:-mb-5 last:border-b-0" : cn("rounded-md", SURFACE),
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -299,48 +470,75 @@ export function ToggleItem({
 }
 
 /**
- * Les réglages d'une fonction désactivée : toujours affichés, pour qu'on voie
- * ce que la fonction offre, mais grisés et inertes jusqu'à son activation.
+ * Les réglages d'une option ou d'une fonction désactivée, grisés et inertes.
  * Un `fieldset` désactivé : ses champs et boutons le sont aussi (et restent
- * lus par les lecteurs d'écran, contrairement à `inert`). Pas de mention :
- * l'interrupteur « Désactivé » et le grisé suffisent. L'aide reste au survol.
+ * lus par les lecteurs d'écran, contrairement à `inert`).
+ *
+ * `feature` : la page d'une fonction entière. Plutôt qu'une page voilée,
+ * une tuile « Cette fonction est désactivée » avec de quoi l'activer, et
+ * l'aperçu des réglages replié dessous.
  */
 export function InactiveOptions({
   inactive,
   className,
+  feature,
   children,
 }: {
   inactive: boolean;
   /** Pour le cadre grisé seulement (actives, les options sont rendues telles quelles). */
   className?: string;
+  feature?: { onActivate?: () => void; disabled?: boolean };
   children: React.ReactNode;
 }) {
+  const t = useTranslations("worlds.settings");
   if (!inactive) return <>{children}</>;
-  return (
+  const greyed = (
     <fieldset
       disabled
       data-testid="inactive-options"
       className={cn(
         "pointer-events-none m-0 min-w-0 border-0 p-0 opacity-60 select-none [&_[data-testid=help-hint]]:pointer-events-auto",
-        className,
+        !feature && className,
+        feature && "space-y-4",
       )}
     >
       {children}
     </fieldset>
   );
+  if (!feature) return greyed;
+  return (
+    <div className="space-y-3" data-testid="feature-off">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-4 py-8 text-center">
+        <span className="grid size-9 place-items-center rounded-full bg-muted text-muted-foreground">
+          <PowerOff className="size-4" aria-hidden />
+        </span>
+        <p className="text-sm text-muted-foreground">{t("featureOff")}</p>
+        {feature.onActivate && (
+          <Button type="button" size="sm" disabled={feature.disabled} onClick={feature.onActivate}>
+            {t("featureOffActivate")}
+          </Button>
+        )}
+      </div>
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden />
+          {t("featureOffPreview")}
+        </summary>
+        <div className="pt-3">{greyed}</div>
+      </details>
+    </div>
+  );
 }
 
-/** L'état d'une catégorie, dans la colonne de gauche : « Actif » ou « Off ». */
-export function StatusPill({ id, active, onLabel, offLabel }: { id?: string; active: boolean; onLabel: string; offLabel: string }) {
+/**
+ * Une fonction désactivée, dans le menu : on ne marque que l'exception. Une
+ * icône discrète ; le mot (« Désactivé ») se lit en description.
+ */
+export function FeatureOffMark({ id, label }: { id?: string; label: string }) {
   return (
-    <Badge
-      id={id}
-      tone={active ? "success" : "neutral"}
-      className={active ? undefined : "text-muted-foreground"}
-      data-testid="feature-status"
-      data-active={active || undefined}
-    >
-      {active ? onLabel : offLabel}
-    </Badge>
+    <span data-testid="feature-status" className="flex shrink-0 items-center text-muted-foreground">
+      <PowerOff className="size-3.5" aria-hidden />
+      <span id={id} className="sr-only">{label}</span>
+    </span>
   );
 }

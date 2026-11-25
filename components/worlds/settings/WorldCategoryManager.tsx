@@ -414,8 +414,14 @@ export function WorldCategoryManager({
           </SortableContext>
         </DndContext>
 
+        {/* Vide : une seule tuile, la phrase et l'ajout ensemble. */}
         {categories.length === 0 && !creating && (
-          <SettingsEmpty>{t("settings.noCategories")}</SettingsEmpty>
+          <SettingsEmpty
+            onAdd={canEdit ? () => setCreating(true) : undefined}
+            addLabel={t("settings.newCategory")}
+          >
+            {t("settings.noCategories")}
+          </SettingsEmpty>
         )}
       </div>
 
@@ -423,7 +429,7 @@ export function WorldCategoryManager({
         (creating ? (
           <CategoryForm worldId={worldId} onCancel={() => setCreating(false)} onSaved={handleCreated} />
         ) : (
-          <SettingsAddRow label={t("settings.newCategory")} onClick={() => setCreating(true)} />
+          categories.length > 0 && <SettingsAddRow label={t("settings.newCategory")} onClick={() => setCreating(true)} />
         ))}
     </div>
   );

@@ -219,7 +219,7 @@ describe("TimelineSettings — couleurs", () => {
     render(<Harnais />);
     const cartes = [
       screen.getByTestId("timeline-preview").parentElement as HTMLElement,
-      screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }).closest(".divide-y") as HTMLElement,
+      screen.getByRole("region", { name: "Règles des salons" }),
     ];
     for (const c of cartes) expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-card", "border-border"]));
     const champs = [
@@ -237,16 +237,19 @@ describe("TimelineSettings — couleurs", () => {
 describe("TimelineSettings — responsive", () => {
   it("s'adapte à la place de sa page (requêtes de conteneur), pas à la fenêtre", () => {
     render(<Harnais />);
-    // L'en-tête et chaque section : deux colonnes seulement quand la page a la place.
+    // L'en-tête en deux colonnes seulement quand la page a la place ; les
+    // sections, des cartes empilées, dont les listes se dédoublent de même.
     const date = screen.getByTestId("timeline-preview").parentElement as HTMLElement;
     expect(date.className).toMatch(/@2xl:grid-cols-/);
     expect(date.className).not.toMatch(/(^|\s)(sm|md|lg):grid-cols-/);
     const section = screen.getByRole("region", { name: "Mois du calendrier" });
-    expect(section.className).toMatch(/@2xl:grid-cols-/);
     expect(section.querySelector("ol")!.className).toMatch(/@lg:grid-cols-2/);
-    // Cartes et bordures en rounded-md : aucun élément bordé n'arrondit plus.
+    // Les cartes des sections en rounded-lg, comme les paramètres du compte ;
+    // tout ce qu'elles contiennent de bordé en rounded-md, jamais plus.
+    const sections = [...document.querySelectorAll<HTMLElement>("section[data-layout]")];
+    for (const el of sections) expect(el.className.split(" ")).toContain("rounded-lg");
     const bordes = [...document.querySelectorAll<HTMLElement>("[class*='border']")]
-      .filter((el) => !el.className.split(" ").includes("border-0"));
+      .filter((el) => !el.matches("section[data-layout]") && !el.className.split(" ").includes("border-0"));
     expect(bordes.length).toBeGreaterThan(5);
     for (const el of bordes) expect(el.className).not.toMatch(/(^|\s)rounded-(lg|xl)(\s|$)/);
     // Les lignes d'ajout passent à la ligne plutôt que de déborder.

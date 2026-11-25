@@ -33,7 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/section-label";
-import { StatusPill } from "./FeatureLayout";
+import { FeatureOffMark } from "./FeatureLayout";
 import {
   isFeatureSection,
   subgroupOf,
@@ -123,7 +123,7 @@ function runsOf(sections: SettingsSectionId[]): { subgroup: SettingsSubgroupId |
 
 /**
  * Le menu de gauche des paramètres d'un monde, rangé en groupes. Les pages
- * « Fonctions » y portent leur état (Actif / Off), lu en description.
+ * « Fonctions » désactivées y sont grisées, avec une icône lue en description.
  *
  * Sur mobile, il occupe toute la largeur tant qu'aucune section n'est
  * ouverte (WorldSettingsView le masque ensuite) : chaque entrée y prend une
@@ -147,16 +147,17 @@ export function WorldSettingsNav({
 }) {
   const tSettings = useTranslations("worlds.settings");
   const label = useSettingsSectionLabel();
-  const on = tSettings("statusOn");
   const off = tSettings("statusOff");
 
   function entry(id: SettingsSectionId) {
     const Icon = ICONS[id];
     const isSelected = id === selected;
-    const status = isFeatureSection(id) ? featureStatus[id] : undefined;
+    // Seule l'exception se marque : une fonction désactivée (grisée, avec
+    // son icône), pas les fonctions actives.
+    const isOff = isFeatureSection(id) && featureStatus[id] === false;
     // Le Catalogue est réservé : « Bientôt » à la place de l'état.
     const soon = id === "catalog";
-    const describedBy = status !== undefined || soon ? `settings-status-${id}` : undefined;
+    const describedBy = isOff || soon ? `settings-status-${id}` : undefined;
     return (
       <li key={id}>
         <button
@@ -167,6 +168,7 @@ export function WorldSettingsNav({
           aria-label={label(id)}
           aria-describedby={describedBy}
           data-section={id}
+          data-off={isOff || undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-left text-sm transition-colors md:py-1.5",
             isSelected && !selectedOnDesktopOnly
@@ -175,11 +177,9 @@ export function WorldSettingsNav({
             isSelected && selectedOnDesktopOnly && "md:bg-muted md:font-medium md:text-foreground",
           )}
         >
-          <Icon className="size-4 shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1 truncate">{label(id)}</span>
-          {status !== undefined && (
-            <StatusPill id={`settings-status-${id}`} active={status} onLabel={on} offLabel={off} />
-          )}
+          <Icon className={cn("size-4 shrink-0", isOff && !isSelected && "opacity-50")} aria-hidden />
+          <span className={cn("min-w-0 flex-1 truncate", isOff && !isSelected && "opacity-60")}>{label(id)}</span>
+          {isOff && <FeatureOffMark id={`settings-status-${id}`} label={off} />}
           {soon && (
             <Badge id={`settings-status-${id}`} tone="neutral" className="text-muted-foreground">
               {tSettings("catalogFeature.soon")}
@@ -192,7 +192,7 @@ export function WorldSettingsNav({
   }
 
   return (
-    <nav aria-label={tSettings("menu.label")} className="space-y-5 p-3 md:p-4" data-testid="settings-nav">
+    <nav aria-label={tSettings("menu.label")} className="space-y-4 p-3 md:p-4" data-testid="settings-nav">
       {groups.map((group) => {
         // Sans titre (Général, Communauté) : une simple liste en tête.
         const titled = !UNTITLED_SETTINGS_GROUPS.includes(group.id);
@@ -211,12 +211,12 @@ export function WorldSettingsNav({
           <ul className="space-y-0.5">
             {runsOf(group.sections).map((run) =>
               run.subgroup ? (
-                // Une sous-catégorie (Économie) : son titre, puis ses pages en retrait.
+                // Une sous-catégorie (Économie) : son titre, puis ses pages, alignées sur les autres.
                 <li key={run.subgroup} className="pt-2">
                   <SectionLabel as="p" id={`settings-subgroup-${run.subgroup}`} className="px-2.5 pb-1">
                     {tSettings(`menu.subgroups.${run.subgroup}`)}
                   </SectionLabel>
-                  <ul aria-labelledby={`settings-subgroup-${run.subgroup}`} className="space-y-0.5 md:pl-2">
+                  <ul aria-labelledby={`settings-subgroup-${run.subgroup}`} className="space-y-0.5">
                     {run.sections.map(entry)}
                   </ul>
                 </li>

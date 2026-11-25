@@ -26,7 +26,7 @@ import {
   type AnnouncementKind,
   type WorldWelcome,
 } from "@/lib/worldAnnouncements";
-import { FIELD, SettingsSection, StatusPill, ToggleItem, ToggleList } from "../FeatureLayout";
+import { FIELD, SettingsSection, ToggleItem, ToggleList } from "../FeatureLayout";
 
 /** Pas de bandeau de bienvenue : l'accueil d'un nouveau membre est déjà lu. */
 const WELCOME_KINDS: readonly AnnouncementKind[] = ["message", "notification"];
@@ -67,7 +67,6 @@ export function WorldWelcomeSection({
 }) {
   const t = useTranslations("worlds.announcements.welcome");
   const tA = useTranslations("worlds.announcements");
-  const tSettings = useTranslations("worlds.settings");
   const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const errorMessage = useAnnouncementErrorMessage();
@@ -117,7 +116,6 @@ export function WorldWelcomeSection({
       title={t("sectionTitle")}
       description={t("description")}
       help={t("help")}
-      aside={<StatusPill active={enabled} onLabel={tSettings("statusOn")} offLabel={tSettings("statusOff")} />}
     >
       <div data-testid="welcome-section" className="space-y-3">
         <ToggleList>

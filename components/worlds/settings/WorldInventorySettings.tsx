@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Hand, Library, PencilLine, type LucideIcon } from "lucide-react";
 import { setWorldInventoryMode, setWorldInventorySlots } from "@/app/actions/worldCatalog";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { messageErreurAction } from "@/lib/actionErrors";
@@ -22,7 +22,9 @@ import {
   type InventoryMode,
 } from "@/lib/personaInventory";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
-import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, SettingsChoiceCards, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+
+const MODE_ICONS: Record<InventoryMode, LucideIcon> = { free: PencilLine, catalog: Library, held: Hand };
 
 /** Une saisie numérique : un entier, ou `null` si le champ est vide. */
 function parseCount(raw: string): number | null {
@@ -113,60 +115,50 @@ export function WorldInventorySettings({
   );
 
   return (
-    <SettingsSection title={t("title")} aside={<AutoSaveIndicator status={status} />}>
-      <div onBlur={flush}>
-        <ToggleList>
-          {/* Les trois modes en liste à cocher : chacun dit en clair ce qu'il permet. */}
-          <div className="px-4 py-2.5">
-            <p className="text-sm font-medium">{t("mode.title")}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t("mode.help")}</p>
-            <RadioGroup
-              aria-label={t("mode.title")}
-              value={mode}
-              onValueChange={(v) => v !== mode && void changeMode(v as InventoryMode)}
-              className="mt-2 gap-0.5"
-            >
-              {INVENTORY_MODES.map((m) => (
-                <label
-                  key={m}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/50"
-                >
-                  <RadioGroupItem value={m} />
-                  <span className="text-sm">{t(`mode.${m}`)}</span>
-                  <span className="min-w-0 truncate text-xs text-muted-foreground">{t(`mode.${m}Hint`)}</span>
-                </label>
-              ))}
-            </RadioGroup>
-          </div>
-          <ToggleItem
-            title={t("slotsDefault.title")}
-            description={t("slotsDefault.help")}
-            control={numberField(t("slotsDefault.title"), slotsDefault, setSlotsDefault, { max: MAX_INVENTORY_SLOTS })}
-          />
-          <ToggleItem
-            indent
-            dimmed={unlimited}
-            title={t("slotsMax.title")}
-            description={t("slotsMax.help")}
-            control={numberField(t("slotsMax.title"), slotsMax, setSlotsMax, {
-              disabled: unlimited,
-              max: MAX_INVENTORY_SLOTS,
-              placeholder: String(MAX_INVENTORY_SLOTS),
-            })}
-          />
-          <ToggleItem
-            indent
-            dimmed={unlimited || !economyOn}
-            title={t("slotCost.title")}
-            description={economyOn ? t("slotCost.help", { unit: baseUnit.name }) : t("slotCost.needsEconomy")}
-            control={numberField(t("slotCost.title"), slotCost, setSlotCost, {
-              disabled: unlimited || !economyOn,
-              max: MAX_SLOT_COST,
-            })}
-          />
-        </ToggleList>
-      </div>
-      {!valid && <p className="mt-3 text-xs text-destructive">{t("invalid")}</p>}
-    </SettingsSection>
+    <div className="space-y-4">
+      {/* Les trois modes en cartes : chacune dit en clair ce qu'elle permet. */}
+      <SettingsSection title={t("mode.title")} description={t("mode.help")}>
+        <SettingsChoiceCards
+          label={t("mode.title")}
+          value={[mode]}
+          options={INVENTORY_MODES.map((m) => ({ value: m, icon: MODE_ICONS[m], label: t(`mode.${m}`), description: t(`mode.${m}Hint`) }))}
+          onToggle={(m) => void changeMode(m)}
+          testIdPrefix="inventory-mode"
+        />
+      </SettingsSection>
+      <SettingsSection title={t("slotsTitle")} aside={<AutoSaveIndicator status={status} />}>
+        <div onBlur={flush}>
+          <ToggleList>
+            <ToggleItem
+              title={t("slotsDefault.title")}
+              description={t("slotsDefault.help")}
+              control={numberField(t("slotsDefault.title"), slotsDefault, setSlotsDefault, { max: MAX_INVENTORY_SLOTS })}
+            />
+            <ToggleItem
+              indent
+              dimmed={unlimited}
+              title={t("slotsMax.title")}
+              description={t("slotsMax.help")}
+              control={numberField(t("slotsMax.title"), slotsMax, setSlotsMax, {
+                disabled: unlimited,
+                max: MAX_INVENTORY_SLOTS,
+                placeholder: String(MAX_INVENTORY_SLOTS),
+              })}
+            />
+            <ToggleItem
+              indent
+              dimmed={unlimited || !economyOn}
+              title={t("slotCost.title")}
+              description={economyOn ? t("slotCost.help", { unit: baseUnit.name }) : t("slotCost.needsEconomy")}
+              control={numberField(t("slotCost.title"), slotCost, setSlotCost, {
+                disabled: unlimited || !economyOn,
+                max: MAX_SLOT_COST,
+              })}
+            />
+          </ToggleList>
+        </div>
+        {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
+      </SettingsSection>
+    </div>
   );
 }

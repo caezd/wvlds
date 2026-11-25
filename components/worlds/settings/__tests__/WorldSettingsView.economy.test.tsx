@@ -106,14 +106,14 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
   it("Devises porte l'interrupteur de l'économie", async () => {
     monter({ enable_economy: false } as Partial<World>);
     await ouvrir("Devises");
-    await userEvent.click(within(screen.getByRole("region", { name: "Devises" })).getByRole("switch", { name: "Activer l'économie" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Activer l'économie" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_economy", true));
   });
 
   it("Objets porte l'interrupteur de l'inventaire", async () => {
     monter({ enable_inventory: true } as Partial<World>);
     await ouvrir("Inventaire");
-    await userEvent.click(within(screen.getByRole("region", { name: "Inventaire" })).getByRole("switch", { name: "Activer l’inventaire" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Activer l’inventaire" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_inventory", false));
   });
 
@@ -148,7 +148,7 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     monter({ enable_economy: false, enable_inventory: true, enable_shops: false } as Partial<World>);
     await ouvrir("Boutiques");
     const page = screen.getByRole("region", { name: "Boutiques" });
-    expect(within(page).getByRole("switch", { name: "Activer les boutiques" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Activer les boutiques" })).toBeDisabled();
     expect(within(page).getByText("Les boutiques demandent les devises et l’inventaire.")).toBeInTheDocument();
     // La gestion reste visible, grisée et inerte, comme les autres fonctions coupées.
     expect(within(page).getByTestId("inactive-options")).toContainElement(within(page).getByText(/gestion des boutiques/));
@@ -158,7 +158,7 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     monter({ enable_economy: true, enable_inventory: true, enable_shops: false } as Partial<World>);
     await ouvrir("Boutiques");
     const page = screen.getByRole("region", { name: "Boutiques" });
-    await userEvent.click(within(page).getByRole("switch", { name: "Activer les boutiques" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Activer les boutiques" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_shops", true));
     // Ouvertes, les boutiques se gèrent sur la page même.
     expect(await within(page).findByText("gestion des boutiques de w1")).toBeInTheDocument();
@@ -168,7 +168,7 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     monter({ enable_economy: false, enable_inventory: false, enable_trades: false } as Partial<World>);
     await ouvrir("Échanges");
     const page = screen.getByRole("region", { name: "Échanges" });
-    expect(within(page).getByRole("switch", { name: "Activer les échanges" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Activer les échanges" })).toBeDisabled();
     expect(within(page).getByText("Activez d’abord les devises ou l’inventaire.")).toBeInTheDocument();
   });
 
@@ -180,7 +180,7 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const memeCompte = () => within(page).getByRole("switch", { name: "Échanges entre personas d’un même compte" });
     expect(memeCompte()).toBeDisabled();
 
-    await userEvent.click(within(page).getByRole("switch", { name: "Activer les échanges" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Activer les échanges" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_trades", true));
     await waitFor(() => expect(memeCompte()).toBeEnabled());
     await userEvent.click(memeCompte());

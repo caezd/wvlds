@@ -63,10 +63,10 @@ describe("WorldSettingsView — Chatbox (migration 237)", () => {
   it("drapeau allumé : une entrée « Chatbox », éteinte par défaut pour le monde", async () => {
     monter();
     const entree = within(nav()).getByRole("button", { name: "Chatbox" });
-    expect(entree).toHaveAccessibleDescription("Off");
+    expect(entree).toHaveAccessibleDescription("Désactivé");
     await userEvent.click(entree);
-    const page = screen.getByRole("region", { name: "Chatbox" });
-    expect(within(page).getByRole("switch", { name: "Activer la chatbox" })).toHaveAttribute("aria-checked", "false");
+    expect(within(screen.getByRole("region", { name: "Chatbox" })).getByTestId("feature-off")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Activer la chatbox" })).toHaveAttribute("aria-checked", "false");
   });
 
   it("l'activer l'enregistre pour le monde, et la pastille suit", async () => {
@@ -78,7 +78,7 @@ describe("WorldSettingsView — Chatbox (migration 237)", () => {
     await userEvent.click(screen.getByRole("switch", { name: "Activer la chatbox" }));
     expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_live_chat", true);
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ enable_live_chat: true }));
-    expect(within(nav()).getByRole("button", { name: "Chatbox" })).toHaveAccessibleDescription("Actif");
+    expect(within(nav()).getByRole("button", { name: "Chatbox" })).not.toHaveAccessibleDescription();
   });
 
   it("la page porte le réglage des messages conservés, à la valeur du monde (migration 239)", async () => {
@@ -90,6 +90,7 @@ describe("WorldSettingsView — Chatbox (migration 237)", () => {
 
   it("un monde qui l'a activée la montre active", () => {
     monter({ enable_live_chat: true });
-    expect(within(nav()).getByRole("button", { name: "Chatbox" })).toHaveAccessibleDescription("Actif");
+    expect(within(nav()).getByRole("button", { name: "Chatbox" })).not.toHaveAccessibleDescription();
+    expect(within(nav()).getByRole("button", { name: "Chatbox" })).not.toHaveAttribute("data-off");
   });
 });

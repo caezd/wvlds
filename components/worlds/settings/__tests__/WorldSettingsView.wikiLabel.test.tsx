@@ -101,13 +101,14 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     expect(within(section).getByRole("textbox", { name: "Nom du lien" })).toHaveAttribute("placeholder", "Annexes");
     const page = screen.getByRole("region", { name: "Wiki" });
     expect(page).toContainElement(section);
-    expect(within(page).getByRole("switch", { name: "Activer le wiki" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: "Activer le wiki" })).toHaveAttribute("aria-checked", "true");
     unmount();
 
     render(<WorldSettingsView world={{ ...BASE_WORLD, enable_wiki: false }} />);
     await user.click(screen.getByRole("button", { name: "Wiki" }));
     // Le réglage reste en vue, pour qu'on sache ce que le wiki offre, mais ne
     // se modifie qu'une fois le wiki activé.
+    await user.click(screen.getByText("Voir ses réglages"));
     const champ = screen.getByPlaceholderText("Annexes");
     expect(champ).toBeDisabled();
     expect(screen.getByTestId("inactive-options")).toBeDisabled();

@@ -30,7 +30,7 @@ import {
   setPrimaryGroup,
 } from "@/lib/personaGroupMembership";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FeaturePage, FIELD, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, FIELD, SETTINGS_ROW, SettingsEmpty, SettingsSection, useSettingsHeaderMode } from "./FeatureLayout";
 
 /** Un persona du monde, tel que la fiche d'un groupe le montre. */
 export type GroupPersona = {
@@ -155,17 +155,21 @@ export function WorldGroupDetail({
   const inherited = values.color === null && !!parent;
   const swatch = values.color ?? parent?.swatch ?? DEFAULT_PLAYER_COLOR;
 
+  const inHeader = useSettingsHeaderMode();
   const title = group
     ? groupPathLabel(group)
     : parent ? t("newSubgroupOf", { name: groupPathLabel(parent) }) : t("newGroup");
 
   return (
     <div className="space-y-4">
-      <Button type="button" variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={onBack}>
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("groups")}
-      </Button>
-      <FeaturePage title={title}>
+      {/* Le retour vit dans le fil d'Ariane de l'en-tête quand il y en a un. */}
+      {!inHeader && (
+        <Button type="button" variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={onBack}>
+          <ArrowLeft className="size-4" aria-hidden />
+          {t("groups")}
+        </Button>
+      )}
+      <FeaturePage title={title} back={{ label: t("groups"), onClick: onBack }}>
         <SettingsSection title={t("groupInfo")}>
           <div className="space-y-1.5">
             <Label htmlFor={nameId} className={FIELD_LABEL}>{t("groupName")}</Label>
