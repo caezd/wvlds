@@ -16,7 +16,8 @@ import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, gainSettingsOf, gainSettingsSche
 import type { World } from "@/types/worlds";
 import { cn } from "@/lib/utils";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
-import { FIELD, SettingsSection, TitleWithHelp } from "./FeatureLayout";
+import { SectionLabel } from "@/components/ui/section-label";
+import { FIELD, SettingsSection } from "./FeatureLayout";
 
 const columnOf = (kind: GainKind) => `gain_${kind}` as const;
 
@@ -76,18 +77,17 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
   const cap = draft.gain_daily_cap;
 
   // À plat, sans carte : un réglage par ligne, les champs alignés à droite.
-  // Deux sections : ce qui rapporte, puis ce qui limite.
+  // Une section : ce qui rapporte, puis ce qui le limite.
   return (
-    <>
-      <SettingsSection title={t("title")} help={t("help")} aside={indicator}>
-        <div className="grid gap-y-4" onBlur={flush}>
+    <SettingsSection title={t("title")} description={t("help")} aside={indicator}>
+      <div className="grid gap-y-4" onBlur={flush}>
           {SHOWN_GAIN_KINDS.map((kind) => {
             const value = draft[columnOf(kind)];
             return (
               <GainField
                 key={kind}
                 label={t(kind)}
-                help={t(`${kind}Help`)}
+                description={t(`${kind}Help`)}
                 status={value === 0 ? t("nothing") : value < 0 ? t("loss") : null}
               >
                 {/* Un gain peut retirer (migration 261) : son sens devant les cases. */}
@@ -105,11 +105,10 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
               </GainField>
             );
           })}
-        </div>
-      </SettingsSection>
-      <SettingsSection title={t("limits")} help={t("limitsHelp")} aside={indicator}>
-        <div className="grid gap-y-4" onBlur={flush}>
-          <GainField label={t("cooldown")} help={t("cooldownHelp")} status={!cooldown ? t("noCooldown") : null}>
+      </div>
+      <div role="group" aria-labelledby="gains-limits" className="grid gap-y-4 border-t border-border pt-4" onBlur={flush}>
+          <SectionLabel as="p" id="gains-limits">{t("limits")}</SectionLabel>
+          <GainField label={t("cooldown")} description={t("cooldownHelp")} status={!cooldown ? t("noCooldown") : null}>
             <div className="relative">
               <Input
                 type="number"
@@ -132,16 +131,15 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
           {/* Le plafond borne tous les gains à la fois. Vide : sans plafond ; zéro : plus rien. */}
           <GainField
             label={t("cap")}
-            help={t("capHelp")}
+            description={t("capHelp")}
             status={cap === null ? t("noCap") : cap === 0 ? t("zeroCap") : null}
             warn={cap === 0}
           >
             {amount(t("cap"), "gain-cap", cap, (v) => setDraft((d) => ({ ...d, gain_daily_cap: v })), "—")}
           </GainField>
-        </div>
-        {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
-      </SettingsSection>
-    </>
+      </div>
+      {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
+    </SettingsSection>
   );
 }
 
@@ -157,13 +155,13 @@ const SUFFIX = "pointer-events-none absolute inset-y-0 right-0 flex w-9 items-ce
  */
 function GainField({
   label,
-  help,
+  description,
   status,
   warn = false,
   children,
 }: {
   label: string;
-  help: string;
+  description: string;
   status: string | null;
   warn?: boolean;
   children: React.ReactNode;
@@ -171,9 +169,8 @@ function GainField({
   return (
     <div role="group" aria-label={label} className="grid items-center gap-x-4 gap-y-1.5 @md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
       <div className="min-w-0">
-        <p className="text-sm">
-          <TitleWithHelp title={label} help={help} />
-        </p>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
         {status && <p className={cn("text-xs", warn ? "text-destructive" : "text-muted-foreground")}>{status}</p>}
       </div>
       {children}

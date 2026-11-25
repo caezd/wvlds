@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Interface",
     area: "Monde",
+    text: "Paramètres du monde : explications lisibles sans ouvrir d’aide.\n- une phrase sous chaque page, section et réglage qui en a besoin ; aides gardées pour les détails rares\n- interrupteur des fonctions sans libellé « Activée »\n- Général : une section Identité ; suppression du monde confirmée dans une boîte\n- Gains et limites réunis\n- Boutiques visibles et grisées tant qu’elles sont coupées ; raison des options indisponibles affichée\n- listes vides et ajouts présentés de la même façon partout",
+  },
+  {
+    date: "2026-11-25",
+    category: "Interface",
+    area: "Monde",
     text: "Paramètres du monde réorganisés.\n- Catégories rangées sous Monde\n- nouvelle section Personas : fiche par défaut, compétences, faceclaims, groupes, relations\n- objets et compétences gérés dans les paramètres, en tableau par catégorie ; plus d’entrées Objets et Compétences dans le menu du monde\n- Devises, Gains et Inventaire enregistrés automatiquement\n- Catalogue annoncé « Bientôt »",
   },
   {

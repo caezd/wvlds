@@ -148,7 +148,6 @@ export function WorldPersonaTemplateSection({
       <ToggleList>
         <ToggleItem
           title={t("defaultSheet")}
-          help={tSettings("defaultSheetHelp")}
           checked={!!templateId}
           disabled={!loaded || toggling}
           onCheckedChange={(v) => void handleToggle(v)}
@@ -159,6 +158,7 @@ export function WorldPersonaTemplateSection({
             indent
             dimmed={!templateId}
             title={t("personaReview.label")}
+            description={t("personaReview.description")}
             help={t("personaReview.help")}
             control={
               <Switch
@@ -174,7 +174,6 @@ export function WorldPersonaTemplateSection({
             indent
             dimmed={!templateId}
             title={tSettings("editSheet")}
-            help={tSettings("editSheetHelp")}
             control={
               <Button
                 type="button"

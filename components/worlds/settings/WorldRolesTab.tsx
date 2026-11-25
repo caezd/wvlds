@@ -28,7 +28,6 @@ import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { ColorPickerButton } from "./ColorPickerButton";
 import { SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 import { RoleChip } from "../members/RoleChip";
-import { HelpHint } from "@/components/ui/help-hint";
 import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/section-label";
 import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
@@ -186,11 +185,8 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
       {/* ── Liste ──────────────────────────────────────────── */}
       <aside className={cn("w-full shrink-0", deuxColonnes && "md:w-56 md:border-r md:border-border md:pr-4")}>
         <div className="flex items-center justify-between gap-2 pb-2 pl-2.5">
-          <SectionLabel as="p" className="flex items-center gap-1.5">
-            <span>
-              {t("title")} · <span className="tabular-nums">{sorted.length}</span>
-            </span>
-            <HelpHint title={t("title")}>{t("hierarchyHelp")}</HelpHint>
+          <SectionLabel as="p">
+            {t("title")} · <span className="tabular-nums">{sorted.length}</span>
           </SectionLabel>
           <Button
             variant="outline"
@@ -427,21 +423,20 @@ function RoleDetails({
         <ToggleList>
           <ToggleItem
             title={t("hoist")}
-            help={t("hoistHelp")}
+            description={t("hoistHelp")}
             checked={role.hoist}
             disabled={!editable}
             onCheckedChange={(hoist) => onPersist({ hoist })}
           />
           <ToggleItem
             title={t("mentionable")}
-            help={t("mentionableHelp")}
             checked={role.mentionable}
             disabled={!editable}
             onCheckedChange={(mentionable) => onPersist({ mentionable })}
           />
           <ToggleItem
             title={t("isDefault")}
-            help={t("isDefaultHelp")}
+            description={t("isDefaultHelp")}
             checked={role.is_default}
             disabled={!editable}
             onCheckedChange={(is_default) => onPersist({ is_default })}

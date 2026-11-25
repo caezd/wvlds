@@ -58,21 +58,17 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     expect(screen.getByRole("region", { name: "Mois du calendrier" })).toBeInTheDocument();
   });
 
-  it("chaque explication derrière une aide en bout de ligne, sans exemple ni texte sous le titre", () => {
+  it("chaque section dit à quoi elle sert en clair ; l'aide ne garde que le détail", () => {
     render(<Harnais />);
     const saisons = screen.getByRole("region", { name: "Saisons" });
+    expect(within(saisons).getByText("Des âges nommés qui découpent l’histoire du monde.")).toBeVisible();
     const aide = within(saisons).getByRole("button", { name: "Aide : Saisons" });
-    expect(aide).toHaveAccessibleDescription(/^Des âges nommés qui découpent l'histoire du monde\./);
-    // Plus d'exemple entre guillemets, ni de description visible sous le titre.
-    expect(aide.getAttribute("aria-describedby")).toBeTruthy();
-    expect(saisons.textContent).not.toMatch(/«/);
-    expect(within(saisons).queryByText(/^Des âges nommés/, { selector: "p" })).toBeNull();
+    expect(aide).toHaveAccessibleDescription(/^Sur la frise, elles remplacent les tranches de cinq ans\./);
+    expect(screen.getByRole("region", { name: "Où en est le récit" })).toHaveTextContent("La date proposée aux nouveaux salons.");
+    // Les options de la frise s'expliquent sous leur titre.
+    expect(screen.getByText("Sans message depuis ce nombre de jours. 0 : jamais.")).toBeInTheDocument();
     // Ni « Ex. … » sous les champs du format.
     expect(screen.queryByText(/^Ex\./)).toBeNull();
-    // Une aide par sous-option, et pour les options qu'elles contiennent.
-    for (const nom of ["Aide : Fêtes du calendrier", "Aide : Afficher les journaux des personas", "Aide : Mise en pause"]) {
-      expect(screen.getByRole("button", { name: nom })).toBeInTheDocument();
-    }
   });
 
   it("le calendrier dit la longueur de l'année qu'il compose ; la date actuelle, où l'on en est dans l'année", () => {
@@ -128,7 +124,7 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     const user = userEvent.setup();
     render(<Harnais onPersist={onPersist} />);
 
-    expect(screen.getByText(/ne pourra être situé qu'en Dégel, an 342 des Cendres/)).toBeInTheDocument();
+    expect(screen.getByText(/ne peut être situé qu’en Dégel, an 342 des Cendres/)).toBeInTheDocument();
     await user.click(screen.getByRole("switch", { name: "Restreindre les salons à la période en cours" }));
     expect(onPersist).toHaveBeenCalledWith({ restrict_to_current: true });
   });

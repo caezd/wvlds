@@ -182,8 +182,9 @@ export function WorldLiveChannelsSettings({ worldId }: { worldId: string }) {
   return (
     <SettingsSection
       title={t("title")}
-      help={t("help")}
-      meta={channels ? t("count", { count: channels.length + 1 }) : undefined}
+      description={t("help")}
+      help={t("more")}
+      count={channels ? channels.length + 1 : undefined}
     >
       {channels === null ? (
         <div className="flex justify-center py-4 text-muted-foreground">

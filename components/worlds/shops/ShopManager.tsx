@@ -15,6 +15,7 @@ import { useWorldShops, type ShopArticle } from "@/hooks/useWorldShops";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { formatAmount } from "@/lib/worldCurrency";
 import { buybackPriceOf, type WorldShop } from "@/lib/worldShops";
+import { SettingsEmpty } from "@/components/worlds/settings/FeatureLayout";
 import { ShopDialog, ShopItemDialog, type ShopItemTarget } from "./ShopDialogs";
 
 type Shops = ReturnType<typeof useWorldShops>;
@@ -33,11 +34,23 @@ export function ShopManager({ worldId }: { worldId: string }) {
   const [itemTarget, setItemTarget] = useState<ShopItemTarget | null>(null);
 
   if (shops.status === "loading") return null;
-  if (shops.status === "off") return <p className="text-sm text-muted-foreground">{t("off")}</p>;
+  // Coupées : l'en-tête de la page dit déjà pourquoi (devises, inventaire, interrupteur).
+  if (shops.status === "off") return null;
 
   return (
     <div className="space-y-4">
-      {shops.shops.length === 0 && <p className="text-sm text-muted-foreground">{t("empty")}</p>}
+      {shops.shops.length === 0 && (
+        <SettingsEmpty
+          action={
+            <Button type="button" size="sm" variant="outline" onClick={() => setShopDialog({ shop: null })}>
+              <Plus className="h-3.5 w-3.5" />
+              {t("create")}
+            </Button>
+          }
+        >
+          {t("empty")}
+        </SettingsEmpty>
+      )}
 
       {shops.shops.map((shop) => (
         <ManagedShop
@@ -49,10 +62,12 @@ export function ShopManager({ worldId }: { worldId: string }) {
         />
       ))}
 
-      <Button type="button" size="sm" variant="outline" onClick={() => setShopDialog({ shop: null })}>
-        <Plus className="h-3.5 w-3.5" />
-        {t("create")}
-      </Button>
+      {shops.shops.length > 0 && (
+        <Button type="button" size="sm" variant="outline" onClick={() => setShopDialog({ shop: null })}>
+          <Plus className="h-3.5 w-3.5" />
+          {t("create")}
+        </Button>
+      )}
 
       <ShopDialog
         worldId={worldId}

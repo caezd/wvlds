@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { HelpHint } from "@/components/ui/help-hint";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AmountInput } from "@/components/economy/AmountInput";
 import { addWorldShop, addWorldShopItem, updateWorldShop, updateWorldShopItem } from "@/app/actions/worldShops";
@@ -31,11 +30,12 @@ function intOrNull(raw: string): number | null {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-function LabelWithHelp({ htmlFor, label, help }: { htmlFor?: string; label: string; help: string }) {
+/** Un libellé et sa phrase d'explication, visible : la raison d'une case grisée se lit sans ouvrir d'aide. */
+function LabelWithDescription({ htmlFor, label, description }: { htmlFor?: string; label: string; description: string }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="min-w-0 space-y-0.5">
       <Label htmlFor={htmlFor}>{label}</Label>
-      <HelpHint title={label}>{help}</HelpHint>
+      <p className="text-xs text-muted-foreground text-pretty">{description}</p>
     </div>
   );
 }
@@ -129,20 +129,20 @@ function ShopForm({
           />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <LabelWithHelp htmlFor="shop-open" label={t("open")} help={t("openHelp")} />
+          <LabelWithDescription htmlFor="shop-open" label={t("open")} description={t("openHelp")} />
           <Switch id="shop-open" checked={isOpen} onCheckedChange={setIsOpen} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <LabelWithHelp
+          <LabelWithDescription
             htmlFor="shop-buyback"
             label={t("buyback")}
-            help={allowBuyback ? t("buybackHelp") : t("buybackHeldOnly")}
+            description={allowBuyback ? t("buybackHelp") : t("buybackHeldOnly")}
           />
           <Switch id="shop-buyback" checked={allowBuyback && buyback} disabled={!allowBuyback} onCheckedChange={setBuyback} />
         </div>
         {allowBuyback && buyback && (
           <div className="flex items-center justify-between gap-3">
-            <LabelWithHelp htmlFor="shop-percent" label={t("buybackPercent")} help={t("buybackPercentHelp")} />
+            <LabelWithDescription htmlFor="shop-percent" label={t("buybackPercent")} description={t("buybackPercentHelp")} />
             <Input
               id="shop-percent"
               type="number"
@@ -265,7 +265,7 @@ function ShopItemForm({
         </div>
         {allowBuyback && (
           <div className="space-y-1.5">
-            <LabelWithHelp label={t("buybackPrice")} help={t("buybackPriceHelp")} />
+            <LabelWithDescription label={t("buybackPrice")} description={t("buybackPriceHelp")} />
             <AmountInput
               units={units}
               value={buyback}

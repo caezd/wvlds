@@ -144,9 +144,9 @@ describe("ShopManager — les boutiques, depuis les paramètres", () => {
     expect(within(dialog).queryByLabelText(/Rachat par défaut/)).toBeNull();
   });
 
-  it("option coupée : le dit", () => {
+  it("option coupée : rien, la page des réglages dit déjà pourquoi", () => {
     shops({ status: "off" });
-    renderManager();
-    expect(screen.getByText(/l’option Boutiques/)).toBeInTheDocument();
+    const { container } = renderManager();
+    expect(container).toBeEmptyDOMElement();
   });
 });

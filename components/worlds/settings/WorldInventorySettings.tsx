@@ -22,7 +22,7 @@ import {
   type InventoryMode,
 } from "@/lib/personaInventory";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
-import { FIELD, SettingsSection, TitleWithHelp, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Une saisie numérique : un entier, ou `null` si le champ est vide. */
 function parseCount(raw: string): number | null {
@@ -118,9 +118,8 @@ export function WorldInventorySettings({
         <ToggleList>
           {/* Les trois modes en liste à cocher : chacun dit en clair ce qu'il permet. */}
           <div className="px-4 py-2.5">
-            <p className="text-sm font-medium">
-              <TitleWithHelp title={t("mode.title")} help={t("mode.help")} />
-            </p>
+            <p className="text-sm font-medium">{t("mode.title")}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("mode.help")}</p>
             <RadioGroup
               aria-label={t("mode.title")}
               value={mode}
@@ -141,14 +140,14 @@ export function WorldInventorySettings({
           </div>
           <ToggleItem
             title={t("slotsDefault.title")}
-            help={t("slotsDefault.help")}
+            description={t("slotsDefault.help")}
             control={numberField(t("slotsDefault.title"), slotsDefault, setSlotsDefault, { max: MAX_INVENTORY_SLOTS })}
           />
           <ToggleItem
             indent
             dimmed={unlimited}
             title={t("slotsMax.title")}
-            help={t("slotsMax.help")}
+            description={t("slotsMax.help")}
             control={numberField(t("slotsMax.title"), slotsMax, setSlotsMax, {
               disabled: unlimited,
               max: MAX_INVENTORY_SLOTS,
@@ -159,7 +158,7 @@ export function WorldInventorySettings({
             indent
             dimmed={unlimited || !economyOn}
             title={t("slotCost.title")}
-            help={economyOn ? t("slotCost.help", { unit: baseUnit.name }) : t("slotCost.needsEconomy")}
+            description={economyOn ? t("slotCost.help", { unit: baseUnit.name }) : t("slotCost.needsEconomy")}
             control={numberField(t("slotCost.title"), slotCost, setSlotCost, {
               disabled: unlimited || !economyOn,
               max: MAX_SLOT_COST,

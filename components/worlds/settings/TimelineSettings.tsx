@@ -18,10 +18,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { HelpHint } from "@/components/ui/help-hint";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FIELD, SURFACE, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, SettingsAddRow, SettingsEmpty, SettingsSection, SURFACE, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Le rouge de la date actuelle, comme sur la frise : l'accent. */
 const NOW_RED_BG = "bg-accent";
@@ -144,7 +143,6 @@ export function TimelineSettings({
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Hourglass className="size-3.5" aria-hidden />
             {tSettings("timelinePreviewLabel")}
-            <HelpHint title={tSettings("timelinePreviewLabel")}>{tSettings("timelinePreviewHelp")}</HelpHint>
           </p>
           <p className="mt-3 text-3xl font-semibold tracking-tight">{apercu}</p>
           {nbMois > 0 && (
@@ -171,10 +169,10 @@ export function TimelineSettings({
           aria-label={tSettings("timelineNow")}
           className="space-y-4 border-t border-border p-5 @2xl:border-l @2xl:border-t-0"
         >
-          <p className="flex items-center gap-1.5 text-sm font-semibold">
-            {tSettings("timelineNow")}
-            <HelpHint title={tSettings("timelineNow")}>{tSettings("timelineNowHelp")}</HelpHint>
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">{tSettings("timelineNow")}</p>
+            <p className="text-sm text-muted-foreground text-pretty">{tSettings("timelineNowHelp")}</p>
+          </div>
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-current-year" className="text-xs font-normal text-muted-foreground">{t("currentYear")}</Label>
             <div className={cn("flex h-10 items-center rounded-md border", FIELD)}>
@@ -232,7 +230,7 @@ export function TimelineSettings({
       </div>
 
       {/* ── Comment une date s'écrit ── */}
-      <SettingsSection title={tSettings("timelineFormat")} help={tSettings("timelineFormatHelp")}>
+      <SettingsSection title={tSettings("timelineFormat")}>
         <div className="grid gap-3 @md:grid-cols-2">
           <div className="grid gap-1.5">
             <Label htmlFor="timeline-year-label" className="text-xs font-normal text-muted-foreground">{t("yearLabel")}</Label>
@@ -270,17 +268,17 @@ export function TimelineSettings({
       </SettingsSection>
 
       {/* ── Les salons et la date du monde ── */}
-      <SettingsSection title={tSettings("roomRules")} help={tSettings("roomRulesHelp")}>
+      <SettingsSection title={tSettings("roomRules")}>
         <ToggleList>
           <ToggleItem
             title={tSettings("restrictToCurrent")}
-            help={tSettings("restrictToCurrentHelp", { period: periode })}
+            description={tSettings("restrictToCurrentHelp", { period: periode })}
             checked={!!config.restrict_to_current}
             onCheckedChange={(v) => onPersist({ restrict_to_current: v })}
           />
           <ToggleItem
             title={tSettings("requireDate")}
-            help={tSettings("requireDateHelp")}
+            description={tSettings("requireDateHelp")}
             checked={!!config.require_date}
             onCheckedChange={(v) => onPersist({ require_date: v })}
           />
@@ -294,7 +292,7 @@ export function TimelineSettings({
           ajout, retrait ou préréglage touche les deux à la fois. */}
       <SettingsSection
         title={t("calendarMonths")}
-        help={tSettings("timelineCalendarHelp")}
+        description={tSettings("timelineCalendarHelp")}
         meta={nbMois > 0 ? (
           <span data-testid="timeline-year-length">{tSettings("calendarSummary", { months: nbMois, days: joursParAn })}</span>
         ) : undefined}
@@ -373,24 +371,17 @@ export function TimelineSettings({
             ))}
           </ol>
         ) : (
-          <p className="text-xs italic text-muted-foreground">{tSettings("noMonthsHint")}</p>
+          <SettingsEmpty>{tSettings("noMonthsHint")}</SettingsEmpty>
         )}
 
-        <button
-          type="button"
-          onClick={ajouterMois}
-          className="flex h-10 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-        >
-          <Plus className="size-4" aria-hidden />
-          {tSettings("addMonth")}
-        </button>
+        <SettingsAddRow label={tSettings("addMonth")} onClick={ajouterMois} />
       </SettingsSection>
 
       {/* ── Les saisons ── */}
       {/* Des âges nommés : ils remplacent, sur la frise, les tranches de cinq
           ans, et ouvrent leurs années d'un bandeau. Sans année de fin, une
           saison court jusqu'à la suivante. */}
-      <SettingsSection title={tSettings("timelineAges")} help={tSettings("timelineAgesHelp")}>
+      <SettingsSection title={tSettings("timelineAges")} description={tSettings("timelineAgesHelp")} help={tSettings("timelineAgesMore")}>
         {ages.length > 0 ? (
           <ol className="space-y-2" aria-label={tSettings("timelineAges")}>
             {ages.map((age, i) => (
@@ -468,7 +459,7 @@ export function TimelineSettings({
       {/* ── Les fêtes du calendrier ── */}
       {/* Des jours qui reviennent chaque année : la frise les rappelle à leur
           date, dans les mois qui ont déjà une entrée. */}
-      <SettingsSection title={tSettings("timelineHolidays")} help={tSettings("timelineHolidaysHelp")}>
+      <SettingsSection title={tSettings("timelineHolidays")} description={tSettings("timelineHolidaysHelp")} help={tSettings("timelineHolidaysMore")}>
         {holidays.length > 0 ? (
           <ol className="space-y-2" aria-label={tSettings("timelineHolidays")}>
             {holidays.map((fete, i) => (
@@ -584,11 +575,11 @@ export function TimelineSettings({
       </SettingsSection>
 
       {/* ── Ce que montre la frise ── */}
-      <SettingsSection title={tSettings("timelineFrieze")} help={tSettings("timelineFriezeHelp")}>
+      <SettingsSection title={tSettings("timelineFrieze")}>
         <ToggleList>
           <ToggleItem
             title={tSettings("showJournals")}
-            help={tSettings("showJournalsHelp")}
+            description={tSettings("showJournalsHelp")}
             checked={!!config.show_journals}
             onCheckedChange={(v) => onPersist({ show_journals: v })}
           />
@@ -596,7 +587,7 @@ export function TimelineSettings({
               sommeil » ; rien n'est modifié en base (voir effectiveRoomStatus). */}
           <ToggleItem
             title={tSettings("dormantDays")}
-            help={tSettings("dormantDaysHelp")}
+            description={tSettings("dormantDaysHelp")}
             control={
               <span className={cn("flex h-9 shrink-0 items-center rounded-md border pr-3", FIELD)}>
                 <Input

@@ -195,7 +195,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                             <>
                                 <div className="space-y-6">
                                     {/* -- Visibilité ----------------------------- */}
-                                    <SettingsSection title={tSettings("visibility")} help={t("publicWorldHelp")}>
+                                    <SettingsSection title={tSettings("visibility")} description={t("publicWorldHelp")}>
                                     <FormField
                                         control={form.control}
                                         name="visibility"
@@ -233,7 +233,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     {/* -- Sécurité ----------------------------- */}
                                     {/* Deux cartes plutôt qu'un interrupteur : le choix se lit
                                         d'un coup d'œil, comme Privé / Public juste au-dessus. */}
-                                    <SettingsSection title={t("tabSecurity")} help={tSettings("ageRestrictedHelp")}>
+                                    <SettingsSection title={t("tabSecurity")} description={tSettings("ageRestrictedHelp")}>
                                         <SegmentedRail>
                                             <Segment
                                                 active={!ageRestricted}
@@ -253,7 +253,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     </SettingsSection>
 
                                     {/* -- Avatars acceptés --------------------- */}
-                                    <SettingsSection title={t("acceptedAvatarTypes")} help={tSettings("avatarTypesHelp")}>
+                                    <SettingsSection title={t("acceptedAvatarTypes")} description={tSettings("avatarTypesHelp")}>
                                         <SegmentedRail>
                                             <Segment
                                                 active={allowsRealAvatars}
@@ -276,7 +276,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     {/* Un seul cadre pour ce qu'on a et ce qu'on tape, une ligne
                                         discrète pour ce qu'on propose : trois rangées de pastilles
                                         de formes différentes se lisaient comme un fourre-tout. */}
-                                    <SettingsSection title={tSettings("tags")} help={tSettings("tagsHelp")} meta={`${tags.length}/${MAX_TAGS}`}>
+                                    <SettingsSection title={tSettings("tags")} description={tSettings("tagsHelp")} count={`${tags.length}/${MAX_TAGS}`}>
                                         <div className={cn("space-y-2 rounded-md border p-2", FIELD)}>
                                             {tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">

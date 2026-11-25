@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
     Form,
     FormControl,
@@ -224,7 +225,6 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
     // peut retenir sous Firefox — l'envoi n'en partait alors jamais.
     const { userId } = useCurrentUser();
     const [uploading, setUploading] = React.useState<null | "icon" | "banner">(null);
-    const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
 
 
@@ -250,7 +250,6 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
 
     // Réinitialise les valeurs si on change de monde tout en restant sur cette vue.
     React.useEffect(() => {
-        setConfirmDelete(false);
         form.reset({
             name: world.name ?? "",
             description: world.description ?? "",
@@ -346,10 +345,6 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
     }
 
     async function handleDelete() {
-        if (!confirmDelete) {
-            setConfirmDelete(true);
-            return;
-        }
         setDeleting(true);
         try {
             const { error } = await supabase
@@ -378,9 +373,12 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
      *  `ownTitle` : la page porte déjà le sien (FeaturePage), pas de doublon. */
     // Toutes les pages ont la même largeur et la même mise en page que celles
     // des fonctions (FeaturePage) : titre, puis sections à deux colonnes.
+    // Le sous-titre d'une page qui n'en porte pas elle-même.
+    const pageDescription = (id: SettingsSectionId): string | undefined =>
+        id === "roles" ? t("roles.hierarchyHelp") : id === "reports" ? t("reportsIntro") : undefined;
     const page = (id: SettingsSectionId, children: React.ReactNode, ownTitle = false) => (
         <div className={SETTINGS_PAGE_WIDTH} data-settings-page={id}>
-            {ownTitle ? children : <FeaturePage title={sectionLabel(id)}>{children}</FeaturePage>}
+            {ownTitle ? children : <FeaturePage title={sectionLabel(id)} description={pageDescription(id)}>{children}</FeaturePage>}
         </div>
     );
 
@@ -434,14 +432,15 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                 onSubmit={(e) => e.preventDefault()}
                                 className="space-y-6"
                             >
-                                {/* -- Nom ------------------------------------ */}
-                                <SettingsSection title={t("name")} help={t("nameHelp")}>
+                                {/* -- Identité : nom, description, icône, bannière ── */}
+                                <SettingsSection title={tSettings("identity")}>
+                                <div className="space-y-5">
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="sr-only">{t("name")}</FormLabel>
+                                            <FormLabel>{t("name")}</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder={t("namePlaceholder")}
@@ -457,16 +456,14 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                         </FormItem>
                                     )}
                                 />
-                                </SettingsSection>
 
-                                {/* -- Description ---------------------------- */}
-                                <SettingsSection title={t("description")} help={t("tagHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="description"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="sr-only">{t("description")}</FormLabel>
+                                            <FormLabel>{t("description")}</FormLabel>
+                                            <p className="text-sm text-muted-foreground">{t("tagHelp")}</p>
                                             <FormControl>
                                                 <Textarea
                                                     rows={5}
@@ -482,16 +479,13 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                         </FormItem>
                                     )}
                                 />
-                                </SettingsSection>
 
-                                {/* -- Icône ----------------------------------- */}
-                                <SettingsSection title={tSettings("worldIcon")} help={t("iconHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="icon_url"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel className="sr-only">{tSettings("worldIcon")}</FormLabel>
+                                            <FormLabel>{tSettings("worldIcon")}</FormLabel>
                                             <div className="flex items-start gap-3">
                                                 {iconUrl ? (
                                                     <div className="flex items-start gap-2">
@@ -584,16 +578,13 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                         </FormItem>
                                     )}
                                 />
-                                </SettingsSection>
 
-                                {/* -- Bannière -------------------------------- */}
-                                <SettingsSection title={tSettings("banner")} help={t("bannerHelp")}>
                                 <FormField
                                     control={form.control}
                                     name="banner_url"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel className="sr-only">{tSettings("banner")}</FormLabel>
+                                            <FormLabel>{tSettings("banner")}</FormLabel>
                                             <ImagePickerCropField
                                                 aspect={16 / 7}
                                                 uploading={uploading === "banner"}
@@ -618,6 +609,7 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                         </FormItem>
                                     )}
                                 />
+                                </div>
                                 </SettingsSection>
 
                                 {/* -- Couleurs de la page d'accueil : désactivé temporairement
@@ -628,21 +620,19 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                             {/* Supprimer le monde reste au propriétaire : `world.settings`
                                 permet de régler le monde, pas d'en disposer. */}
                             {membership?.isOwner && (
-                                <SettingsSection title={tSettings("menu.dangerZone")}>
-                                    <div>
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => void handleDelete()}
-                                            disabled={deleting}
-                                        >
-                                            {deleting ? (
-                                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                            ) : null}
-                                            {confirmDelete ? t("deleteConfirmShort") : t("delete")}
-                                        </Button>
-                                    </div>
+                                <SettingsSection title={tSettings("menu.dangerZone")} description={tSettings("deleteWorldHelp")}>
+                                    <DeleteConfirmDialog
+                                        title={t("delete")}
+                                        description={t("deleteConfirmation")}
+                                        confirmLabel={t("delete")}
+                                        onConfirm={() => void handleDelete()}
+                                        trigger={
+                                            <Button type="button" variant="destructive" size="sm" disabled={deleting}>
+                                                {deleting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                                                {t("delete")}
+                                            </Button>
+                                        }
+                                    />
                                 </SettingsSection>
                             )}
                             </>

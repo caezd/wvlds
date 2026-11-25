@@ -40,15 +40,10 @@ beforeEach(() => {
 });
 
 describe("WorldHomeGridSettings — aides", () => {
-  it("les explications derrière une aide en bout de libellé, plus sous les titres", () => {
+  it("les statistiques s'expliquent sous leur titre ; l'espacement se lit dans l'éditeur", () => {
     render(<WorldHomeGridSettings world={BASE_WORLD} />);
-    for (const aide of screen.getAllByTestId("help-hint")) {
-      expect(aide).toHaveAccessibleName(/^Aide : /);
-      expect(aide.getAttribute("aria-describedby")).toBeTruthy();
-    }
-    expect(screen.getByRole("button", { name: "Aide : Espacement des blocs" }))
-      .toHaveAccessibleDescription(/^Espace entre les blocs de la grille/);
-    expect(screen.queryByText(/^Espace entre les blocs de la grille/, { selector: "p" })).toBeNull();
+    expect(screen.getByText("Messages, membres et personas, sous le titre de l’accueil.")).toBeInTheDocument();
+    expect(screen.queryByTestId("help-hint")).toBeNull();
   });
 });
 

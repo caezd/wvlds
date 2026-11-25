@@ -35,7 +35,8 @@ describe("WorldRelationsSettings", () => {
     expect(mock.buildersFor("world_persona_groups")).toHaveLength(0);
 
     const types = screen.getByRole("region", { name: "Types de relation" });
-    expect(types).toHaveTextContent("4 types");
+    expect(within(types).getByRole("heading", { name: /Types de relation/ })).toHaveTextContent(/4$/);
+    expect(types).toHaveTextContent("Les liens que les personas tissent entre eux.");
     // Le trait tel qu'il paraît sur le graphe.
     expect(within(types).getAllByTestId("relation-line")[1].querySelector("line")).toHaveAttribute("stroke-dasharray", "5 3");
     // Le trait, et la réciprocité : éteinte, ou le statut marital.

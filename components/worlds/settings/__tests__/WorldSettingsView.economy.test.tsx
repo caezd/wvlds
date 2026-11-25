@@ -150,7 +150,8 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const page = screen.getByRole("region", { name: "Boutiques" });
     expect(within(page).getByRole("switch", { name: "Activer les boutiques" })).toBeDisabled();
     expect(within(page).getByText("Les boutiques demandent les devises et l’inventaire.")).toBeInTheDocument();
-    expect(within(page).queryByText(/gestion des boutiques/)).toBeNull();
+    // La gestion reste visible, grisée et inerte, comme les autres fonctions coupées.
+    expect(within(page).getByTestId("inactive-options")).toContainElement(within(page).getByText(/gestion des boutiques/));
   });
 
   it("Boutiques : l'interrupteur appelle l'action avec le bon champ", async () => {

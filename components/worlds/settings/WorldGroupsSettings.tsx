@@ -37,7 +37,7 @@ import {
   type PersonaGroupRow,
 } from "@/lib/personaGroups";
 import { WorldGroupDetail, type GroupFields, type GroupPersona } from "./WorldGroupDetail";
-import { FeaturePage, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, SETTINGS_ROW, SettingsAddRow, SettingsEmpty, SettingsSection } from "./FeatureLayout";
 
 /** Une ligne de la liste : bordée, sur le fond des cartes ; le bouton qu'elle contient l'occupe. */
 const ROW = cn(SETTINGS_ROW, "flex-nowrap gap-1 py-1 pl-1");
@@ -45,8 +45,6 @@ const ROW = cn(SETTINGS_ROW, "flex-nowrap gap-1 py-1 pl-1");
 const ROW_BUTTON =
   "flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 /** La ligne d'ajout, en pointillés. */
-const ADD_ROW =
-  "flex min-h-12 w-full items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 /** Le retrait d'un sous-groupe, par niveau. */
 const INDENT_REM = 1.5;
 
@@ -262,10 +260,11 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
     <FeaturePage title={t("groups")}>
       <SettingsSection
         title={t("personaGroups")}
+        description={t("groupsDescription")}
         help={t("groupsHelp")}
-        meta={t("groupsCount", { count: rows.length })}
+        count={rows.length}
       >
-        {rows.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noGroupsDefined")}</p>}
+        {rows.length === 0 && <SettingsEmpty>{t("noGroupsDefined")}</SettingsEmpty>}
         <ul className="space-y-2" aria-label={t("groups")}>
           {groups.map((g) => {
             const parent = g.parent_id ? byId.get(g.parent_id) : undefined;
@@ -347,10 +346,7 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
             );
           })}
         </ul>
-        <button type="button" className={ADD_ROW} onClick={() => setPage({ parentId: null })}>
-          <Plus className="size-4" aria-hidden />
-          {t("newGroup")}
-        </button>
+        <SettingsAddRow label={t("newGroup")} onClick={() => setPage({ parentId: null })} />
       </SettingsSection>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>

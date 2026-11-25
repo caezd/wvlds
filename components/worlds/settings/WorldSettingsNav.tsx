@@ -213,12 +213,9 @@ export function WorldSettingsNav({
               run.subgroup ? (
                 // Une sous-catégorie (Économie) : son titre, puis ses pages en retrait.
                 <li key={run.subgroup} className="pt-2">
-                  <p
-                    id={`settings-subgroup-${run.subgroup}`}
-                    className="px-2.5 pb-1 text-xs font-medium text-muted-foreground"
-                  >
+                  <SectionLabel as="p" id={`settings-subgroup-${run.subgroup}`} className="px-2.5 pb-1">
                     {tSettings(`menu.subgroups.${run.subgroup}`)}
-                  </p>
+                  </SectionLabel>
                   <ul aria-labelledby={`settings-subgroup-${run.subgroup}`} className="space-y-0.5 md:pl-2">
                     {run.sections.map(entry)}
                   </ul>

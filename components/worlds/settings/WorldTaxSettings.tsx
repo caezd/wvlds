@@ -88,7 +88,7 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
   const anchorLabel = anchor.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 
   return (
-    <SettingsSection title={t("title")} help={t("help")} aside={<AutoSaveIndicator status={status} />}>
+    <SettingsSection title={t("title")} description={t("help")} aside={<AutoSaveIndicator status={status} />}>
       <div onBlur={flush}>
         <ToggleList>
           <ToggleItem title={t("enable")} checked={draft.tax_enabled} onCheckedChange={(v) => set({ tax_enabled: v })} />
@@ -143,7 +143,6 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
               />
               <ToggleItem
                 title={t("anchor")}
-                help={t("anchorHelp")}
                 control={
                   <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                     <PopoverTrigger asChild>
@@ -198,19 +197,18 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
               </div>
               <ToggleItem
                 title={t("accumulate")}
-                help={t("accumulateHelp")}
+                description={t("accumulateHelp")}
                 checked={draft.tax_accumulate}
                 onCheckedChange={(v) => set({ tax_accumulate: v })}
               />
               <ToggleItem
                 title={t("grace")}
-                help={t("graceHelp")}
+                description={t("graceHelp")}
                 checked={draft.tax_grace_new}
                 onCheckedChange={(v) => set({ tax_grace_new: v })}
               />
               <ToggleItem
                 title={t("badgeEnabled")}
-                help={t("badgeEnabledHelp")}
                 checked={draft.tax_badge_enabled}
                 onCheckedChange={(v) => set({ tax_badge_enabled: v })}
               />
@@ -218,7 +216,6 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
                 <div className="divide-y divide-border">
                   <ToggleItem
                     title={t("badge")}
-                    help={t("badgeHelp")}
                     control={
                       <Input
                         aria-label={t("badge")}
@@ -232,7 +229,6 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
                   />
                   <ToggleItem
                     title={t("badgeStyle")}
-                    help={t("badgeStyleHelp")}
                     control={
                       <div className="flex shrink-0 items-center gap-2">
                         <span data-testid="tax-badge-preview" className="flex">

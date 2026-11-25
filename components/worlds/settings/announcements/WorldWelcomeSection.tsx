@@ -34,7 +34,6 @@ import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, us
 import { AnnouncementLivePreview, AnnouncementPreviewButton } from "./AnnouncementLivePreview";
 import { EMPTY_EXTRAS } from "@/components/worlds/announcements/AnnouncementExtrasFields";
 import { WikiPagePicker, useWorldWikiPages } from "@/components/worlds/catalogue/WikiPagePicker";
-import { LabelWithHelp } from "../LabelWithHelp";
 
 /**
  * La page « Message de bienvenue » des paramètres (groupe Communications) :
@@ -116,6 +115,7 @@ export function WorldWelcomeSection({
   return (
     <SettingsSection
       title={t("sectionTitle")}
+      description={t("description")}
       help={t("help")}
       aside={<StatusPill active={enabled} onLabel={tSettings("statusOn")} offLabel={tSettings("statusOff")} />}
     >
@@ -277,7 +277,7 @@ function WelcomeEditor({
           </div>
           {kind === "notification" && (
             <ToggleList>
-              <ToggleItem title={tA("asWorld")} help={tA("asWorldHelp")} checked={asWorld} onCheckedChange={setAsWorld} />
+              <ToggleItem title={tA("asWorld")} description={tA("asWorldHelp")} checked={asWorld} onCheckedChange={setAsWorld} />
             </ToggleList>
           )}
           {kind === "notification" && (
@@ -309,9 +309,10 @@ function WelcomeEditor({
           </div>
           {kind === "notification" && (
             <div className="space-y-2">
-              <SectionLabel as="div">
-                <LabelWithHelp help={t("wikiPageHelp")}>{t("wikiPage")}</LabelWithHelp>
-              </SectionLabel>
+              <div className="space-y-0.5">
+                <SectionLabel as="div">{t("wikiPage")}</SectionLabel>
+                <p className="text-xs text-muted-foreground">{t("wikiPageHelp")}</p>
+              </div>
               <WikiPagePicker
                 worldId={worldId}
                 pages={wikiPages}

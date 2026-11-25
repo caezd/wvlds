@@ -150,8 +150,9 @@ describe("WorldSettingsView — carte et wiki", () => {
     await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
     const carte = screen.getByRole("region", { name: "Carte" });
     expect(within(carte).getByRole("heading", { name: /Carte/ })).toBeInTheDocument();
-    // L'interrupteur encadré de l'en-tête dit l'état, et le change.
-    expect(within(carte).getByText("Activée")).toBeInTheDocument();
+    // L'interrupteur de l'en-tête porte l'état, sans libellé « Activée ».
+    expect(within(carte).getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
+    expect(within(carte).queryByText("Activée")).toBeNull();
     expect(screen.queryByRole("region", { name: "Inventaire" })).toBeNull();
   });
 

@@ -12,10 +12,9 @@ import {
   type WorldHomeGridGap,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
-import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { ToggleItem, ToggleList } from "./FeatureLayout";
+import { SettingsSection, SettingsSegmented, ToggleItem, ToggleList } from "./FeatureLayout";
 
 const GAP_OPTIONS: WorldHomeGridGap[] = ["compact", "comfortable", "spacious"];
 
@@ -73,49 +72,39 @@ export function WorldHomeGridSettings({
 
   return (
     <div className="space-y-6">
-      <ToggleList>
-        <ToggleItem
-          title={t("home.showStats")}
-          help={t("home.showStatsDesc")}
-          checked={showStats}
-          disabled={togglingStats}
-          onCheckedChange={(v) => void handleToggleStats(v)}
-        />
-        <ToggleItem
-          title={t("home.gridGap")}
-          help={t("home.gridGapDesc")}
-          control={
-            <div className="flex shrink-0 gap-1" role="radiogroup" aria-label={t("home.gridGap")}>
-              {GAP_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={gap === option}
-                  disabled={savingGap}
-                  onClick={() => void handleChangeGap(option)}
-                  className={cn(
-                    "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60",
-                    gap === option
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border bg-background text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t(`home.gridGapOptions.${option}`)}
-                </button>
-              ))}
-            </div>
-          }
-        />
-      </ToggleList>
+      <SettingsSection title={t("home.display")}>
+        <ToggleList>
+          <ToggleItem
+            title={t("home.showStats")}
+            description={t("home.showStatsDesc")}
+            checked={showStats}
+            disabled={togglingStats}
+            onCheckedChange={(v) => void handleToggleStats(v)}
+          />
+          <ToggleItem
+            title={t("home.gridGap")}
+            control={
+              <SettingsSegmented
+                label={t("home.gridGap")}
+                value={gap}
+                options={GAP_OPTIONS.map((option) => ({ value: option, label: t(`home.gridGapOptions.${option}`) }))}
+                onValueChange={(v) => void handleChangeGap(v)}
+                disabled={savingGap}
+              />
+            }
+          />
+        </ToggleList>
+      </SettingsSection>
 
-      <WorldHomeGridEditor
-        worldId={world.id}
-        items={items}
-        onItemsChange={setItems}
-        onPersisted={() => router.refresh()}
-        gap={gap}
-      />
+      <SettingsSection title={t("home.blocks")} layout="stacked">
+        <WorldHomeGridEditor
+          worldId={world.id}
+          items={items}
+          onItemsChange={setItems}
+          onPersisted={() => router.refresh()}
+          gap={gap}
+        />
+      </SettingsSection>
     </div>
   );
 }

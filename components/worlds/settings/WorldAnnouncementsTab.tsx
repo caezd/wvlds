@@ -250,13 +250,14 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       <div className="@container min-w-0 space-y-6">
       <div ref={formRef} className="scroll-mt-6" />
       {/* ── Type ─────────────────────────────────────────── */}
-      <SettingsSection title={t("kind")} help={t("kindHelp")}>
+      <SettingsSection title={t("kind")}>
         <KindPicker kind={kind} onChange={setKind} dmsEnabled={dmsEnabled} />
       </SettingsSection>
 
       {/* ── Destinataires ────────────────────────────────── */}
       <SettingsSection
         title={t("recipients")}
+        description={t("recipientsDescription")}
         help={t("recipientsHelp")}
         meta={
           <span data-testid="announcement-recipient-count" data-state={recipients === null ? "loading" : "ready"}>
@@ -324,14 +325,13 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
           <ToggleList>
             <ToggleItem
               title={t("asWorld")}
-              help={t("asWorldHelp")}
+              description={t("asWorldHelp")}
               checked={asWorld}
               onCheckedChange={setAsWorld}
             />
             {kind === "banner" && (
               <ToggleItem
                 title={t("bannerDuration")}
-                help={t("bannerDurationHelp")}
                 control={
                   <div className="flex flex-wrap justify-end gap-1.5" role="group" aria-label={t("bannerDuration")}>
                     <Button
@@ -368,14 +368,14 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
       )}
 
       {/* ── Présentation : étiquette, image, accueil ───────── */}
-      <SettingsSection title={t("presentation")} help={t("presentationHelp")}>
+      <SettingsSection title={t("presentation")} description={t("presentationHelp")}>
         <AnnouncementExtrasFields value={extras} onChange={setExtras} onUploaded={images.track} />
       </SettingsSection>
 
       {/* ── Message ──────────────────────────────────────── */}
       <SettingsSection
         title={t("body")}
-        help={
+        description={
           kind === "notification"
             ? t("bodyHelpNotification")
             : kind === "banner"

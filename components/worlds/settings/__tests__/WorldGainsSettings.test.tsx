@@ -45,15 +45,25 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("WorldGainsSettings (migration 252)", () => {
-  it("ce qui rapporte, puis les limites (délai, plafond) ; les gains de scène, masqués pour l'instant", () => {
+  it("une seule section : ce qui rapporte, puis ses limites (délai, plafond) ; les gains de scène, masqués pour l'instant", () => {
     render(<WorldGainsSettings world={monde()} />);
-    const noms = (section: string) =>
-      within(screen.getByRole("region", { name: section }))
+    const noms = (el: HTMLElement) =>
+      within(el)
         .getAllByRole("spinbutton")
         .map((c) => c.getAttribute("aria-label"))
         .filter((n) => !n?.endsWith(" en Or"));
-    expect(noms("Gains")).toEqual(["Par message en Argent", "Connexion du jour en Argent"]);
-    expect(noms("Limites des gains")).toEqual(["Délai entre deux messages payés, en minutes", "Plafond par jour en Argent"]);
+    const gains = screen.getByRole("region", { name: "Gains" });
+    expect(screen.getAllByRole("region")).toHaveLength(1);
+    expect(noms(gains)).toEqual([
+      "Par message en Argent", "Connexion du jour en Argent",
+      "Délai entre deux messages payés, en minutes", "Plafond par jour en Argent",
+    ]);
+    expect(noms(within(gains).getByRole("group", { name: "Limites des gains" }))).toEqual([
+      "Délai entre deux messages payés, en minutes", "Plafond par jour en Argent",
+    ]);
+    // Chaque réglage s'explique sous son libellé, sans aide à ouvrir.
+    expect(within(gains).getByText("Payé une fois par délai.")).toBeInTheDocument();
+    expect(within(gains).queryByTestId("help-hint")).toBeNull();
   });
 
   it("dit ce que veut dire un champ vide : rien, aucun délai, sans plafond", () => {

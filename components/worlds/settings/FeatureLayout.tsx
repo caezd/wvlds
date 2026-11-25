@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { HelpHint } from "@/components/ui/help-hint";
+import { Plus } from "lucide-react";
 
 /**
  * La mise en page des réglages de fonctions (onglet Fonctions) : une page
@@ -49,45 +50,56 @@ export function TitleWithHelp({ title, help, className }: { title: string; help?
   );
 }
 
-/** L'en-tête d'une catégorie : titre, aide, et son interrupteur encadré s'il en a un. */
+/** Le sous-titre d'une page ou d'une section : l'explication, en clair. */
+const DESCRIPTION = "text-sm text-muted-foreground text-pretty";
+
+/**
+ * L'en-tête d'une page : titre, sous-titre (à quoi sert la page) et, pour une
+ * fonction, son interrupteur. L'interrupteur n'a pas de libellé visible :
+ * l'état se lit dans la pastille du menu, et un « Activée » / « Activé »
+ * accordé au genre de chaque fonction n'apprenait rien. Son aide dit ce que
+ * la désactivation garde.
+ */
 export function FeaturePage({
   title,
-  help,
+  description,
   toggle,
   fill = false,
   children,
 }: {
   title: string;
-  help?: string;
+  /** Une phrase : à quoi sert la page. */
+  description?: React.ReactNode;
   /** La page prend toute la hauteur restante (voir FILL). */
   fill?: boolean;
   toggle?: {
-    /** « Activée », « Désactivée »… selon l'état. */
-    label: string;
     /** Le nom de l'interrupteur pour les lecteurs d'écran : « Activer la carte ». */
     ariaLabel: string;
     checked: boolean;
     disabled?: boolean;
     onCheckedChange: (checked: boolean) => void;
+    /** Ce que la désactivation garde (« rien n'est supprimé »). */
+    help?: string;
   };
   children?: React.ReactNode;
 }) {
   return (
     <div className={cn("@container min-w-0 space-y-6", fill && FILL)}>
-      <header className="flex shrink-0 items-center justify-between gap-4">
-        <h3 className="min-w-0 text-xl font-semibold tracking-tight">
-          <TitleWithHelp title={title} help={help} />
-        </h3>
+      <header className="flex shrink-0 items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className="text-xl font-semibold tracking-tight">{title}</h3>
+          {description && <p className={cn(DESCRIPTION, "max-w-prose")}>{description}</p>}
+        </div>
         {toggle && (
-          <label className={cn("flex shrink-0 cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm", SURFACE)}>
-            {toggle.label}
+          <span className="flex shrink-0 items-center gap-2 pt-1">
+            {toggle.help && <HelpHint title={toggle.ariaLabel}>{toggle.help}</HelpHint>}
             <Switch
               checked={toggle.checked}
               disabled={toggle.disabled}
               onCheckedChange={toggle.onCheckedChange}
               aria-label={toggle.ariaLabel}
             />
-          </label>
+          </span>
         )}
       </header>
       {children}
@@ -95,38 +107,130 @@ export function FeaturePage({
   );
 }
 
-/** Une section : titre (et aide) à gauche, réglages à droite. */
+/**
+ * Une section. Par défaut en deux colonnes : titre, compteur et sous-titre à
+ * gauche, réglages à droite. `stacked` : le contenu passe sous l'en-tête, pour
+ * ce qui a besoin de toute la largeur (tableau, liste maître-détail, journal).
+ * L'aide (`help`) reste pour un détail rare ; l'explication utile va dans
+ * `description`, visible.
+ */
 export function SettingsSection({
   title,
+  description,
+  count,
   help,
   meta,
   aside,
+  layout = "columns",
   className,
   children,
 }: {
   title: string;
+  /** Une ou deux phrases : à quoi sert la section. */
+  description?: React.ReactNode;
+  /** Un compteur à côté du titre (« 3 », « 5 sur 5 »). */
+  count?: React.ReactNode;
   help?: string;
   /** Une donnée sous le titre (« 12 mois · 365 jours »), pas une description. */
   meta?: React.ReactNode;
-  /** Sous le titre : une action secondaire. */
+  /** Sous le titre : une action secondaire ou l'indicateur d'enregistrement. */
   aside?: React.ReactNode;
+  layout?: "columns" | "stacked";
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <section
       aria-label={title}
-      className={cn("grid gap-4 border-t border-border pt-6 @2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10", className)}
+      data-layout={layout}
+      className={cn(
+        "grid gap-4 border-t border-border pt-6",
+        layout === "columns" && "@2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10",
+        className,
+      )}
     >
       <div className="space-y-1">
-        <h4 className="text-sm font-semibold">
+        <h4 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
           <TitleWithHelp title={title} help={help} />
+          {count !== undefined && (
+            <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
+          )}
         </h4>
+        {description && <p className={DESCRIPTION}>{description}</p>}
         {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
         {aside}
       </div>
       <div className="min-w-0 space-y-3">{children}</div>
     </section>
+  );
+}
+
+/** La dernière rangée d'une liste : « + Ajouter… », en pointillés, sur toute la largeur. */
+export function SettingsAddRow({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-12 w-full items-center gap-2 rounded-md border border-dashed border-border px-3 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
+    >
+      <Plus className="size-4 shrink-0" aria-hidden />
+      {label}
+    </button>
+  );
+}
+
+/** Une liste encore vide : une phrase et, souvent, l'action qui la remplit. */
+export function SettingsEmpty({ children, action, testId }: { children: React.ReactNode; action?: React.ReactNode; testId?: string }) {
+  return (
+    <div data-testid={testId} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed border-border px-4 py-4 text-sm text-muted-foreground">
+      <span>{children}</span>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Choisir parmi deux à quatre options courtes : un seul contrôle segmenté
+ * pour tous les réglages. Des options qui ont besoin d'une phrase passent par
+ * des boutons radio ; au-delà de quatre, par une liste déroulante.
+ */
+export function SettingsSegmented<T extends string>({
+  label,
+  value,
+  options,
+  onValueChange,
+  disabled,
+}: {
+  /** Le nom du groupe pour les lecteurs d'écran. */
+  label: string;
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onValueChange: (value: T) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex h-9 shrink-0 items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            disabled={disabled}
+            onClick={() => { if (!on) onValueChange(o.value); }}
+            className={cn(
+              "flex h-full items-center rounded-sm px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+              on ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

@@ -142,13 +142,13 @@ export function AnnouncementExtrasFields({
       <ToggleList>
         <ToggleItem
           title={t("showOnHome")}
-          help={t("showOnHomeHelp")}
+          description={t("showOnHomeHelp")}
           checked={value.showOnHome}
           onCheckedChange={(v) => set({ showOnHome: v, pinned: v ? value.pinned : false })}
         />
         <ToggleItem
           title={t("pinned")}
-          help={t("pinnedHelp")}
+          description={t("pinnedHelp")}
           checked={value.pinned}
           disabled={!value.showOnHome}
           dimmed={!value.showOnHome}

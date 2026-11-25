@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Plus, Loader2 } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +37,7 @@ import type { ChatroomCategory } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { cn } from "@/lib/utils";
-import { SETTINGS_ROW, SURFACE } from "./FeatureLayout";
+import { SETTINGS_ROW, SettingsAddRow, SettingsEmpty, SURFACE } from "./FeatureLayout";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -415,9 +415,7 @@ export function WorldCategoryManager({
         </DndContext>
 
         {categories.length === 0 && !creating && (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            {t("settings.noCategories")}
-          </p>
+          <SettingsEmpty>{t("settings.noCategories")}</SettingsEmpty>
         )}
       </div>
 
@@ -425,10 +423,7 @@ export function WorldCategoryManager({
         (creating ? (
           <CategoryForm worldId={worldId} onCancel={() => setCreating(false)} onSaved={handleCreated} />
         ) : (
-          <Button type="button" variant="outline" size="sm" onClick={() => setCreating(true)}>
-            <Plus className="h-3.5 w-3.5" />
-            {t("settings.newCategory")}
-          </Button>
+          <SettingsAddRow label={t("settings.newCategory")} onClick={() => setCreating(true)} />
         ))}
     </div>
   );

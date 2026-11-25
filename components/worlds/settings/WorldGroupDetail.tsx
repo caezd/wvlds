@@ -30,7 +30,7 @@ import {
   setPrimaryGroup,
 } from "@/lib/personaGroupMembership";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FIELD, FeaturePage, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, FIELD, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
 
 /** Un persona du monde, tel que la fiche d'un groupe le montre. */
 export type GroupPersona = {
@@ -326,9 +326,9 @@ function GroupMembers({
       <SettingsSection
         title={t("groupMembers")}
         help={t("groupMembersHelp")}
-        meta={t("memberCount", { count: members.length })}
+        count={members.length}
       >
-        {members.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noMembers")}</p>}
+        {members.length === 0 && <SettingsEmpty>{t("noMembers")}</SettingsEmpty>}
         <ul className="space-y-2" aria-label={t("groupMembers")}>
           {members.map((p) => {
             const primaryId = index.primaryByPersona.get(p.id);

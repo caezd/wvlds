@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FIELD, FeaturePage, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, FIELD, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
 import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
 
 const RT_COLUMNS = "id, world_id, name, color, dash, sort_index, mutual, marital_status";
@@ -136,10 +136,11 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
       {/* ── Types de relation ── */}
       <SettingsSection
         title={t("relTypes")}
+        description={t("relTypesDescription")}
         help={t("relTypesHelp")}
-        meta={t("typesCount", { count: relTypes.length })}
+        count={relTypes.length}
       >
-        {relTypes.length === 0 && <p className="text-xs italic text-muted-foreground">{t("noTypesDefined")}</p>}
+        {relTypes.length === 0 && <SettingsEmpty>{t("noTypesDefined")}</SettingsEmpty>}
         <ul className="space-y-2" aria-label={t("relTypes")}>
           {relTypes.map((rt) => {
             const reciprocity: Reciprocity = rt.marital_status ?? (rt.mutual ? "mutual" : "none");

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, ExternalLink, Flag, Loader2, Trash2 } from "lucide-react";
+import { Check, ExternalLink, Loader2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchOpenReports, resolveReport, type OpenReport } from "@/lib/messageReports";
 import { replyExcerpt } from "@/lib/replyExcerpt";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import DateDisplay from "@/components/date-display";
 import { cn } from "@/lib/utils";
-import { SURFACE } from "./FeatureLayout";
+import { SettingsEmpty, SURFACE } from "./FeatureLayout";
 
 /**
  * File des signalements ouverts d'un monde. Visible de qui a « Gérer les
@@ -58,16 +58,12 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
 
   if (reports.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground" data-testid="reports-empty">
-        <Flag className="h-5 w-5" />
-        {t("reportsEmpty")}
-      </div>
+      <SettingsEmpty testId="reports-empty">{t("reportsEmpty")}</SettingsEmpty>
     );
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{t("reportsIntro")}</p>
       <ul className="space-y-3">
         {reports.map((r) => {
           const auteur = r.persona_name ?? r.message_author?.username ?? t("reportsUnknown");

@@ -52,7 +52,7 @@ export function WorldLiveChatRetentionSetting({
   }
 
   return (
-    <SettingsSection title={t("title")} help={t("help")}>
+    <SettingsSection title={t("title")} description={t("help")}>
       <Select value={String(retention)} disabled={saving} onValueChange={(v) => void choose(v)}>
         <SelectTrigger
           aria-label={t("title")}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useLocale, useTranslations } from "next-intl";
 import type { DateRange } from "react-day-picker";
 import { enUS, es, fr } from "react-day-picker/locale";
-import { CalendarDays, Check, ChevronsUpDown, History, Loader2 } from "lucide-react";
+import { CalendarDays, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import DateDisplay from "@/components/date-display";
 import { cn } from "@/lib/utils";
-import { SURFACE } from "./FeatureLayout";
+import { SettingsEmpty, SURFACE } from "./FeatureLayout";
 
 const NO_FILTERS: Required<ActivityFilters> = { kinds: [], personaId: null, from: null, to: null };
 
@@ -174,10 +174,7 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : entries.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
-          <History className="h-5 w-5" />
-          {failed ? t("failed") : t("empty")}
-        </div>
+        <SettingsEmpty>{failed ? t("failed") : t("empty")}</SettingsEmpty>
       ) : (
         <>
           <div className={cn("rounded-md", SURFACE)}>

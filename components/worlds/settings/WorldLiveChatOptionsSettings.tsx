@@ -60,7 +60,7 @@ export function WorldLiveChatOptionsSettings({
           <ToggleItem
             key={field}
             title={t(`${LABELS[field]}.title`)}
-            help={t(`${LABELS[field]}.help`)}
+            description={field === "live_chat_bubbles" ? undefined : t(`${LABELS[field]}.help`)}
             checked={values[field]}
             disabled={saving === field}
             onCheckedChange={(v) => void toggle(field, v)}

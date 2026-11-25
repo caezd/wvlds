@@ -123,6 +123,30 @@ describe("WorldSettingsView — menu de gauche", () => {
     expect(screen.getByRole("button", { name: "Supprimer le monde" })).toBeInTheDocument();
   });
 
+  it("Général : une section Identité, champs nommés en clair ; la description dit où elle paraît", () => {
+    monter();
+    const identite = screen.getByRole("region", { name: "Identité" });
+    expect(within(identite).getByLabelText("Nom du monde")).toBeInTheDocument();
+    expect(within(identite).getByLabelText("Description du monde")).toBeInTheDocument();
+    expect(within(identite).getByText("Affichée sur la carte du monde.")).toBeVisible();
+    expect(within(identite).queryByTestId("help-hint")).toBeNull();
+  });
+
+  it("supprimer le monde passe par une boîte de confirmation", async () => {
+    monter();
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer le monde" }));
+    const boite = screen.getByRole("alertdialog");
+    expect(within(boite).getByText(/Cette action est irréversible/)).toBeInTheDocument();
+    await userEvent.click(within(boite).getByRole("button", { name: "Annuler" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("Rôles : la hiérarchie en sous-titre de la page", async () => {
+    monter();
+    await userEvent.click(within(nav()).getByRole("button", { name: "Rôles" }));
+    expect(screen.getByText(/^Du plus haut au plus bas/)).toBeVisible();
+  });
+
   it("la zone de danger reste au propriétaire", () => {
     acces.owner = false;
     monter();

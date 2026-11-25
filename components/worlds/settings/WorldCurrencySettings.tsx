@@ -7,7 +7,6 @@ import { Coins, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { HelpHint } from "@/components/ui/help-hint";
 import { setWorldCurrency } from "@/app/actions/worldCatalog";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { messageErreurAction } from "@/lib/actionErrors";
@@ -26,7 +25,7 @@ import {
   type CurrencyUnit,
 } from "@/lib/worldCurrency";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
-import { FIELD, SURFACE } from "./FeatureLayout";
+import { FIELD, SettingsSection, SURFACE } from "./FeatureLayout";
 
 /** Le taux proposé pour un palier ajouté au-dessus des autres. */
 const NEW_UNIT_RATIO = 10;
@@ -92,14 +91,14 @@ export function WorldCurrencySettings({
     .join(" · ");
 
   return (
-    <div role="region" aria-label={t("title")} className={cn("overflow-hidden rounded-md", SURFACE)} onBlur={flush}>
+    <SettingsSection title={t("title")} layout="stacked">
+    <div className={cn("overflow-hidden rounded-md", SURFACE)} onBlur={flush}>
       {/* ── L'aperçu : un montant d'exemple, et la chaîne de conversion ── */}
       <div className="border-b border-border p-5" data-testid="currency-preview">
         <div className="flex items-center gap-2">
           <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <Coins className="size-3.5 shrink-0" aria-hidden />
             {t("previewLabel")}
-            <HelpHint title={t("previewLabel")}>{t("previewHelp")}</HelpHint>
           </p>
           <AutoSaveIndicator status={status} className="ml-auto shrink-0" />
         </div>
@@ -114,10 +113,10 @@ export function WorldCurrencySettings({
 
       {/* ── Les paliers, du plus grand au plus petit ── */}
       <section aria-label={t("tiers")} className="space-y-4 p-5">
-        <p className="flex items-center gap-1.5 text-sm font-semibold">
-          {t("tiers")}
-          <HelpHint title={t("tiers")}>{t("help")}</HelpHint>
-        </p>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold">{t("tiers")}</p>
+          <p className="text-sm text-muted-foreground text-pretty">{t("help")}</p>
+        </div>
         <div className="space-y-3 @xl:space-y-2">
           {rows.map((row, i) => {
             const next = rows[i + 1];
@@ -191,5 +190,6 @@ export function WorldCurrencySettings({
         {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
       </section>
     </div>
+    </SettingsSection>
   );
 }

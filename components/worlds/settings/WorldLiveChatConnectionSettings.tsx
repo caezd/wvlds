@@ -105,7 +105,7 @@ export function WorldLiveChatConnectionSettings({
         />
         <ToggleItem
           title={t("idle.title")}
-          help={t("idle.help")}
+          description={t("idle.help")}
           indent
           dimmed={!sessionsOn}
           control={select(
@@ -124,7 +124,6 @@ export function WorldLiveChatConnectionSettings({
         />
         <ToggleItem
           title={t("offline.title")}
-          help={t("offline.help")}
           indent
           dimmed={!sessionsOn}
           control={select(

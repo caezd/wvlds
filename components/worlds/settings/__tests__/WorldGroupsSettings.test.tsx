@@ -73,7 +73,9 @@ describe("WorldGroupsSettings — la liste", () => {
   it("l'arbre : un sous-groupe sous son parent, en retrait ; sa couleur héritée est signalée", async () => {
     monter();
     expect(await screen.findByRole("heading", { level: 3, name: "Groupes" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Groupes de personas" })).toHaveTextContent("3 groupes");
+    const section = screen.getByRole("region", { name: "Groupes de personas" });
+    expect(within(section).getByRole("heading", { name: /Groupes de personas/ })).toHaveTextContent(/3$/);
+    expect(section).toHaveTextContent("Des personas réunis sous une couleur, sur le graphe et dans les listes.");
     expect(lignes()).toEqual([["Maison", 0], ["Branche cadette", 1], ["Ordre", 0]]);
     const cadette = ligne("Branche cadette").querySelector("[data-group-swatch]")!;
     expect(cadette).toHaveAttribute("data-inherited");
