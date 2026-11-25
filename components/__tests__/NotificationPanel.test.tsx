@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import * as React from "react";
 import userEvent from "@testing-library/user-event";
 import type { AppNotification } from "@/types/db";
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -81,6 +82,12 @@ function mockNotifications(overrides: Partial<ReturnType<typeof useNotifications
         togglePanel: vi.fn(),
         ...overrides,
     });
+}
+
+/** Les valeurs par défaut du fournisseur simulé. */
+function useNotificationsDefaults() {
+    mockNotifications();
+    return vi.mocked(useNotifications)();
 }
 
 beforeEach(() => {
@@ -284,5 +291,44 @@ describe("NotificationInlinePanelContent — annonce signée par le monde", () =
         render(<NotificationInlinePanelContent />);
         expect(screen.queryByRole("img", { name: "Ygg" })).not.toBeInTheDocument();
         expect(screen.getByText("Y")).toBeInTheDocument();
+    });
+});
+
+// ── Ouvrir une annonce ───────────────────────────────────────────────────────
+
+describe("NotificationInlinePanelContent — ouvrir une annonce", () => {
+    // Lire une notification la retire de la liste, comme le vrai fournisseur.
+    function mockRemovingOnRead(notif: AppNotification) {
+        const first = useNotificationsDefaults();
+        vi.mocked(useNotifications).mockImplementation(() => {
+            const [list, setList] = React.useState([notif]);
+            return {
+                ...first,
+                notifications: list,
+                unreadNotifCount: list.length,
+                markNotifRead: async (id: string) => {
+                    mockMarkNotifRead(id);
+                    setList(l => l.filter(n => n.id !== id));
+                },
+            };
+        });
+    }
+
+    it("la fenêtre reste ouverte ; la notification est lue à sa fermeture", async () => {
+        const user = userEvent.setup();
+        mockRemovingOnRead(makeNotif({
+            type: "world_announcement", chat_id: null, message_id: null, actor_name: "Ygg",
+            content: "Bienvenue Lys", metadata: { welcome: true, world_name: "Ygg", body: "Ravi de vous voir" },
+            world: { name: "Ygg", icon_url: null },
+        }));
+        render(<NotificationInlinePanelContent />);
+        await user.click(screen.getByRole("button", { name: /Bienvenue Lys/ }));
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog).toHaveTextContent("Ravi de vous voir");
+        expect(mockMarkNotifRead).not.toHaveBeenCalled();
+
+        await user.keyboard("{Escape}");
+        await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+        expect(mockMarkNotifRead).toHaveBeenCalledWith("n1");
     });
 });

@@ -442,12 +442,11 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
                     role="button"
                     tabIndex={0}
                     className="block cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={() => { setAnnouncementOpen(true); if (isUnread) onRead(notif.id); }}
+                    onClick={() => setAnnouncementOpen(true)}
                     onKeyDown={e => {
                         if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
                         e.preventDefault();
                         setAnnouncementOpen(true);
-                        if (isUnread) onRead(notif.id);
                     }}
                 >
                     {content}
@@ -456,7 +455,12 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
                     notif={notif}
                     worldName={worldInfo?.name ?? null}
                     open={announcementOpen}
-                    onOpenChange={setAnnouncementOpen}
+                    // Lue à la fermeture seulement : la lire la retire de la
+                    // liste, et la fenêtre partirait avec elle.
+                    onOpenChange={open => {
+                        setAnnouncementOpen(open);
+                        if (!open && isUnread) onRead(notif.id);
+                    }}
                     onNavigate={onClose}
                 />
             </>

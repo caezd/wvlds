@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Correctif",
     area: "Notifications",
-    text: "Message de bienvenue en notification : « … vous souhaite la bienvenue », au lieu d’une annonce.\n- même libellé dans l’aperçu et l’essai\n- titre suggéré prérempli",
+    text: "Message de bienvenue en notification : « … vous souhaite la bienvenue », au lieu d’une annonce.\n- même libellé dans l’aperçu et l’essai\n- titre suggéré prérempli\n- une annonce ouverte depuis les notifications reste affichée ; lue à sa fermeture",
   },
   {
     date: "2026-11-25",
