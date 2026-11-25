@@ -11,6 +11,7 @@ import {
   Flag,
   FolderTree,
   Globe,
+  History,
   House,
   Map as MapIcon,
   Megaphone,
@@ -57,6 +58,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   roles: Shield,
   announcements: Megaphone,
   reports: Flag,
+  activity: History,
 };
 
 /** Le nom d'une section, dans le menu comme en titre de sa page. */
@@ -65,6 +67,7 @@ export function useSettingsSectionLabel() {
   const tSettings = useTranslations("worlds.settings");
   const tCatalogue = useTranslations("catalogue");
   const tShops = useTranslations("shops");
+  const tActivity = useTranslations("worldActivity");
   return React.useCallback(
     (id: SettingsSectionId): string => {
       switch (id) {
@@ -86,9 +89,10 @@ export function useSettingsSectionLabel() {
         case "roles": return t("tabRoles");
         case "announcements": return t("tabAnnouncements");
         case "reports": return t("tabReports");
+        case "activity": return tActivity("title");
       }
     },
-    [t, tSettings, tCatalogue, tShops],
+    [t, tSettings, tCatalogue, tShops, tActivity],
   );
 }
 

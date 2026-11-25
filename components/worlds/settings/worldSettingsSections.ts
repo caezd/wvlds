@@ -42,7 +42,8 @@ export const SETTINGS_GROUPS = [
   { id: "world", sections: ["home"] },
   { id: "features", sections: FEATURE_SECTIONS },
   { id: "rooms", sections: ["categories", "groups", "relations"] },
-  { id: "members", sections: ["roles", "announcements", "reports"] },
+  // Journal (migration 254) : l'activité du monde, l'économie pour l'instant.
+  { id: "members", sections: ["roles", "announcements", "reports", "activity"] },
 ] as const;
 
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];

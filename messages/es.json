@@ -3007,5 +3007,38 @@
   },
   "gains": {
     "daily": "Ganancia del día: {amount} para sus personas."
+  },
+  "worldActivity": {
+    "title": "Registro",
+    "filters": {
+      "kind": "Tipo",
+      "allKinds": "Todos los tipos",
+      "persona": "Persona",
+      "allPersonas": "Todos los personas",
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "kinds": {
+      "balance_adjust": "Ajuste de dinero",
+      "item_adjust": "Objeto dado o retirado",
+      "slots_purchase": "Espacios de inventario",
+      "purchase": "Compra",
+      "sale": "Venta",
+      "transfer": "Intercambio"
+    },
+    "lines": {
+      "purchase": "{persona} compró {items} en {shop} por {amount}",
+      "sale": "{persona} vendió {items} a {shop} por {amount}",
+      "transfer": "{persona} dio {what} a {target}",
+      "balance_adjust": "Bolsa de {persona}: {amount}",
+      "item_adjust": "Inventario de {persona}: {items}",
+      "slots_purchase": "{persona} compró {slots, plural, one {# espacio} other {# espacios}} por {amount}",
+      "generic": "{kind} · {persona} · {amount}"
+    },
+    "deletedPersona": "Persona eliminado",
+    "system": "Sistema",
+    "empty": "Aún no hay actividad.",
+    "failed": "No se pudo cargar el registro.",
+    "more": "Ver más"
   }
 }

@@ -67,6 +67,8 @@ import type { World } from "@/types/worlds";
 
 
 import { WorldReportsTab } from "./WorldReportsTab";
+import { WorldActivityTab } from "./WorldActivityTab";
+import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { WorldRolesTab } from "./WorldRolesTab";
 import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
 import { FeaturePage, SETTINGS_PAGE_WIDTH, SettingsSection } from "./FeatureLayout";
@@ -148,6 +150,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             // Annonces (migration 227) : écrire à tous les membres.
             case "announcements":
                 return can("members.announce");
+            // Journal (migration 254) : l'économie, lue par qui la gère.
+            case "activity":
+                return world_economy && can("economy.manage");
         }
     };
     const groups = visibleSettingsGroups(allowed);
@@ -691,6 +696,15 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         {/* ── Signalements ─────────────────────────────── */}
                         {shown === "reports" && page("reports", (
                             <WorldReportsTab key={`reports-${world.id}`} worldId={world.id} />
+                        ))}
+
+                        {/* ── Journal ──────────────────────────────────── */}
+                        {shown === "activity" && page("activity", (
+                            <WorldActivityTab
+                                key={`activity-${world.id}`}
+                                worldId={world.id}
+                                units={currencyUnitsOf(world.currency_units)}
+                            />
                         ))}
                     </div>
                 </div>

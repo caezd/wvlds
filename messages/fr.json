@@ -3007,5 +3007,38 @@
   },
   "gains": {
     "daily": "Gain du jour : {amount} pour vos personas."
+  },
+  "worldActivity": {
+    "title": "Journal",
+    "filters": {
+      "kind": "Type",
+      "allKinds": "Tous les types",
+      "persona": "Persona",
+      "allPersonas": "Tous les personas",
+      "from": "Du",
+      "to": "Au"
+    },
+    "kinds": {
+      "balance_adjust": "Ajustement d’argent",
+      "item_adjust": "Don ou retrait d’objet",
+      "slots_purchase": "Emplacements d’inventaire",
+      "purchase": "Achat",
+      "sale": "Revente",
+      "transfer": "Échange"
+    },
+    "lines": {
+      "purchase": "{persona} a acheté {items} à {shop} pour {amount}",
+      "sale": "{persona} a revendu {items} à {shop} pour {amount}",
+      "transfer": "{persona} a donné {what} à {target}",
+      "balance_adjust": "Bourse de {persona} : {amount}",
+      "item_adjust": "Inventaire de {persona} : {items}",
+      "slots_purchase": "{persona} a acheté {slots, plural, one {# emplacement} other {# emplacements}} pour {amount}",
+      "generic": "{kind} · {persona} · {amount}"
+    },
+    "deletedPersona": "Persona supprimé",
+    "system": "Système",
+    "empty": "Aucune activité pour l’instant.",
+    "failed": "Impossible de lire le journal.",
+    "more": "Voir plus"
   }
 }

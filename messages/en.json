@@ -3007,5 +3007,38 @@
   },
   "gains": {
     "daily": "Daily earning: {amount} for your personas."
+  },
+  "worldActivity": {
+    "title": "Activity log",
+    "filters": {
+      "kind": "Type",
+      "allKinds": "All types",
+      "persona": "Persona",
+      "allPersonas": "All personas",
+      "from": "From",
+      "to": "To"
+    },
+    "kinds": {
+      "balance_adjust": "Money adjustment",
+      "item_adjust": "Item given or removed",
+      "slots_purchase": "Inventory slots",
+      "purchase": "Purchase",
+      "sale": "Sale",
+      "transfer": "Trade"
+    },
+    "lines": {
+      "purchase": "{persona} bought {items} at {shop} for {amount}",
+      "sale": "{persona} sold {items} to {shop} for {amount}",
+      "transfer": "{persona} gave {what} to {target}",
+      "balance_adjust": "{persona}’s purse: {amount}",
+      "item_adjust": "{persona}’s inventory: {items}",
+      "slots_purchase": "{persona} bought {slots, plural, one {# slot} other {# slots}} for {amount}",
+      "generic": "{kind} · {persona} · {amount}"
+    },
+    "deletedPersona": "Deleted persona",
+    "system": "System",
+    "empty": "No activity yet.",
+    "failed": "Could not load the log.",
+    "more": "Show more"
   }
 }
