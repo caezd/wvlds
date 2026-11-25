@@ -30,7 +30,7 @@ const NOW_RED_BORDER = "border-accent/40";
 /** Un champ sans cadre, dans une ligne bordée. */
 const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0";
 /** Une ligne d'une liste (saison, fête) : bordée, sur le fond des cartes. */
-const LIST_ROW = cn("flex h-12 items-center gap-2 rounded-md pl-2 pr-1.5", SURFACE);
+const LIST_ROW = cn("flex h-12 items-center gap-2 rounded-lg pl-2 pr-1.5", SURFACE);
 /** Une petite case de saisie dans une ligne : une année, un jour. */
 const SMALL_BOX = cn("h-8 rounded-md border px-2 text-center text-sm focus-visible:ring-1", FIELD);
 /** Un sélecteur (shadcn) dans une ligne : aux mesures des petites cases. */
@@ -138,7 +138,7 @@ export function TimelineSettings({
   return (
     <div className="space-y-6">
       {/* ── En tête : la date actuelle du monde, et où en est le récit ── */}
-      <div className={cn("grid overflow-hidden rounded-md @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]", SURFACE)}>
+      <div className={cn("grid overflow-hidden rounded-lg @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]", SURFACE)}>
         <div className="flex flex-col p-5" data-testid="timeline-preview">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Hourglass className="size-3.5" aria-hidden />
@@ -315,7 +315,7 @@ export function TimelineSettings({
               <li
                 key={i}
                 className={cn(
-                  "flex h-11 items-center gap-2 rounded-md border bg-card pl-3 pr-1.5",
+                  "flex h-11 items-center gap-2 rounded-lg border bg-card pl-3 pr-1.5",
                   i === moisCourant ? NOW_RED_BORDER : "border-border",
                 )}
                 data-current={i === moisCourant || undefined}
@@ -628,7 +628,7 @@ function AddRow({
 }) {
   return (
     // Sur une page étroite, ses champs passent à la ligne plutôt que de déborder.
-    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-md border border-dashed border-border py-1.5 pl-2 pr-1.5">
+    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-lg border border-dashed border-border py-1.5 pl-2 pr-1.5">
       {children}
       <Button
         type="button"

@@ -145,7 +145,7 @@ function CategoryForm({
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className={cn("space-y-3 rounded-md p-3", SURFACE)}
+      className={cn("space-y-3 rounded-lg p-3", SURFACE)}
     >
       <div className="space-y-1.5">
         <ImagePickerCropField

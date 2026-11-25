@@ -39,7 +39,7 @@ export const SETTINGS_PAGE_WIDTH = "w-full max-w-3xl has-[[data-fill-page]]:max-
  */
 export const FILL = "flex min-h-0 flex-1 flex-col";
 /** Une ligne d'une liste d'éléments (salles, groupes, relations, catégories). */
-export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
+export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-lg py-1.5 pl-3 pr-1.5", SURFACE);
 
 /**
  * Les deux emplacements de la barre d'en-tête où la page ouverte place son
@@ -239,7 +239,7 @@ export function SettingsAddRow({ label, onClick, disabled }: { label: string; on
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-12 w-full items-center gap-2 rounded-md border border-dashed border-border px-3 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
+      className="flex min-h-12 w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
     >
       <Plus className="size-4 shrink-0" aria-hidden />
       {label}
@@ -405,7 +405,7 @@ export function ToggleList({ children, className, label }: { children: React.Rea
       data-flush={inCard || undefined}
       className={cn(
         "divide-y divide-border",
-        inCard ? "-mx-5 border-y border-border px-1 last:-mb-5 last:border-b-0" : cn("rounded-md", SURFACE),
+        inCard ? "-mx-5 border-y border-border px-1 last:-mb-5 last:border-b-0" : cn("rounded-lg", SURFACE),
         className,
       )}
     >

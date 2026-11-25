@@ -34,7 +34,7 @@ export function AnnouncementFiltersPanel({
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-border bg-card p-3" data-testid="announcement-filters">
+    <div className="space-y-3 rounded-lg border border-border bg-card p-3" data-testid="announcement-filters">
       {roles.length > 0 && (
         <FilterRow label={t("filterExcept")}>
           {roles.map((role) => (

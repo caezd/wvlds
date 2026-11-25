@@ -244,14 +244,20 @@ describe("TimelineSettings — responsive", () => {
     expect(date.className).not.toMatch(/(^|\s)(sm|md|lg):grid-cols-/);
     const section = screen.getByRole("region", { name: "Mois du calendrier" });
     expect(section.querySelector("ol")!.className).toMatch(/@lg:grid-cols-2/);
-    // Les cartes des sections en rounded-lg, comme les paramètres du compte ;
-    // tout ce qu'elles contiennent de bordé en rounded-md, jamais plus.
-    const sections = [...document.querySelectorAll<HTMLElement>("section[data-layout]")];
-    for (const el of sections) expect(el.className.split(" ")).toContain("rounded-lg");
-    const bordes = [...document.querySelectorAll<HTMLElement>("[class*='border']")]
-      .filter((el) => !el.matches("section[data-layout]") && !el.className.split(" ").includes("border-0"));
-    expect(bordes.length).toBeGreaterThan(5);
-    for (const el of bordes) expect(el.className).not.toMatch(/(^|\s)rounded-(lg|xl)(\s|$)/);
+    // Toutes les cartes en rounded-lg, comme les paramètres du compte : les
+    // sections, la date, les lignes (fond des cartes ou pointillés). Les
+    // champs, eux, restent en rounded-md ; rien n'arrondit davantage.
+    const cartes = [...document.querySelectorAll<HTMLElement>("[class*='border']")].filter((el) => {
+      const c = el.className.split(" ");
+      return !c.includes("border-0") && (c.includes("bg-card") || c.includes("border-dashed"));
+    });
+    expect(cartes.length).toBeGreaterThan(5);
+    for (const el of cartes) expect(el.className.split(" ")).toContain("rounded-lg");
+    for (const el of document.querySelectorAll<HTMLElement>("[class*='rounded-']")) {
+      expect(el.className).not.toMatch(/(^|\s)rounded-(xl|2xl|3xl)(\s|$)/);
+    }
+    const champ = screen.getByLabelText("Libellé d'année");
+    expect(champ.className.split(" ")).toContain("rounded-md");
     // Les lignes d'ajout passent à la ligne plutôt que de déborder.
     const ajout = screen.getByRole("button", { name: "Ajouter la saison" }).parentElement as HTMLElement;
     expect(ajout.className.split(" ")).toContain("flex-wrap");

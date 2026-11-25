@@ -71,7 +71,7 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
           const extrait = r.content === null ? null : (replyExcerpt(r.content) ?? t("reportsBlock"));
           const occupe = busyId === r.id;
           return (
-            <li key={r.id} className={cn("rounded-md p-3", SURFACE)} data-testid="report-item">
+            <li key={r.id} className={cn("rounded-lg p-3", SURFACE)} data-testid="report-item">
               <div className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
                 <span>{t("reportsBy", { name: r.reporter?.username ?? t("reportsUnknown") })}</span>
                 <span>·</span>

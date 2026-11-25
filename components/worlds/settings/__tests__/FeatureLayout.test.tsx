@@ -153,7 +153,7 @@ describe("ToggleList", () => {
     );
     const liste = screen.getByRole("group", { name: "options" });
     expect(liste).toHaveAttribute("data-flush");
-    expect(liste.className.split(" ")).not.toContain("rounded-md");
+    expect(liste.className.split(" ")).not.toContain("rounded-lg");
   });
 
   it("hors d'une section, une liste bordée", () => {
@@ -164,7 +164,7 @@ describe("ToggleList", () => {
     );
     const liste = screen.getByRole("group", { name: "options" });
     expect(liste).not.toHaveAttribute("data-flush");
-    expect(liste.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "bg-card"]));
+    expect(liste.className.split(" ")).toEqual(expect.arrayContaining(["rounded-lg", "bg-card"]));
   });
 });
 

@@ -92,7 +92,7 @@ export function WorldCurrencySettings({
 
   return (
     <SettingsSection title={t("title")} layout="stacked">
-    <div className={cn("overflow-hidden rounded-md", SURFACE)} onBlur={flush}>
+    <div className={cn("overflow-hidden rounded-lg", SURFACE)} onBlur={flush}>
       {/* ── L'aperçu : un montant d'exemple, et la chaîne de conversion ── */}
       <div className="border-b border-border p-5" data-testid="currency-preview">
         <div className="flex items-center gap-2">

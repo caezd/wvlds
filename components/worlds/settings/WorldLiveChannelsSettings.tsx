@@ -289,7 +289,7 @@ export function WorldLiveChannelsSettings({ worldId }: { worldId: string }) {
         </ul>
       )}
 
-      <div className="flex min-h-12 flex-wrap items-center gap-3 rounded-md border border-dashed border-border py-1.5 pl-3 pr-1.5">
+      <div className="flex min-h-12 flex-wrap items-center gap-3 rounded-lg border border-dashed border-border py-1.5 pl-3 pr-1.5">
         <ColorPickerButton color={newColor ?? NO_COLOR} alpha={false} onChange={setNewColor} className={SWATCH} />
         <Input
           value={newName}

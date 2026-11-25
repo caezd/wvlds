@@ -340,14 +340,14 @@ export function AnnouncementPreview({
   const t = useTranslations("worlds.announcements");
   if (kind === "banner") {
     return (
-      <div className="rounded-md border border-border bg-background p-4" data-testid={testId}>
+      <div className="rounded-lg border border-border bg-background p-4" data-testid={testId}>
         <BannerCard title={title || t("previewEmpty")} body={body} signer={signer ?? null} testId={`${testId}-banner`} />
       </div>
     );
   }
   if (kind === "message") {
     return (
-      <div className="rounded-md border border-border bg-background p-4" data-testid={testId}>
+      <div className="rounded-lg border border-border bg-background p-4" data-testid={testId}>
         <p className="w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl bg-muted px-4 py-2.5 text-sm">
           {body || t("previewEmpty")}
         </p>
@@ -355,7 +355,7 @@ export function AnnouncementPreview({
     );
   }
   return (
-    <div className="space-y-3 rounded-md border border-border bg-background p-4" data-testid={testId}>
+    <div className="space-y-3 rounded-lg border border-border bg-background p-4" data-testid={testId}>
       <SectionLabel as="div">{worldName}</SectionLabel>
       <p className="font-semibold">{title || t("previewEmpty")}</p>
       {body ? <MarkdownRenderer content={body} /> : null}

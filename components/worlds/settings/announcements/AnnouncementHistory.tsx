@@ -204,7 +204,7 @@ export function AnnouncementDetails({
                 </div>
               </DialogDescription>
             </DialogHeader>
-            <div className="max-h-[50vh] space-y-3 overflow-y-auto rounded-md border border-border bg-background p-4">
+            <div className="max-h-[50vh] space-y-3 overflow-y-auto rounded-lg border border-border bg-background p-4">
               <AnnouncementImage src={current.image_url} />
               {current.kind !== "message" ? (
                 <MarkdownRenderer content={current.body} />
@@ -213,7 +213,7 @@ export function AnnouncementDetails({
               )}
             </div>
             {confirmRetract ? (
-              <div className="space-y-3 rounded-md border border-border bg-card p-3" data-testid="announcement-retract-confirm">
+              <div className="space-y-3 rounded-lg border border-border bg-card p-3" data-testid="announcement-retract-confirm">
                 <p className="text-sm">
                   {isBanner
                     ? t("retractBannerConfirm", { count: current.recipient_count })

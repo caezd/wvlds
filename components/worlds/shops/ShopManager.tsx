@@ -153,7 +153,7 @@ function ManagedShop({
       {articles.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t("noItems")}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-md border border-border">
+        <ul className="divide-y divide-border rounded-lg border border-border">
           {articles.map((article) => {
             const entry = article.catalog!;
             const buyback = shops.buyback ? buybackPriceOf(shop, article) : null;

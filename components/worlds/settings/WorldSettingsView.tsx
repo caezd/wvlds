@@ -80,7 +80,7 @@ import { ExploreWorldCard } from "@/app/(protected)/explore/ExploreWorldCard";
 /** Une image encore absente : sa place en pointillés, cliquable (ImagePickerCropField). */
 function ImagePlaceholder({ label }: { label: string }) {
     return (
-        <span className="flex size-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-2 text-center text-xs text-muted-foreground transition-colors group-hover:bg-muted/60 group-hover:text-foreground">
+        <span className="flex size-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-2 text-center text-xs text-muted-foreground transition-colors group-hover:bg-muted/60 group-hover:text-foreground">
             <ImagePlus className="size-5" aria-hidden />
             {label}
         </span>
@@ -557,7 +557,7 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                                 aspect={1}
                                                 uploading={uploading === "icon"}
                                                 previewSrc={iconUrl || null}
-                                                previewClassName="size-24 shrink-0 rounded-xl"
+                                                previewClassName="size-24 shrink-0 rounded-lg"
                                                 changeLabel={tCommon("dropToReplace")}
                                                 placeholder={<ImagePlaceholder label={tSettings("addIcon")} />}
                                                 onConfirm={onIconConfirm}
@@ -590,7 +590,7 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                                                 aspect={16 / 7}
                                                 uploading={uploading === "banner"}
                                                 previewSrc={bannerUrl || null}
-                                                previewClassName="aspect-[16/7] w-full max-w-sm rounded-xl"
+                                                previewClassName="aspect-[16/7] w-full max-w-sm rounded-lg"
                                                 changeLabel={tCommon("dropToReplace")}
                                                 placeholder={<ImagePlaceholder label={tSettings("addBanner")} />}
                                                 onConfirm={onBannerConfirm}

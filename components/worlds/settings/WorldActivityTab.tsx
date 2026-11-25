@@ -177,7 +177,7 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         <SettingsEmpty>{failed ? t("failed") : t("empty")}</SettingsEmpty>
       ) : (
         <>
-          <div className={cn("rounded-md", SURFACE)}>
+          <div className={cn("rounded-lg", SURFACE)}>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
