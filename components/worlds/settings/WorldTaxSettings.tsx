@@ -33,7 +33,7 @@ import {
 } from "@/lib/worldTax";
 import type { World } from "@/types/worlds";
 import { cn } from "@/lib/utils";
-import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 const SELECT_CLASS =
   "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary";
@@ -91,174 +91,179 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
       <div onBlur={flush}>
         <ToggleList>
           <ToggleItem title={t("enable")} checked={draft.tax_enabled} onCheckedChange={(v) => set({ tax_enabled: v })} />
-          <ToggleItem
-            title={t("amount")}
-            control={
-              <div className="w-56 shrink-0">
-                <AmountInput
-                  compact
-                  units={units}
-                  value={draft.tax_amount || null}
-                  onChange={(v) => set({ tax_amount: v ?? 0 })}
-                  idPrefix="tax-amount"
-                  placeholder="0"
-                  fieldClassName={FIELD}
-                  labelOf={(unit) => t("amountIn", { label: t("amountLabel"), unit: unit.name })}
-                />
-              </div>
-            }
-          />
-          <ToggleItem
-            title={t("recurrence")}
-            control={
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm text-muted-foreground">{t("every")}</span>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={MAX_TAX_EVERY}
-                  step={1}
-                  aria-label={t("every")}
-                  value={every ?? ""}
-                  onChange={(e) => setEvery(e.target.value.trim() === "" ? null : e.target.valueAsNumber)}
-                  className={cn("h-9 w-16 tabular-nums", FIELD)}
-                />
-                <select
-                  aria-label={t("unitLabel")}
-                  className={SELECT_CLASS}
-                  value={draft.tax_unit}
-                  onChange={(e) => set({ tax_unit: e.target.value as TaxUnit })}
-                >
-                  {TAX_UNITS.map((u) => (
-                    <option key={u} value={u}>{t(`units.${u}`, { count: every ?? 1 })}</option>
-                  ))}
-                </select>
-              </div>
-            }
-          />
-          <ToggleItem
-            title={t("anchor")}
-            help={t("anchorHelp")}
-            control={
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    aria-label={`${t("anchor")} : ${anchorLabel}`}
-                    className="h-9 shrink-0 justify-start font-normal"
-                  >
-                    <CalendarDays className="mr-1 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                    {anchorLabel}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    required
-                    locale={CALENDAR_LOCALES[locale as keyof typeof CALENDAR_LOCALES] ?? fr}
-                    selected={anchor}
-                    defaultMonth={anchor}
-                    onSelect={(d) => {
-                      if (!d) return;
-                      // Minuit local du jour choisi.
-                      set({ tax_anchor: new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString() });
-                      setCalendarOpen(false);
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
-            }
-          />
-          <ToggleItem
-            title={t("mode")}
-            help={t("modeHelp")}
-            control={
-              <select
-                aria-label={t("mode")}
-                className={cn(SELECT_CLASS, "shrink-0")}
-                value={draft.tax_mode}
-                onChange={(e) => set({ tax_mode: e.target.value as TaxMode })}
-              >
-                {TAX_MODES.map((m) => (
-                  <option key={m} value={m}>{t(`modes.${m}`)}</option>
-                ))}
-              </select>
-            }
-          />
-          <ToggleItem
-            title={t("accumulate")}
-            help={t("accumulateHelp")}
-            checked={draft.tax_accumulate}
-            onCheckedChange={(v) => set({ tax_accumulate: v })}
-          />
-          <ToggleItem
-            title={t("grace")}
-            help={t("graceHelp")}
-            checked={draft.tax_grace_new}
-            onCheckedChange={(v) => set({ tax_grace_new: v })}
-          />
-          <ToggleItem
-            title={t("badge")}
-            help={t("badgeHelp")}
-            control={
-              <Input
-                aria-label={t("badge")}
-                maxLength={MAX_TAX_BADGE_LENGTH}
-                placeholder={tTax("badge")}
-                value={badge}
-                onChange={(e) => setBadge(e.target.value)}
-                className={cn("h-9 w-44 shrink-0", FIELD)}
+          {/* Désactivée : ses options restent visibles, grisées et inertes. */}
+          <InactiveOptions inactive={!draft.tax_enabled}>
+            <div className="divide-y divide-border">
+              <ToggleItem
+                title={t("amount")}
+                control={
+                  <div className="w-56 shrink-0">
+                    <AmountInput
+                      compact
+                      units={units}
+                      value={draft.tax_amount || null}
+                      onChange={(v) => set({ tax_amount: v ?? 0 })}
+                      idPrefix="tax-amount"
+                      placeholder="0"
+                      fieldClassName={FIELD}
+                      labelOf={(unit) => t("amountIn", { label: t("amountLabel"), unit: unit.name })}
+                    />
+                  </div>
+                }
               />
-            }
-          />
-          <ToggleItem
-            title={t("badgeStyle")}
-            help={t("badgeStyleHelp")}
-            control={
-              <div className="flex shrink-0 items-center gap-2">
-                <span data-testid="tax-badge-preview" className="flex">
-                  <TaxBadgeView
-                    label={badge.trim() || tTax("badge")}
-                    color={pendingColor ?? draft.tax_badge_color}
-                    icon={draft.tax_badge_icon}
-                  />
-                </span>
-                <ColorPickerButton
-                  color={pendingColor ?? draft.tax_badge_color ?? DEFAULT_COLOR_PRESETS[1].value}
-                  onChange={setPendingColor}
-                  onClose={() => {
-                    if (pendingColor) set({ tax_badge_color: pendingColor });
-                    setPendingColor(null);
-                  }}
-                  className="h-9 w-9"
-                />
-                <LucideIconPicker
-                  value={draft.tax_badge_icon ?? ""}
-                  onChange={(name) => set({ tax_badge_icon: name || null })}
-                  trigger={
-                    <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label={tIcon("chooseIcon")}>
-                      <Shapes className="h-4 w-4" aria-hidden />
-                    </Button>
-                  }
-                />
-                {(draft.tax_badge_color || draft.tax_badge_icon) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setPendingColor(null);
-                      set({ tax_badge_color: null, tax_badge_icon: null });
-                    }}
+              <ToggleItem
+                title={t("recurrence")}
+                control={
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{t("every")}</span>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={MAX_TAX_EVERY}
+                      step={1}
+                      aria-label={t("every")}
+                      value={every ?? ""}
+                      onChange={(e) => setEvery(e.target.value.trim() === "" ? null : e.target.valueAsNumber)}
+                      className={cn("h-9 w-16 tabular-nums", FIELD)}
+                    />
+                    <select
+                      aria-label={t("unitLabel")}
+                      className={SELECT_CLASS}
+                      value={draft.tax_unit}
+                      onChange={(e) => set({ tax_unit: e.target.value as TaxUnit })}
+                    >
+                      {TAX_UNITS.map((u) => (
+                        <option key={u} value={u}>{t(`units.${u}`, { count: every ?? 1 })}</option>
+                      ))}
+                    </select>
+                  </div>
+                }
+              />
+              <ToggleItem
+                title={t("anchor")}
+                help={t("anchorHelp")}
+                control={
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label={`${t("anchor")} : ${anchorLabel}`}
+                        className="h-9 shrink-0 justify-start font-normal"
+                      >
+                        <CalendarDays className="mr-1 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                        {anchorLabel}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        required
+                        locale={CALENDAR_LOCALES[locale as keyof typeof CALENDAR_LOCALES] ?? fr}
+                        selected={anchor}
+                        defaultMonth={anchor}
+                        onSelect={(d) => {
+                          if (!d) return;
+                          // Minuit local du jour choisi.
+                          set({ tax_anchor: new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString() });
+                          setCalendarOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                }
+              />
+              <ToggleItem
+                title={t("mode")}
+                help={t("modeHelp")}
+                control={
+                  <select
+                    aria-label={t("mode")}
+                    className={cn(SELECT_CLASS, "shrink-0")}
+                    value={draft.tax_mode}
+                    onChange={(e) => set({ tax_mode: e.target.value as TaxMode })}
                   >
-                    {t("resetStyle")}
-                  </Button>
-                )}
-              </div>
-            }
-          />
+                    {TAX_MODES.map((m) => (
+                      <option key={m} value={m}>{t(`modes.${m}`)}</option>
+                    ))}
+                  </select>
+                }
+              />
+              <ToggleItem
+                title={t("accumulate")}
+                help={t("accumulateHelp")}
+                checked={draft.tax_accumulate}
+                onCheckedChange={(v) => set({ tax_accumulate: v })}
+              />
+              <ToggleItem
+                title={t("grace")}
+                help={t("graceHelp")}
+                checked={draft.tax_grace_new}
+                onCheckedChange={(v) => set({ tax_grace_new: v })}
+              />
+              <ToggleItem
+                title={t("badge")}
+                help={t("badgeHelp")}
+                control={
+                  <Input
+                    aria-label={t("badge")}
+                    maxLength={MAX_TAX_BADGE_LENGTH}
+                    placeholder={tTax("badge")}
+                    value={badge}
+                    onChange={(e) => setBadge(e.target.value)}
+                    className={cn("h-9 w-44 shrink-0", FIELD)}
+                  />
+                }
+              />
+              <ToggleItem
+                title={t("badgeStyle")}
+                help={t("badgeStyleHelp")}
+                control={
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span data-testid="tax-badge-preview" className="flex">
+                      <TaxBadgeView
+                        label={badge.trim() || tTax("badge")}
+                        color={pendingColor ?? draft.tax_badge_color}
+                        icon={draft.tax_badge_icon}
+                      />
+                    </span>
+                    <ColorPickerButton
+                      color={pendingColor ?? draft.tax_badge_color ?? DEFAULT_COLOR_PRESETS[1].value}
+                      onChange={setPendingColor}
+                      onClose={() => {
+                        if (pendingColor) set({ tax_badge_color: pendingColor });
+                        setPendingColor(null);
+                      }}
+                      className="h-9 w-9"
+                    />
+                    <LucideIconPicker
+                      value={draft.tax_badge_icon ?? ""}
+                      onChange={(name) => set({ tax_badge_icon: name || null })}
+                      trigger={
+                        <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label={tIcon("chooseIcon")}>
+                          <Shapes className="h-4 w-4" aria-hidden />
+                        </Button>
+                      }
+                    />
+                    {(draft.tax_badge_color || draft.tax_badge_icon) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setPendingColor(null);
+                          set({ tax_badge_color: null, tax_badge_icon: null });
+                        }}
+                      >
+                        {t("resetStyle")}
+                      </Button>
+                    )}
+                  </div>
+                }
+              />
+            </div>
+          </InactiveOptions>
         </ToggleList>
       </div>
       {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
