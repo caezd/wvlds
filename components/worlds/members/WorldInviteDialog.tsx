@@ -88,7 +88,7 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
     const [pendingInvites, setPendingInvites] = useState<PendingInvitation[]>([]);
     const [pendingCancelInvite, setPendingCancelInvite] = useState<PendingInvitation | null>(null);
     const supabase = useMemo(() => createClient(), []);
-    const { userId: currentUserId, username: currentUsername } = useCurrentUser();
+    const { userId: currentUserId } = useCurrentUser();
 
     // Seuls les rôles sous son rang sont proposés : la policy refuse les autres.
     const grantable = useMemo(
@@ -234,16 +234,6 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
             const userId = await resolveUserId();
             if (!userId) return;
 
-            const { data: worldData } = await supabase
-                .from(TABLE.WORLDS)
-                .select("name, icon_url, banner_url, description")
-                .eq("id", worldId)
-                .single();
-            type WorldRow = { name: string; icon_url: string | null; banner_url: string | null; description: string | null };
-            const wd = worldData as WorldRow | null;
-            const worldName = wd?.name ?? null;
-            const worldMeta = wd ? { icon_url: wd.icon_url, banner_url: wd.banner_url, description: wd.description } : null;
-
             // Supprime toute invitation existante (declined ou pending) avant d'en créer une nouvelle.
             // Évite le problème de UPSERT → UPDATE bloqué par la policy RLS invitee-only.
             const { error: cleanupError } = await supabase
@@ -262,20 +252,8 @@ export function WorldInviteDialog({ worldId }: { worldId: string }) {
                 return;
             }
 
-            // L'invitation est enregistrée ; sans notification, l'invité ne
-            // la verra pas apparaître. On ne fait pas échouer l'envoi pour
-            // autant, mais on cesse de l'ignorer.
-            const { error: notifError } = await supabase.from(TABLE.NOTIFICATIONS).insert({
-                recipient_id: userId,
-                type: "world_invite",
-                world_id: worldId,
-                actor_id: currentUserId,
-                actor_name: currentUsername,
-                content: worldName,
-                metadata: worldMeta,
-            });
-            if (notifError) console.error("[WorldInviteDialog] notification non créée", notifError.message);
-
+            // La notification de l'invité naît de l'invitation elle-même
+            // (trigger `trg_world_invitation_notify`, migration 259).
             toast.success(t("sent"), {
                 description: selected?.username ? t("sentTo", { name: `@${selected.username}` }) : undefined,
             });

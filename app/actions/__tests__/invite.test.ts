@@ -44,10 +44,10 @@ function mockCaller(sub: string | null, caller: Caller = { canManage: false }) {
   } as never);
 }
 
-/** Client service_role : `world_invitations`, `notifications`, lectures. */
+/** Client service_role : `world_invitations`, lectures. */
 function mockAdminTables() {
   adminFrom.mockImplementation((table: string) => {
-    if (table === "world_invitations" || table === "notifications") {
+    if (table === "world_invitations") {
       return { insert: (row: unknown) => adminInsert(table, row) ?? Promise.resolve({ error: null }) };
     }
     const builder: Record<string, unknown> = {};
@@ -128,18 +128,6 @@ describe("inviteUserToWorld", () => {
     await inviteUserToWorld("a@b.com", "w1", null);
     const args = inviteUserByEmail.mock.calls[0];
     expect(JSON.stringify(args)).not.toMatch(/invited_role|invited_world_id/);
-  });
-
-  it("notifie l'invité pour que l'invitation soit visible à sa connexion", async () => {
-    mockCaller("u1", { canManage: true, rank: 30 });
-    await inviteUserToWorld("a@b.com", "w1", null);
-    const notif = adminInsert.mock.calls.find(([table]) => table === "notifications");
-    expect(notif?.[1]).toMatchObject({
-      recipient_id: "invitee-1",
-      type: "world_invite",
-      world_id: "w1",
-      actor_id: "u1",
-    });
   });
 
   it("remonte le message d'erreur de l'envoi", async () => {

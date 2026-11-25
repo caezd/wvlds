@@ -75,6 +75,7 @@ export const RPC = {
   WORLD_RANK: "world_rank",
   GET_WORLD_MEMBER_ACTIVITY: "get_world_member_activity",
   NOTIFY_GROUP_MENTIONS: "notify_group_mentions",
+  NOTIFY_USER_MENTIONS: "notify_user_mentions",
   SUBMIT_PERSONA_FOR_REVIEW: "submit_persona_for_review",
   REVIEW_PERSONA: "review_persona",
   SYNC_PERSONA_TEMPLATE_FIELDS: "sync_persona_template_fields",

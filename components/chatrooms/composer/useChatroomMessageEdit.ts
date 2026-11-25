@@ -144,10 +144,6 @@ export function useChatroomMessageEdit({
       await notifyMentions(supabase, {
         text: next,
         messageId: message.id,
-        chatId: message.chat_id,
-        worldId: message.world_id,
-        selfId,
-        selfUsername: online[selfId]?.username ?? null,
         roles: worldRoles,
         // Les présents du canal du salon : ce que le hook connaît de la présence.
         onlineMemberIds: Object.keys(online).filter((id) => id !== selfId),

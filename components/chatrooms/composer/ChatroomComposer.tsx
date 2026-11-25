@@ -161,7 +161,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     const tAccess = useTranslations("chatrooms.access");
     const tDms = useTranslations("dms");
     const supabase = useMemo(() => createClient(), []);
-    const { userId, username, plan } = useCurrentUser();
+    const { userId, plan } = useCurrentUser();
     const inFlightRef = useRef(false);
 
     const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
@@ -638,10 +638,6 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     notifyMentions(supabase, {
                         text,
                         messageId: newMessage.id,
-                        chatId: targetChatId,
-                        worldId: newMessage.world_id,
-                        selfId: userId,
-                        selfUsername: username,
                         roles: worldRoles,
                         onlineMemberIds,
                     }),

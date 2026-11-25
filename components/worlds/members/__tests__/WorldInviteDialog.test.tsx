@@ -57,13 +57,12 @@ describe("WorldInviteDialog", () => {
     expect(dialog).toHaveTextContent("Modifier le wiki");
   });
 
-  it("invite un compte existant avec les rôles par défaut (`role_id` nul) et le notifie", async () => {
+  it("invite un compte existant avec les rôles par défaut (`role_id` nul)", async () => {
     const mock = createSupabaseMock({
-      // world_invitations (en attente) → worlds → delete invitation → insert invitation → notifications
+      // world_invitations (en attente) → delete invitation → insert invitation.
+      // La notification de l'invité naît d'un trigger sur world_invitations.
       results: [
         { data: [] },
-        { data: { name: "Monde", icon_url: null, banner_url: null, description: null } },
-        { data: null },
         { data: null },
         { data: null },
       ],
@@ -86,8 +85,6 @@ describe("WorldInviteDialog", () => {
         role_id: null,
       });
     });
-    const notif = mock.builders.find((b) => b.table === "notifications");
-    expect(notif?.builder.insert).toHaveBeenCalledWith(expect.objectContaining({ recipient_id: "bob", type: "world_invite" }));
   });
 
   it("un éditeur ne se voit proposer aucun rôle qu'il ne pourrait pas conférer", async () => {

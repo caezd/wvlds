@@ -98,30 +98,8 @@ export async function inviteUserToWorld(
     .insert({ world_id: worldId, invitee_id: inviteeId, inviter_id: userId, role_id: roleId });
   if (invErr) return { error: echecEnregistrement("inviteUserToWorld", invErr) };
 
-  // Sans notification, l'invité arrive dans l'application sans rien voir :
-  // la carte d'invitation du panneau est rendue à partir d'une notification,
-  // qui va ensuite lire `world_invitations` pour son statut et son rôle.
-  const [{ data: world }, { data: inviter }] = await Promise.all([
-    admin.from("worlds").select("name, icon_url, banner_url, description").eq("id", worldId).maybeSingle(),
-    admin.from("profiles").select("username").eq("id", userId).maybeSingle(),
-  ]);
-  const w = world as { name?: string; icon_url?: string | null; banner_url?: string | null; description?: string | null } | null;
-
-  const { error: notifErr } = await admin.from("notifications").insert({
-    recipient_id: inviteeId,
-    type: "world_invite",
-    world_id: worldId,
-    actor_id: userId,
-    actor_name: (inviter as { username?: string | null } | null)?.username ?? null,
-    content: w?.name ?? null,
-    metadata: w
-      ? { icon_url: w.icon_url, banner_url: w.banner_url, description: w.description }
-      : null,
-  });
-  // L'invitation elle-même est enregistrée : une notification manquante gêne
-  // l'invité sans lui interdire de rejoindre, on ne fait donc pas échouer
-  // l'action pour autant.
-  if (notifErr) console.error("Notification d'invitation non créée :", notifErr);
-
+  // La notification de l'invité, sans laquelle il ne verrait pas l'invitation
+  // à sa connexion, naît de l'invitation elle-même (trigger
+  // `trg_world_invitation_notify`, migration 259).
   return {};
 }

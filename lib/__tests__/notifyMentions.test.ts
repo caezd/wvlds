@@ -6,10 +6,6 @@ import { notifyMentions } from "@/lib/notifyMentions";
 const ROLES = [{ id: "mj", name: "Maître du jeu" }];
 const BASE = {
   messageId: 42,
-  chatId: "c1",
-  worldId: "w1",
-  selfId: "me",
-  selfUsername: "moi",
   roles: ROLES,
   onlineMemberIds: ["u1", "u2"],
 };
@@ -22,22 +18,25 @@ describe("notifyMentions", () => {
     expect(mock.client.rpc).not.toHaveBeenCalled();
   });
 
-  it("un @pseudo : notifications `mention` pour les membres du monde, jamais pour soi", async () => {
-    // profiles → chatrooms → world_members → notifications
-    const mock = createSupabaseMock({
-      results: [
-        { data: [{ id: "u1" }, { id: "me" }] },
-        { data: { title: "Taverne", name: null } },
-        { data: [{ user_id: "u1" }] },
-        { data: null },
-      ],
-    });
+  it("un @pseudo : la RPC des mentions reçoit le message et les pseudos, sans écriture directe", async () => {
+    // Destinataires, nom de l'expéditeur et titre du salon sont établis par la
+    // base : le client ne peut plus rien en choisir.
+    const mock = createSupabaseMock();
+    mock.client.rpc.mockResolvedValue({ data: 1, error: null });
     await notifyMentions(mock.client as never, { ...BASE, text: "salut @alice et @moi" });
-    const notif = mock.builders.find((b) => b.table === "notifications")!;
-    expect(notif.builder.insert).toHaveBeenCalledWith([
-      expect.objectContaining({ recipient_id: "u1", type: "mention", message_id: 42, content: "Taverne", actor_name: "moi" }),
-    ]);
-    expect(mock.client.rpc).not.toHaveBeenCalled();
+    expect(mock.client.rpc).toHaveBeenCalledWith("notify_user_mentions", {
+      p_message_id: 42,
+      p_usernames: ["alice", "moi"],
+    });
+    expect(mock.client.from).not.toHaveBeenCalled();
+  });
+
+  it("pseudos et groupe dans le même message : les deux RPC", async () => {
+    const mock = createSupabaseMock();
+    mock.client.rpc.mockResolvedValue({ data: 1, error: null });
+    await notifyMentions(mock.client as never, { ...BASE, text: "@alice @tous" });
+    expect(mock.client.rpc).toHaveBeenCalledWith("notify_user_mentions", expect.objectContaining({ p_usernames: ["alice"] }));
+    expect(mock.client.rpc).toHaveBeenCalledWith("notify_group_mentions", expect.objectContaining({ p_everyone: true }));
   });
 
   it("un rôle, @tous : la RPC de groupe, sans présents quand @tous l'emporte", async () => {
