@@ -8,61 +8,48 @@ import { cn } from "@/lib/utils";
 type AmountProps = ComponentProps<typeof AmountInput>;
 
 /**
- * Un montant qui peut être négatif : « + » ou « − » devant les cases
- * d'AmountInput, qui gardent la valeur absolue. Le sens choisi sur un montant
- * vide ou nul vaut pour la saisie qui suit. Pour les gains (migration 261).
+ * Un montant qui peut être négatif (gains, migration 261) : une case « + »
+ * ou « − » devant celles d'AmountInput, qui gardent la valeur absolue. Un
+ * clic inverse le montant et le transmet aussitôt. Sans montant, la case est
+ * inactive : un sens choisi sur rien ne s'enregistrerait pas.
  */
 export function SignedAmountInput({
   value,
   onChange,
   signLabel,
-  plusLabel,
-  minusLabel,
   fieldClassName,
   ...amount
 }: AmountProps & {
-  /** Le nom accessible du choix du sens (« Sens : Par message »). */
+  /** Le nom accessible de la case du sens (« Retirer au lieu de donner : Par message »). */
   signLabel: string;
-  plusLabel: string;
-  minusLabel: string;
 }) {
   const [negative, setNegative] = useState(value !== null && value < 0);
   const magnitude = value === null ? null : Math.abs(value);
   const signed = (abs: number | null, neg: boolean) => (abs === null ? null : neg ? -abs || 0 : abs);
 
-  function choose(neg: boolean) {
-    if (neg === negative) return;
-    setNegative(neg);
-    if (magnitude) onChange(signed(magnitude, neg));
+  function flip() {
+    if (!magnitude) return;
+    setNegative(!negative);
+    onChange(signed(magnitude, !negative));
   }
-
-  const option = (neg: boolean, symbol: string, label: string) => (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={negative === neg}
-      aria-label={label}
-      title={label}
-      onClick={() => choose(neg)}
-      className={cn(
-        "w-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        negative === neg ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {symbol}
-    </button>
-  );
 
   return (
     <div className="flex gap-2">
-      <div
-        role="radiogroup"
+      <button
+        type="button"
+        role="switch"
+        aria-checked={negative}
         aria-label={signLabel}
-        className={cn("flex h-10 shrink-0 overflow-hidden rounded-md border divide-x divide-border", fieldClassName)}
+        disabled={!magnitude}
+        onClick={flip}
+        className={cn(
+          fieldClassName,
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-base tabular-nums text-foreground transition-colors",
+          "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:text-muted-foreground",
+        )}
       >
-        {option(false, "+", plusLabel)}
-        {option(true, "−", minusLabel)}
-      </div>
+        {negative ? "−" : "+"}
+      </button>
       <div className="min-w-0 flex-1">
         <AmountInput
           {...amount}

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("@/app/actions/worldCatalog", () => ({ setWorldGains: vi.fn() }));
+const setWorldGains = vi.fn().mockResolvedValue({ ok: true });
+vi.mock("@/app/actions/worldCatalog", () => ({ setWorldGains: (...a: unknown[]) => setWorldGains(...a) }));
 
 import { WorldGainsSettings } from "@/components/worlds/settings/WorldGainsSettings";
 import type { World } from "@/types/worlds";
@@ -31,17 +32,17 @@ describe("WorldGainsSettings : gains négatifs (migration 261)", () => {
   it("chaque gain a son sens ; un montant négatif retire, affiché en valeur absolue", () => {
     render(<WorldGainsSettings world={monde()} />);
     const message = screen.getByRole("group", { name: "Par message" });
-    expect(within(message).getByRole("radio", { name: "Retire" })).toBeChecked();
+    expect(within(message).getByRole("switch", { name: "Retirer au lieu de donner : Par message" })).toBeChecked();
     expect(within(message).getByRole("spinbutton", { name: "Par message en Or" })).toHaveValue(1);
     expect(within(message).getByText("Retire de la bourse, jusqu’à zéro")).toBeInTheDocument();
 
     const connexion = screen.getByRole("group", { name: "Connexion du jour" });
-    expect(within(connexion).getByRole("radio", { name: "Donne" })).toBeChecked();
+    expect(within(connexion).getByRole("switch", { name: "Retirer au lieu de donner : Connexion du jour" })).not.toBeChecked();
   });
 
   it("le plafond n'a pas de sens : il reste positif", () => {
     render(<WorldGainsSettings world={monde()} />);
-    expect(within(screen.getByRole("group", { name: "Plafond par jour" })).queryByRole("radio")).toBeNull();
+    expect(within(screen.getByRole("group", { name: "Plafond par jour" })).queryByRole("switch")).toBeNull();
   });
 
   it("les cases n'acceptent que des chiffres : montants et délai", async () => {
@@ -53,5 +54,14 @@ describe("WorldGainsSettings : gains négatifs (migration 261)", () => {
     const argent = screen.getByRole("spinbutton", { name: "Par message en Argent" });
     await user.type(argent, "2.5");
     expect(argent).toHaveValue(25);
+  });
+
+  it("changer de sens s'enregistre comme toute autre modification", async () => {
+    const user = userEvent.setup();
+    render(<WorldGainsSettings world={monde()} />);
+    await user.click(screen.getByRole("switch", { name: "Retirer au lieu de donner : Par message" }));
+    await waitFor(() => expect(setWorldGains).toHaveBeenCalledWith("w1", expect.objectContaining({ gain_message: 150 })), {
+      timeout: 2000,
+    });
   });
 });

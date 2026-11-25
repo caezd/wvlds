@@ -101,8 +101,6 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
                   fieldClassName={FIELD}
                   labelOf={(unit) => t("amountIn", { label: t(kind), unit: unit.name })}
                   signLabel={t("sign", { label: t(kind) })}
-                  plusLabel={t("plus")}
-                  minusLabel={t("minus")}
                 />
               </GainField>
             );
