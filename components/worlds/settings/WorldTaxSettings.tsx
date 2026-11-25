@@ -9,6 +9,7 @@ import { CalendarDays, Shapes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AmountInput } from "@/components/economy/AmountInput";
 import { DEFAULT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
@@ -33,7 +34,7 @@ import {
 } from "@/lib/worldTax";
 import type { World } from "@/types/worlds";
 import { cn } from "@/lib/utils";
-import { FIELD, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, InactiveOptions, SettingsSection, TitleWithHelp, ToggleItem, ToggleList } from "./FeatureLayout";
 
 const SELECT_CLASS =
   "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary";
@@ -174,22 +175,27 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
                   </Popover>
                 }
               />
-              <ToggleItem
-                title={t("mode")}
-                help={t("modeHelp")}
-                control={
-                  <select
-                    aria-label={t("mode")}
-                    className={cn(SELECT_CLASS, "shrink-0")}
-                    value={draft.tax_mode}
-                    onChange={(e) => set({ tax_mode: e.target.value as TaxMode })}
-                  >
-                    {TAX_MODES.map((m) => (
-                      <option key={m} value={m}>{t(`modes.${m}`)}</option>
-                    ))}
-                  </select>
-                }
-              />
+              <div className="px-4 py-2.5">
+                <p className="text-sm font-medium">
+                  <TitleWithHelp title={t("mode")} help={t("modeHelp")} />
+                </p>
+                <RadioGroup
+                  aria-label={t("mode")}
+                  value={draft.tax_mode}
+                  onValueChange={(v) => set({ tax_mode: v as TaxMode })}
+                  className="mt-2 gap-0.5"
+                >
+                  {TAX_MODES.map((m) => (
+                    <label
+                      key={m}
+                      className="flex cursor-pointer items-center gap-2.5 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/50"
+                    >
+                      <RadioGroupItem value={m} />
+                      <span className="text-sm">{t(`modes.${m}`)}</span>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
               <ToggleItem
                 title={t("accumulate")}
                 help={t("accumulateHelp")}

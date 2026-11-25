@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 
@@ -90,7 +90,9 @@ describe("WorldTaxSettings (migration 255)", () => {
     await user.clear(every);
     await user.type(every, "2");
     await user.selectOptions(screen.getByRole("combobox", { name: "Unité de la récurrence" }), "week");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Paiement" }), "auto");
+    const paiement = screen.getByRole("radiogroup", { name: "Paiement" });
+    expect(within(paiement).getByRole("radio", { name: "Par le joueur" })).toBeChecked();
+    await user.click(within(paiement).getByRole("radio", { name: "Retrait automatique" }));
     await user.click(screen.getByRole("switch", { name: "Les dettes s’accumulent" }));
     await user.click(screen.getByRole("switch", { name: "Délai pour les nouveaux personas" }));
     await user.type(screen.getByRole("textbox", { name: "Texte du badge" }), "Mauvais payeur");
