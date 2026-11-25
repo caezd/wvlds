@@ -47,12 +47,15 @@ export function ShopDialog({
   worldId,
   shop,
   open,
+  buyback,
   onOpenChange,
   onSaved,
 }: {
   worldId: string;
   shop: WorldShop | null;
   open: boolean;
+  /** Le monde permet-il le rachat (`worldAllowsBuyback`) ? */
+  buyback: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
@@ -60,13 +63,23 @@ export function ShopDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         {/* Remonté à chaque ouverture : le formulaire repart de la boutique. */}
-        {open && <ShopForm worldId={worldId} shop={shop} onDone={() => { onOpenChange(false); onSaved(); }} />}
+        {open && <ShopForm worldId={worldId} shop={shop} allowBuyback={buyback} onDone={() => { onOpenChange(false); onSaved(); }} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function ShopForm({ worldId, shop, onDone }: { worldId: string; shop: WorldShop | null; onDone: () => void }) {
+function ShopForm({
+  worldId,
+  shop,
+  allowBuyback,
+  onDone,
+}: {
+  worldId: string;
+  shop: WorldShop | null;
+  allowBuyback: boolean;
+  onDone: () => void;
+}) {
   const t = useTranslations("shops");
   const tCommon = useTranslations("common");
   const [name, setName] = useState(shop?.name ?? "");
@@ -120,10 +133,14 @@ function ShopForm({ worldId, shop, onDone }: { worldId: string; shop: WorldShop 
           <Switch id="shop-open" checked={isOpen} onCheckedChange={setIsOpen} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <LabelWithHelp htmlFor="shop-buyback" label={t("buyback")} help={t("buybackHelp")} />
-          <Switch id="shop-buyback" checked={buyback} onCheckedChange={setBuyback} />
+          <LabelWithHelp
+            htmlFor="shop-buyback"
+            label={t("buyback")}
+            help={allowBuyback ? t("buybackHelp") : t("buybackHeldOnly")}
+          />
+          <Switch id="shop-buyback" checked={allowBuyback && buyback} disabled={!allowBuyback} onCheckedChange={setBuyback} />
         </div>
-        {buyback && (
+        {allowBuyback && buyback && (
           <div className="flex items-center justify-between gap-3">
             <LabelWithHelp htmlFor="shop-percent" label={t("buybackPercent")} help={t("buybackPercentHelp")} />
             <Input
@@ -162,24 +179,37 @@ export type ShopItemTarget = {
 export function ShopItemDialog({
   target,
   units,
+  buyback,
   onOpenChange,
   onSaved,
 }: {
   target: ShopItemTarget | null;
   units: CurrencyUnit[];
+  /** Le monde permet-il le rachat (`worldAllowsBuyback`) ? */
+  buyback: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
   return (
     <Dialog open={target !== null} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        {target && <ShopItemForm target={target} units={units} onDone={() => { onOpenChange(false); onSaved(); }} />}
+        {target && <ShopItemForm target={target} units={units} allowBuyback={buyback} onDone={() => { onOpenChange(false); onSaved(); }} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function ShopItemForm({ target, units, onDone }: { target: ShopItemTarget; units: CurrencyUnit[]; onDone: () => void }) {
+function ShopItemForm({
+  target,
+  units,
+  allowBuyback,
+  onDone,
+}: {
+  target: ShopItemTarget;
+  units: CurrencyUnit[];
+  allowBuyback: boolean;
+  onDone: () => void;
+}) {
   const t = useTranslations("shops");
   const tCommon = useTranslations("common");
   const [price, setPrice] = useState<number | null>(target.item?.price ?? null);
@@ -233,16 +263,18 @@ function ShopItemForm({ target, units, onDone }: { target: ShopItemTarget; units
             onChange={(e) => setStock(e.target.value)}
           />
         </div>
-        <div className="space-y-1.5">
-          <LabelWithHelp label={t("buybackPrice")} help={t("buybackPriceHelp")} />
-          <AmountInput
-            units={units}
-            value={buyback}
-            onChange={setBuyback}
-            idPrefix="shop-buyback"
-            labelOf={(unit) => t("buybackPriceIn", { unit: unit.name })}
-          />
-        </div>
+        {allowBuyback && (
+          <div className="space-y-1.5">
+            <LabelWithHelp label={t("buybackPrice")} help={t("buybackPriceHelp")} />
+            <AmountInput
+              units={units}
+              value={buyback}
+              onChange={setBuyback}
+              idPrefix="shop-buyback"
+              labelOf={(unit) => t("buybackPriceIn", { unit: unit.name })}
+            />
+          </div>
+        )}
       </div>
       <DialogFooter>
         <Button type="button" disabled={price === null || saving} onClick={() => void save()}>

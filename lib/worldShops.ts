@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { lucideIconSchema } from "@/lib/inputSchemas";
-import { MAX_ITEM_QUANTITY } from "@/lib/personaInventory";
+import { MAX_ITEM_QUANTITY, inventoryModeOf } from "@/lib/personaInventory";
 import { MAX_CURRENCY_VALUE } from "@/lib/worldCurrency";
 
 /**
@@ -55,6 +55,16 @@ export function worldHasShops(
   world: { enable_economy?: boolean | null; enable_inventory?: boolean | null; enable_shops?: boolean | null } | null | undefined,
 ): boolean {
   return !!world && world.enable_economy === true && world.enable_inventory !== false && world.enable_shops === true;
+}
+
+/**
+ * Les boutiques de ce monde peuvent-elles racheter ? Seulement si l'équipe
+ * tient l'inventaire (`held`) : quand les joueurs ajoutent eux-mêmes les
+ * objets du catalogue, les revendre créerait de l'argent à volonté. Miroir
+ * du refus de `sell_shop_item` (migration 262).
+ */
+export function worldAllowsBuyback(world: { inventory_mode?: string | null } | null | undefined): boolean {
+  return inventoryModeOf(world) === "held";
 }
 
 type BuybackShop = Pick<WorldShop, "buyback_enabled" | "buyback_percent">;

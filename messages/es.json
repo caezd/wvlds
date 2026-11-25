@@ -3023,6 +3023,7 @@
     "openHelp": "Cerrada, la tienda solo es visible para quienes gestionan la economía.",
     "buyback": "Reventa",
     "buybackHelp": "La tienda recompra los objetos que vende. Un objeto revendido vuelve a sus existencias si son limitadas.",
+    "buybackHeldOnly": "No disponible mientras los jugadores añaden sus propios objetos: la recompra solo existe si el equipo gestiona el inventario.",
     "buybackPercent": "Recompra por defecto (% del precio)",
     "buybackPercentHelp": "Para los artículos sin precio de recompra propio. Vacío: solo se recompran esos artículos.",
     "deleteShop": "Eliminar la tienda",

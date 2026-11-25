@@ -58,12 +58,14 @@ export function ShopManager({ worldId }: { worldId: string }) {
         worldId={worldId}
         shop={shopDialog?.shop ?? null}
         open={shopDialog !== null}
+        buyback={shops.buyback}
         onOpenChange={(o) => !o && setShopDialog(null)}
         onSaved={() => void shops.reload()}
       />
       <ShopItemDialog
         target={itemTarget}
         units={shops.units}
+        buyback={shops.buyback}
         onOpenChange={(o) => !o && setItemTarget(null)}
         onSaved={() => void shops.reload()}
       />
@@ -113,7 +115,7 @@ function ManagedShop({
           {shop.description && <p className="whitespace-pre-line text-xs text-muted-foreground">{shop.description}</p>}
           <div className="flex flex-wrap gap-1.5">
             {!shop.is_open && <Badge tone="warning">{t("closed")}</Badge>}
-            {shop.buyback_enabled && <Badge>{t("buysBack")}</Badge>}
+            {shops.buyback && shop.buyback_enabled && <Badge>{t("buysBack")}</Badge>}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -139,7 +141,7 @@ function ManagedShop({
         <ul className="divide-y divide-border rounded-md border border-border">
           {articles.map((article) => {
             const entry = article.catalog!;
-            const buyback = buybackPriceOf(shop, article);
+            const buyback = shops.buyback ? buybackPriceOf(shop, article) : null;
             return (
               <li key={article.id} aria-label={entry.name} className="flex items-center gap-3 px-2 py-1.5">
                 <CatalogVisual icon={entry.icon} lucideIcon={entry.lucide_icon} imageUrl={entry.image_url} size={28} />

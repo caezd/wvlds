@@ -3023,6 +3023,7 @@
     "openHelp": "Fermée, la boutique n’est visible que de ceux qui gèrent l’économie.",
     "buyback": "Revente",
     "buybackHelp": "La boutique rachète les objets qu’elle vend. Un objet revendu revient dans son stock s’il est limité.",
+    "buybackHeldOnly": "Indisponible tant que les joueurs ajoutent eux-mêmes leurs objets : la revente n’existe que si l’équipe tient l’inventaire.",
     "buybackPercent": "Rachat par défaut (% du prix)",
     "buybackPercentHelp": "Pour les articles sans prix de rachat propre. Vide : seuls ces articles sont rachetés.",
     "deleteShop": "Supprimer la boutique",

@@ -33,6 +33,7 @@ const casque = { id: "i2", shop_id: "s1", catalog_item_id: "c2", price: 100, sto
 function shops(patch: Record<string, unknown> = {}) {
   const state = {
     status: "on",
+    buyback: true,
     units: UNITS,
     shops: [forge, cave],
     itemsOf: (id: string) => (id === "s1" ? [epee, casque] : []),
@@ -122,6 +123,14 @@ describe("WorldShops (migration 249)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Revendre : Épée" });
     await user.click(within(dialog).getByRole("button", { name: "Revendre" }));
     await waitFor(() => expect(state.sell).toHaveBeenCalledWith("p1", "i1", 1));
+  });
+
+  it("joueurs maîtres de leur inventaire : rien ne se revend", () => {
+    shops({ buyback: false });
+    renderShops();
+    expect(within(card("Épée")).queryByRole("button", { name: "Revendre" })).toBeNull();
+    expect(within(card("Épée")).queryByText(/Rachat/)).toBeNull();
+    expect(screen.queryByText("Rachète ses objets")).toBeNull();
   });
 
   it("sans persona dans le monde : on regarde, on n'achète pas", () => {

@@ -3023,6 +3023,7 @@
     "openHelp": "When closed, the shop is only visible to those who manage the economy.",
     "buyback": "Buyback",
     "buybackHelp": "The shop buys back the items it sells. A sold item returns to its stock if limited.",
+    "buybackHeldOnly": "Unavailable while players add their own items: buyback only exists when the team manages inventories.",
     "buybackPercent": "Default buyback (% of price)",
     "buybackPercentHelp": "For items without their own buyback price. Empty: only those items are bought back.",
     "deleteShop": "Delete shop",

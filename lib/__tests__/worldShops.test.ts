@@ -11,6 +11,7 @@ import {
   maxPurchasable,
   shopInputSchema,
   shopItemInputSchema,
+  worldAllowsBuyback,
   worldHasShops,
 } from "@/lib/worldShops";
 import { MAX_CURRENCY_VALUE } from "@/lib/worldCurrency";
@@ -18,6 +19,20 @@ import { MAX_ITEM_QUANTITY } from "@/lib/personaInventory";
 
 const shop = { buyback_enabled: true, buyback_percent: 50 as number | null };
 const item = { price: 101, stock: null as number | null, buyback_price: null as number | null };
+
+describe("worldAllowsBuyback", () => {
+  it("seulement quand l'équipe tient l'inventaire", () => {
+    expect(worldAllowsBuyback({ inventory_mode: "held" })).toBe(true);
+  });
+
+  it("jamais quand les joueurs remplissent eux-mêmes leur inventaire : la revente créerait de l'argent", () => {
+    expect(worldAllowsBuyback({ inventory_mode: "free" })).toBe(false);
+    expect(worldAllowsBuyback({ inventory_mode: "catalog" })).toBe(false);
+    // Non chargé : le mode par défaut, libre.
+    expect(worldAllowsBuyback({})).toBe(false);
+    expect(worldAllowsBuyback(null)).toBe(false);
+  });
+});
 
 describe("buybackPriceOf", () => {
   it("rien sans l'option de revente", () => {

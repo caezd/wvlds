@@ -15,10 +15,10 @@ const article = (id: string, shop: string, patch: Record<string, unknown> = {}) 
   id, shop_id: shop, catalog_item_id: "c1", price: 10, stock: null, buyback_price: null, sort_index: 0, catalog: epee, ...patch,
 });
 
-function charger(extra: Record<string, unknown>[] = []) {
+function charger(extra: Record<string, unknown>[] = [], world: Record<string, unknown> = WORLD) {
   const mock = createSupabaseMock({
     results: [
-      { data: WORLD },
+      { data: world },
       { data: [forge, herbo] },
       { data: [article("i1", "s1"), article("i2", "s2", { stock: 3 })] },
       { data: [{ id: "p1", name: "Brom", avatar_url: null }] },
@@ -65,6 +65,18 @@ describe("useWorldShops (migration 249)", () => {
     const personas = mock.buildersFor("personas")[0];
     expect(personas.eq).toHaveBeenCalledWith("user_id", "u1");
     expect(personas.is).toHaveBeenCalledWith("deleted_at", null);
+  });
+
+  it("le rachat n'existe que si l'équipe tient l'inventaire", async () => {
+    charger([], { ...WORLD, inventory_mode: "catalog" });
+    const libre = renderHook(() => useWorldShops("w1", "u1", false));
+    await waitFor(() => expect(libre.result.current.status).toBe("on"));
+    expect(libre.result.current.buyback).toBe(false);
+
+    charger([], { ...WORLD, inventory_mode: "held" });
+    const tenu = renderHook(() => useWorldShops("w1", "u1", false));
+    await waitFor(() => expect(tenu.result.current.status).toBe("on"));
+    expect(tenu.result.current.buyback).toBe(true);
   });
 
   it("acheter passe par la RPC puis relit bourses, possessions et stocks", async () => {

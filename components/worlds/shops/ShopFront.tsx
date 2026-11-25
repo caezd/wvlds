@@ -30,7 +30,7 @@ export function ShopFront({ shop, shops, buyer }: { shop: WorldShop; shops: Shop
         <div className="min-w-0 flex-1 space-y-1">
           {shop.description && <p className="whitespace-pre-line text-sm text-muted-foreground">{shop.description}</p>}
           <div className="flex flex-wrap gap-1.5">
-            {shop.buyback_enabled && <Badge>{t("buysBack")}</Badge>}
+            {shops.buyback && shop.buyback_enabled && <Badge>{t("buysBack")}</Badge>}
             {!shop.is_open && <Badge tone="warning">{t("closedHint")}</Badge>}
           </div>
         </div>
@@ -42,7 +42,7 @@ export function ShopFront({ shop, shops, buyer }: { shop: WorldShop; shops: Shop
         {articles.map((article) => {
           const entry = article.catalog!;
           const held = buyer ? shops.held(buyer.id, article.catalog_item_id) : 0;
-          const buyback = buybackPriceOf(shop, article);
+          const buyback = shops.buyback ? buybackPriceOf(shop, article) : null;
           const soldOut = article.stock === 0;
           return (
             <article

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_CURRENCY_UNITS, currencyUnitsOf, type CurrencyUnit } from "@/lib/worldCurrency";
-import { worldHasShops, type WorldShop, type WorldShopItem } from "@/lib/worldShops";
+import { worldAllowsBuyback, worldHasShops, type WorldShop, type WorldShopItem } from "@/lib/worldShops";
 import type { InventoryCatalogEntry } from "@/hooks/usePersonaInventory";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
 
@@ -36,7 +36,8 @@ function errorOf(error: { message?: string } | null): ShopError {
 /**
  * Les boutiques d'un monde, telles que les voit qui les visite : leurs
  * articles, mes personas qui peuvent acheter (avec leur solde) et ce que
- * chacun porte déjà, pour la revente. La RLS ne rend les boutiques fermées
+ * chacun porte déjà, pour la revente — que `buyback` n'ouvre que si l'équipe
+ * tient l'inventaire. La RLS ne rend les boutiques fermées
  * qu'à qui gère l'économie ; achats et reventes sont tranchés par la base.
  *
  * `off` tant que le monde n'a pas l'économie, l'inventaire et l'option
@@ -46,6 +47,7 @@ export function useWorldShops(worldId: string, userId: string | null, canManage:
   const supabase = useMemo(() => createClient(), []);
   const [status, setStatus] = useState<"loading" | "off" | "on">("loading");
   const [units, setUnits] = useState<CurrencyUnit[]>(DEFAULT_CURRENCY_UNITS);
+  const [buyback, setBuyback] = useState(false);
   const [shops, setShops] = useState<WorldShop[]>([]);
   const [articles, setArticles] = useState<ShopArticle[]>([]);
   const [buyers, setBuyers] = useState<Omit<ShopBuyer, "balance">[]>([]);
@@ -101,12 +103,18 @@ export function useWorldShops(worldId: string, userId: string | null, canManage:
     (async () => {
       const { data: world } = await supabase
         .from("worlds")
-        .select("enable_economy, enable_inventory, enable_shops, currency_units")
+        .select("enable_economy, enable_inventory, enable_shops, currency_units, inventory_mode")
         .eq("id", worldId)
         .maybeSingle();
       if (cancelled) return;
       const row = world as
-        | { enable_economy?: boolean | null; enable_inventory?: boolean | null; enable_shops?: boolean | null; currency_units?: unknown }
+        | {
+            enable_economy?: boolean | null;
+            enable_inventory?: boolean | null;
+            enable_shops?: boolean | null;
+            currency_units?: unknown;
+            inventory_mode?: string | null;
+          }
         | null;
       if (!row || !worldHasShops(row)) {
         setStatus("off");
@@ -146,6 +154,7 @@ export function useWorldShops(worldId: string, userId: string | null, canManage:
       await readPurses(personas.map((p) => p.id));
       if (cancelled) return;
       setUnits(currencyUnitsOf(row.currency_units));
+      setBuyback(worldAllowsBuyback(row));
       setShops((s ?? []) as WorldShop[]);
       setArticles((a ?? []) as unknown as ShopArticle[]);
       setBuyers(personas);
@@ -189,5 +198,5 @@ export function useWorldShops(worldId: string, userId: string | null, canManage:
     [holdings],
   );
 
-  return { status, units, shops, itemsOf, personas, held, catalog, categories, buy, sell, reload };
+  return { status, units, buyback, shops, itemsOf, personas, held, catalog, categories, buy, sell, reload };
 }
