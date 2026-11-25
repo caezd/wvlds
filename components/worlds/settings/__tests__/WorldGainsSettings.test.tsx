@@ -39,26 +39,33 @@ beforeEach(() => {
 });
 
 describe("WorldGainsSettings (migration 252)", () => {
-  it("le délai suit « Par message » ; les gains de scène, masqués pour l'instant ; le plafond, à part", () => {
+  it("ce qui rapporte, puis les limites (délai, plafond) ; les gains de scène, masqués pour l'instant", () => {
     render(<WorldGainsSettings world={monde()} />);
-    const gains = screen.getByRole("group", { name: "Ce qui rapporte" });
-    const lignes = within(gains)
-      .getAllByRole("spinbutton")
-      .map((c) => c.getAttribute("aria-label"))
-      .filter((n) => !n?.endsWith(" en Or"));
-    expect(lignes).toEqual([
-      "Par message en Argent",
-      "Délai entre deux messages payés (minutes)",
-      "Connexion du jour en Argent",
-    ]);
-    expect(within(gains).queryByRole("spinbutton", { name: "Plafond par jour en Or" })).toBeNull();
-    expect(within(screen.getByRole("group", { name: "Plafond par jour" })).getByRole("spinbutton", { name: "Plafond par jour en Or" })).toBeInTheDocument();
+    const noms = (section: string) =>
+      within(screen.getByRole("region", { name: section }))
+        .getAllByRole("spinbutton")
+        .map((c) => c.getAttribute("aria-label"))
+        .filter((n) => !n?.endsWith(" en Or"));
+    expect(noms("Gains")).toEqual(["Par message en Argent", "Connexion du jour en Argent"]);
+    expect(noms("Limites des gains")).toEqual(["Délai entre deux messages payés, en minutes", "Plafond par jour en Argent"]);
+  });
+
+  it("dit ce que veut dire un champ vide : rien, aucun délai, sans plafond", () => {
+    render(<WorldGainsSettings world={monde({ gain_message_cooldown: 0 })} />);
+    expect(screen.getAllByText("Ne rapporte rien")).toHaveLength(1); // Connexion du jour
+    expect(screen.getByText("Aucun délai : chaque message est payé")).toBeInTheDocument();
+    expect(screen.getByText("Sans plafond")).toBeInTheDocument();
+  });
+
+  it("prévient qu'un plafond à zéro bloque tous les gains", () => {
+    render(<WorldGainsSettings world={monde({ gain_daily_cap: 0 })} />);
+    expect(screen.getByText("Plafond à zéro : plus aucun gain n’est versé")).toBeInTheDocument();
   });
 
   it("chaque gain, palier par palier, avec les montants du monde", () => {
     render(<WorldGainsSettings world={monde()} />);
     expect(champ("Par message en Argent")).toHaveValue(5);
-    expect(champ("Délai entre deux messages payés (minutes)")).toHaveValue(2);
+    expect(champ("Délai entre deux messages payés, en minutes")).toHaveValue(2);
     expect(champ("Plafond par jour en Or")).toHaveValue(null);
     expect(enregistrer()).toBeDisabled();
   });
@@ -82,15 +89,12 @@ describe("WorldGainsSettings (migration 252)", () => {
     );
   });
 
-  it("les montants et le délai se règlent aussi aux boutons −/+", async () => {
+  it("un délai vidé vaut zéro", async () => {
     const user = userEvent.setup();
     render(<WorldGainsSettings world={monde()} />);
-    await user.click(screen.getByRole("button", { name: "Augmenter : Par message en Argent" }));
-    await user.click(screen.getByRole("button", { name: "Diminuer : Délai entre deux messages payés (minutes)" }));
+    await user.clear(champ("Délai entre deux messages payés, en minutes"));
     await user.click(enregistrer());
-    await waitFor(() =>
-      expect(setWorldGains).toHaveBeenCalledWith("w1", expect.objectContaining({ gain_message: 6, gain_message_cooldown: 1 })),
-    );
+    await waitFor(() => expect(setWorldGains).toHaveBeenCalledWith("w1", expect.objectContaining({ gain_message_cooldown: 0 })));
   });
 
   it("un plafond saisi est enregistré", async () => {
@@ -104,8 +108,8 @@ describe("WorldGainsSettings (migration 252)", () => {
   it("un délai au-delà d'une journée ne s'enregistre pas", async () => {
     const user = userEvent.setup();
     render(<WorldGainsSettings world={monde()} />);
-    await user.clear(champ("Délai entre deux messages payés (minutes)"));
-    await user.type(champ("Délai entre deux messages payés (minutes)"), "1441");
+    await user.clear(champ("Délai entre deux messages payés, en minutes"));
+    await user.type(champ("Délai entre deux messages payés, en minutes"), "1441");
     expect(enregistrer()).toBeDisabled();
   });
 });

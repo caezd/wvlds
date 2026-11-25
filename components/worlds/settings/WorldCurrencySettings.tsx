@@ -23,7 +23,7 @@ import {
   type CurrencyRatioRow,
   type CurrencyUnit,
 } from "@/lib/worldCurrency";
-import { FIELD, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
+import { FIELD, SettingsSection } from "./FeatureLayout";
 
 /** Le taux proposé pour un palier ajouté au-dessus des autres. */
 const NEW_UNIT_RATIO = 10;
@@ -34,7 +34,8 @@ const NEW_UNIT_RATIO = 10;
  * suivant (« 1 Or = 100 Argent »). La base ne garde que les valeurs absolues ;
  * l'éditeur passe par les taux, plus naturels à saisir.
  *
- * Plusieurs champs pour un seul réglage : on enregistre d'un bouton.
+ * Plusieurs champs pour un seul réglage : on enregistre d'un bouton. Les
+ * paliers, à plat (sans carte), comme les autres champs de la page.
  */
 export function WorldCurrencySettings({
   world,
@@ -88,14 +89,14 @@ export function WorldCurrencySettings({
         {rows.map((row, i) => {
           const next = rows[i + 1];
           return (
-            <div key={i} className={cn(SETTINGS_ROW, "flex-nowrap gap-2")}>
+            <div key={i} className="flex items-center gap-2">
               <Input
                 value={row.name}
                 maxLength={MAX_CURRENCY_NAME_LENGTH}
                 placeholder={t("namePlaceholder")}
                 aria-label={t("unitName", { n: i + 1 })}
                 onChange={(e) => patchRow(i, { name: e.target.value })}
-                className={cn("h-8 w-32 min-w-0 shrink rounded-md text-sm", FIELD)}
+                className={cn("h-10 min-w-0 flex-1 basis-24 @md:max-w-40 rounded-md text-sm", FIELD)}
               />
               <Input
                 value={row.short}
@@ -103,7 +104,7 @@ export function WorldCurrencySettings({
                 placeholder={t("shortPlaceholder")}
                 aria-label={t("unitShort", { n: i + 1 })}
                 onChange={(e) => patchRow(i, { short: e.target.value })}
-                className={cn("h-8 w-16 shrink-0 rounded-md text-sm", FIELD)}
+                className={cn("h-10 w-16 shrink-0 rounded-md text-sm", FIELD)}
               />
               {next ? (
                 <span className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
@@ -115,7 +116,7 @@ export function WorldCurrencySettings({
                     value={Number.isFinite(row.ratio) ? row.ratio : ""}
                     aria-label={t("unitRatio", { name: labelOf(row, i), next: labelOf(next, i + 1) })}
                     onChange={(e) => patchRow(i, { ratio: e.target.valueAsNumber })}
-                    className={cn("h-8 w-20 shrink-0 rounded-md text-sm", FIELD)}
+                    className={cn("h-10 w-20 shrink-0 rounded-md text-sm", FIELD)}
                   />
                   <span className="truncate">{labelOf(next, i + 1)}</span>
                 </span>
@@ -126,7 +127,7 @@ export function WorldCurrencySettings({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 shrink-0"
+                className="size-10 shrink-0 text-muted-foreground"
                 disabled={rows.length === 1}
                 aria-label={t("remove", { name: labelOf(row, i) })}
                 onClick={() => setRows((current) => current.filter((_, j) => j !== i))}

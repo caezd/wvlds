@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { amountFromCounts, splitAmount, type CurrencyUnit } from "@/lib/worldCurrency";
+import { cn } from "@/lib/utils";
 
 /** Les cases d'un montant déjà connu, palier par palier ; vides s'il n'y en a pas. */
 function countsOf(value: number | null, units: readonly CurrencyUnit[]): number[] {
@@ -26,6 +27,9 @@ export function AmountInput({
   idPrefix,
   labelOf,
   stepper = false,
+  compact = false,
+  placeholder,
+  fieldClassName,
 }: {
   units: CurrencyUnit[];
   value: number | null;
@@ -35,6 +39,15 @@ export function AmountInput({
   labelOf: (unit: CurrencyUnit) => string;
   /** Des boutons −/+ à côté de chaque case (NumberInput). */
   stepper?: boolean;
+  /**
+   * Une rangée de cases qui se partagent la largeur, sans intitulé au-dessus : l'abréviation du
+   * palier dans la case (« [ 12 S ] »). Pour les réglages, sous un seul libellé.
+   */
+  compact?: boolean;
+  /** Ce qu'affichent les cases vides (`compact`) : « 0 », « — »… */
+  placeholder?: string;
+  /** Le fond et la bordure des cases (`compact`), selon la surface. */
+  fieldClassName?: string;
 }) {
   const [counts, setCounts] = useState<number[]>(() => countsOf(value, units));
 
@@ -43,6 +56,38 @@ export function AmountInput({
     next[i] = v;
     setCounts(next);
     onChange(next.every((n) => !Number.isFinite(n)) ? null : amountFromCounts(next, units));
+  }
+
+  if (compact) {
+    return (
+      <div className="flex gap-2">
+        {units.map((unit, i) => (
+          <div key={unit.value} className="relative min-w-0 flex-1">
+            <Input
+              id={`${idPrefix}-${unit.value}`}
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              aria-label={labelOf(unit)}
+              placeholder={placeholder}
+              value={Number.isFinite(counts[i]) ? counts[i] : ""}
+              onChange={(e) => update(i, e.target.valueAsNumber)}
+              className={cn(
+                "h-10 rounded-md pr-10 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                fieldClassName,
+              )}
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center truncate text-xs text-muted-foreground"
+            >
+              {unit.short || unit.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

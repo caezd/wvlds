@@ -5,14 +5,15 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { NumberInput } from "@/components/ui/number-input";
+import { Input } from "@/components/ui/input";
 import { AmountInput } from "@/components/economy/AmountInput";
 import { setWorldGains } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, gainSettingsOf, gainSettingsSchema, type GainKind, type GainSettings } from "@/lib/worldGains";
 import type { World } from "@/types/worlds";
-import { SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { cn } from "@/lib/utils";
+import { FIELD, SettingsSection, TitleWithHelp } from "./FeatureLayout";
 
 const columnOf = (kind: GainKind) => `gain_${kind}` as const;
 
@@ -25,8 +26,9 @@ const SHOWN_GAIN_KINDS: readonly GainKind[] = GAIN_KINDS.filter((k) => k === "me
 
 /**
  * Les gains automatiques (migrations 252, 253), dans la page Devises : un
- * montant par déclencheur, saisi palier par palier (zéro : rien), le délai
- * entre deux messages payés et le plafond par jour, enregistrés d'un bouton.
+ * montant par déclencheur, saisi palier par palier (vide ou zéro : rien),
+ * puis, dans une seconde section, les limites — délai entre deux messages
+ * payés, plafond par jour —, enregistrés d'un bouton.
  * La base paie.
  */
 export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdated?: (patch: Partial<World>) => void }) {
@@ -55,63 +57,111 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
     toast.success(t("saved"));
   }
 
-  const amount = (label: string, id: string, value: number | null, onChange: (v: number | null) => void) => (
+  const amount = (label: string, id: string, value: number | null, onChange: (v: number | null) => void, placeholder: string) => (
     <AmountInput
-      stepper
+      compact
       units={units}
       value={value}
       onChange={onChange}
       idPrefix={id}
+      placeholder={placeholder}
+      fieldClassName={FIELD}
       labelOf={(unit) => t("amountIn", { label, unit: unit.name })}
     />
   );
 
+  const cap = draft.gain_daily_cap;
+
+  // À plat, sans carte : un réglage par ligne, les champs alignés à droite.
+  // Deux sections : ce qui rapporte, puis ce qui limite.
   return (
-    <SettingsSection title={t("title")} help={t("help")}>
-      <ToggleList label={t("events")}>
-        {SHOWN_GAIN_KINDS.map((kind) => (
-          <React.Fragment key={kind}>
-            <ToggleItem
-              title={t(kind)}
-              help={t(`${kind}Help`)}
-              control={amount(t(kind), `gain-${kind}`, draft[columnOf(kind)] || null, (v) =>
-                setDraft((d) => ({ ...d, [columnOf(kind)]: v ?? 0 })),
-              )}
-            />
-            {/* Le délai ne règle que le gain par message : sa sous-option. */}
-            {kind === "message" && (
-              <ToggleItem
-                indent
-                title={t("cooldown")}
-                help={t("cooldownHelp")}
-                control={
-                  <NumberInput
-                    min={0}
-                    max={MAX_GAIN_COOLDOWN_MINUTES}
-                    aria-label={t("cooldown")}
-                    value={cooldown}
-                    onValueChange={setCooldown}
-                  />
-                }
+    <>
+      <SettingsSection title={t("title")} help={t("help")}>
+        <div className="grid gap-y-4">
+          {SHOWN_GAIN_KINDS.map((kind) => {
+            const value = draft[columnOf(kind)];
+            return (
+              <GainField key={kind} label={t(kind)} help={t(`${kind}Help`)} status={value === 0 ? t("nothing") : null}>
+                {amount(t(kind), `gain-${kind}`, value || null, (v) => setDraft((d) => ({ ...d, [columnOf(kind)]: v ?? 0 })), "0")}
+              </GainField>
+            );
+          })}
+        </div>
+      </SettingsSection>
+      <SettingsSection title={t("limits")} help={t("limitsHelp")}>
+        <div className="grid gap-y-4">
+          <GainField label={t("cooldown")} help={t("cooldownHelp")} status={!cooldown ? t("noCooldown") : null}>
+            <div className="relative">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={MAX_GAIN_COOLDOWN_MINUTES}
+                step={1}
+                aria-label={t("cooldownLabel")}
+                placeholder="0"
+                value={cooldown || ""}
+                onChange={(e) => setCooldown(e.target.value.trim() === "" ? null : e.target.valueAsNumber)}
+                className={cn(NUMBER_FIELD, FIELD)}
               />
-            )}
-          </React.Fragment>
-        ))}
-      </ToggleList>
-      {/* Le plafond borne tous les gains à la fois : hors de la liste. */}
-      <ToggleList label={t("cap")} className="mt-3">
-        <ToggleItem
-          title={t("cap")}
-          help={t("capHelp")}
-          control={amount(t("cap"), "gain-cap", draft.gain_daily_cap, (v) => setDraft((d) => ({ ...d, gain_daily_cap: v })))}
-        />
-      </ToggleList>
-      <div className="mt-3 flex items-center gap-3">
-        {dirty && !valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
-        <Button type="button" size="sm" className="ml-auto" disabled={!dirty || !valid || saving} onClick={() => void save()}>
-          {t("save")}
-        </Button>
+              <span aria-hidden className={SUFFIX}>
+                {t("minutes")}
+              </span>
+            </div>
+          </GainField>
+          {/* Le plafond borne tous les gains à la fois. Vide : sans plafond ; zéro : plus rien. */}
+          <GainField
+            label={t("cap")}
+            help={t("capHelp")}
+            status={cap === null ? t("noCap") : cap === 0 ? t("zeroCap") : null}
+            warn={cap === 0}
+          >
+            {amount(t("cap"), "gain-cap", cap, (v) => setDraft((d) => ({ ...d, gain_daily_cap: v })), "—")}
+          </GainField>
+        </div>
+        <div className="flex items-center gap-3">
+          {dirty && !valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
+          <Button type="button" size="sm" className="ml-auto" disabled={!dirty || !valid || saving} onClick={() => void save()}>
+            {t("save")}
+          </Button>
+        </div>
+      </SettingsSection>
+    </>
+  );
+}
+
+/** Une case numérique, l'unité dans la case (voir AmountInput `compact`). */
+const NUMBER_FIELD =
+  "h-10 rounded-md pr-10 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+const SUFFIX = "pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center text-xs text-muted-foreground";
+
+/**
+ * Un réglage, sur une ligne : son libellé, son aide et ce que veut dire la
+ * valeur quand elle est vide ou nulle (« Ne rapporte rien », « Sans
+ * plafond ») à gauche ; ses champs à droite, dans une colonne commune.
+ */
+function GainField({
+  label,
+  help,
+  status,
+  warn = false,
+  children,
+}: {
+  label: string;
+  help: string;
+  status: string | null;
+  warn?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div role="group" aria-label={label} className="grid items-center gap-x-4 gap-y-1.5 @md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]">
+      <div className="min-w-0">
+        <p className="text-sm">
+          <TitleWithHelp title={label} help={help} />
+        </p>
+        {status && <p className={cn("text-xs", warn ? "text-destructive" : "text-muted-foreground")}>{status}</p>}
       </div>
-    </SettingsSection>
+      {children}
+    </div>
   );
 }
