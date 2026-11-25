@@ -185,7 +185,10 @@ export const ANNOUNCEMENT_TEST_HOURLY_LIMIT = 10;
  */
 export async function sendAnnouncementTest(
   supabase: Pick<SupabaseClient, "rpc">,
-  input: Omit<SendAnnouncementInput, "roleIds" | "filters" | "bannerDays">,
+  input: Omit<SendAnnouncementInput, "roleIds" | "filters" | "bannerDays"> & {
+    /** Essai du message de bienvenue : notifié comme tel (migration 263). */
+    welcome?: boolean;
+  },
 ): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
   const { error } = await supabase.rpc(RPC.SEND_WORLD_ANNOUNCEMENT_TEST, {
     p_world_id: input.worldId,
@@ -193,6 +196,7 @@ export async function sendAnnouncementTest(
     p_title: input.kind !== "message" ? input.title.trim() : null,
     p_body: input.body.trim(),
     p_as_world: input.kind !== "message" && !!input.asWorld,
+    p_welcome: !!input.welcome,
   });
   if (error) {
     console.error("[worldAnnouncements] essai", error);

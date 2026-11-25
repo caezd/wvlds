@@ -311,7 +311,8 @@
       "personaSentBack": "<b>{actor}</b> a renvoyé la fiche de <b>{persona}</b> en brouillon",
       "personaFallback": "un persona",
       "sequelRequest": "<b>{actor}</b> propose que <b>{chatroom}</b> fasse suite à <b>{previous}</b>",
-      "worldAnnouncement": "<b>{actor}</b> a publié une annonce : <b>{title}</b>"
+      "worldAnnouncement": "<b>{actor}</b> a publié une annonce : <b>{title}</b>",
+      "worldWelcome": "<b>{actor}</b> vous souhaite la bienvenue : <b>{title}</b>"
     },
     "sequelRequest": {
       "accept": "Accepter",
@@ -1400,7 +1401,8 @@
         "saved": "Message de bienvenue enregistré.",
         "editorTitle": "Message de bienvenue",
         "editorDescription": "Envoyé à chaque nouveau membre, depuis votre compte une fois enregistré.",
-        "titlePlaceholder": "Bienvenue dans '{world}'"
+        "titlePlaceholder": "Bienvenue dans '{world}'",
+        "previewDialogTitle": "Aperçu du message de bienvenue"
       },
       "kindBanner": "Bandeau",
       "kindBannerHelp": "Un titre et un texte en tête de l'accueil du monde, jusqu'à ce qu'on le ferme.",

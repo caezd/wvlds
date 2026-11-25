@@ -94,9 +94,10 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                 previous: n.metadata?.previous_title ?? t("text.someone"),
                 ...r,
             });
-        // Une annonce de l'équipe d'un monde (migration 227) : son titre.
+        // Une annonce de l'équipe d'un monde (migration 227) : son titre. Le
+        // message de bienvenue voyage sous le même type, marqué `welcome`.
         case "world_announcement":
-            return t.rich("text.worldAnnouncement", {
+            return t.rich(n.metadata?.welcome ? "text.worldWelcome" : "text.worldAnnouncement", {
                 actor,
                 title: n.content
                     ?? (n.metadata?.test && n.metadata.kind === "message" ? t("announcement.testMessageTitle") : t("announcement.fallbackTitle")),

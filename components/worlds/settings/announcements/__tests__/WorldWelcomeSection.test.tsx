@@ -113,7 +113,7 @@ describe("WorldWelcomeSection", () => {
     await user.type(title, "Salut");
     await user.click(within(editor).getByTestId("welcome-test"));
     await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.", asWorld: false,
+      worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.", asWorld: false, welcome: true,
     }));
     expect(toast.success).toHaveBeenCalledWith("testSent");
   });
@@ -133,9 +133,24 @@ describe("WorldWelcomeSection", () => {
     // Pas d'accueil pour un message de bienvenue.
     expect(within(direct).queryByTestId("welcome-live-preview-home")).toBeNull();
 
+    // La cloche dit « bienvenue », pas « a publié une annonce ».
+    expect(within(direct).getByTestId("welcome-live-preview-bell")).toHaveTextContent("text.worldWelcome:Bienvenue mojkkin");
+
     await user.click(within(editor).getByRole("button", { name: "previewOpen" }));
     const fenetre = await screen.findByTestId("announcement-preview-dialog");
     expect(within(fenetre).getByTestId("announcement-preview-opened")).toHaveTextContent("Ravi de vous voir dans Ygg.");
+    expect(within(fenetre).getByRole("heading", { name: "previewDialogTitle" })).toBeInTheDocument();
+  });
+
+  it("une notification sans titre enregistré part du titre suggéré, visible dans l'aperçu", async () => {
+    api.welcome.mockResolvedValue({ ...SAVED, kind: "message", title: null });
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(await screen.findByTestId("welcome-edit"));
+    const editor = await screen.findByTestId("welcome-editor");
+    await user.click(within(editor).getByTestId("welcome-kind-notification"));
+    expect(within(editor).getByTestId("welcome-title")).toHaveValue("titlePlaceholder");
+    expect(within(editor).getByTestId("welcome-live-preview-bell")).not.toHaveTextContent("previewEmpty");
   });
 
   it("sans messages privés, un modèle en message privé se rouvre en notification", async () => {

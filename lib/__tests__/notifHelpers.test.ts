@@ -64,6 +64,12 @@ describe("notifText — annonce d'un monde", () => {
     notifText(makeNotif({ type: "world_announcement", world_id: "w1", content: null, metadata: { test: true, kind: "message" } }), t);
     expect(calls[0].values?.title).toBe("announcement.testMessageTitle");
   });
+
+  it("un message de bienvenue n'est pas une annonce : sa propre phrase", () => {
+    calls.length = 0;
+    notifText(makeNotif({ type: "world_announcement", world_id: "w1", content: "Bienvenue Lys", metadata: { welcome: true } }), t);
+    expect(calls[0]).toMatchObject({ key: "text.worldWelcome", values: { actor: "Alice", title: "Bienvenue Lys" } });
+  });
 });
 
 describe("compactTime", () => {

@@ -107,8 +107,14 @@ describe("sendAnnouncementTest", () => {
     expect(await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "message", title: "ignoré", body: " Coucou " }))
       .toEqual({ ok: true });
     expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", {
-      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou", p_as_world: false,
+      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou", p_as_world: false, p_welcome: false,
     });
+  });
+
+  it("marque l'essai d'un message de bienvenue (migration 263)", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "notification", title: "Salut", body: "b", welcome: true });
+    expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", expect.objectContaining({ p_welcome: true }));
   });
 
   it("nomme le plafond des essais", async () => {

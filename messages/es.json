@@ -310,7 +310,8 @@
       "personaSentBack": "<b>{actor}</b> devolvió la ficha de <b>{persona}</b> a borrador",
       "personaFallback": "un persona",
       "sequelRequest": "<b>{actor}</b> propone que <b>{chatroom}</b> continúe <b>{previous}</b>",
-      "worldAnnouncement": "<b>{actor}</b> publicó un anuncio: <b>{title}</b>"
+      "worldAnnouncement": "<b>{actor}</b> publicó un anuncio: <b>{title}</b>",
+      "worldWelcome": "<b>{actor}</b> le da la bienvenida: <b>{title}</b>"
     },
     "back": "Volver",
     "sequelRequest": {
@@ -1400,7 +1401,8 @@
         "saved": "Mensaje de bienvenida guardado.",
         "editorTitle": "Mensaje de bienvenida",
         "editorDescription": "Se envía a cada nuevo miembro, desde su cuenta una vez guardado.",
-        "titlePlaceholder": "Bienvenido a '{world}'"
+        "titlePlaceholder": "Bienvenido a '{world}'",
+        "previewDialogTitle": "Vista previa del mensaje de bienvenida"
       },
       "kindBanner": "Banda",
       "kindBannerHelp": "Un título y un texto en la parte superior del inicio del mundo, hasta que se cierre.",

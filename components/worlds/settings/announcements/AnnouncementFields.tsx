@@ -73,9 +73,9 @@ function useAnnouncementTest(worldId: string) {
   const supabase = React.useMemo(() => createClient(), []);
   const [testing, setTesting] = React.useState(false);
   const sendTest = React.useCallback(
-    async (kind: AnnouncementKind, title: string, body: string, asWorld = false) => {
+    async (kind: AnnouncementKind, title: string, body: string, asWorld = false, welcome = false) => {
       setTesting(true);
-      const res = await sendAnnouncementTest(supabase, { worldId, kind, title, body, asWorld });
+      const res = await sendAnnouncementTest(supabase, { worldId, kind, title, body, asWorld, ...(welcome && { welcome }) });
       setTesting(false);
       if (!res.ok) {
         toast.error(errorMessage(res.reason));
@@ -99,6 +99,7 @@ export function AnnouncementTestButton({
   body,
   asWorld,
   disabled,
+  welcome = false,
   testId = "announcement-test",
 }: {
   worldId: string;
@@ -107,6 +108,8 @@ export function AnnouncementTestButton({
   body: string;
   asWorld: boolean;
   disabled: boolean;
+  /** Essai du message de bienvenue. */
+  welcome?: boolean;
   testId?: string;
 }) {
   const t = useTranslations("worlds.announcements");
@@ -118,7 +121,7 @@ export function AnnouncementTestButton({
       type="button"
       variant="outline"
       disabled={disabled || testing}
-      onClick={() => void sendTest(kind, title, body, asWorld)}
+      onClick={() => void sendTest(kind, title, body, asWorld, welcome)}
       title={banner ? t("sendTestBannerHelp") : t("sendTestHelp")}
       data-testid={testId}
     >

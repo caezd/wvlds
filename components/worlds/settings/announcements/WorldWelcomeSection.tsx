@@ -183,6 +183,9 @@ function WelcomeEditor({
   const errorMessage = useAnnouncementErrorMessage();
 
   const defaultKind: AnnouncementKind = dmsEnabled ? "message" : "notification";
+  // Titre suggéré, repris tel quel quand une notification n'en a pas : ce
+  // que montre l'aperçu est ce qui partira.
+  const suggestedTitle = t("titlePlaceholder");
   const [kind, setKind] = React.useState<AnnouncementKind>(defaultKind);
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
@@ -194,11 +197,17 @@ function WelcomeEditor({
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setKind(initial ? (initial.kind === "message" && !dmsEnabled ? "notification" : initial.kind) : defaultKind);
-      setTitle(initial?.title ?? "");
+      const nextKind = initial ? (initial.kind === "message" && !dmsEnabled ? "notification" : initial.kind) : defaultKind;
+      setKind(nextKind);
+      setTitle(initial?.title ?? (nextKind === "notification" ? suggestedTitle : ""));
       setBody(initial?.body ?? "");
       setAsWorld(!!initial?.signed_as_world);
     }
+  }
+
+  function changeKind(next: AnnouncementKind) {
+    setKind(next);
+    if (next === "notification" && !title.trim()) setTitle(suggestedTitle);
   }
 
   const valid = isAnnouncementValid(kind, title, body);
@@ -212,6 +221,7 @@ function WelcomeEditor({
     worldName,
     asWorld: kind === "notification" && asWorld,
     extras: EMPTY_EXTRAS,
+    welcome: true,
   };
 
   async function save() {
@@ -237,7 +247,7 @@ function WelcomeEditor({
         <div className="@container min-w-0 space-y-4">
           <div className="space-y-2">
             <SectionLabel as="div">{tA("kind")}</SectionLabel>
-            <KindPicker kind={kind} onChange={setKind} dmsEnabled={dmsEnabled} kinds={WELCOME_KINDS} testIdPrefix="welcome" />
+            <KindPicker kind={kind} onChange={changeKind} dmsEnabled={dmsEnabled} kinds={WELCOME_KINDS} testIdPrefix="welcome" />
           </div>
           {kind === "notification" && (
             <ToggleList>
@@ -288,9 +298,10 @@ function WelcomeEditor({
             body={body}
             asWorld={kind === "notification" && asWorld}
             disabled={!valid}
+            welcome
             testId="welcome-test"
           />
-          <AnnouncementPreviewButton {...previewProps} />
+          <AnnouncementPreviewButton {...previewProps} dialogTitle={t("previewDialogTitle")} />
           <Button type="button" disabled={!valid || saving} onClick={() => void save()} data-testid="welcome-save">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {tCommon("save")}

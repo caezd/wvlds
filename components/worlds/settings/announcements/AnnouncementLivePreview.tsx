@@ -32,6 +32,8 @@ export type AnnouncementPreviewProps = {
   /** Signée par le monde plutôt que par l'auteur. */
   asWorld: boolean;
   extras: AnnouncementExtrasValue;
+  /** Message de bienvenue : la cloche le dit, sans parler d'annonce. */
+  welcome?: boolean;
 };
 
 /** Un endroit où l'annonce paraît, sous sa légende. */
@@ -60,6 +62,7 @@ export function AnnouncementLivePreview({
   worldName,
   asWorld,
   extras,
+  welcome = false,
   testId = "announcement-preview",
 }: AnnouncementPreviewProps & { testId?: string }) {
   const t = useTranslations("worlds.announcements");
@@ -75,7 +78,7 @@ export function AnnouncementLivePreview({
     type: "world_announcement",
     actor_name: signer,
     content: shownTitle,
-    metadata: {},
+    metadata: welcome ? { welcome: true } : {},
   } as unknown as AppNotification;
 
   return (
@@ -158,10 +161,10 @@ export function AnnouncementLivePreview({
 }
 
 /** Le bouton « Aperçu » et sa fenêtre. */
-export function AnnouncementPreviewButton(props: AnnouncementPreviewProps & { disabled?: boolean }) {
+export function AnnouncementPreviewButton(props: AnnouncementPreviewProps & { disabled?: boolean; dialogTitle?: string }) {
   const t = useTranslations("worlds.announcements");
   const [open, setOpen] = React.useState(false);
-  const { disabled, ...preview } = props;
+  const { disabled, dialogTitle, ...preview } = props;
   return (
     <>
       <Button type="button" variant="outline" onClick={() => setOpen(true)} disabled={disabled} data-testid="announcement-preview-open">
@@ -171,7 +174,7 @@ export function AnnouncementPreviewButton(props: AnnouncementPreviewProps & { di
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[100dvh] max-w-lg overflow-y-auto" data-testid="announcement-preview-dialog">
           <DialogHeader>
-            <DialogTitle>{t("previewTitle")}</DialogTitle>
+            <DialogTitle>{dialogTitle ?? t("previewTitle")}</DialogTitle>
             <DialogDescription>{t("previewHelp")}</DialogDescription>
           </DialogHeader>
           {open && <AnnouncementLivePreview {...preview} />}

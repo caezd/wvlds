@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-25",
     category: "Correctif",
+    area: "Notifications",
+    text: "Message de bienvenue en notification : « … vous souhaite la bienvenue », au lieu d’une annonce.\n- même libellé dans l’aperçu et l’essai\n- titre suggéré prérempli",
+  },
+  {
+    date: "2026-11-25",
+    category: "Correctif",
     text: "Sécurité : une requête modifiée à la main depuis le navigateur ne passe plus.\n- seules les données que l’application propose de changer sont modifiables ; propriétaire d’un monde, nature d’un persona, salon d’un message ou conversation d’un message privé sont figés\n- un persona n’entre que dans un monde dont vous êtes membre\n- lieux, catégories et types de relation désignés : toujours ceux du même monde\n- seul le propriétaire supprime son monde\n- notifications de mention et d’invitation établies par le serveur\n- déplacement d’un persona vers un autre monde rétabli",
   },
   {

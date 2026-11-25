@@ -310,7 +310,8 @@
       "personaSentBack": "<b>{actor}</b> sent <b>{persona}</b>'s sheet back to draft",
       "personaFallback": "a persona",
       "sequelRequest": "<b>{actor}</b> proposes <b>{chatroom}</b> as a sequel to <b>{previous}</b>",
-      "worldAnnouncement": "<b>{actor}</b> posted an announcement: <b>{title}</b>"
+      "worldAnnouncement": "<b>{actor}</b> posted an announcement: <b>{title}</b>",
+      "worldWelcome": "<b>{actor}</b> welcomes you: <b>{title}</b>"
     },
     "back": "Back",
     "sequelRequest": {
@@ -1400,7 +1401,8 @@
         "saved": "Welcome message saved.",
         "editorTitle": "Welcome message",
         "editorDescription": "Sent to every new member, from your account once saved.",
-        "titlePlaceholder": "Welcome to '{world}'"
+        "titlePlaceholder": "Welcome to '{world}'",
+        "previewDialogTitle": "Welcome message preview"
       },
       "kindBanner": "Banner",
       "kindBannerHelp": "A title and text at the top of the world's home page, until dismissed.",
