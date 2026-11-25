@@ -232,6 +232,19 @@ describe("CatalogueList — gestion", () => {
     expect(actions.updateWorldCatalogItem).not.toHaveBeenCalled();
   });
 
+  it("compétences : la sélection ne propose pas de rareté", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createClient).mockReturnValue(
+      createSupabaseMock({ results: [{ data: [] }, { data: [{ ...item("s-forge", "Forge", null), type: "skills", rarity: "rare" }] }] }) as never,
+    );
+    render(<CatalogueList type="skills" worldId="w1" canEdit usage={null} />);
+    await screen.findByText("Forge");
+    await user.click(screen.getByRole("checkbox", { name: "Sélectionner Forge" }));
+    const toolbar = screen.getByRole("toolbar", { name: "Sélection" });
+    expect(within(toolbar).getByRole("button", { name: "Supprimer" })).toBeInTheDocument();
+    expect(within(toolbar).queryByRole("button", { name: "Rareté" })).toBeNull();
+  });
+
   it("garde sélectionnés les objets que la base a refusés", async () => {
     actions.trashWorldCatalogItems.mockResolvedValueOnce({ ok: true, ids: ["i-epee"] });
     const user = userEvent.setup();

@@ -653,7 +653,7 @@
     },
     "namePlaceholder": "Ex. Monde de Veldis",
     "descriptionPlaceholder": "Brève description du monde…",
-    "restrictToCatalogue": "Restreindre au catalogue du monde",
+    "restrictToCatalogue": "Restreindre aux compétences du monde",
     "enableTimeline": "Activer la chronologie",
     "yearLabel": "Libellé d'année",
     "eraSuffix": "Ère / suffixe",
@@ -697,7 +697,6 @@
       "filterReset": "Réinitialiser les filtres",
       "addEvent": "Événement",
       "today": "Aujourd’hui",
-      "summary": "{rooms, plural, =0 {aucun salon} one {# salon} other {# salons}} · {arcs, plural, =0 {aucun arc} one {# arc} other {# arcs}}",
       "roomsCount": "{count, plural, one {# salon} other {# salons}}",
       "episodes": "{count, plural, one {# épisode} other {# épisodes}}",
       "position": "Position dans la chronologie",
@@ -906,7 +905,7 @@
           "help": "Cartes, lieux, régions et liens entre lieux."
         },
         "catalog_edit": {
-          "label": "Modifier le catalogue",
+          "label": "Modifier les objets et compétences",
           "help": "Objets, compétences et leurs catégories."
         },
         "timeline_manage": {
@@ -1010,10 +1009,10 @@
       "ageRestrictedHelp": "Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.",
       "allAges": "Tout public",
       "adultsOnly": "18 ans et plus",
-      "inventoryItems": "Objets d'inventaire",
+      "inventoryPage": "Inventaire",
       "inventoryItemsHelp": "Les personas peuvent gérer un inventaire d'objets.",
       "skillsHelp": "Les personas peuvent lister leurs compétences.",
-      "restrictSkillsHelp": "Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.",
+      "restrictSkillsHelp": "Les personas ne peuvent avoir que des compétences créées dans le monde — la saisie libre est désactivée.",
       "faceclaimsHelp": "Permet aux personas d'indiquer l'acteur ou le personnage sur lequel leur avatar est basé.",
       "requireFaceclaim": "Faceclaim obligatoire",
       "requireFaceclaimHelp": "Une fiche sans faceclaim n'est pas considérée comme terminée, et son persona ne peut pas jouer.",
@@ -1115,7 +1114,7 @@
         "groups": {
           "world": "Monde",
           "features": "Fonctions",
-          "rooms": "Salons & personas",
+          "personas": "Personas",
           "members": "Membres",
           "communications": "Communications"
         },
@@ -1165,9 +1164,11 @@
           "base": "Unité de base",
           "add": "Ajouter un palier",
           "remove": "Retirer {name}",
-          "save": "Enregistrer la monnaie",
-          "saved": "Monnaie enregistrée.",
-          "invalid": "Chaque palier doit porter un nom et valoir au moins 2 du palier suivant."
+          "invalid": "Chaque palier doit porter un nom et valoir au moins 2 du palier suivant.",
+          "tiers": "Paliers",
+          "previewLabel": "Aperçu de la monnaie",
+          "previewHelp": "Un montant d'exemple, écrit avec vos paliers, et ce que vaut chacun d'eux.",
+          "conversion": "1 {from} = {ratio} {to}"
         },
         "currencies": "Devises"
       },
@@ -1175,11 +1176,11 @@
         "title": "Inventaire des personas",
         "mode": {
           "title": "Ajout d'objets",
-          "help": "Qui fait entrer des objets dans l'inventaire d'un persona. Qui gère l'économie peut toujours donner ou retirer un objet du catalogue.",
+          "help": "Qui fait entrer des objets dans l'inventaire d'un persona. Qui gère l'économie peut toujours donner ou retirer un objet du monde.",
           "free": "Libre",
           "freeHint": "Le joueur crée et modifie ses objets",
-          "catalog": "Catalogue",
-          "catalogHint": "Le joueur pioche dans le catalogue",
+          "catalog": "Objets du monde",
+          "catalogHint": "Le joueur pioche parmi les objets du monde",
           "held": "Tenu",
           "heldHint": "Objets donnés, achetés ou échangés"
         },
@@ -1196,9 +1197,8 @@
           "help": "Ce que paie un persona, en {unit}, pour chaque emplacement ajouté à son inventaire. Vide : pas d'agrandissement.",
           "needsEconomy": "Agrandir un inventaire se paie dans la monnaie du monde : activez l'économie pour fixer un prix."
         },
-        "save": "Enregistrer les emplacements",
-        "saved": "Emplacements enregistrés.",
-        "invalid": "Le plafond ne peut pas être inférieur au nombre de départ."
+        "invalid": "Le plafond ne peut pas être inférieur au nombre de départ.",
+        "tabSettings": "Réglages"
       },
       "liveChatConnection": {
         "title": "Connexion des joueurs",
@@ -1241,14 +1241,14 @@
           "help": "Un message qui commence par /me devient une action jouée : en italique, précédée du nom du joueur, ou de son persona."
         }
       },
-      "enableItems": "Activer les objets",
+      "enableInventory": "Activer l’inventaire",
       "enableShops": "Activer les boutiques",
-      "shopsHelp": "Des boutiques où les personas achètent des objets du catalogue, et les revendent si la boutique l’accepte.",
-      "shopsNeedEconomy": "Les boutiques demandent les devises et les objets.",
+      "shopsHelp": "Des boutiques où les personas achètent des objets du monde, et les revendent si la boutique l’accepte.",
+      "shopsNeedEconomy": "Les boutiques demandent les devises et l’inventaire.",
       "trades": "Échanges",
       "enableTrades": "Activer les échanges",
       "tradesHelp": "Un persona donne de l’argent ou des objets à un autre depuis le composeur d’un salon, avec le bloc Transférer. Le transfert est immédiat.",
-      "tradesNeedSomething": "Activez d’abord les devises ou les objets.",
+      "tradesNeedSomething": "Activez d’abord les devises ou l’inventaire.",
       "tradesSameAccount": "Échanges entre personas d’un même compte",
       "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre.",
       "gainsForm": {
@@ -1279,8 +1279,6 @@
         "capHelp": "Total des gains d’un persona par jour (UTC). Vide : sans plafond.",
         "noCap": "Sans plafond",
         "zeroCap": "Plafond à zéro : plus aucun gain n’est versé",
-        "save": "Enregistrer les gains",
-        "saved": "Gains enregistrés.",
         "invalid": "Montants entiers ; plafond positif ; délai d’une journée au plus."
       },
       "taxForm": {
@@ -1318,6 +1316,27 @@
         "badgeStyleHelp": "La couleur et l’icône du badge des personas en retard.",
         "resetStyle": "Style par défaut",
         "invalid": "Vérifiez le montant et la récurrence."
+      },
+      "personaSheet": "Fiche par défaut",
+      "enableSkills": "Activer les compétences",
+      "enableFaceclaims": "Activer les faceclaims",
+      "catalogBoard": {
+        "sellLink": "Mettre en vente dans une boutique",
+        "inventory": {
+          "title": "Objets",
+          "intro": "Objets du monde",
+          "help": "Une colonne par catégorie, chacune avec son bouton pour y créer un objet. Glissez les objets pour les classer ou les changer de catégorie, et les colonnes pour les réordonner. Ces objets peuvent être mis en vente dans les boutiques."
+        },
+        "skills": {
+          "title": "Compétences",
+          "intro": "Compétences du monde",
+          "help": "Une colonne par catégorie, chacune avec son bouton pour y créer une compétence. Glissez les compétences pour les classer ou les changer de catégorie, et les colonnes pour les réordonner."
+        }
+      },
+      "catalogFeature": {
+        "title": "Catalogue",
+        "soon": "Bientôt",
+        "body": "Bientôt disponible."
       }
     },
     "timelinePicker": {
@@ -2787,8 +2806,6 @@
     "moreResults": "+{count} de plus — affinez la recherche"
   },
   "catalogue": {
-    "title": "Catalogue",
-    "editingActive": "Modification active",
     "items": "Objets",
     "skills": "Compétences",
     "chooseIcon": "Choisir une icône de jeu",
@@ -2800,38 +2817,30 @@
     "addSkillBtn": "Ajouter une compétence",
     "sortAlpha": "Trier par ordre alphabétique",
     "uncategorized": "Sans catégorie",
-    "emptyInventory": "Aucun objet dans le catalogue.",
-    "emptySkills": "Aucune compétence dans le catalogue.",
+    "emptyInventory": "Aucun objet pour l'instant.",
+    "emptySkills": "Aucune compétence pour l'instant.",
     "categoryNamePlaceholder": "Nom de la catégorie",
     "createCategory": "Créer une catégorie",
-    "itemsDisabled": "Objets désactivés dans ce monde",
-    "itemsUnrestricted": "Objets : les joueurs créent aussi leurs propres objets.",
-    "skillsDisabled": "Compétences désactivées dans ce monde",
-    "skillsUnrestricted": "Compétences : saisie libre (catalogue non restreint)",
     "faceclaims": "Faceclaims",
     "emptyFaceclaims": "Aucun faceclaim déclaré dans ce monde.",
-    "itemsRestricted": "Objets : seuls les objets du catalogue entrent dans l'inventaire des personas.",
-    "skillsRestricted": "Compétences : catalogue restreint — seules les entrées du catalogue peuvent être ajoutées à une fiche.",
     "chooseLucideIcon": "Choisir une icône de l’application",
     "trash": "Corbeille",
     "trashDescription": "Les objets supprimés y restent trente jours. Les restaurer les rend à toutes les fiches qui les portaient.",
     "trashEmpty": "Rien dans la corbeille.",
     "trashRestore": "Restaurer",
     "trashDeleteForever": "Supprimer définitivement",
-    "trashDeleteForeverDesc": "L’objet et son image seront effacés, et les fiches qui le portaient le garderont marqué comme retiré du catalogue. Il n’y aura plus de retour possible.",
+    "trashDeleteForeverDesc": "L’objet et son image seront effacés, et les fiches qui le portaient le garderont marqué comme supprimé. Il n’y aura plus de retour possible.",
     "movedToTrash": "Envoyé à la corbeille",
     "deletedAt": "Supprimé {when}",
     "skillLevel": "Niveau",
-    "inventoryFromCatalog": "Inventaire du catalogue",
-    "skillsFromCatalog": "Compétences du catalogue",
-    "addFromCatalog": "Ajouter depuis le catalogue",
-    "allItemsAdded": "Tous les objets du catalogue sont ajoutés",
-    "allSkillsAdded": "Toutes les compétences du catalogue sont ajoutées",
+    "skillsFromCatalog": "Compétences du monde",
+    "allItemsAdded": "Tous les objets du monde sont ajoutés",
+    "allSkillsAdded": "Toutes les compétences du monde sont ajoutées",
     "chooseItem": "Choisir un objet",
     "chooseSkill": "Choisir une compétence",
     "searchPlaceholder": "Rechercher un nom, une description…",
     "noResults": "Aucun résultat.",
-    "orphanedItem": "Retiré du catalogue",
+    "orphanedItem": "Supprimé du monde",
     "editItem": "Modifier l’objet",
     "editSkill": "Modifier la compétence",
     "duplicate": "Dupliquer",
@@ -2857,12 +2866,12 @@
     "removeImage": "Retirer l’image",
     "imageTooLarge": "L’image ne doit pas dépasser {max} Mo.",
     "usageCount": "{count, plural, =0 {Porté par personne} one {Porté par # personnage} other {Porté par # personnages}}",
-    "exportCatalog": "Exporter le catalogue",
-    "importCatalog": "Importer un catalogue",
+    "exportCatalog": "Exporter la liste",
+    "importCatalog": "Importer une liste",
     "importDone": "{count, plural, one {# entrée importée} other {# entrées importées}}",
     "importError_json": "Ce fichier n’est pas un JSON valide.",
-    "importError_shape": "Ce fichier n’a pas la forme d’un catalogue exporté.",
-    "importError_type": "Ce fichier vient de l’autre onglet du catalogue.",
+    "importError_shape": "Ce fichier n’a pas la forme d’une liste exportée.",
+    "importError_type": "Ce fichier vient de l’autre liste (objets ou compétences).",
     "importError_empty": "Ce fichier ne contient aucune entrée exploitable.",
     "selectItem": "Sélectionner {name}",
     "itemActions": "Actions pour {name}",
@@ -2905,7 +2914,9 @@
     "collapseRecipe": "Replier {name}",
     "recipeTruncated": "(suite non dépliée)",
     "missingPrerequisites": "Prérequis manquants : {names}",
-    "prerequisiteMissingBadge": "Prérequis manquant"
+    "prerequisiteMissingBadge": "Prérequis manquant",
+    "addItemFromWorld": "Ajouter un objet du monde",
+    "addSkillFromWorld": "Ajouter une compétence du monde"
   },
   "offline": {
     "title": "Vous êtes hors ligne",
@@ -2988,7 +2999,6 @@
   },
   "shops": {
     "title": "Boutiques",
-    "manage": "Gérer les boutiques",
     "off": "Les boutiques demandent l’économie, l’inventaire et l’option Boutiques, à activer dans Paramètres › Fonctions › Économie.",
     "empty": "Aucune boutique pour l’instant.",
     "create": "Nouvelle boutique",

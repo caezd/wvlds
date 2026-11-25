@@ -74,7 +74,7 @@ export default async function WorldHomeContent({
   // `getChatroomsNav` est mémoïsé pour la requête et partagé avec
   // `WorldSidebar`, monté par le layout : il ne part qu'une fois, quel que soit
   // le nombre de composants qui le réclame.
-  const [initialRooms, worldPrefs, initialPersonas, initialCategories, widgetData, initialMap] = await Promise.all([
+  const [initialRooms, worldPrefs, initialPersonas, initialCategories, widgetData, initialMap, hasPersonaTemplate] = await Promise.all([
     (async (): Promise<NavRoom[]> => {
       const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
@@ -223,6 +223,18 @@ export default async function WorldHomeContent({
       if (panel !== "map") return null;
       return getWorldMaps(worldId);
     })(),
+    // Réglages : l'état « Fiche par défaut » du menu, sans monter sa page
+    // (qui chargeait le modèle par une action serveur à chaque ouverture).
+    (async (): Promise<boolean | undefined> => {
+      if (panel !== "settings") return undefined;
+      const { data } = await supabase
+        .from("personas")
+        .select("id")
+        .eq("world_id", worldId)
+        .eq("is_template", true)
+        .limit(1);
+      return (data ?? []).length > 0;
+    })(),
   ]);
 
   return (
@@ -234,6 +246,7 @@ export default async function WorldHomeContent({
       isShared={isShared}
       initialRooms={initialRooms}
       initialCategories={initialCategories}
+      hasPersonaTemplate={hasPersonaTemplate}
       initialWidgetData={widgetData}
       initialMap={initialMap}
       initialPersonas={initialPersonas}

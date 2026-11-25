@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowRight, ChevronLeft, ChevronRight, CirclePause } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, CirclePause } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
@@ -20,10 +20,11 @@ import { withOpacity } from "@/lib/colorOpacity";
 export type DrawerRoom = { id: string; title: string; date: WorldTimelineDate; status: TimelineRoomStatus };
 export type DrawerEpisode = DrawerRoom & { rank: number };
 
-/** La marque d'un statut à la couleur de l'arc : creux, plein, pause, pointillés. */
+/** La marque d'un statut à la couleur de l'arc : creux, pause, coché, pointillés. */
 function StatusDot({ status, color }: { status: TimelineRoomStatus; color: string | null }) {
-  if (status === "dormant") {
-    return <CirclePause className="size-3.5 shrink-0" strokeWidth={3} style={color ? { color } : undefined} aria-hidden />;
+  if (status === "dormant" || status === "completed") {
+    const Icon = status === "dormant" ? CirclePause : CircleCheck;
+    return <Icon className="size-3.5 shrink-0" strokeWidth={3} style={color ? { color } : undefined} aria-hidden />;
   }
   return (
     <span
@@ -31,9 +32,8 @@ function StatusDot({ status, color }: { status: TimelineRoomStatus; color: strin
         "size-3 shrink-0 rounded-full border-2",
         !color && "border-foreground/40",
         status === "abandoned" && "border-dashed",
-        status === "completed" && !color && "bg-foreground/40",
       )}
-      style={color ? { borderColor: color, ...(status === "completed" ? { backgroundColor: color } : {}) } : undefined}
+      style={color ? { borderColor: color } : undefined}
       aria-hidden
     />
   );

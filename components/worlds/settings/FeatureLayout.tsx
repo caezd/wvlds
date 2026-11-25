@@ -30,6 +30,12 @@ export const SURFACE = "border border-border bg-card";
 export const FIELD = "border-border bg-background shadow-none hover:bg-background";
 /** La largeur de toutes les pages des paramètres d'un monde. */
 export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
+/**
+ * Un maillon de la chaîne qui donne toute la hauteur restante à une page
+ * (l'onglet Objets de l'Inventaire) : flex en colonne, s'étire, et peut
+ * rétrécir sous son contenu pour que le défilement se fasse plus bas.
+ */
+export const FILL = "flex min-h-0 flex-1 flex-col";
 /** Une ligne d'une liste d'éléments (salles, groupes, relations, catégories). */
 export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-md py-1.5 pl-3 pr-1.5", SURFACE);
 
@@ -48,10 +54,13 @@ export function FeaturePage({
   title,
   help,
   toggle,
+  fill = false,
   children,
 }: {
   title: string;
   help?: string;
+  /** La page prend toute la hauteur restante (voir FILL). */
+  fill?: boolean;
   toggle?: {
     /** « Activée », « Désactivée »… selon l'état. */
     label: string;
@@ -64,8 +73,8 @@ export function FeaturePage({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="@container min-w-0 space-y-6">
-      <header className="flex items-center justify-between gap-4">
+    <div className={cn("@container min-w-0 space-y-6", fill && FILL)}>
+      <header className="flex shrink-0 items-center justify-between gap-4">
         <h3 className="min-w-0 text-xl font-semibold tracking-tight">
           <TitleWithHelp title={title} help={help} />
         </h3>
@@ -192,13 +201,25 @@ export function ToggleItem({
  * lus par les lecteurs d'écran, contrairement à `inert`). Pas de mention :
  * l'interrupteur « Désactivé » et le grisé suffisent. L'aide reste au survol.
  */
-export function InactiveOptions({ inactive, children }: { inactive: boolean; children: React.ReactNode }) {
+export function InactiveOptions({
+  inactive,
+  className,
+  children,
+}: {
+  inactive: boolean;
+  /** Pour le cadre grisé seulement (actives, les options sont rendues telles quelles). */
+  className?: string;
+  children: React.ReactNode;
+}) {
   if (!inactive) return <>{children}</>;
   return (
     <fieldset
       disabled
       data-testid="inactive-options"
-      className="pointer-events-none m-0 min-w-0 border-0 p-0 opacity-60 select-none [&_[data-testid=help-hint]]:pointer-events-auto"
+      className={cn(
+        "pointer-events-none m-0 min-w-0 border-0 p-0 opacity-60 select-none [&_[data-testid=help-hint]]:pointer-events-auto",
+        className,
+      )}
     >
       {children}
     </fieldset>

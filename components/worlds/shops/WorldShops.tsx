@@ -1,14 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Lock, Settings, Store } from "lucide-react";
+import { Lock, Store } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
-import { buttonVariants } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
@@ -20,17 +17,15 @@ import { ShopFront } from "./ShopFront";
  * La vue Boutiques d'un monde (`?view=shops`, migration 249) : une boutique
  * par onglet, ses articles, et le persona pour qui l'on achète. Boutiques,
  * prix, stocks et rachats se gèrent dans Paramètres › Fonctions › Économie ›
- * Boutiques (ShopManager) : `manageHref` y mène qui règle le monde.
+ * Boutiques (ShopManager).
  */
 export function WorldShops({
   worldId,
   canManage,
-  manageHref = null,
 }: {
   worldId: string;
   /** Qui gère l'économie voit aussi les boutiques fermées. */
   canManage: boolean;
-  manageHref?: string | null;
 }) {
   const t = useTranslations("shops");
   const { userId } = useCurrentUser();
@@ -46,14 +41,6 @@ export function WorldShops({
       <WorldPanelHeader
         icon={<Store className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("title")}
-        right={
-          manageHref && (
-            <Link href={manageHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs")}>
-              <Settings className="h-3 w-3" />
-              {t("manage")}
-            </Link>
-          )
-        }
       />
 
       {shops.status === "off" && <p className="p-6 text-sm text-muted-foreground">{t("off")}</p>}

@@ -77,7 +77,7 @@ describe("StatsField", () => {
 });
 
 describe("SkillsField", () => {
-  it("en mode catalogue, écarte les compétences déjà prises", async () => {
+  it("restreint aux compétences du monde, écarte les compétences déjà prises", async () => {
     const catalogue = [
       { id: "s1", name: "Escrime", description: null, icon: null },
       { id: "s2", name: "Alchimie", description: null, icon: null },
@@ -92,7 +92,7 @@ describe("SkillsField", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /ajouter depuis le catalogue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /ajouter une compétence du monde/i }));
     const choix = screen.getAllByRole("button").filter((b) => b.textContent?.includes("Alchimie"));
     expect(choix).toHaveLength(1);
     expect(screen.getByRole("dialog")).not.toHaveTextContent("Escrime");

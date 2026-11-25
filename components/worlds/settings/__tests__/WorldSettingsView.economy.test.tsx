@@ -41,10 +41,18 @@ vi.mock("@/components/worlds/settings/WorldRelationsSettings", () => ({
   WorldRelationsSettings: () => <div />,
 }));
 vi.mock("@/components/worlds/settings/WorldCurrencySettings", () => ({
-  WorldCurrencySettings: () => <div />,
+  WorldCurrencySettings: () => <div data-testid="currency-settings" />,
 }));
 vi.mock("@/components/worlds/settings/WorldGainsSettings", () => ({
   WorldGainsSettings: () => <p>montants des gains</p>,
+}));
+vi.mock("@/components/worlds/settings/WorldInventorySettings", () => ({
+  WorldInventorySettings: () => <p>{"réglages de l'inventaire"}</p>,
+}));
+vi.mock("@/components/worlds/settings/WorldCatalogBoardSection", () => ({
+  WorldCatalogBoardSection: ({ worldId, type }: { worldId: string; type: string }) => (
+    <p>{type === "skills" ? "compétences" : "objets"} du monde {worldId}</p>
+  ),
 }));
 vi.mock("@/components/worlds/shops/ShopManager", () => ({
   ShopManager: ({ worldId }: { worldId: string }) => <p>gestion des boutiques de {worldId}</p>,
@@ -87,11 +95,11 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
     const fonctions = within(nav).getByRole("group", { name: "Fonctions" });
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Carte", "Wiki", "Personas", "Devises", "Objets", "Boutiques", "Échanges"],
+      ["Carte", "Wiki", "Catalogue", "Devises", "Inventaire", "Boutiques", "Échanges"],
     );
     const economie = within(fonctions).getByRole("list", { name: "Économie" });
     expect(within(economie).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Devises", "Objets", "Boutiques", "Échanges"],
+      ["Devises", "Inventaire", "Boutiques", "Échanges"],
     );
   });
 
@@ -104,9 +112,36 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
 
   it("Objets porte l'interrupteur de l'inventaire", async () => {
     monter({ enable_inventory: true } as Partial<World>);
-    await ouvrir("Objets");
-    await userEvent.click(within(screen.getByRole("region", { name: "Objets" })).getByRole("switch", { name: "Activer les objets" }));
+    await ouvrir("Inventaire");
+    await userEvent.click(within(screen.getByRole("region", { name: "Inventaire" })).getByRole("switch", { name: "Activer l’inventaire" }));
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_inventory", false));
+  });
+
+  it("Inventaire : deux onglets, Réglages puis Objets ; les objets ne se chargent qu'à l'ouverture de leur onglet", async () => {
+    monter({ enable_inventory: true } as Partial<World>);
+    await ouvrir("Inventaire");
+    const page = screen.getByRole("region", { name: "Inventaire" });
+    const onglets = within(page).getAllByRole("tab").map((o) => o.textContent);
+    expect(onglets).toEqual(["Réglages", "Objets"]);
+    expect(within(page).getByText("réglages de l'inventaire")).toBeInTheDocument();
+    expect(within(page).queryByText(/objets du monde/)).toBeNull();
+    await userEvent.click(within(page).getByRole("tab", { name: "Objets" }));
+    expect(within(page).getByText("objets du monde w1")).toBeInTheDocument();
+  });
+
+  it("Inventaire : seul l'onglet Objets prend toute la hauteur (le défilement se fait dans le tableau)", async () => {
+    monter({ enable_inventory: true } as Partial<World>);
+    await ouvrir("Inventaire");
+    const page = screen.getByRole("region", { name: "Inventaire" });
+    expect(page).not.toHaveAttribute("data-fill-page");
+    await userEvent.click(within(page).getByRole("tab", { name: "Objets" }));
+    expect(page).toHaveAttribute("data-fill-page");
+    await userEvent.click(within(page).getByRole("tab", { name: "Réglages" }));
+    expect(page).not.toHaveAttribute("data-fill-page");
+    // Une autre page ne la prend pas, même l'onglet Objets resté ouvert.
+    await userEvent.click(within(page).getByRole("tab", { name: "Objets" }));
+    await ouvrir("Devises");
+    expect(document.querySelector("[data-fill-page]")).toBeNull();
   });
 
   it("Boutiques : inerte sans l'économie, s'active avec", async () => {
@@ -114,7 +149,7 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     await ouvrir("Boutiques");
     const page = screen.getByRole("region", { name: "Boutiques" });
     expect(within(page).getByRole("switch", { name: "Activer les boutiques" })).toBeDisabled();
-    expect(within(page).getByText("Les boutiques demandent les devises et les objets.")).toBeInTheDocument();
+    expect(within(page).getByText("Les boutiques demandent les devises et l’inventaire.")).toBeInTheDocument();
     expect(within(page).queryByText(/gestion des boutiques/)).toBeNull();
   });
 
@@ -133,7 +168,7 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     await ouvrir("Échanges");
     const page = screen.getByRole("region", { name: "Échanges" });
     expect(within(page).getByRole("switch", { name: "Activer les échanges" })).toBeDisabled();
-    expect(within(page).getByText("Activez d’abord les devises ou les objets.")).toBeInTheDocument();
+    expect(within(page).getByText("Activez d’abord les devises ou l’inventaire.")).toBeInTheDocument();
   });
 
   it("Échanges : l'option et les échanges entre personas d'un même compte", async () => {
@@ -163,5 +198,14 @@ describe("WorldSettingsView — sous-catégorie Économie", () => {
     await ouvrir("Devises");
     const page = screen.getByRole("region", { name: "Devises" });
     expect(within(page).getByText("montants des gains").closest("fieldset")).toBeNull();
+  });
+
+  it("Devises : la monnaie en tête, les gains dessous", async () => {
+    monter({ enable_economy: true } as Partial<World>);
+    await ouvrir("Devises");
+    const page = screen.getByRole("region", { name: "Devises" });
+    const monnaie = within(page).getByTestId("currency-settings");
+    const gains = within(page).getByText("montants des gains");
+    expect(monnaie.compareDocumentPosition(gains) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

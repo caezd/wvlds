@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -28,6 +28,18 @@ function setup(card: unknown) {
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   return mock;
 }
+
+// La bio et la carte passent par `dynamic()`. Le premier import transforme
+// toute la pile Markdown à froid (~0,9 s au repos, davantage sous la charge de
+// la suite), ce qui mangeait le délai d'1 s des `findBy`. Préchargés ici, les
+// tests mesurent le composant et non la compilation ; la carte ne se monte plus
+// en retard, au risque de consommer la file du mock dans le désordre.
+beforeAll(async () => {
+  await Promise.all([
+    import("@/components/MarkdownRenderer"),
+    import("@/components/worlds/members/MemberWorldCardSection"),
+  ]);
+});
 
 beforeEach(() => { vi.clearAllMocks(); route.pathname = "/explore"; });
 

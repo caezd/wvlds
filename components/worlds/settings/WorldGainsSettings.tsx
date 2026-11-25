@@ -4,17 +4,18 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AmountInput } from "@/components/economy/AmountInput";
 import { SignedAmountInput } from "@/components/economy/SignedAmountInput";
 import { setWorldGains } from "@/app/actions/worldCatalog";
+import { useAutoSave } from "@/hooks/useAutoSave";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { digitsOnly } from "@/lib/digitsOnly";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, gainSettingsOf, gainSettingsSchema, type GainKind, type GainSettings } from "@/lib/worldGains";
 import type { World } from "@/types/worlds";
 import { cn } from "@/lib/utils";
+import { AutoSaveIndicator } from "./AutoSaveIndicator";
 import { FIELD, SettingsSection, TitleWithHelp } from "./FeatureLayout";
 
 const columnOf = (kind: GainKind) => `gain_${kind}` as const;
@@ -31,34 +32,33 @@ const SHOWN_GAIN_KINDS: readonly GainKind[] = GAIN_KINDS.filter((k) => k === "me
  * montant par déclencheur, saisi palier par palier (vide ou zéro : rien ;
  * « − » : retire, migration 261),
  * puis, dans une seconde section, les limites — délai entre deux messages
- * payés, plafond par jour —, enregistrés d'un bouton.
- * La base paie.
+ * payés, plafond par jour. Chaque modification valide s'enregistre
+ * d'elle-même (useAutoSave). La base paie.
  */
 export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdated?: (patch: Partial<World>) => void }) {
   const t = useTranslations("worlds.settings.gainsForm");
   const tCommon = useTranslations("common");
   const units = React.useMemo(() => currencyUnitsOf(world.currency_units), [world.currency_units]);
-  const [saved, setSaved] = React.useState<GainSettings>(() => gainSettingsOf(world));
-  const [draft, setDraft] = React.useState<GainSettings>(saved);
-  const [cooldown, setCooldown] = React.useState<number | null>(saved.gain_message_cooldown);
-  const [saving, setSaving] = React.useState(false);
+  const [draft, setDraft] = React.useState<GainSettings>(() => gainSettingsOf(world));
+  const [cooldown, setCooldown] = React.useState<number | null>(draft.gain_message_cooldown);
 
   const settings: GainSettings = { ...draft, gain_message_cooldown: cooldown ?? 0 };
   const valid = gainSettingsSchema.safeParse(settings).success;
-  const dirty = (Object.keys(settings) as (keyof GainSettings)[]).some((k) => settings[k] !== saved[k]);
 
-  async function save() {
-    setSaving(true);
-    const res = await setWorldGains(world.id, settings);
-    setSaving(false);
-    if (!res.ok) {
-      toast.error(messageErreurAction(res.error, tCommon));
-      return;
-    }
-    setSaved(settings);
-    onUpdated?.(settings);
-    toast.success(t("saved"));
-  }
+  const { status, flush } = useAutoSave({
+    value: settings,
+    valid,
+    save: async (next) => {
+      const res = await setWorldGains(world.id, next);
+      if (!res.ok) {
+        toast.error(messageErreurAction(res.error, tCommon));
+        return false;
+      }
+      onUpdated?.(next);
+      return true;
+    },
+  });
+  const indicator = <AutoSaveIndicator status={status} />;
 
   const amount = (label: string, id: string, value: number | null, onChange: (v: number | null) => void, placeholder: string) => (
     <AmountInput
@@ -79,8 +79,8 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
   // Deux sections : ce qui rapporte, puis ce qui limite.
   return (
     <>
-      <SettingsSection title={t("title")} help={t("help")}>
-        <div className="grid gap-y-4">
+      <SettingsSection title={t("title")} help={t("help")} aside={indicator}>
+        <div className="grid gap-y-4" onBlur={flush}>
           {SHOWN_GAIN_KINDS.map((kind) => {
             const value = draft[columnOf(kind)];
             return (
@@ -107,8 +107,8 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
           })}
         </div>
       </SettingsSection>
-      <SettingsSection title={t("limits")} help={t("limitsHelp")}>
-        <div className="grid gap-y-4">
+      <SettingsSection title={t("limits")} help={t("limitsHelp")} aside={indicator}>
+        <div className="grid gap-y-4" onBlur={flush}>
           <GainField label={t("cooldown")} help={t("cooldownHelp")} status={!cooldown ? t("noCooldown") : null}>
             <div className="relative">
               <Input
@@ -139,12 +139,7 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
             {amount(t("cap"), "gain-cap", cap, (v) => setDraft((d) => ({ ...d, gain_daily_cap: v })), "—")}
           </GainField>
         </div>
-        <div className="flex items-center gap-3">
-          {dirty && !valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
-          <Button type="button" size="sm" className="ml-auto" disabled={!dirty || !valid || saving} onClick={() => void save()}>
-            {t("save")}
-          </Button>
-        </div>
+        {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
       </SettingsSection>
     </>
   );

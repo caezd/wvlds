@@ -130,7 +130,8 @@ export function CatalogItemDetail({
             <div className="min-w-0 flex-1 space-y-1 text-left">
               <DrawerTitle className="text-lg leading-tight">{item.name}</DrawerTitle>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                {item.rarity && <RarityBadge rarity={item.rarity} />}
+                {/* La rareté n'appartient qu'aux objets. */}
+                {item.type === "inventory" && item.rarity && <RarityBadge rarity={item.rarity} />}
                 {item.type === "inventory" && item.stackable === false && <span>{t("uniqueItem")}</span>}
                 {item.type === "inventory" && item.max_quantity ? <span>{t("maxQuantityValue", { count: item.max_quantity })}</span> : null}
                 {usageCount !== undefined && <span>{t("usageCount", { count: usageCount })}</span>}

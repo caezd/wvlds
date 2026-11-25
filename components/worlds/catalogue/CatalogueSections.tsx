@@ -26,7 +26,7 @@ import { buttonVariants } from "@/components/ui/button";
 // catégorie, et celle qui en crée une.
 
 /** Une colonne du tableau : largeur fixe, fond discret, cartes empilées. */
-const COLUMN = "flex w-72 shrink-0 snap-start flex-col rounded-xl border border-border bg-muted/30";
+const COLUMN = "flex min-h-0 w-72 shrink-0 snap-start flex-col rounded-xl border border-border bg-muted/30";
 
 type ItemHandlers = {
   usage: Record<string, number> | null;
@@ -59,7 +59,7 @@ function ColumnCards({
   const t = useTranslations("catalogue");
   return (
     <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-      <div className="flex min-h-12 flex-1 flex-col gap-1.5 px-2 pb-2">
+      <div className="flex min-h-12 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
         {items.map(item => (
           <SortableItemRow
             key={item.id}

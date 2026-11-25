@@ -95,12 +95,19 @@ export function CatalogueList({
   worldId,
   canEdit,
   usage,
+  fill = false,
 }: {
   type: CatalogType;
   worldId: string;
   canEdit: boolean;
   /** Personas portant chaque objet — chargé par le parent, `null` si inconnu. */
   usage: Record<string, number> | null;
+  /**
+   * Remplit la hauteur du parent (un conteneur flex en colonne) : les
+   * colonnes descendent jusqu'en bas et défilent chacune en hauteur (page
+   * Inventaire des réglages).
+   */
+  fill?: boolean;
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
@@ -607,7 +614,7 @@ export function CatalogueList({
   }
 
   return (
-    <div className="space-y-1">
+    <div className={cn("space-y-1", fill && "flex min-h-0 flex-1 flex-col")}>
       {/* Barre d'outils : chercher, exporter, importer */}
       <div className="mb-2 flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
@@ -723,26 +730,29 @@ export function CatalogueList({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
-              >
-                {t("rarity")}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-40">
-              {CATALOG_RARITIES.map(r => (
-                <DropdownMenuItem key={r} onSelect={() => void handleRaritySelected(r)}>
-                  <RarityDot rarity={r} className="mr-2" />
-                  {t(`rarity${r.charAt(0).toUpperCase()}${r.slice(1)}`)}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => void handleRaritySelected(null)}>{t("rarityNone")}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* La rareté n'appartient qu'aux objets. */}
+          {type === "inventory" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "text-xs")}
+                >
+                  {t("rarity")}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-40">
+                {CATALOG_RARITIES.map(r => (
+                  <DropdownMenuItem key={r} onSelect={() => void handleRaritySelected(r)}>
+                    <RarityDot rarity={r} className="mr-2" />
+                    {t(`rarity${r.charAt(0).toUpperCase()}${r.slice(1)}`)}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void handleRaritySelected(null)}>{t("rarityNone")}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <button
             type="button"
             onClick={() => void handleTrashSelected()}
@@ -777,7 +787,7 @@ export function CatalogueList({
         onDragCancel={onDragCancel}
       >
         {/* Le tableau : une colonne par catégorie, défilant de côté. */}
-        <div className="-mx-1 flex snap-x items-start gap-3 overflow-x-auto px-1 pb-3">
+        <div className={cn("-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3", fill ? "min-h-0 flex-1 items-stretch" : "items-start")}>
           {showUncategorized && (
             <UncategorizedColumn
               items={uncatItems}

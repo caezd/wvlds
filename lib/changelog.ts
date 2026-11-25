@@ -47,6 +47,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Interface",
     area: "Monde",
+    text: "Paramètres du monde réorganisés.\n- Catégories rangées sous Monde\n- nouvelle section Personas : fiche par défaut, compétences, faceclaims, groupes, relations\n- objets et compétences gérés dans les paramètres, en tableau par catégorie ; plus d’entrées Objets et Compétences dans le menu du monde\n- Devises, Gains et Inventaire enregistrés automatiquement\n- Catalogue annoncé « Bientôt »",
+  },
+  {
+    date: "2026-11-25",
+    category: "Interface",
+    area: "Carte",
+    text: "Carte : époques masquées pour l’instant ; la carte se lit au présent. Les dates déjà saisies sont gardées.",
+  },
+  {
+    date: "2026-11-25",
+    category: "Interface",
+    area: "Monde",
     text: "Paramètres du monde : nouvelle section Communications.\n- Annonces, Message de bienvenue et Signalements\n- message de bienvenue sur sa propre page\n- Membres : Rôles et Journal",
   },
   {

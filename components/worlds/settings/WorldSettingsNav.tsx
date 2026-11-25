@@ -21,13 +21,17 @@ import {
   Shield,
   SlidersHorizontal,
   Store,
-  UserRound,
+  IdCard,
+  ScanFace,
+  Sparkles,
   UsersRound,
   Waypoints,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/section-label";
 import { StatusPill } from "./FeatureLayout";
 import {
@@ -46,9 +50,12 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   community: Globe,
   map: MapIcon,
   wiki: BookOpen,
-  personas: UserRound,
+  personas: IdCard,
+  skills: Sparkles,
+  faceclaims: ScanFace,
   timeline: Clock,
   chatbox: MessagesSquare,
+  catalog: Library,
   currency: Coins,
   items: Package,
   shops: Store,
@@ -78,11 +85,14 @@ export function useSettingsSectionLabel() {
         case "community": return t("tabCommunity");
         case "map": return t("nav.map");
         case "wiki": return tSettings("wiki");
-        case "personas": return t("nav.personas");
+        case "personas": return tSettings("personaSheet");
+        case "skills": return t("tabSkills");
+        case "faceclaims": return tCatalogue("faceclaims");
         case "timeline": return t("nav.timeline");
         case "chatbox": return tSettings("chatbox");
+        case "catalog": return tSettings("catalogFeature.title");
         case "currency": return tSettings("economy.currencies");
-        case "items": return tCatalogue("items");
+        case "items": return tSettings("inventoryPage");
         case "shops": return tShops("title");
         case "trades": return tSettings("trades");
         case "categories": return t("tabCategories");
@@ -144,6 +154,9 @@ export function WorldSettingsNav({
     const Icon = ICONS[id];
     const isSelected = id === selected;
     const status = isFeatureSection(id) ? featureStatus[id] : undefined;
+    // Le Catalogue est réservé : « Bientôt » à la place de l'état.
+    const soon = id === "catalog";
+    const describedBy = status !== undefined || soon ? `settings-status-${id}` : undefined;
     return (
       <li key={id}>
         <button
@@ -152,7 +165,7 @@ export function WorldSettingsNav({
           aria-current={isSelected ? "page" : undefined}
           // Nommé par sa section ; l'état éventuel se lit en description.
           aria-label={label(id)}
-          aria-describedby={status === undefined ? undefined : `settings-status-${id}`}
+          aria-describedby={describedBy}
           data-section={id}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-left text-sm transition-colors md:py-1.5",
@@ -166,6 +179,11 @@ export function WorldSettingsNav({
           <span className="min-w-0 flex-1 truncate">{label(id)}</span>
           {status !== undefined && (
             <StatusPill id={`settings-status-${id}`} active={status} onLabel={on} offLabel={off} />
+          )}
+          {soon && (
+            <Badge id={`settings-status-${id}`} tone="neutral" className="text-muted-foreground">
+              {tSettings("catalogFeature.soon")}
+            </Badge>
           )}
           <ChevronRight className="size-4 shrink-0 text-muted-foreground md:hidden" aria-hidden />
         </button>

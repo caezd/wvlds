@@ -21,10 +21,8 @@ import {
   Drama,
   Home,
   Map as MapIcon,
-  Package,
   Waypoints,
   Settings,
-  Sparkles,
   Store,
   Users,
 } from "lucide-react";
@@ -44,12 +42,11 @@ type ParticipatedRoom = {
 
 export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const supabase = await createClient();
-  const [userId, featureFlags, t, tNav, tCatalogue] = await Promise.all([
+  const [userId, featureFlags, t, tNav] = await Promise.all([
     getCurrentUserId(),
     getCachedFeatureFlags(),
     getTranslations("worlds"),
     getTranslations("nav"),
-    getTranslations("catalogue"),
   ]);
 
   // `getChatroomsNav`, `getWorldMembership` et `getWorldsQuota` sont mémoïsés pour
@@ -78,9 +75,6 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
 
   const participated = (participatedResult.data ?? []) as ParticipatedRoom[];
 
-  // Le catalogue se lit en deux vues, chacune derrière son réglage.
-  const hasItems = featureFlags.world_catalogue && world.enable_inventory !== false;
-  const hasSkills = featureFlags.world_catalogue && world.enable_skills !== false;
   const hasTimeline =
     featureFlags.world_timeline && !!world.timeline_enabled;
   // Réglages par monde, indépendants des drapeaux globaux. `!== false` : la
@@ -130,12 +124,6 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       )}
       {hasTimeline && (
         <WorldSidebarNavLink href={`${worldBase}?view=timeline`} icon={<Clock size={14} />} label={t("nav.timeline")} />
-      )}
-      {hasItems && (
-        <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Package size={14} />} label={tCatalogue("items")} />
-      )}
-      {hasSkills && (
-        <WorldSidebarNavLink href={`${worldBase}?view=skills`} icon={<Sparkles size={14} />} label={tCatalogue("skills")} />
       )}
       {hasShops && (
         <WorldSidebarNavLink href={`${worldBase}?view=shops`} icon={<Store size={14} />} label={t("nav.shops")} />

@@ -18,9 +18,15 @@ describe("resolveWorldPanel", () => {
   });
 
   it("ouvre les onglets toujours disponibles", () => {
-    for (const v of ["members", "personas", "canvas", "catalogue", "skills"]) {
+    for (const v of ["members", "personas", "canvas"]) {
       expect(resolveWorldPanel(v, ctx)).toBe(v);
     }
+  });
+
+  it("Objets et Compétences n'ont pas de vue : un ancien lien retombe sur l'accueil", () => {
+    // Ils se gèrent dans les réglages (Économie › Inventaire, Personas › Compétences).
+    expect(resolveWorldPanel("catalogue", ctx)).toBe("home");
+    expect(resolveWorldPanel("skills", ctx)).toBe("home");
   });
 
   it("wiki : suit le réglage du monde (NULL vaut activé)", () => {

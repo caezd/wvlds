@@ -41,6 +41,17 @@ describe("CatalogItemDetail", () => {
     expect(await screen.findByRole("button", { name: "La Forge" })).toBeInTheDocument();
   });
 
+  it("la rareté s'affiche pour un objet, pas pour une compétence", async () => {
+    setup([]);
+    const { unmount } = render(<CatalogItemDetail item={EPEE} open onOpenChange={() => {}} />);
+    expect(await screen.findByText("Rare")).toBeInTheDocument();
+    unmount();
+    setup([]);
+    render(<CatalogItemDetail item={{ ...EPEE, type: "skills", name: "Forge" }} open onOpenChange={() => {}} />);
+    expect(await screen.findByText("Forge")).toBeInTheDocument();
+    expect(screen.queryByText("Rare")).toBeNull();
+  });
+
   it("une page liée ouvre le wiki du monde", async () => {
     setup();
     const user = userEvent.setup();

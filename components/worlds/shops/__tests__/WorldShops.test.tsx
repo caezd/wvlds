@@ -53,10 +53,10 @@ function shops(patch: Record<string, unknown> = {}) {
   return state;
 }
 
-function renderShops(canManage = false, manageHref: string | null = null) {
+function renderShops(canManage = false) {
   return render(
     <NextIntlClientProvider locale="fr" messages={fr}>
-      <WorldShops worldId="w1" canManage={canManage} manageHref={manageHref} />
+      <WorldShops worldId="w1" canManage={canManage} />
     </NextIntlClientProvider>,
   );
 }
@@ -140,19 +140,12 @@ describe("WorldShops (migration 249)", () => {
     expect(within(card("Épée")).getByRole("button", { name: "Acheter" })).toBeDisabled();
   });
 
-  it("la gestion vit dans les paramètres : un lien pour qui règle le monde, rien à modifier ici", () => {
+  it("la gestion vit dans les paramètres : rien à modifier ici", () => {
     shops();
-    renderShops(true, "/w/w1?view=settings&section=shops");
-    expect(screen.getByRole("link", { name: "Gérer les boutiques" })).toHaveAttribute("href", "/w/w1?view=settings&section=shops");
+    renderShops(true);
     expect(screen.queryByRole("button", { name: "Modifier" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Nouvelle boutique" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Mettre en vente" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Supprimer la boutique" })).toBeNull();
-  });
-
-  it("sans accès aux paramètres, pas de lien", () => {
-    shops();
-    renderShops(true);
-    expect(screen.queryByRole("link", { name: "Gérer les boutiques" })).toBeNull();
   });
 });

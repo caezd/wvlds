@@ -29,7 +29,12 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ public_worlds: false, world_timeline: false, world_map: true }),
 }));
 vi.mock("@/components/worlds/settings/WorldPersonaTemplateSection", () => ({
-  WorldPersonaTemplateSection: () => <div />,
+  WorldPersonaTemplateSection: () => <div data-testid="persona-template" />,
+}));
+vi.mock("@/components/worlds/settings/WorldCatalogBoardSection", () => ({
+  WorldCatalogBoardSection: ({ worldId, type }: { worldId: string; type: string }) => (
+    <p>{type === "skills" ? "compétences" : "objets"} du monde {worldId}</p>
+  ),
 }));
 vi.mock("@/components/worlds/settings/WorldCategoryManager", () => ({
   WorldCategoryManager: () => <div />,
@@ -127,7 +132,7 @@ describe("WorldSettingsView — carte et wiki", () => {
     const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
     const fonctions = within(nav).getByRole("group", { name: "Fonctions" });
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Carte", "Wiki", "Personas", "Objets"],
+      ["Carte", "Wiki", "Catalogue", "Inventaire"],
     );
     // L'état se lit en description : « Actif » ou « Off ».
     expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAccessibleDescription("Actif");
@@ -135,11 +140,11 @@ describe("WorldSettingsView — carte et wiki", () => {
 
     // « Général » d'emblée : aucune page « Fonctions » visible.
     expect(within(nav).getByRole("button", { name: "Général" })).toHaveAttribute("aria-current", "page");
-    expect(screen.queryByRole("region", { name: "Objets" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Inventaire" })).toBeNull();
 
-    await userEvent.click(within(nav).getByRole("button", { name: "Objets" }));
-    expect(within(nav).getByRole("button", { name: "Objets" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("region", { name: "Objets" })).toBeVisible();
+    await userEvent.click(within(nav).getByRole("button", { name: "Inventaire" }));
+    expect(within(nav).getByRole("button", { name: "Inventaire" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("region", { name: "Inventaire" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "Carte" })).toBeNull();
 
     await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
@@ -147,24 +152,54 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(carte).getByRole("heading", { name: /Carte/ })).toBeInTheDocument();
     // L'interrupteur encadré de l'en-tête dit l'état, et le change.
     expect(within(carte).getByText("Activée")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Objets" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Inventaire" })).toBeNull();
   });
 
   it("objets : les options d'une fonction coupée restent visibles, grisées et inertes", async () => {
     monter({ enable_inventory: false } as Partial<World>);
-    await userEvent.click(screen.getByRole("button", { name: "Objets" }));
-    const page = screen.getByRole("region", { name: "Objets" });
-    expect(within(page).getByRole("switch", { name: "Activer les objets" })).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(screen.getByRole("button", { name: "Inventaire" }));
+    const page = screen.getByRole("region", { name: "Inventaire" });
+    expect(within(page).getByRole("switch", { name: "Activer l’inventaire" })).toHaveAttribute("aria-checked", "false");
     expect(within(page).getByRole("radio", { name: /^Libre/ })).toBeDisabled();
     expect(within(page).getByRole("spinbutton", { name: "Emplacements de départ" })).toBeDisabled();
   });
 
-  it("personas : compétences et faceclaims s'y règlent", async () => {
-    monter({ enable_skills: true, enable_faceclaims: false } as Partial<World>);
-    await userEvent.click(screen.getByRole("button", { name: "Personas" }));
-    const page = screen.getByRole("region", { name: "Personas" });
-    expect(within(page).getByRole("switch", { name: "Compétences : Restreindre au catalogue du monde" })).toBeEnabled();
-    // Faceclaims coupés : « Faceclaim obligatoire » visible, inerte.
+  it("Personas : une catégorie à part, cinq pages (fiche par défaut, compétences, faceclaims, groupes, relations)", () => {
+    monter();
+    const nav = screen.getByRole("navigation", { name: "Sections des paramètres" });
+    const personas = within(nav).getByRole("group", { name: "Personas" });
+    expect(within(personas).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
+      ["Fiche par défaut", "Compétences", "Faceclaims", "Groupes", "Relations"],
+    );
+    // Les pages « Fonctions » y gardent leur état.
+    expect(within(personas).getByRole("button", { name: "Compétences" })).toHaveAccessibleDescription(/Actif|Off/);
+  });
+
+  it("Fiche par défaut : le modèle de fiche, sans les compétences ni les faceclaims", async () => {
+    monter({ enable_skills: true, enable_faceclaims: true } as Partial<World>);
+    await userEvent.click(screen.getByRole("button", { name: "Fiche par défaut" }));
+    const page = screen.getByRole("region", { name: "Fiche par défaut" });
+    expect(within(page).getByTestId("persona-template")).toBeInTheDocument();
+    expect(within(page).queryByRole("switch")).toBeNull();
+  });
+
+  it("Compétences : l'interrupteur, la restriction aux compétences du monde et le tableau des compétences", async () => {
+    monter({ enable_skills: true } as Partial<World>);
+    await userEvent.click(screen.getByRole("button", { name: "Compétences" }));
+    const page = screen.getByRole("region", { name: "Compétences" });
+    expect(page).toHaveAttribute("data-fill-page");
+    expect(within(page).getByRole("switch", { name: "Activer les compétences" })).toHaveAttribute("aria-checked", "true");
+    expect(within(page).getByRole("switch", { name: "Compétences : Restreindre aux compétences du monde" })).toBeEnabled();
+    expect(within(page).getByText("compétences du monde w1")).toBeInTheDocument();
+    await userEvent.click(within(page).getByRole("switch", { name: "Activer les compétences" }));
+    await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_skills", false));
+  });
+
+  it("Faceclaims : l'interrupteur et le faceclaim obligatoire, inerte quand ils sont coupés", async () => {
+    monter({ enable_faceclaims: false } as Partial<World>);
+    await userEvent.click(screen.getByRole("button", { name: "Faceclaims" }));
+    const page = screen.getByRole("region", { name: "Faceclaims" });
+    expect(within(page).getByRole("switch", { name: "Activer les faceclaims" })).toHaveAttribute("aria-checked", "false");
     expect(within(page).getByRole("switch", { name: "Faceclaim obligatoire" })).toBeDisabled();
   });
 });

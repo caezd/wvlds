@@ -147,7 +147,7 @@ export function SortableItemRow({
         className="min-w-0 flex-1 rounded text-left transition-colors hover:text-foreground"
       >
         <span className="flex items-center gap-1.5">
-          {item.rarity && (
+          {item.type === "inventory" && item.rarity && (
             <span
               aria-hidden
               className="inline-block h-2 w-2 shrink-0 rounded-full"

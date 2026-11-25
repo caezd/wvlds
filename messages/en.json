@@ -653,7 +653,7 @@
     },
     "namePlaceholder": "E.g. World of Veldis",
     "descriptionPlaceholder": "Short description of the world…",
-    "restrictToCatalogue": "Restrict to the world catalogue",
+    "restrictToCatalogue": "Restrict to the world's skills",
     "enableTimeline": "Enable the timeline",
     "yearLabel": "Year label",
     "eraSuffix": "Era / suffix",
@@ -697,7 +697,6 @@
       "filterReset": "Reset filters",
       "addEvent": "Event",
       "today": "Today",
-      "summary": "{rooms, plural, =0 {no rooms} one {# room} other {# rooms}} · {arcs, plural, =0 {no arcs} one {# arc} other {# arcs}}",
       "roomsCount": "{count, plural, one {# room} other {# rooms}}",
       "episodes": "{count, plural, one {# episode} other {# episodes}}",
       "position": "Position in the timeline",
@@ -906,7 +905,7 @@
           "help": "Maps, places, regions and links between places."
         },
         "catalog_edit": {
-          "label": "Edit the catalogue",
+          "label": "Edit items and skills",
           "help": "Items, skills and their categories."
         },
         "timeline_manage": {
@@ -1010,10 +1009,10 @@
       "ageRestrictedHelp": "New members will have to confirm they are 18 or older before joining this world.",
       "allAges": "All ages",
       "adultsOnly": "18 and over",
-      "inventoryItems": "Inventory items",
+      "inventoryPage": "Inventory",
       "inventoryItemsHelp": "Personas can manage an inventory of items.",
       "skillsHelp": "Personas can list their skills.",
-      "restrictSkillsHelp": "Personas can only have skills defined in the catalogue — free entry is disabled.",
+      "restrictSkillsHelp": "Personas can only have skills created in the world — free entry is disabled.",
       "faceclaimsHelp": "Lets personas name the actor or character their avatar is based on.",
       "requireFaceclaim": "Faceclaim required",
       "requireFaceclaimHelp": "A sheet without a faceclaim doesn't count as finished, and its persona can't play.",
@@ -1115,7 +1114,7 @@
         "groups": {
           "world": "World",
           "features": "Features",
-          "rooms": "Rooms & personas",
+          "personas": "Personas",
           "members": "Members",
           "communications": "Communications"
         },
@@ -1165,9 +1164,11 @@
           "base": "Base unit",
           "add": "Add a tier",
           "remove": "Remove {name}",
-          "save": "Save the currency",
-          "saved": "Currency saved.",
-          "invalid": "Each tier needs a name and must be worth at least 2 of the next tier."
+          "invalid": "Each tier needs a name and must be worth at least 2 of the next tier.",
+          "tiers": "Tiers",
+          "previewLabel": "Currency preview",
+          "previewHelp": "A sample amount, written with your tiers, and what each of them is worth.",
+          "conversion": "1 {from} = {ratio} {to}"
         },
         "currencies": "Currencies"
       },
@@ -1175,11 +1176,11 @@
         "title": "Persona inventory",
         "mode": {
           "title": "Adding items",
-          "help": "Who brings items into a persona's inventory. Whoever manages the economy can always give or take a catalogue item.",
+          "help": "Who brings items into a persona's inventory. Whoever manages the economy can always give or take a world item.",
           "free": "Free",
           "freeHint": "The player creates and edits their items",
-          "catalog": "Catalogue",
-          "catalogHint": "The player picks from the catalogue",
+          "catalog": "World items",
+          "catalogHint": "The player picks from the world's items",
           "held": "Held",
           "heldHint": "Items given, bought or traded"
         },
@@ -1196,9 +1197,8 @@
           "help": "What a persona pays, in {unit}, for each slot added to their inventory. Empty: no expansion.",
           "needsEconomy": "Expanding an inventory is paid in the world's currency: enable the economy to set a price."
         },
-        "save": "Save the slots",
-        "saved": "Slots saved.",
-        "invalid": "The cap can't be lower than the starting number."
+        "invalid": "The cap can't be lower than the starting number.",
+        "tabSettings": "Settings"
       },
       "liveChatConnection": {
         "title": "Player connection",
@@ -1241,14 +1241,14 @@
           "help": "A message starting with /me becomes a roleplayed action: in italics, preceded by the player's name, or their persona's."
         }
       },
-      "enableItems": "Enable items",
+      "enableInventory": "Enable inventory",
       "enableShops": "Enable shops",
-      "shopsHelp": "Shops where personas buy catalogue items, and sell them back if the shop allows it.",
-      "shopsNeedEconomy": "Shops need the currency and the items.",
+      "shopsHelp": "Shops where personas buy the world's items, and sell them back if the shop allows it.",
+      "shopsNeedEconomy": "Shops need the currency and the inventory.",
       "trades": "Trades",
       "enableTrades": "Enable trades",
       "tradesHelp": "A persona gives money or items to another from a room’s composer, with the Transfer block. The transfer is immediate.",
-      "tradesNeedSomething": "Enable currencies or items first.",
+      "tradesNeedSomething": "Enable currencies or inventory first.",
       "tradesSameAccount": "Trades between personas of the same account",
       "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another.",
       "gainsForm": {
@@ -1279,8 +1279,6 @@
         "capHelp": "A persona’s total earnings per day (UTC). Empty: no cap.",
         "noCap": "No cap",
         "zeroCap": "Cap at zero: no gains are paid anymore",
-        "save": "Save earnings",
-        "saved": "Earnings saved.",
         "invalid": "Whole amounts; a positive cap; a delay of one day at most."
       },
       "taxForm": {
@@ -1318,6 +1316,27 @@
         "badgeStyleHelp": "The colour and icon of the badge shown on personas behind on payments.",
         "resetStyle": "Default style",
         "invalid": "Check the amount and the recurrence."
+      },
+      "personaSheet": "Default sheet",
+      "enableSkills": "Enable skills",
+      "enableFaceclaims": "Enable faceclaims",
+      "catalogBoard": {
+        "sellLink": "Put on sale in a shop",
+        "inventory": {
+          "title": "Items",
+          "intro": "World items",
+          "help": "One column per category, each with its own button to create an item in it. Drag items to sort them or move them to another category, and drag columns to reorder them. These items can be put on sale in shops."
+        },
+        "skills": {
+          "title": "Skills",
+          "intro": "World skills",
+          "help": "One column per category, each with its own button to create a skill in it. Drag skills to sort them or move them to another category, and drag columns to reorder them."
+        }
+      },
+      "catalogFeature": {
+        "title": "Catalogue",
+        "soon": "Soon",
+        "body": "Coming soon."
       }
     },
     "timelinePicker": {
@@ -2787,8 +2806,6 @@
     "moreResults": "+{count} more — refine your search"
   },
   "catalogue": {
-    "title": "Catalogue",
-    "editingActive": "Edit mode active",
     "items": "Items",
     "skills": "Skills",
     "chooseIcon": "Choose a game icon",
@@ -2800,38 +2817,30 @@
     "addSkillBtn": "Add a skill",
     "sortAlpha": "Sort alphabetically",
     "uncategorized": "Uncategorized",
-    "emptyInventory": "No items in the catalogue.",
-    "emptySkills": "No skills in the catalogue.",
+    "emptyInventory": "No items yet.",
+    "emptySkills": "No skills yet.",
     "categoryNamePlaceholder": "Category name",
     "createCategory": "Create a category",
-    "itemsDisabled": "Items disabled in this world",
-    "itemsUnrestricted": "Items: players also create their own items.",
-    "skillsDisabled": "Skills disabled in this world",
-    "skillsUnrestricted": "Skills: free entry (catalogue not restricted)",
     "faceclaims": "Faceclaims",
     "emptyFaceclaims": "No faceclaims declared in this world.",
-    "itemsRestricted": "Items: only catalogue items go into persona inventories.",
-    "skillsRestricted": "Skills: restricted catalogue — only catalogue entries can be added to a sheet.",
     "chooseLucideIcon": "Choose an app icon",
     "trash": "Trash",
     "trashDescription": "Deleted entries stay here for thirty days. Restoring one gives it back to every sheet that carried it.",
     "trashEmpty": "Nothing in the trash.",
     "trashRestore": "Restore",
     "trashDeleteForever": "Delete forever",
-    "trashDeleteForeverDesc": "The entry and its image will be erased, and the sheets carrying it will keep it marked as removed from the catalogue. There will be no way back.",
+    "trashDeleteForeverDesc": "The entry and its image will be erased, and the sheets carrying it will keep it marked as deleted. There will be no way back.",
     "movedToTrash": "Moved to the trash",
     "deletedAt": "Deleted {when}",
     "skillLevel": "Level",
-    "inventoryFromCatalog": "Catalogue inventory",
-    "skillsFromCatalog": "Catalogue skills",
-    "addFromCatalog": "Add from the catalogue",
-    "allItemsAdded": "Every catalogue item has been added",
-    "allSkillsAdded": "Every catalogue skill has been added",
+    "skillsFromCatalog": "World skills",
+    "allItemsAdded": "Every world item has been added",
+    "allSkillsAdded": "Every world skill has been added",
     "chooseItem": "Choose an item",
     "chooseSkill": "Choose a skill",
     "searchPlaceholder": "Search a name, a description…",
     "noResults": "No results.",
-    "orphanedItem": "Removed from the catalogue",
+    "orphanedItem": "Deleted from the world",
     "editItem": "Edit item",
     "editSkill": "Edit skill",
     "duplicate": "Duplicate",
@@ -2857,12 +2866,12 @@
     "removeImage": "Remove image",
     "imageTooLarge": "The image must not exceed {max} MB.",
     "usageCount": "{count, plural, =0 {Held by nobody} one {Held by # character} other {Held by # characters}}",
-    "exportCatalog": "Export the catalogue",
-    "importCatalog": "Import a catalogue",
+    "exportCatalog": "Export the list",
+    "importCatalog": "Import a list",
     "importDone": "{count, plural, one {# entry imported} other {# entries imported}}",
     "importError_json": "This file is not valid JSON.",
-    "importError_shape": "This file does not look like an exported catalogue.",
-    "importError_type": "This file comes from the other catalogue tab.",
+    "importError_shape": "This file does not look like an exported list.",
+    "importError_type": "This file comes from the other list (items or skills).",
     "importError_empty": "This file holds no usable entry.",
     "selectItem": "Select {name}",
     "itemActions": "Actions for {name}",
@@ -2905,7 +2914,9 @@
     "collapseRecipe": "Collapse {name}",
     "recipeTruncated": "(not expanded further)",
     "missingPrerequisites": "Missing prerequisites: {names}",
-    "prerequisiteMissingBadge": "Missing prerequisite"
+    "prerequisiteMissingBadge": "Missing prerequisite",
+    "addItemFromWorld": "Add a world item",
+    "addSkillFromWorld": "Add a world skill"
   },
   "offline": {
     "title": "You're offline",
@@ -2988,7 +2999,6 @@
   },
   "shops": {
     "title": "Shops",
-    "manage": "Manage shops",
     "off": "Shops need the economy, the inventory and the Shops option, enabled in Settings › Features › Economy.",
     "empty": "No shops yet.",
     "create": "New shop",

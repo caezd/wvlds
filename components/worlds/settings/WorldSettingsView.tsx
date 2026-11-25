@@ -40,11 +40,11 @@ import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGri
 // leurs propres appels serveur — voir l'en-tête de chacun.
 import { WorldFeaturesTab } from "./WorldFeaturesTab";
 import { WorldCommunityTab } from "./WorldCommunityTab";
-import type { World } from "@/types/worlds";
+import type { ChatroomCategory, World } from "@/types/worlds";
 
 /**
  * Vue plein-écran des paramètres d'un « monde » : un menu à gauche, rangé en
- * groupes (Monde, Fonctions, Salons & personas, Membres — voir
+ * groupes (Monde, Fonctions, Personas, Membres — voir
  * worldSettingsSections.ts), et la page de la section choisie à droite. La
  * visibilité de la vue est pilotée par le parent (`?view=settings`) ; la
  * section ouverte, par `&section=…`.
@@ -73,6 +73,16 @@ import { WorldRolesTab } from "./WorldRolesTab";
 import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
 import { WorldWelcomeTab } from "./announcements/WorldWelcomeSection";
 import { FeaturePage, SETTINGS_PAGE_WIDTH, SettingsSection } from "./FeatureLayout";
+
+/**
+ * Une page qui prend toute la hauteur (`data-fill-page`, l'onglet Objets de
+ * l'Inventaire) : la zone de défilement passe en flex et ne défile plus, le
+ * contenu défile plus bas (le tableau des objets). Les autres pages ne
+ * changent pas.
+ */
+const FILL_AREA =
+    "has-[[data-fill-page]]:flex has-[[data-fill-page]]:flex-col has-[[data-fill-page]]:overflow-hidden md:has-[[data-fill-page]]:flex";
+const FILL_LINK = "has-[[data-fill-page]]:flex has-[[data-fill-page]]:min-h-0 has-[[data-fill-page]]:flex-1 has-[[data-fill-page]]:flex-col";
 import { WorldSettingsNav, useSettingsSectionLabel } from "./WorldSettingsNav";
 import {
   SECTION_PARAM,
@@ -95,6 +105,10 @@ import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 export interface WorldSettingsViewProps {
     world: World;
     onUpdated?: (world: World) => void;
+    /** Les catégories de salons déjà lues par le serveur (page Catégories). */
+    initialCategories?: ChatroomCategory[];
+    /** Le monde a-t-il une fiche par défaut ? (état du menu, sans charger la page) */
+    hasPersonaTemplate?: boolean;
 }
 
 // Le sélecteur de couleurs de la page d'accueil (`HomeColorField`) vivait ici,
@@ -102,7 +116,7 @@ export interface WorldSettingsViewProps {
 // applique toujours les couleurs du thème. Retiré — git le conserve, voir le
 // commit 544205f.
 
-export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
+export function WorldSettingsView({ world, onUpdated, initialCategories, hasPersonaTemplate }: WorldSettingsViewProps) {
   const tCommon = useTranslations("common");
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
@@ -122,6 +136,10 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             case "map":
             case "wiki":
             case "personas":
+            case "skills":
+            case "faceclaims":
+            // Le Catalogue : fonction réservée, rien à régler pour l'instant.
+            case "catalog":
                 return settings;
             case "timeline":
                 return settings && world_timeline;
@@ -395,7 +413,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                     </div>
 
                     <div
-                        className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:block md:p-6", !requested && "hidden")}
+                        className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:block md:p-6", requested ? FILL_AREA : "hidden")}
                         data-testid="settings-content"
                     >
                         {requested && (
@@ -651,7 +669,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             leur état, et le menu connaît l'état de chacune. Elles
                             portent leur propre titre (FeaturePage). */}
                         {settings && (
-                            <div className={cn(SETTINGS_PAGE_WIDTH, !isFeatureSection(shown) && "hidden")}>
+                            <div className={cn(SETTINGS_PAGE_WIDTH, !isFeatureSection(shown) && "hidden", FILL_LINK)}>
                                 <WorldFeaturesTab
                                     // La clé REMONTE les pages quand on change de monde.
                                     key={`features-${world.id}`}
@@ -661,13 +679,19 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     onUpdated={onUpdated}
                                     section={isFeatureSection(shown) ? shown : null}
                                     onStatusChange={setFeatureStatus}
+                                    hasPersonaTemplate={hasPersonaTemplate}
                                 />
                             </div>
                         )}
 
+                        {/* ── Catalogue (réservé) ──────────────────────── */}
+                        {shown === "catalog" && page("catalog", (
+                            <p className="text-sm text-muted-foreground">{tSettings("catalogFeature.body")}</p>
+                        ))}
+
                         {/* ── Catégories ───────────────────────────────── */}
                         {shown === "categories" && page("categories", (
-                            <WorldCategoryManager worldId={world.id} canEdit />
+                            <WorldCategoryManager key={world.id} worldId={world.id} canEdit initialCategories={initialCategories} />
                         ))}
 
                         {/* ── Groupes ──────────────────────────────────── */}

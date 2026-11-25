@@ -9,7 +9,7 @@ import type { SkillItem } from "@/types/personas";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
 import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/section-label";
-import { CatalogPicker, EntryVisual, IconButton, RarityMark, makeItemId } from "./shared";
+import { CatalogPicker, EntryVisual, IconButton, makeItemId } from "./shared";
 import { missingPrerequisites } from "@/lib/catalogRelations";
 import { useCatalogRelations } from "@/components/worlds/catalogue/CatalogRelations";
 
@@ -87,7 +87,6 @@ export function SkillsField({
             <div key={item.id} className="flex items-center gap-2 group/skill">
               <EntryVisual icon={resolved.icon} imageUrl={resolved.image_url} />
               <span className="flex-1 min-w-0 flex items-center gap-1.5">
-                <RarityMark rarity={resolved.rarity} />
                 <span className="truncate text-sm font-medium">{resolved.name}</span>
                 {missing.length > 0 && (
                   <Badge

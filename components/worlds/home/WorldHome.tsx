@@ -24,7 +24,6 @@ import type { InitialWorldMap } from "../map/WorldMap";
 import { toggleWorldFavorite } from "@/app/(protected)/(world)/w/actions";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 import { permissionListHas, type WorldPermission } from "@/lib/worldPermissions";
-import { inventoryModeOf } from "@/lib/personaInventory";
 import { worldHasShops } from "@/lib/worldShops";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.
 const SearchCenter = dynamic(() =>
@@ -36,7 +35,6 @@ const SearchCenter = dynamic(() =>
 const WorldWiki = dynamic(() => import("../wiki/WorldWiki").then((m) => m.WorldWiki));
 const WorldSettingsView = dynamic(() => import("../settings/WorldSettingsView").then((m) => m.WorldSettingsView));
 const RelationsCanvas = dynamic(() => import("../relations/RelationsCanvas").then((m) => m.RelationsCanvas));
-const WorldCatalogue = dynamic(() => import("../catalogue/WorldCatalogue").then((m) => m.WorldCatalogue));
 const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap));
 const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
 const WorldShops = dynamic(() => import("../shops/WorldShops").then((m) => m.WorldShops));
@@ -61,6 +59,7 @@ export function WorldHome({
   isShared,
   initialRooms,
   initialCategories,
+  hasPersonaTemplate,
   initialWidgetData = {},
   initialMap,
   initialPersonas,
@@ -81,6 +80,8 @@ export function WorldHome({
   initialRooms: Room[];
   /** Catégories chargées côté serveur, partagées avec WorldSidebar. */
   initialCategories?: ChatroomCategory[];
+  /** Réglages : le monde a-t-il une fiche par défaut ? (état du menu) */
+  hasPersonaTemplate?: boolean;
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
   initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[]; announcements?: HomeAnnouncement[] };
@@ -97,7 +98,7 @@ export function WorldHome({
   /** Lieu sur lequel ouvrir le composeur d'emblée (`?play=…`, depuis la carte). */
   initialPlayPinId?: string | null;
 }) {
-  const { create_chatroom, world_map, world_catalogue, world_timeline, world_economy } = useFeatureFlags();
+  const { create_chatroom, world_map, world_timeline, world_economy } = useFeatureFlags();
   const router = useRouter();
 
   const can = (perm: WorldPermission) => permissionListHas(permissions, perm);
@@ -105,7 +106,6 @@ export function WorldHome({
   const canOpenSettings = SETTINGS_PERMISSIONS.some((perm) => can(perm));
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
-  const _hasCatalogue = world_catalogue && (inventoryModeOf(world) !== "free" || !!world.restrict_skills || can("catalog.edit"));
 
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -175,7 +175,6 @@ export function WorldHome({
     canOpenSettings,
   });
   const showCanvas = panel === "canvas";
-  const showCatalogue = panel === "catalogue" || panel === "skills";
   const showWiki = panel === "wiki";
   const showMap = panel === "map";
   const showTimeline = panel === "timeline";
@@ -191,6 +190,9 @@ export function WorldHome({
         {showSettings ? (
           <WorldSettingsView
             world={world}
+            // Le getter serveur ne relit pas `world_id` : c'est celui du monde.
+            initialCategories={initialCategories?.map((c) => ({ ...c, world_id: worldId }))}
+            hasPersonaTemplate={hasPersonaTemplate}
             onUpdated={(updated: World) => {
               Object.assign(world, updated);
               router.refresh();
@@ -219,28 +221,6 @@ export function WorldHome({
             userId={userId ?? ""}
             canAdmin={can("relations.manage")}
           />
-        ) : showCatalogue ? (
-          // Objets et Compétences : deux vues, une même coque. La clé remonte
-          // la vue au passage de l'une à l'autre (mode édition, décompte).
-          panel === "skills" ? (
-            <WorldCatalogue
-              key="skills"
-              worldId={worldId}
-              type="skills"
-              canEdit={can("catalog.edit")}
-              enabled={world.enable_skills !== false}
-              restricted={!!world.restrict_skills}
-            />
-          ) : (
-            <WorldCatalogue
-              key="inventory"
-              worldId={worldId}
-              type="inventory"
-              canEdit={can("catalog.edit")}
-              enabled={world.enable_inventory !== false}
-              restricted={inventoryModeOf(world) !== "free"}
-            />
-          )
         ) : showWiki ? (
           <WorldWiki
             worldId={worldId}
@@ -265,7 +245,6 @@ export function WorldHome({
           <WorldShops
             worldId={worldId}
             canManage={can("economy.manage")}
-            manageHref={can("world.settings") ? `/w/${worldId}?view=settings&section=shops` : null}
           />
         ) : showTimeline ? (
           <WorldTimeline

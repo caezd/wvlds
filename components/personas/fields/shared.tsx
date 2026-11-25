@@ -161,7 +161,7 @@ export function CatalogPicker({
         <Plus className="h-3.5 w-3.5" />
         {empty
           ? (type === "inventory" ? t("allItemsAdded") : t("allSkillsAdded"))
-          : label ?? t("addFromCatalog")}
+          : label ?? (type === "inventory" ? t("addItemFromWorld") : t("addSkillFromWorld"))}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -209,7 +209,8 @@ export function CatalogPicker({
                     <EntryVisual icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} size={36} />
                     <div className="flex-1 min-w-0">
                       <p className="flex items-center gap-1.5 text-sm font-medium">
-                        <RarityMark rarity={item.rarity ?? null} />
+                        {/* La rareté n'appartient qu'aux objets. */}
+                        {type === "inventory" && <RarityMark rarity={item.rarity ?? null} />}
                         <span className="truncate">{item.name}</span>
                       </p>
                       {item.description && (

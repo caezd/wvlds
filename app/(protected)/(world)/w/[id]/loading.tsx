@@ -9,7 +9,7 @@ import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenBut
 // autre valeur de `view` — absente, inconnue, ou désignant une vue désactivée
 // pour ce monde — retombe sur la page d'accueil et sa bannière.
 const WORLD_PANEL_VIEWS = new Set([
-  "members", "personas", "wiki", "canvas", "catalogue", "skills", "map", "timeline", "shops", "settings",
+  "members", "personas", "wiki", "canvas", "map", "timeline", "shops", "settings",
 ]);
 
 // AppShell masque sa barre mobile générique sur tout `/w/` (cf. `isWorldRoute`

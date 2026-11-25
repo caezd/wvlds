@@ -395,33 +395,33 @@ export function CatalogItemDialog({
             <WikiPagePicker worldId={worldId} value={pageIds} onChange={(next) => { setPageIds(next); setPagesDirty(true); }} />
           </div>
 
-          {/* Rareté, empilement, plafond */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("rarity")}</Label>
-              <Select
-                value={rarity ?? "none"}
-                onValueChange={(v) => setRarity(v === "none" ? null : (v as WorldCatalogRarity))}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("rarityNone")}</SelectItem>
-                  {CATALOG_RARITIES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      <span className="flex items-center gap-2">
-                        <RarityDot rarity={r} />
-                        {t(rarityKey(r))}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Rareté et plafond : propres aux objets. Une compétence ne se compte
+              pas et n'a pas de rareté ; une rareté déjà enregistrée reste en base. */}
+          {type === "inventory" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">{t("rarity")}</Label>
+                <Select
+                  value={rarity ?? "none"}
+                  onValueChange={(v) => setRarity(v === "none" ? null : (v as WorldCatalogRarity))}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("rarityNone")}</SelectItem>
+                    {CATALOG_RARITIES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        <span className="flex items-center gap-2">
+                          <RarityDot rarity={r} />
+                          {t(rarityKey(r))}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Une compétence ne se compte pas : ni empilement ni plafond. */}
-            {type === "inventory" && (
               <div className="space-y-1.5">
                 <Label className="text-xs" htmlFor={`max-${item.id}`}>{t("maxQuantity")}</Label>
                 <input
@@ -435,8 +435,8 @@ export function CatalogItemDialog({
                   className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm tabular-nums outline-none focus:border-primary/40 disabled:opacity-40"
                 />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {type === "inventory" && (
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">

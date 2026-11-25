@@ -81,10 +81,13 @@ describe("WorldSettingsView — menu de gauche", () => {
   it("Général et Communauté en tête, hors groupe ; puis quatre groupes, dans l'ordre", () => {
     monter();
     expect(enTete()).toEqual(["Général", "Communauté"]);
-    expect(groupes()).toEqual(["settings-group-world", "settings-group-features", "settings-group-rooms", "settings-group-members", "settings-group-communications"]);
-    expect(entrees("Monde")).toEqual(["Page d'accueil"]);
-    expect(entrees("Fonctions")).toEqual(["Carte", "Wiki", "Personas", "Chronologie", "Objets"]);
-    expect(entrees("Salons & personas")).toEqual(["Catégories", "Groupes", "Relations"]);
+    expect(groupes()).toEqual([
+      "settings-group-world", "settings-group-features", "settings-group-personas", "settings-group-members",
+      "settings-group-communications",
+    ]);
+    expect(entrees("Monde")).toEqual(["Page d'accueil", "Catégories"]);
+    expect(entrees("Fonctions")).toEqual(["Carte", "Wiki", "Chronologie", "Catalogue", "Inventaire"]);
+    expect(entrees("Personas")).toEqual(["Fiche par défaut", "Compétences", "Faceclaims", "Groupes", "Relations"]);
     expect(entrees("Membres")).toEqual(["Rôles"]);
     expect(entrees("Communications")).toEqual(["Annonces", "Message de bienvenue", "Signalements"]);
   });
@@ -101,6 +104,17 @@ describe("WorldSettingsView — menu de gauche", () => {
     expect(pushState).toHaveBeenCalledWith(null, "", "/w/w1?view=settings&section=welcome");
   });
 
+  it("Catalogue : une fonction réservée, marquée « Bientôt », sans interrupteur", async () => {
+    monter();
+    const entree = within(nav()).getByRole("button", { name: "Catalogue" });
+    expect(entree).toHaveAccessibleDescription("Bientôt");
+    await userEvent.click(entree);
+    expect(screen.getByRole("heading", { name: "Catalogue" })).toBeInTheDocument();
+    expect(screen.getByText("Bientôt disponible.")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(pushState).toHaveBeenCalledWith(null, "", "/w/w1?view=settings&section=catalog");
+  });
+
   it("ouvre « Général » d'emblée, avec la zone de danger du propriétaire", () => {
     monter();
     expect(within(nav()).getByRole("button", { name: "Général" })).toHaveAttribute("aria-current", "page");
@@ -114,6 +128,23 @@ describe("WorldSettingsView — menu de gauche", () => {
     monter();
     expect(screen.queryByRole("region", { name: "Zone de danger" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Supprimer le monde" })).toBeNull();
+  });
+
+  it("un membre qui gère les relations voit « Personas › Groupes, Relations », sans les pages du monde", () => {
+    acces.perms = new Set(["relations.manage"]);
+    acces.owner = false;
+    monter();
+    expect(groupes()).toEqual(["settings-group-personas"]);
+    expect(entrees("Personas")).toEqual(["Groupes", "Relations"]);
+  });
+
+  it("un membre qui gère les catégories voit « Monde › Catégories », sans la page d'accueil", () => {
+    acces.perms = new Set(["categories.manage"]);
+    acces.owner = false;
+    monter();
+    expect(groupes()).toEqual(["settings-group-world"]);
+    expect(entrees("Monde")).toEqual(["Catégories"]);
+    expect(screen.getByTestId("categories-tab")).toBeInTheDocument();
   });
 
   it("un membre qui ne gère que les rôles ne voit que « Membres › Rôles »", () => {

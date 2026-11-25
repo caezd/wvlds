@@ -45,14 +45,17 @@ import { WorldLiveChatOptionsSettings } from "./WorldLiveChatOptionsSettings";
 import { WorldLiveChatConnectionSettings } from "./WorldLiveChatConnectionSettings";
 import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import { WorldInventorySettings } from "./WorldInventorySettings";
+import { WorldCatalogBoardSection } from "./WorldCatalogBoardSection";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import { ShopManager } from "@/components/worlds/shops/ShopManager";
 import { WorldGainsSettings } from "./WorldGainsSettings";
 import { WorldTaxSettings } from "./WorldTaxSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { ArrowRightLeft, BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowRightLeft, BookOpen, Clock, Coins, IdCard, Map as MapIcon, MessagesSquare, Package, ScanFace, Sparkles, Store, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, FILL, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
  * Les pages « Fonctions » des réglages d'un monde : carte, wiki, personas
@@ -61,9 +64,11 @@ import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, Toggl
  * (`section`) ; ce composant lui rend l'état de chacune (`onStatusChange`)
  * pour les pastilles Actif / Off.
  *
- * Toujours monté (pour qui peut régler le monde), pages cachées : chacune
- * garde son état d'une visite à l'autre, et l'état des personas, que sa
- * section charge elle-même, est connu du menu dès l'ouverture.
+ * Toujours monté (pour qui peut régler le monde), pour donner au menu l'état
+ * de chaque page. Une page ne se monte qu'à sa première ouverture (ses données
+ * se chargent alors), puis reste montée, cachée : elle garde son état et sa
+ * sauvegarde automatique d'une visite à l'autre. L'état de la fiche par défaut
+ * vient du serveur (`hasPersonaTemplate`), sans monter sa page.
  *
  * Chaque groupe porte lui-même son état et son appel serveur. C'est ce qui
  * permet de le sortir du composant parent sans défilé de props : seuls le
@@ -74,12 +79,14 @@ import { FIELD, FeaturePage, InactiveOptions, SettingsSection, ToggleItem, Toggl
  * un — un oubli dans cette liste et un réglage restait affiché à la valeur du
  * monde précédent.
  */
-export function WorldFeaturesTab({ world, form, persistField, onUpdated, section, onStatusChange }: ProprietesOnglet & {
+export function WorldFeaturesTab({ world, form, persistField, onUpdated, section, onStatusChange, hasPersonaTemplate }: ProprietesOnglet & {
   onUpdated?: (world: World) => void;
   /** La page affichée ; `null` : une autre section des paramètres est ouverte. */
   section: FeatureSectionId | null;
   /** L'état (actif ou non) de chaque page, à chaque changement. */
   onStatusChange?: (status: Record<FeatureSectionId, boolean>) => void;
+  /** Le monde a-t-il une fiche par défaut ? Lu par le serveur, pour le menu. */
+  hasPersonaTemplate?: boolean;
 }) {
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
@@ -90,6 +97,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
 
     const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
     const [enableSkills, setEnableSkills] = React.useState(world.enable_skills !== false);
+    // L'onglet ouvert de la page Inventaire : « Objets » y prend toute la hauteur.
+    const [inventoryTab, setInventoryTab] = React.useState<"settings" | "items">("settings");
+    // Les pages dont le tableau prend toute la hauteur : l'onglet Objets de
+    // l'Inventaire, et les Compétences.
+    const fillPage = (section === "items" && inventoryTab === "items") || section === "skills";
     const [restrictSkills, setRestrictSkills] = React.useState(!!world.restrict_skills);
     const [pendingRestriction, setPendingRestriction] = React.useState<"skills" | null>(null);
     const [togglingRestriction, setTogglingRestriction] = React.useState(false);
@@ -121,8 +133,14 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         world.timeline_config ?? defaultConfig,
     );
     const [togglingTimeline, setTogglingTimeline] = React.useState(false);
-    // L'état de la fiche modèle des personas : sa section le charge elle-même.
-    const [personasActive, setPersonasActive] = React.useState(false);
+    // L'état de la fiche modèle des personas : lu par le serveur, puis tenu
+    // à jour par sa page une fois ouverte.
+    const [personasActive, setPersonasActive] = React.useState(!!hasPersonaTemplate);
+    // Les pages déjà ouvertes : seules celles-ci sont montées (voir plus haut).
+    const [opened, setOpened] = React.useState<ReadonlySet<FeatureSectionId>>(
+        () => new Set(section ? [section] : []),
+    );
+    if (section && !opened.has(section)) setOpened(new Set([...opened, section]));
 
     async function handleEnableToggle(field: "inventory" | "skills", enabled: boolean) {
         setTogglingEnable(true);
@@ -353,54 +371,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 </FeaturePage>
             ),
         },
+        // Fonctions › Personas : la fiche par défaut, les compétences et les
+        // faceclaims, chacun sa page (demande du 2026-11-24).
         {
             id: "personas",
-            icon: UserRound,
-            label: t("nav.personas"),
+            icon: IdCard,
+            label: tSettings("personaSheet"),
             active: personasActive,
             page: (
-                <FeaturePage title={t("nav.personas")} help={tSettings("personasHelp")}>
-                    {/* Compétences et faceclaims : sortis du catalogue, ils règlent la fiche. */}
-                    <ToggleList>
-                        <ToggleItem
-                            title={t("tabSkills")}
-                            help={tSettings("skillsHelp")}
-                            checked={enableSkills}
-                            disabled={togglingEnable}
-                            onCheckedChange={v => void handleEnableToggle("skills", v)}
-                        />
-                        <ToggleItem
-                            indent
-                            dimmed={!enableSkills}
-                            title={t("restrictToCatalogue")}
-                            help={tSettings("restrictSkillsHelp")}
-                            control={
-                                <Switch
-                                    checked={restrictSkills}
-                                    disabled={!enableSkills || togglingRestriction}
-                                    onCheckedChange={v => void handleRestrictionToggle("skills", v)}
-                                    aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
-                                    className="shrink-0"
-                                />
-                            }
-                        />
-                        <ToggleItem
-                            title={tCatalogue("faceclaims")}
-                            help={tSettings("faceclaimsHelp")}
-                            checked={enableFaceclaims}
-                            disabled={togglingFaceclaims}
-                            onCheckedChange={v => void handleFaceclaimsToggle(v)}
-                        />
-                        <ToggleItem
-                            indent
-                            dimmed={!enableFaceclaims}
-                            title={tSettings("requireFaceclaim")}
-                            help={tSettings("requireFaceclaimHelp")}
-                            checked={requireFaceclaim}
-                            disabled={!enableFaceclaims || togglingRequireFaceclaim}
-                            onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
-                        />
-                    </ToggleList>
+                <FeaturePage title={tSettings("personaSheet")} help={tSettings("personasHelp")}>
                     <WorldPersonaTemplateSection
                         worldId={world.id}
                         restrictSkills={restrictSkills}
@@ -408,6 +387,79 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
                         onActiveChange={setPersonasActive}
                     />
+                </FeaturePage>
+            ),
+        },
+        {
+            id: "skills",
+            icon: Sparkles,
+            label: t("tabSkills"),
+            active: enableSkills,
+            page: (
+                <FeaturePage
+                    title={t("tabSkills")}
+                    help={tSettings("skillsHelp")}
+                    toggle={{
+                        label: tSettings(enableSkills ? "enabledF" : "disabledF"),
+                        ariaLabel: tSettings("enableSkills"),
+                        checked: enableSkills,
+                        disabled: togglingEnable,
+                        onCheckedChange: v => void handleEnableToggle("skills", v),
+                    }}
+                    fill={section === "skills"}
+                >
+                    <InactiveOptions inactive={!enableSkills} className={FILL}>
+                        <div className={cn(FILL, "gap-6")}>
+                            <ToggleList className="shrink-0">
+                                <ToggleItem
+                                    title={t("restrictToCatalogue")}
+                                    help={tSettings("restrictSkillsHelp")}
+                                    control={
+                                        <Switch
+                                            checked={restrictSkills}
+                                            disabled={!enableSkills || togglingRestriction}
+                                            onCheckedChange={v => void handleRestrictionToggle("skills", v)}
+                                            aria-label={`${t("tabSkills")} : ${t("restrictToCatalogue")}`}
+                                            className="shrink-0"
+                                        />
+                                    }
+                                />
+                            </ToggleList>
+                            {/* Le tableau ne se charge qu'à l'ouverture de la page. */}
+                            {section === "skills" && <WorldCatalogBoardSection worldId={world.id} type="skills" />}
+                        </div>
+                    </InactiveOptions>
+                </FeaturePage>
+            ),
+        },
+        {
+            id: "faceclaims",
+            icon: ScanFace,
+            label: tCatalogue("faceclaims"),
+            active: enableFaceclaims,
+            page: (
+                <FeaturePage
+                    title={tCatalogue("faceclaims")}
+                    help={tSettings("faceclaimsHelp")}
+                    toggle={{
+                        label: tSettings(enableFaceclaims ? "enabledM" : "disabledM"),
+                        ariaLabel: tSettings("enableFaceclaims"),
+                        checked: enableFaceclaims,
+                        disabled: togglingFaceclaims,
+                        onCheckedChange: v => void handleFaceclaimsToggle(v),
+                    }}
+                >
+                    <InactiveOptions inactive={!enableFaceclaims}>
+                        <ToggleList>
+                            <ToggleItem
+                                title={tSettings("requireFaceclaim")}
+                                help={tSettings("requireFaceclaimHelp")}
+                                checked={requireFaceclaim}
+                                disabled={!enableFaceclaims || togglingRequireFaceclaim}
+                                onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
+                            />
+                        </ToggleList>
+                    </InactiveOptions>
                 </FeaturePage>
             ),
         },
@@ -525,27 +577,48 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
         {
             id: "items" as const,
             icon: Package,
-            label: tCatalogue("items"),
+            label: tSettings("inventoryPage"),
             active: enableInventory,
             page: (
                 <FeaturePage
-                    title={tCatalogue("items")}
+                    title={tSettings("inventoryPage")}
                     help={tSettings("inventoryItemsHelp")}
                     toggle={{
                         label: tSettings(enableInventory ? "enabledM" : "disabledM"),
-                        ariaLabel: tSettings("enableItems"),
+                        ariaLabel: tSettings("enableInventory"),
                         checked: enableInventory,
                         disabled: togglingEnable,
                         onCheckedChange: v => void handleEnableToggle("inventory", v),
                     }}
+                    fill={fillPage}
                 >
-                    {/* L'inventaire des personas (migration 247) : grisé tant que les objets sont coupés. */}
-                    <InactiveOptions inactive={!enableInventory}>
-                        <WorldInventorySettings
-                            world={world}
-                            onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
-                        />
-                    </InactiveOptions>
+                    {/* Deux onglets : les réglages de l'inventaire des personas (migration
+                        247), puis les objets du catalogue en tableau. Radix ne monte que
+                        l'onglet ouvert : le catalogue ne se charge qu'à la demande. */}
+                    <TabsPrimitive.Root
+                        value={inventoryTab}
+                        onValueChange={(v) => setInventoryTab(v === "items" ? "items" : "settings")}
+                        className={cn(fillPage && FILL)}
+                    >
+                        <TabBar className="static bg-transparent" listClassName="px-0">
+                            <TabBarTrigger value="settings">{tSettings("inventory.tabSettings")}</TabBarTrigger>
+                            <TabBarTrigger value="items">{tSettings("catalogBoard.inventory.title")}</TabBarTrigger>
+                        </TabBar>
+                        {/* Grisé tant que l’inventaire est coupé. */}
+                        <TabsPrimitive.Content value="settings" className="pt-6">
+                            <InactiveOptions inactive={!enableInventory}>
+                                <WorldInventorySettings
+                                    world={world}
+                                    onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
+                                />
+                            </InactiveOptions>
+                        </TabsPrimitive.Content>
+                        <TabsPrimitive.Content value="items" className={cn("pt-6", FILL)}>
+                            <InactiveOptions inactive={!enableInventory} className={FILL}>
+                                <WorldCatalogBoardSection worldId={world.id} type="inventory" />
+                            </InactiveOptions>
+                        </TabsPrimitive.Content>
+                    </TabsPrimitive.Root>
                 </FeaturePage>
             ),
         },
@@ -622,6 +695,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             map: enableMap,
             wiki: enableWiki,
             personas: personasActive,
+            skills: enableSkills,
+            faceclaims: enableFaceclaims,
             timeline: timelineEnabled,
             chatbox: enableLiveChat,
             currency: enableEconomy,
@@ -629,11 +704,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             shops: shopsOpen,
             trades: tradesOpen,
         });
-    }, [onStatusChange, enableMap, enableWiki, personasActive, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen, tradesOpen]);
+    }, [onStatusChange, enableMap, enableWiki, personasActive, enableSkills, enableFaceclaims, timelineEnabled, enableLiveChat, enableEconomy, enableInventory, shopsOpen, tradesOpen]);
 
   return (
     <>
-            <div hidden={section === null} data-testid="feature-pages">
+            {/* Une page qui prend toute la hauteur (l'onglet Objets de l'Inventaire)
+                porte `data-fill-page` : la zone de défilement des réglages se met
+                alors en flex (WorldSettingsView, `has-[[data-fill-page]]`) et la
+                chaîne descend jusqu'au tableau, qui défile seul. */}
+            <div hidden={section === null} data-testid="feature-pages" className={cn(fillPage && FILL)}>
                 {sections.map((s) => (
                     <div
                         key={s.id}
@@ -641,8 +720,10 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         role="region"
                         aria-label={s.label}
                         data-feature-page={s.id}
+                        data-fill-page={(fillPage && s.id === section) || undefined}
+                        className={cn(fillPage && s.id === section && FILL)}
                     >
-                        {s.page}
+                        {opened.has(s.id) && s.page}
                     </div>
                 ))}
             </div>

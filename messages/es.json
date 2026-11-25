@@ -653,7 +653,7 @@
     },
     "namePlaceholder": "Ej. Mundo de Veldis",
     "descriptionPlaceholder": "Breve descripción del mundo…",
-    "restrictToCatalogue": "Restringir al catálogo del mundo",
+    "restrictToCatalogue": "Restringir a las habilidades del mundo",
     "enableTimeline": "Activar la cronología",
     "yearLabel": "Etiqueta del año",
     "eraSuffix": "Era / sufijo",
@@ -697,7 +697,6 @@
       "filterReset": "Restablecer los filtros",
       "addEvent": "Evento",
       "today": "Hoy",
-      "summary": "{rooms, plural, =0 {ninguna sala} one {# sala} other {# salas}} · {arcs, plural, =0 {ningún arco} one {# arco} other {# arcos}}",
       "roomsCount": "{count, plural, one {# sala} other {# salas}}",
       "episodes": "{count, plural, one {# episodio} other {# episodios}}",
       "position": "Posición en la cronología",
@@ -906,7 +905,7 @@
           "help": "Mapas, lugares, regiones y enlaces entre lugares."
         },
         "catalog_edit": {
-          "label": "Modificar el catálogo",
+          "label": "Modificar los objetos y habilidades",
           "help": "Objetos, habilidades y sus categorías."
         },
         "timeline_manage": {
@@ -1010,10 +1009,10 @@
       "ageRestrictedHelp": "Los nuevos miembros deberán confirmar que tienen 18 años o más antes de unirse a este mundo.",
       "allAges": "Para todos los públicos",
       "adultsOnly": "Mayores de 18",
-      "inventoryItems": "Objetos de inventario",
+      "inventoryPage": "Inventario",
       "inventoryItemsHelp": "Los personajes pueden gestionar un inventario de objetos.",
       "skillsHelp": "Los personajes pueden listar sus habilidades.",
-      "restrictSkillsHelp": "Los personajes solo pueden tener habilidades definidas en el catálogo; la entrada libre está desactivada.",
+      "restrictSkillsHelp": "Los personajes solo pueden tener habilidades creadas en el mundo; la entrada libre está desactivada.",
       "faceclaimsHelp": "Permite a los personas indicar el actor o el personaje en el que se basa su avatar.",
       "requireFaceclaim": "Faceclaim obligatorio",
       "requireFaceclaimHelp": "Una ficha sin faceclaim no se considera terminada, y su personaje no puede jugar.",
@@ -1115,7 +1114,7 @@
         "groups": {
           "world": "Mundo",
           "features": "Funciones",
-          "rooms": "Salas y personajes",
+          "personas": "Personas",
           "members": "Miembros",
           "communications": "Comunicaciones"
         },
@@ -1165,9 +1164,11 @@
           "base": "Unidad base",
           "add": "Añadir un escalón",
           "remove": "Quitar {name}",
-          "save": "Guardar la moneda",
-          "saved": "Moneda guardada.",
-          "invalid": "Cada escalón debe tener un nombre y valer al menos 2 del escalón siguiente."
+          "invalid": "Cada escalón debe tener un nombre y valer al menos 2 del escalón siguiente.",
+          "tiers": "Escalones",
+          "previewLabel": "Vista previa de la moneda",
+          "previewHelp": "Un importe de ejemplo, escrito con sus escalones, y lo que vale cada uno de ellos.",
+          "conversion": "1 {from} = {ratio} {to}"
         },
         "currencies": "Divisas"
       },
@@ -1175,11 +1176,11 @@
         "title": "Inventario de las personas",
         "mode": {
           "title": "Entrada de objetos",
-          "help": "Quién hace entrar objetos en el inventario de una persona. Quien gestiona la economía siempre puede dar o quitar un objeto del catálogo.",
+          "help": "Quién hace entrar objetos en el inventario de una persona. Quien gestiona la economía siempre puede dar o quitar un objeto del mundo.",
           "free": "Libre",
           "freeHint": "El jugador crea y modifica sus objetos",
-          "catalog": "Catálogo",
-          "catalogHint": "El jugador elige en el catálogo",
+          "catalog": "Objetos del mundo",
+          "catalogHint": "El jugador elige entre los objetos del mundo",
           "held": "Controlado",
           "heldHint": "Objetos dados, comprados o intercambiados"
         },
@@ -1196,9 +1197,8 @@
           "help": "Lo que paga una persona, en {unit}, por cada espacio añadido a su inventario. Vacío: sin ampliación.",
           "needsEconomy": "Ampliar un inventario se paga en la moneda del mundo: active la economía para fijar un precio."
         },
-        "save": "Guardar los espacios",
-        "saved": "Espacios guardados.",
-        "invalid": "El límite no puede ser inferior al número inicial."
+        "invalid": "El límite no puede ser inferior al número inicial.",
+        "tabSettings": "Ajustes"
       },
       "liveChatConnection": {
         "title": "Conexión de los jugadores",
@@ -1241,14 +1241,14 @@
           "help": "Un mensaje que empieza por /me se convierte en una acción interpretada: en cursiva, precedida del nombre del jugador o de su persona."
         }
       },
-      "enableItems": "Activar los objetos",
+      "enableInventory": "Activar el inventario",
       "enableShops": "Activar las tiendas",
-      "shopsHelp": "Tiendas donde los personas compran objetos del catálogo, y los revenden si la tienda lo acepta.",
-      "shopsNeedEconomy": "Las tiendas requieren las monedas y los objetos.",
+      "shopsHelp": "Tiendas donde los personas compran objetos del mundo, y los revenden si la tienda lo acepta.",
+      "shopsNeedEconomy": "Las tiendas requieren las monedas y el inventario.",
       "trades": "Intercambios",
       "enableTrades": "Activar los intercambios",
       "tradesHelp": "Un persona da dinero u objetos a otro desde el compositor de una sala, con el bloque Transferir. La transferencia es inmediata.",
-      "tradesNeedSomething": "Active primero las divisas o los objetos.",
+      "tradesNeedSomething": "Active primero las divisas o el inventario.",
       "tradesSameAccount": "Intercambios entre personas de una misma cuenta",
       "tradesSameAccountHelp": "Permite a un jugador pasar dinero y objetos de uno de sus personas a otro.",
       "gainsForm": {
@@ -1279,8 +1279,6 @@
         "capHelp": "Total de ganancias de un persona por día (UTC). Vacío: sin límite.",
         "noCap": "Sin límite",
         "zeroCap": "Límite en cero: ya no se paga ninguna ganancia",
-        "save": "Guardar las ganancias",
-        "saved": "Ganancias guardadas.",
         "invalid": "Importes enteros; tope positivo; plazo de un día como máximo."
       },
       "taxForm": {
@@ -1318,6 +1316,27 @@
         "badgeStyleHelp": "El color y el icono de la insignia de las personas atrasadas.",
         "resetStyle": "Estilo predeterminado",
         "invalid": "Revise el importe y la periodicidad."
+      },
+      "personaSheet": "Ficha predeterminada",
+      "enableSkills": "Activar las habilidades",
+      "enableFaceclaims": "Activar los faceclaims",
+      "catalogBoard": {
+        "sellLink": "Poner a la venta en una tienda",
+        "inventory": {
+          "title": "Objetos",
+          "intro": "Objetos del mundo",
+          "help": "Una columna por categoría, cada una con su botón para crear un objeto en ella. Arrastre los objetos para ordenarlos o cambiarlos de categoría, y las columnas para reordenarlas. Estos objetos pueden ponerse a la venta en las tiendas."
+        },
+        "skills": {
+          "title": "Habilidades",
+          "intro": "Habilidades del mundo",
+          "help": "Una columna por categoría, cada una con su botón para crear una habilidad en ella. Arrastre las habilidades para ordenarlas o cambiarlas de categoría, y las columnas para reordenarlas."
+        }
+      },
+      "catalogFeature": {
+        "title": "Catálogo",
+        "soon": "Pronto",
+        "body": "Disponible pronto."
       }
     },
     "timelinePicker": {
@@ -2787,8 +2806,6 @@
     "moreResults": "+{count} más — refine la búsqueda"
   },
   "catalogue": {
-    "title": "Catálogo",
-    "editingActive": "Modo edición activo",
     "items": "Objetos",
     "skills": "Habilidades",
     "chooseIcon": "Elegir un icono de juego",
@@ -2800,38 +2817,30 @@
     "addSkillBtn": "Añadir una habilidad",
     "sortAlpha": "Ordenar alfabéticamente",
     "uncategorized": "Sin categoría",
-    "emptyInventory": "No hay objetos en el catálogo.",
-    "emptySkills": "No hay habilidades en el catálogo.",
+    "emptyInventory": "Todavía no hay objetos.",
+    "emptySkills": "Todavía no hay habilidades.",
     "categoryNamePlaceholder": "Nombre de la categoría",
     "createCategory": "Crear una categoría",
-    "itemsDisabled": "Objetos desactivados en este mundo",
-    "itemsUnrestricted": "Objetos: los jugadores también crean sus propios objetos.",
-    "skillsDisabled": "Habilidades desactivadas en este mundo",
-    "skillsUnrestricted": "Habilidades: entrada libre (catálogo no restringido)",
     "faceclaims": "Faceclaims",
     "emptyFaceclaims": "No hay faceclaims declarados en este mundo.",
-    "itemsRestricted": "Objetos: solo los objetos del catálogo entran en el inventario de las personas.",
-    "skillsRestricted": "Habilidades: catálogo restringido — solo las entradas del catálogo pueden añadirse a una ficha.",
     "chooseLucideIcon": "Elegir un icono de la aplicación",
     "trash": "Papelera",
     "trashDescription": "Las entradas eliminadas permanecen aquí treinta días. Al restaurarlas, vuelven a todas las fichas que las llevaban.",
     "trashEmpty": "Nada en la papelera.",
     "trashRestore": "Restaurar",
     "trashDeleteForever": "Eliminar definitivamente",
-    "trashDeleteForeverDesc": "La entrada y su imagen se borrarán, y las fichas que la llevaban la mantendrán marcada como retirada del catálogo. No habrá vuelta atrás.",
+    "trashDeleteForeverDesc": "La entrada y su imagen se borrarán, y las fichas que la llevaban la mantendrán marcada como eliminada. No habrá vuelta atrás.",
     "movedToTrash": "Enviado a la papelera",
     "deletedAt": "Eliminado {when}",
     "skillLevel": "Nivel",
-    "inventoryFromCatalog": "Inventario del catálogo",
-    "skillsFromCatalog": "Habilidades del catálogo",
-    "addFromCatalog": "Añadir desde el catálogo",
-    "allItemsAdded": "Todos los objetos del catálogo están añadidos",
-    "allSkillsAdded": "Todas las habilidades del catálogo están añadidas",
+    "skillsFromCatalog": "Habilidades del mundo",
+    "allItemsAdded": "Todos los objetos del mundo están añadidos",
+    "allSkillsAdded": "Todas las habilidades del mundo están añadidas",
     "chooseItem": "Elegir un objeto",
     "chooseSkill": "Elegir una habilidad",
     "searchPlaceholder": "Buscar un nombre, una descripción…",
     "noResults": "Sin resultados.",
-    "orphanedItem": "Retirado del catálogo",
+    "orphanedItem": "Eliminado del mundo",
     "editItem": "Modificar el objeto",
     "editSkill": "Modificar la habilidad",
     "duplicate": "Duplicar",
@@ -2857,12 +2866,12 @@
     "removeImage": "Quitar la imagen",
     "imageTooLarge": "La imagen no debe superar {max} MB.",
     "usageCount": "{count, plural, =0 {Nadie lo lleva} one {Lo lleva # personaje} other {Lo llevan # personajes}}",
-    "exportCatalog": "Exportar el catálogo",
-    "importCatalog": "Importar un catálogo",
+    "exportCatalog": "Exportar la lista",
+    "importCatalog": "Importar una lista",
     "importDone": "{count, plural, one {# entrada importada} other {# entradas importadas}}",
     "importError_json": "Este archivo no es un JSON válido.",
-    "importError_shape": "Este archivo no tiene la forma de un catálogo exportado.",
-    "importError_type": "Este archivo viene de la otra pestaña del catálogo.",
+    "importError_shape": "Este archivo no tiene la forma de una lista exportada.",
+    "importError_type": "Este archivo viene de la otra lista (objetos o habilidades).",
     "importError_empty": "Este archivo no contiene ninguna entrada utilizable.",
     "selectItem": "Seleccionar {name}",
     "itemActions": "Acciones para {name}",
@@ -2905,7 +2914,9 @@
     "collapseRecipe": "Plegar {name}",
     "recipeTruncated": "(no desplegado más)",
     "missingPrerequisites": "Requisitos que faltan: {names}",
-    "prerequisiteMissingBadge": "Falta un requisito"
+    "prerequisiteMissingBadge": "Falta un requisito",
+    "addItemFromWorld": "Añadir un objeto del mundo",
+    "addSkillFromWorld": "Añadir una habilidad del mundo"
   },
   "offline": {
     "title": "Está sin conexión",
@@ -2988,7 +2999,6 @@
   },
   "shops": {
     "title": "Tiendas",
-    "manage": "Gestionar las tiendas",
     "off": "Las tiendas requieren la economía, el inventario y la opción Tiendas, que se activan en Ajustes › Funciones › Economía.",
     "empty": "Todavía no hay tiendas.",
     "create": "Nueva tienda",

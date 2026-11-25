@@ -133,6 +133,15 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
   });
 
+  it("l'en-tête porte « Arcs » et « Événement » à droite, sans résumé", async () => {
+    await frise([room("a", "Prologue", 1, 0, 6)], CONFIG, { canManage: true });
+    const entete = screen.getByText("Chronologie").parentElement!;
+    expect(entete).toContainElement(screen.getByRole("button", { name: "Arcs" }));
+    expect(entete).toContainElement(screen.getByRole("button", { name: "Événement" }));
+    expect(screen.getByTestId("timeline-head")).not.toContainElement(screen.getByRole("button", { name: "Arcs" }));
+    expect(screen.queryByTestId("timeline-summary")).toBeNull();
+  });
+
   it("affiche un message quand aucune conversation n'est encore située", async () => {
     await frise([]);
     expect(screen.getByText(/Aucune conversation/)).toBeInTheDocument();
@@ -418,17 +427,17 @@ describe("WorldTimeline — frise verticale", () => {
     }
   });
 
-  it("l'en-tête résume la frise ; « Aujourd'hui » ramène à la date actuelle ; la légende des marques", async () => {
+  it("« Aujourd'hui » ramène à la date actuelle ; la légende des marques", async () => {
     const user = userEvent.setup();
     db.tables.world_timeline_arcs = [{ id: "exil", name: "L'exil", color: "#22c55e", position: 0 }];
     await frise([room("a", "Départ", 1, 0, 1), room("b", "Retour", 1, 2, 1)]);
-    expect(screen.getByTestId("timeline-summary")).toHaveTextContent("2 salons · 1 arc");
     const legende = screen.getByRole("list", { name: "Légende" });
     expect(within(legende).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
       "En cours", "Pause", "Terminé", "Abandonné", "Événement",
     ]);
-    // En pause : l'icône « cercle pause », comme sur le fil.
+    // En pause : l'icône « cercle pause », terminé : « cercle coché », comme sur le fil.
     expect(within(legende).getAllByRole("listitem")[1].querySelector("svg.lucide-circle-pause")).not.toBeNull();
+    expect(within(legende).getAllByRole("listitem")[2].querySelector("svg.lucide-circle-check")).not.toBeNull();
     const scroll = screen.getByTestId("timeline-scroll");
     const scrollTo = vi.fn();
     scroll.scrollTo = scrollTo as never;
@@ -937,13 +946,16 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
 
     const anneau = (id: string) => within(ligne(id)).getByTestId("timeline-ring");
     // En cours : creux, bordé de 2px. En pause : l'icône « cercle pause », sur
-    // le fond qui découpe le fil. Terminé : plein. Abandonné : en pointillés.
+    // le fond qui découpe le fil. Terminé : l'icône « cercle coché », de même.
+    // Abandonné : en pointillés.
     expect(anneau("a").className.split(" ")).toContain("border-2");
     expect(anneau("a").tagName.toLowerCase()).toBe("span");
     expect(anneau("b").tagName.toLowerCase()).toBe("svg");
     expect(anneau("b").getAttribute("class")).toContain("lucide-circle-pause");
     expect(anneau("b").getAttribute("class")).toContain("bg-canvas");
-    expect(anneau("c").className).toContain("bg-foreground/35");
+    expect(anneau("c").tagName.toLowerCase()).toBe("svg");
+    expect(anneau("c").getAttribute("class")).toContain("lucide-circle-check");
+    expect(anneau("c").getAttribute("class")).toContain("bg-canvas");
     expect(anneau("d").className.split(" ")).toContain("border-dashed");
     // Le statut est lu, sauf « en cours ».
     expect(within(ligne("d")).getByRole("button").getAttribute("aria-label")).toContain("Abandonné");

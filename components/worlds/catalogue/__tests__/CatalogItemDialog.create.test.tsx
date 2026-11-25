@@ -43,6 +43,24 @@ describe("CatalogItemDialog — création", () => {
     expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull();
   });
 
+  it("la rareté n'appartient qu'aux objets ; une compétence garde la sienne en base", async () => {
+    const { unmount } = render(
+      <CatalogItemDialog item={{ ...DRAFT, name: "Épée" }} type="inventory" worldId="w1" open
+        onOpenChange={vi.fn()} onSave={vi.fn()} />,
+    );
+    expect(screen.getByText("Rareté")).toBeInTheDocument();
+    unmount();
+
+    const onSave = vi.fn();
+    render(
+      <CatalogItemDialog item={{ ...DRAFT, type: "skills" as never, name: "Forge", rarity: "rare" }} type="skills" worldId="w1" open
+        onOpenChange={vi.fn()} onSave={onSave} />,
+    );
+    expect(screen.queryByText("Rareté")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(DRAFT.id, expect.objectContaining({ name: "Forge", rarity: "rare" })));
+  });
+
   it("en modification, pas de « Créer et continuer »", () => {
     render(
       <CatalogItemDialog item={{ ...DRAFT, name: "Épée" }} type="inventory" worldId="w1" open

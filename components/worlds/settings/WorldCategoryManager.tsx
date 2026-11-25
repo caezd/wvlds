@@ -305,21 +305,28 @@ function CategoryRow({
 export function WorldCategoryManager({
   worldId,
   canEdit,
+  initialCategories,
 }: {
   worldId: string;
   canEdit: boolean;
+  /** Les catégories déjà lues par le serveur (WorldHomeContent) : affichées
+   *  d'emblée, sans requête. Le parent remonte ce composant par monde. */
+  initialCategories?: ChatroomCategory[];
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const router = useRouter();
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
-  const [categories, setCategories] = React.useState<ChatroomCategory[] | null>(null);
+  const [categories, setCategories] = React.useState<ChatroomCategory[] | null>(initialCategories ?? null);
   const [creating, setCreating] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  // Sans catégories reçues du serveur, on les charge ici.
+  const seeded = initialCategories !== undefined;
   React.useEffect(() => {
+    if (seeded) return;
     void (async () => {
       const { data, error } = await supabase
         .from("chatroom_categories")
@@ -332,7 +339,7 @@ export function WorldCategoryManager({
       }
       setCategories(data as ChatroomCategory[]);
     })();
-  }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [worldId, seeded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleCreated(category: ChatroomCategory) {
     setCategories((prev) => [...(prev ?? []), category]);

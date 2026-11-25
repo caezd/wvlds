@@ -58,7 +58,7 @@ describe("SkillsField — prérequis contraignants (migration 187)", () => {
     mockResults([{ data: PREREQS }]);
     const user = userEvent.setup();
     render(<SkillsField initialItems={[]} onSave={vi.fn()} catalogItems={SKILLS} />);
-    await user.click(screen.getByRole("button", { name: /ajouter depuis le catalogue/i }));
+    await user.click(screen.getByRole("button", { name: /ajouter une compétence du monde/i }));
     const dialog = await screen.findByRole("dialog");
     await waitFor(() => expect(within(dialog).getByRole("button", { name: /Forge avancée/ })).toBeDisabled());
     expect(within(dialog).getByRole("button", { name: /Forge avancée/ })).toHaveAttribute("title", "Prérequis manquants : Forge");
@@ -74,7 +74,7 @@ describe("SkillsField — prérequis contraignants (migration 187)", () => {
     const { rerender } = render(
       <SkillsField initialItems={[{ id: "x", catalog_id: "forge", name: "Forge", level: "" }]} onSave={onSave} catalogItems={SKILLS} />,
     );
-    await user.click(screen.getByRole("button", { name: /ajouter depuis le catalogue/i }));
+    await user.click(screen.getByRole("button", { name: /ajouter une compétence du monde/i }));
     const dialog = await screen.findByRole("dialog");
     await waitFor(() => expect(within(dialog).getByRole("button", { name: /Forge avancée/ })).toBeEnabled());
     await user.click(within(dialog).getByRole("button", { name: /Forge avancée/ }));

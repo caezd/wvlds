@@ -23,6 +23,13 @@ import { makeMap, makePin, makePinLink, makePlacedPersona, makeRegion } from "./
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
+// Les époques de la carte sont éteintes pour l'instant : leurs tests les
+// rallument, pour rester valables le jour où elles reviendront.
+const mapFeatures = vi.hoisted(() => ({ eras: false }));
+vi.mock("@/components/worlds/map/features", () => ({
+  get MAP_ERAS_ENABLED() { return mapFeatures.eras; },
+}));
+
 const getWorldMaps = vi.hoisted(() => vi.fn());
 const getPlacedPersonas = vi.hoisted(() => vi.fn(async () => []));
 const createMapRegion = vi.hoisted(() => vi.fn());
@@ -935,6 +942,9 @@ describe("WorldMap — l'époque affichée", () => {
   const RUINE = makePin({ id: "pin1", title: "La ruine", exists_until: { year: 900, month: null, day: null } });
   const VILLE = makePin({ id: "pin2", title: "La ville", exists_from: { year: 1200, month: null, day: null }, x: 20 });
   const TOUJOURS = makePin({ id: "pin3", title: "Le port", x: 80 });
+
+  beforeEach(() => { mapFeatures.eras = true; });
+  afterEach(() => { mapFeatures.eras = false; });
 
   function monterAvecChrono() {
     const mock = createSupabaseMock({ user: { id: "u1" } });

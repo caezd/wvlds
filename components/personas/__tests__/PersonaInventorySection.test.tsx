@@ -93,21 +93,21 @@ describe("PersonaInventorySection (migration 247)", () => {
     expect(actions.addCustom).toHaveBeenCalledWith("Lanterne", "");
   });
 
-  it("le joueur pioche dans le catalogue", async () => {
+  it("le joueur pioche parmi les objets du monde", async () => {
     const user = userEvent.setup();
     rendre();
-    await user.click(screen.getByRole("button", { name: "Ajouter depuis le catalogue" }));
+    await user.click(screen.getByRole("button", { name: "Ajouter un objet du monde" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Épée/ }));
     expect(actions.addCatalog).toHaveBeenCalledWith("c-epee", 1);
   });
 
-  it("mode catalogue : pas d'objet libre", () => {
+  it("objets du monde seulement : pas d'objet libre", () => {
     rendre({ mode: "catalog" });
     expect(screen.queryByRole("button", { name: "Objet libre" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Ajouter depuis le catalogue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ajouter un objet du monde" })).toBeInTheDocument();
   });
 
-  it("catalogue vide : rien à y piocher, pas de bouton", () => {
+  it("aucun objet dans le monde : rien à y piocher, pas de bouton", () => {
     rendre({ catalog: [] });
     expect(screen.queryByRole("button", { name: /catalogue/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Objet libre" })).toBeInTheDocument();
@@ -116,11 +116,11 @@ describe("PersonaInventorySection (migration 247)", () => {
   it("mode tenu : le joueur ne touche à rien", () => {
     rendre({ mode: "held" });
     expect(screen.queryByRole("button", { name: "Objet libre" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Ajouter depuis le catalogue" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ajouter un objet du monde" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Retirer/ })).toBeNull();
   });
 
-  it("mode tenu : qui gère l'économie donne un objet du catalogue", async () => {
+  it("mode tenu : qui gère l'économie donne un objet du monde", async () => {
     const user = userEvent.setup();
     rendre({ mode: "held" }, { canEdit: false, canManage: true });
     await user.click(screen.getByRole("button", { name: "Donner un objet" }));
@@ -152,7 +152,7 @@ describe("PersonaInventorySection (migration 247)", () => {
     const user = userEvent.setup();
     actions.addCatalog.mockResolvedValue({ ok: false, error: "full" });
     rendre();
-    await user.click(screen.getByRole("button", { name: "Ajouter depuis le catalogue" }));
+    await user.click(screen.getByRole("button", { name: "Ajouter un objet du monde" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Épée/ }));
     expect(toast.error).toHaveBeenCalledWith("Inventaire plein.");
   });

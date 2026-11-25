@@ -62,6 +62,7 @@ import { ScaleBar } from "./ScaleBar";
 import { type MapScale } from "./scale";
 import type { Point } from "./zoom";
 import { isWithinTimeline } from "@/lib/worldTimeline";
+import { MAP_ERAS_ENABLED } from "@/components/worlds/map/features";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import type { PendingPin, PinRoom, WikiPageOption } from "./types";
 import { buttonVariants } from "@/components/ui/button";
@@ -118,7 +119,7 @@ export function WorldMap({
   initialMap,
   initialMapId,
   initialPinId,
-  timelineConfig = null,
+  timelineConfig: worldTimeline = null,
 }: {
   worldId: string;
   canEdit: boolean;
@@ -196,6 +197,10 @@ export function WorldMap({
   // L'échelle courante de la vue, relevée à la fin de chaque geste : la barre
   // d'échelle en dépend, et elle n'a pas à suivre le geste image par image.
   const [viewScale, setViewScale] = React.useState(1);
+
+  // Époques éteintes pour l'instant (voir features.ts) : sans chronologie, la
+  // carte n'offre ni sélecteur d'époque, ni dates d'existence sur les lieux.
+  const timelineConfig = MAP_ERAS_ENABLED ? worldTimeline : null;
 
   // L'époque affichée : l'année courante du monde d'emblée, `null` pour tout
   // voir. Les lieux qui n'existent pas à cette date s'estompent.

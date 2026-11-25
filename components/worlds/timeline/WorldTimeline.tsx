@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useDeferredValue, useEffect, useLayoutEffe
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { ArrowDown, BookOpen, BookText, CirclePause, Clock, LocateFixed, Pencil, Plus, Search, Sparkles, Spline, Sunrise, X } from "lucide-react";
+import { ArrowDown, BookOpen, BookText, CircleCheck, CirclePause, Clock, LocateFixed, Pencil, Plus, Search, Sparkles, Spline, Sunrise, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import {
@@ -660,22 +660,35 @@ export function WorldTimeline({
       <WorldPanelHeader
         icon={<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("nav.timeline")}
-      >
-        {!data.loading && (
-          <span className="ml-2 truncate text-xs text-muted-foreground" data-testid="timeline-summary">
-            {tv("summary", { rooms: data.rooms.length, arcs: data.arcs.length })}
-          </span>
-        )}
-      </WorldPanelHeader>
+        right={
+          canManage && (
+            <>
+              <Button type="button" size="sm" variant="outline" onClick={() => setArcsOpen(true)}>
+                <Spline className="h-3.5 w-3.5" />
+                {tv("arcs")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setEventDialog({ open: true, event: null })}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {tv("addEvent")}
+              </Button>
+            </>
+          )
+        }
+      />
 
       {empty && !canManage ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          {/* La tête : recherche, filtres, gestion ; périodes et légende. Hors
+          {/* La tête : recherche, filtres ; périodes et légende. Hors
               de la zone qui défile, pleine largeur (au-dessus de la mini-carte). */}
           <div className="space-y-3 px-5 py-3" data-testid="timeline-head">
-          {/* Recherche, filtres, « Aujourd'hui » ; à droite, la gestion. */}
+          {/* Recherche, filtres, « Aujourd'hui ». La gestion est dans l'en-tête. */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-40 flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -729,22 +742,6 @@ export function WorldTimeline({
               </span>
             )}
             <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reload()} />
-            {canManage && (
-              <div className="ml-auto flex items-center gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => setArcsOpen(true)}>
-                  <Spline className="h-3.5 w-3.5" />
-                  {tv("arcs")}
-                </Button>
-                <Button variant="outline"
-                  type="button"
-                  size="sm"
-                  onClick={() => setEventDialog({ open: true, event: null })}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {tv("addEvent")}
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Les périodes à gauche, la légende du fil à droite. */}
@@ -1335,6 +1332,8 @@ function RoomRow({
   const t = useTranslations("worlds");
   const tv = useTranslations("worlds.timelineView");
   const { status } = item;
+  // En pause ou terminé : une icône lucide à la place de l'anneau.
+  const StatusIcon = status === "dormant" ? CirclePause : status === "completed" ? CircleCheck : null;
   return (
     <li
       className={cn("group/room relative transition-opacity", dimmed && "opacity-30")}
@@ -1344,18 +1343,18 @@ function RoomRow({
       <DayGutter day={day} />
       {/* Un anneau par salon, sur le fil, centré sur son titre (ligne de
           20px), à la couleur de son arc ; il fonce au survol. Son remplissage
-          dit le statut : creux en cours, plein terminé, en pointillés
-          abandonné ; en pause, l'icône « cercle pause » à sa place (même
-          centre, cercle de même taille, trait d'environ 2px). */}
-      {status === "dormant" ? (
-        <CirclePause
+          dit le statut : creux en cours, en pointillés abandonné ; en pause
+          et terminé, l'icône « cercle pause » ou « cercle coché » à sa place
+          (même centre, 18px pour bien se lire, trait d'environ 2px). */}
+      {StatusIcon ? (
+        <StatusIcon
           className={cn(
-            "absolute -left-[34.5px] top-[3px] size-3.5 rounded-full transition-colors",
+            "absolute -left-[36.5px] top-px size-[18px] rounded-full transition-colors",
             AMBIENT_BG,
             !arc && "text-muted-foreground group-hover/room:text-foreground",
           )}
           style={arc ? { color: arc.color } : undefined}
-          strokeWidth={3.4}
+          strokeWidth={2.8}
           data-testid="timeline-ring"
           aria-hidden
         />
@@ -1363,14 +1362,11 @@ function RoomRow({
         <span
           className={cn(
             "absolute -left-[33.5px] top-1 size-3 rounded-full border-2 transition-colors",
+            AMBIENT_BG,
             !arc && "border-foreground/35 text-muted-foreground group-hover/room:border-foreground group-hover/room:text-foreground",
             status === "abandoned" && "border-dashed",
-            status === "completed" && !arc ? "bg-foreground/35 group-hover/room:bg-foreground" : status !== "completed" && AMBIENT_BG,
           )}
-          style={{
-            ...(arc ? { borderColor: arc.color } : {}),
-            ...(status === "completed" && arc ? { backgroundColor: arc.color } : {}),
-          }}
+          style={arc ? { borderColor: arc.color } : undefined}
           data-testid="timeline-ring"
           aria-hidden
         />

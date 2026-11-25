@@ -12,8 +12,6 @@ export type WorldPanel =
   | "settings"
   | "personas"
   | "canvas"
-  | "catalogue"
-  | "skills"
   | "wiki"
   | "map"
   | "timeline"
@@ -41,8 +39,6 @@ export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPan
       return ctx.canOpenSettings ? "settings" : "home";
     case "personas":
     case "canvas":
-    case "catalogue":
-    case "skills":
     case "members":
       return view;
     // Masquer le lien ne suffit pas : `?view=wiki` reste tapable dans la barre
@@ -55,6 +51,9 @@ export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPan
       return ctx.hasTimeline ? "timeline" : "home";
     case "shops":
       return ctx.hasShops ? "shops" : "home";
+    // `catalogue` (Objets) et `skills` (Compétences) ne sont plus des vues :
+    // ils se gèrent dans les réglages (Économie › Inventaire, Personas ›
+    // Compétences). Un ancien lien retombe ici.
     default:
       return "home";
   }

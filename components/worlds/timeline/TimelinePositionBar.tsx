@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp, CirclePause } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, CirclePause } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -117,15 +117,15 @@ export function TimelinePositionBar({
   );
 }
 
-/** La marque d'un statut, telle qu'elle paraît sur le fil ; en pause, l'icône « cercle pause ». */
+/** La marque d'un statut, telle qu'elle paraît sur le fil ; en pause et terminé, « cercle pause » et « cercle coché ». */
 function StatusMark({ status }: { status: TimelineRoomStatus }) {
   if (status === "dormant") return <CirclePause className="size-3 shrink-0" strokeWidth={3} aria-hidden />;
+  if (status === "completed") return <CircleCheck className="size-3 shrink-0" strokeWidth={3} aria-hidden />;
   return (
     <span
       className={cn(
         "size-2.5 shrink-0 rounded-full border-[1.5px] border-foreground/60",
         status === "abandoned" && "border-dashed",
-        status === "completed" && "bg-foreground/60",
       )}
       aria-hidden
     />

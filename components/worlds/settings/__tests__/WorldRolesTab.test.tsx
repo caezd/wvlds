@@ -172,7 +172,7 @@ describe("WorldRolesTab — fiche", () => {
     await user.click(screen.getByRole("button", { name: /^Éditeur/ }));
 
     const section = await screen.findByRole("region", { name: "Éditeur" });
-    await user.click(within(section).getByRole("switch", { name: "Modifier le catalogue" }));
+    await user.click(within(section).getByRole("switch", { name: "Modifier les objets et compétences" }));
 
     const update = mock.builders.find((b) => b.builder.update.mock.calls.length > 0)!;
     expect(update.builder.update).toHaveBeenCalledWith({ permissions: ["wiki.edit", "map.edit", "roles.manage", "catalog.edit"] });
@@ -304,7 +304,7 @@ describe("WorldRolesTab — hiérarchie", () => {
     await user.click(screen.getByRole("button", { name: /^Joueur/ }));
     const player = await screen.findByRole("region", { name: "Joueur" });
     expect(within(player).getByRole("switch", { name: "Modifier le wiki" })).toBeEnabled();
-    expect(within(player).getByRole("switch", { name: "Modifier le catalogue" })).toBeDisabled();
+    expect(within(player).getByRole("switch", { name: "Modifier les objets et compétences" })).toBeDisabled();
     expect(within(player).getByRole("switch", { name: "Administrateur" })).toBeDisabled();
   });
 

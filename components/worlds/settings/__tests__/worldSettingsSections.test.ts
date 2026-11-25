@@ -25,23 +25,42 @@ describe("worldSettingsSections", () => {
     expect(groups.at(-1)?.id).toBe("communications");
   });
 
-  it("Général et Communauté ouvrent le menu, hors groupe ; Monde ne garde que la page d'accueil", () => {
+  it("Général et Communauté ouvrent le menu, hors groupe ; Monde : page d'accueil et catégories de salons", () => {
     const groups = visibleSettingsGroups(() => true);
     expect(groups.slice(0, 2)).toEqual([
       { id: "top", sections: ["general", "community"] },
-      { id: "world", sections: ["home"] },
+      { id: "world", sections: ["home", "categories"] },
     ]);
     expect(UNTITLED_SETTINGS_GROUPS).toEqual(["top"]);
   });
 
-  it("Fonctions : les pages, puis la sous-catégorie Économie (devises, objets, boutiques, échanges)", () => {
+  it("Fonctions : les pages, puis la sous-catégorie Économie", () => {
     const features = visibleSettingsGroups(() => true).find((g) => g.id === "features");
-    expect(features?.sections).toEqual(["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops", "trades"]);
+    expect(features?.sections).toEqual([
+      "map", "wiki", "timeline", "chatbox", "catalog",
+      "currency", "items", "shops", "trades",
+    ]);
     expect(subgroupOf("trades")).toBe("economy");
     expect(subgroupOf("currency")).toBe("economy");
     expect(subgroupOf("items")).toBe("economy");
     expect(subgroupOf("shops")).toBe("economy");
     expect(subgroupOf("map")).toBeNull();
+    // Le Catalogue est réservé : une page « Bientôt », sans interrupteur.
+    expect(subgroupOf("catalog")).toBeNull();
+    expect(isFeatureSection("catalog")).toBe(false);
+  });
+
+  it("Personas : une catégorie à part, entre Fonctions et Membres", () => {
+    const groups = visibleSettingsGroups(() => true);
+    expect(groups.map((g) => g.id)).toEqual(["top", "world", "features", "personas", "members", "communications"]);
+    expect(groups.find((g) => g.id === "personas")?.sections).toEqual(
+      ["personas", "skills", "faceclaims", "groups", "relations"],
+    );
+    // Des pages, pas une sous-catégorie : la fiche, les compétences et les
+    // faceclaims restent des pages « Fonctions » (interrupteur et état).
+    expect(subgroupOf("skills")).toBeNull();
+    expect(isFeatureSection("skills")).toBe(true);
+    expect(isFeatureSection("relations")).toBe(false);
   });
 
   it("les anciennes adresses mènent à leur nouvelle page", () => {

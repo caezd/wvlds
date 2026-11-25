@@ -114,3 +114,12 @@ describe("WorldCategoryManager — poignée de tri", () => {
     expect(screen.queryByRole("button", { name: /Déplacer la catégorie/ })).not.toBeInTheDocument();
   });
 });
+
+describe("WorldCategoryManager — catégories reçues du serveur", () => {
+  it("les affiche d'emblée, sans requête", () => {
+    const mock = setup();
+    render(<WorldCategoryManager worldId="world-1" canEdit initialCategories={[category]} />);
+    expect(screen.getByText("Annonces")).toBeInTheDocument();
+    expect(mock.client.from).not.toHaveBeenCalled();
+  });
+});

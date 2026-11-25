@@ -8,17 +8,21 @@
  */
 
 /** Les sous-pages de l'ancien onglet « Fonctions ». */
-export const FEATURE_SECTIONS = ["map", "wiki", "personas", "timeline", "chatbox", "currency", "items", "shops", "trades"] as const;
+export const FEATURE_SECTIONS = [
+  "map", "wiki", "timeline", "chatbox",
+  "personas", "skills", "faceclaims",
+  "currency", "items", "shops", "trades",
+] as const;
 export type FeatureSectionId = (typeof FEATURE_SECTIONS)[number];
 
 /**
  * Les sous-catégories d'un groupe : des sections qui se suivent, rangées sous
- * un titre à elles dans le menu. L'économie réunit devises, objets,
- * boutiques et échanges (demande du 2026-11-24) ; les gains vivent dans Devises.
+ * un titre à elles dans le menu. L'économie : devises, objets, boutiques et
+ * échanges ; les gains vivent dans Devises.
  */
 export const SETTINGS_SUBGROUPS = {
   economy: ["currency", "items", "shops", "trades"],
-} as const satisfies Record<string, readonly FeatureSectionId[]>;
+} as const satisfies Record<string, readonly string[]>;
 export type SettingsSubgroupId = keyof typeof SETTINGS_SUBGROUPS;
 
 /** La sous-catégorie d'une section, ou `null`. */
@@ -39,9 +43,20 @@ const LEGACY_SECTIONS: Record<string, SettingsSectionId> = {
 export const SETTINGS_GROUPS = [
   // En tête du menu, sans titre de groupe.
   { id: "top", sections: ["general", "community"] },
-  { id: "world", sections: ["home"] },
-  { id: "features", sections: FEATURE_SECTIONS },
-  { id: "rooms", sections: ["categories", "groups", "relations"] },
+  { id: "world", sections: ["home", "categories"] },
+  {
+    id: "features",
+    sections: [
+      // `catalog` : fonction réservée, une page « Bientôt » sans interrupteur
+      // (demande du 2026-11-24) ; hors des FEATURE_SECTIONS.
+      "map", "wiki", "timeline", "chatbox", "catalog",
+      "currency", "items", "shops", "trades",
+    ],
+  },
+  // Personas : la fiche par défaut (section `personas`), les compétences et
+  // les faceclaims restent des pages « Fonctions » (interrupteur, état) ;
+  // groupes et relations gardent leur permission, `relations.manage`.
+  { id: "personas", sections: ["personas", "skills", "faceclaims", "groups", "relations"] },
   // Journal (migration 254) : l'activité du monde, l'économie pour l'instant.
   { id: "members", sections: ["roles", "activity"] },
   // Ce que l'équipe dit aux membres, et ce qu'ils lui signalent ; le message
