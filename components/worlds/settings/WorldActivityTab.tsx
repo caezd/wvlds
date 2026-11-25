@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { History, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, History, Loader2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -19,6 +19,8 @@ import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import DateDisplay from "@/components/date-display";
 import { cn } from "@/lib/utils";
 import { SURFACE } from "./FeatureLayout";
@@ -128,17 +130,12 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-persona">{t("filters.persona")}</Label>
-          <select
+          <PersonaCombobox
             id="activity-persona"
-            className={SELECT_CLASS}
-            value={filters.personaId ?? ""}
-            onChange={(e) => set({ personaId: e.target.value || null })}
-          >
-            <option value="">{t("filters.allPersonas")}</option>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+            personas={personas}
+            value={filters.personaId}
+            onChange={(personaId) => set({ personaId })}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-from">{t("filters.from")}</Label>
@@ -199,5 +196,66 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         </>
       )}
     </div>
+  );
+}
+
+/** Le filtre par persona : une liste cherchable par nom, « Tous les personas » en tête. */
+function PersonaCombobox({
+  id,
+  personas,
+  value,
+  onChange,
+}: {
+  id: string;
+  personas: readonly { id: string; name: string }[];
+  value: string | null;
+  onChange: (personaId: string | null) => void;
+}) {
+  const t = useTranslations("worldActivity");
+  const tTrades = useTranslations("trades");
+  const tPersonas = useTranslations("personas.list");
+  const [open, setOpen] = useState(false);
+  const chosen = personas.find((p) => p.id === value) ?? null;
+  const pick = (personaId: string | null) => {
+    onChange(personaId);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-56 justify-between font-normal"
+        >
+          <span className="truncate">{chosen?.name ?? t("filters.allPersonas")}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-0">
+        <Command>
+          <CommandInput placeholder={tTrades("search")} />
+          <CommandList>
+            <CommandEmpty>{tPersonas("noMatch")}</CommandEmpty>
+            <CommandGroup>
+              <CommandItem value={t("filters.allPersonas")} onSelect={() => pick(null)}>
+                <Check className={cn("h-3.5 w-3.5", value === null ? "opacity-100" : "opacity-0")} aria-hidden />
+                {t("filters.allPersonas")}
+              </CommandItem>
+              {personas.map((p) => (
+                <CommandItem key={p.id} value={p.name} onSelect={() => pick(p.id)}>
+                  <Check className={cn("h-3.5 w-3.5", value === p.id ? "opacity-100" : "opacity-0")} aria-hidden />
+                  <span className="truncate">{p.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -97,15 +97,42 @@ describe("WorldActivityTab", () => {
       expect.anything(), "w1", expect.objectContaining({ kind: "transfer" }), null,
     ));
 
-    // La liste des personas vient du monde.
-    const persona = screen.getByLabelText("Persona");
-    await waitFor(() => expect(within(persona).getByRole("option", { name: "Ysolde" })).toBeInTheDocument());
-    await userEvent.selectOptions(persona, "p2");
+    // Le persona se cherche par son nom, parmi ceux du monde.
+    const persona = screen.getByRole("combobox", { name: "Persona" });
+    expect(persona).toHaveTextContent("Tous les personas");
+    await userEvent.click(persona);
+    await userEvent.type(await screen.findByPlaceholderText("Chercher un persona"), "ysol");
+    expect(screen.queryByRole("option", { name: "Brom" })).toBeNull();
+    await userEvent.click(screen.getByRole("option", { name: "Ysolde" }));
     await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
       expect.anything(), "w1", expect.objectContaining({ kind: "transfer", personaId: "p2" }), null,
     ));
+    expect(screen.getByRole("combobox", { name: "Persona" })).toHaveTextContent("Ysolde");
     expect(mock.builders[0].table).toBe("personas");
     expect(mock.builders[0].builder.eq).toHaveBeenCalledWith("world_id", "w1");
+  });
+
+  it("le persona choisi se retire : retour à tous les personas", async () => {
+    fetchWorldActivity.mockResolvedValue({ entries: [], cursor: null });
+    monter();
+    await userEvent.click(screen.getByRole("combobox", { name: "Persona" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Brom" }));
+    await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
+      expect.anything(), "w1", expect.objectContaining({ personaId: "p1" }), null,
+    ));
+    await userEvent.click(screen.getByRole("combobox", { name: "Persona" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Tous les personas" }));
+    await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
+      expect.anything(), "w1", expect.objectContaining({ personaId: null }), null,
+    ));
+  });
+
+  it("aucun persona ne correspond : un message", async () => {
+    fetchWorldActivity.mockResolvedValue({ entries: [], cursor: null });
+    monter();
+    await userEvent.click(screen.getByRole("combobox", { name: "Persona" }));
+    await userEvent.type(await screen.findByPlaceholderText("Chercher un persona"), "zzz");
+    expect(await screen.findByText("Aucun persona ne correspond.")).toBeInTheDocument();
   });
 
   it("« Voir plus » charge la page suivante à la suite", async () => {
