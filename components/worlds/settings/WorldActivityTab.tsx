@@ -90,27 +90,27 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
 
   const set = (patch: Partial<ActivityFilters>) => setFilters((f) => ({ ...f, ...patch }));
 
-  const line = (e: WorldActivityEntry): string => {
-    const persona = e.persona_name ?? t("deletedPersona");
-    const amount = formatAmount(Math.abs(e.amount), units);
-    const items = formatActivityItems(e.items);
-    switch (e.kind) {
-      case "purchase":
-      case "sale":
-        // Les achats repris de l'historique n'ont pas leurs objets : le motif seul.
-        if (e.items.length === 0) return t("lines.generic", { kind: t(`kinds.${e.kind}`), persona, amount });
-        return t(`lines.${e.kind}`, { persona, items, shop: e.data.shop_name ?? "", amount });
-      case "transfer": {
-        const what = [e.amount > 0 ? amount : null, items || null].filter(Boolean).join(", ");
-        return t("lines.transfer", { persona, what, target: e.target_persona_name ?? t("deletedPersona") });
-      }
-      case "balance_adjust":
-        return t("lines.balance_adjust", { persona, amount: formatAmount(activityBalanceEffect(e), units, { signed: true }) });
-      case "item_adjust":
-        return t("lines.item_adjust", { persona, items: formatActivityItems(e.items, { signed: true }) });
-      case "slots_purchase":
-        return t("lines.slots_purchase", { persona, slots: e.data.slots ?? 0, amount });
-    }
+  const persona = (e: WorldActivityEntry): string => {
+    const from = e.persona_name ?? t("deletedPersona");
+    if (e.kind !== "transfer") return from;
+    return `${from} → ${e.target_persona_name ?? t("deletedPersona")}`;
+  };
+
+  /** Les objets, la boutique, le motif : ce qui précise l'action. */
+  const detail = (e: WorldActivityEntry): string => {
+    const parts: string[] = [];
+    if (e.kind === "slots_purchase") parts.push(t("slots", { slots: e.data.slots ?? 0 }));
+    if (e.items.length > 0) parts.push(formatActivityItems(e.items, { signed: e.kind === "item_adjust" }));
+    if (e.data.shop_name) parts.push(e.data.shop_name);
+    if (e.note) parts.push(`« ${e.note} »`);
+    return parts.join(" · ");
+  };
+
+  /** Ce que l'événement a fait au solde ; un échange montre la somme donnée. */
+  const amount = (e: WorldActivityEntry): string => {
+    if (e.kind === "transfer") return e.amount > 0 ? formatAmount(e.amount, units) : "";
+    const effect = activityBalanceEffect(e);
+    return effect === 0 ? "" : formatAmount(effect, units, { signed: true });
   };
 
   return (
@@ -119,7 +119,7 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
           au bord même de la zone qui défile : le décalage annule son padding
           (p-4, md:p-6 dans WorldSettingsView), qui sinon laisse voir les
           lignes au-dessus. */}
-      <div className="sticky -top-4 z-10 -my-2 flex flex-wrap items-end gap-3 bg-background py-2 md:-top-6">
+      <div className="sticky -top-4 z-10 flex flex-wrap items-end gap-3 bg-background py-2 md:-top-6">
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-kind">{t("filters.kind")}</Label>
           <select
@@ -165,21 +165,34 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         </div>
       ) : (
         <>
-          <ul className={cn("divide-y divide-border rounded-md", SURFACE)}>
-            {entries.map((e) => (
-              <li key={e.id} className="px-3 py-2" data-testid="activity-item">
-                <p className="text-sm">{line(e)}</p>
-                {e.note && <p className="text-sm text-muted-foreground">« {e.note} »</p>}
-                <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
-                  <span>{t(`kinds.${e.kind}`)}</span>
-                  <span>·</span>
-                  <span>{e.actor?.username ?? t("system")}</span>
-                  <span>·</span>
-                  <DateDisplay value={e.created_at} />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className={cn("overflow-x-auto rounded-md", SURFACE)}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {(["date", "who", "action", "domain", "persona", "detail", "amount"] as const).map((c) => (
+                    <th key={c} scope="col" className={cn("whitespace-nowrap px-3 py-2 font-medium", c === "amount" && "text-right")}>
+                      {t(`columns.${c}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {entries.map((e) => (
+                  <tr key={e.id} data-testid="activity-item" className="align-top">
+                    <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                      <DateDisplay value={e.created_at} />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2">{e.actor?.username ?? t("system")}</td>
+                    <td className="whitespace-nowrap px-3 py-2 font-medium">{t(`kinds.${e.kind}`)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{t(`domains.${e.domain}`)}</td>
+                    <td className="px-3 py-2">{persona(e)}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{detail(e)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{amount(e)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {cursor && (
             <div className="flex justify-center">
               <Button type="button" variant="ghost" size="sm" disabled={loadingMore} onClick={() => void loadMore()}>

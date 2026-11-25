@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe("WorldActivityTab", () => {
-  it("une phrase par événement, avec son auteur", async () => {
+  it("un tableau : date, auteur, action, domaine, persona, détail, montant", async () => {
     fetchWorldActivity.mockResolvedValue({
       entries: [
         entree({ id: "1", kind: "purchase", amount: 250, items: [objet("Épée", 2)], data: { shop_name: "Forge" } }),
@@ -65,19 +65,21 @@ describe("WorldActivityTab", () => {
       cursor: null,
     });
     monter();
-    const items = await screen.findAllByTestId("activity-item");
-    const textes = items.map((li) => li.textContent);
-    expect(textes[0]).toContain("Brom a acheté Épée ×2 à Forge pour 2 po 50 pc");
-    expect(textes[1]).toContain("Brom a revendu Potion à Herboriste pour 40 pc");
-    expect(textes[2]).toContain("Brom a donné 1 po 5 pc, Clé à Ysolde");
-    expect(textes[3]).toContain("Bourse de Brom : −1 po");
-    expect(textes[3]).toContain("Amende");
-    expect(textes[4]).toContain("Inventaire de Brom : −1 Lanterne");
-    expect(textes[5]).toContain("Brom a acheté 2 emplacements pour 30 pc");
-    expect(textes[0]).toContain("cae");
+    const lignes = await screen.findAllByTestId("activity-item");
+    expect(screen.getAllByRole("columnheader").map((c) => c.textContent)).toEqual(
+      ["Date", "Qui", "Action", "Domaine", "Persona", "Détail", "Montant"],
+    );
+    // Sans la date (rendue par DateDisplay, simulée).
+    const cellules = lignes.map((tr) => within(tr).getAllByRole("cell").slice(1).map((c) => c.textContent));
+    expect(cellules[0]).toEqual(["cae", "Achat", "Économie", "Brom", "Épée ×2 · Forge", "−2 po 50 pc"]);
+    expect(cellules[1]).toEqual(["cae", "Revente", "Économie", "Brom", "Potion · Herboriste", "+40 pc"]);
+    // L'échange : du donneur au receveur, la somme donnée.
+    expect(cellules[2]).toEqual(["cae", "Échange", "Économie", "Brom → Ysolde", "Clé", "1 po 5 pc"]);
+    expect(cellules[3]).toEqual(["cae", "Ajustement d’argent", "Économie", "Brom", "« Amende »", "−1 po"]);
+    expect(cellules[4]).toEqual(["cae", "Don ou retrait d’objet", "Économie", "Brom", "−1 Lanterne", ""]);
+    expect(cellules[5]).toEqual(["cae", "Emplacements d’inventaire", "Économie", "Brom", "2 emplacements", "−30 pc"]);
     // Persona supprimé, auteur inconnu (la base) : la trace reste lisible.
-    expect(textes[6]).toContain("Bourse de Persona supprimé : +5 pc");
-    expect(textes[6]).toContain("Système");
+    expect(cellules[6]).toEqual(["Système", "Ajustement d’argent", "Économie", "Persona supprimé", "", "+5 pc"]);
   });
 
   it("vide : un message", async () => {

@@ -3026,15 +3026,19 @@
       "sale": "Sale",
       "transfer": "Trade"
     },
-    "lines": {
-      "purchase": "{persona} bought {items} at {shop} for {amount}",
-      "sale": "{persona} sold {items} to {shop} for {amount}",
-      "transfer": "{persona} gave {what} to {target}",
-      "balance_adjust": "{persona}’s purse: {amount}",
-      "item_adjust": "{persona}’s inventory: {items}",
-      "slots_purchase": "{persona} bought {slots, plural, one {# slot} other {# slots}} for {amount}",
-      "generic": "{kind} · {persona} · {amount}"
+    "columns": {
+      "date": "Date",
+      "who": "Who",
+      "action": "Action",
+      "domain": "Domain",
+      "persona": "Persona",
+      "detail": "Detail",
+      "amount": "Amount"
     },
+    "domains": {
+      "economy": "Economy"
+    },
+    "slots": "{slots, plural, one {# slot} other {# slots}}",
     "deletedPersona": "Deleted persona",
     "system": "System",
     "empty": "No activity yet.",

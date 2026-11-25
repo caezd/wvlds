@@ -3026,15 +3026,19 @@
       "sale": "Venta",
       "transfer": "Intercambio"
     },
-    "lines": {
-      "purchase": "{persona} compró {items} en {shop} por {amount}",
-      "sale": "{persona} vendió {items} a {shop} por {amount}",
-      "transfer": "{persona} dio {what} a {target}",
-      "balance_adjust": "Bolsa de {persona}: {amount}",
-      "item_adjust": "Inventario de {persona}: {items}",
-      "slots_purchase": "{persona} compró {slots, plural, one {# espacio} other {# espacios}} por {amount}",
-      "generic": "{kind} · {persona} · {amount}"
+    "columns": {
+      "date": "Fecha",
+      "who": "Quién",
+      "action": "Acción",
+      "domain": "Ámbito",
+      "persona": "Persona",
+      "detail": "Detalle",
+      "amount": "Importe"
     },
+    "domains": {
+      "economy": "Economía"
+    },
+    "slots": "{slots, plural, one {# espacio} other {# espacios}}",
     "deletedPersona": "Persona eliminado",
     "system": "Sistema",
     "empty": "Aún no hay actividad.",
