@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/app/actions/worldCatalog", () => ({ setWorldGains: vi.fn() }));
@@ -41,5 +42,16 @@ describe("WorldGainsSettings : gains négatifs (migration 261)", () => {
   it("le plafond n'a pas de sens : il reste positif", () => {
     render(<WorldGainsSettings world={monde()} />);
     expect(within(screen.getByRole("group", { name: "Plafond par jour" })).queryByRole("radio")).toBeNull();
+  });
+
+  it("les cases n'acceptent que des chiffres : montants et délai", async () => {
+    const user = userEvent.setup();
+    render(<WorldGainsSettings world={monde({ gain_message: 0 })} />);
+    const delai = screen.getByRole("spinbutton", { name: "Délai entre deux messages payés, en minutes" });
+    await user.type(delai, "1e-5");
+    expect(delai).toHaveValue(15);
+    const argent = screen.getByRole("spinbutton", { name: "Par message en Argent" });
+    await user.type(argent, "2.5");
+    expect(argent).toHaveValue(25);
   });
 });

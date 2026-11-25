@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { amountFromCounts, splitAmount, type CurrencyUnit } from "@/lib/worldCurrency";
+import { digitsOnly } from "@/lib/digitsOnly";
 import { cn } from "@/lib/utils";
 
 /** Les cases d'un montant déjà connu, palier par palier ; vides s'il n'y en a pas. */
@@ -69,6 +70,7 @@ export function AmountInput({
               min={0}
               step={1}
               inputMode="numeric"
+              {...digitsOnly}
               aria-label={labelOf(unit)}
               placeholder={placeholder}
               value={Number.isFinite(counts[i]) ? counts[i] : ""}
@@ -112,6 +114,7 @@ export function AmountInput({
               min={0}
               step={1}
               inputMode="numeric"
+              {...digitsOnly}
               aria-label={labelOf(unit)}
               value={Number.isFinite(counts[i]) ? counts[i] : ""}
               onChange={(e) => update(i, e.target.valueAsNumber)}

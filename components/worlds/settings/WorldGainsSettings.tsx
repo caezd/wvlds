@@ -10,6 +10,7 @@ import { AmountInput } from "@/components/economy/AmountInput";
 import { SignedAmountInput } from "@/components/economy/SignedAmountInput";
 import { setWorldGains } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { digitsOnly } from "@/lib/digitsOnly";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, gainSettingsOf, gainSettingsSchema, type GainKind, type GainSettings } from "@/lib/worldGains";
 import type { World } from "@/types/worlds";
@@ -115,6 +116,7 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
               <Input
                 type="number"
                 inputMode="numeric"
+                {...digitsOnly}
                 min={0}
                 max={MAX_GAIN_COOLDOWN_MINUTES}
                 step={1}
