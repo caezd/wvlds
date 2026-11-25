@@ -20,6 +20,7 @@ import {
 import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -165,33 +166,37 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         </div>
       ) : (
         <>
-          <div className={cn("overflow-x-auto rounded-md", SURFACE)}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className={cn("rounded-md", SURFACE)}>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
                   {(["date", "who", "action", "domain", "persona", "detail", "amount"] as const).map((c) => (
-                    <th key={c} scope="col" className={cn("whitespace-nowrap px-3 py-2 font-medium", c === "amount" && "text-right")}>
+                    <TableHead
+                      key={c}
+                      scope="col"
+                      className={cn("px-3 text-xs uppercase tracking-wide text-muted-foreground", c === "amount" && "text-right")}
+                    >
                       {t(`columns.${c}`)}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {entries.map((e) => (
-                  <tr key={e.id} data-testid="activity-item" className="align-top">
-                    <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                  <TableRow key={e.id} data-testid="activity-item">
+                    <TableCell className="px-3 text-muted-foreground">
                       <DateDisplay value={e.created_at} />
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">{e.actor?.username ?? t("system")}</td>
-                    <td className="whitespace-nowrap px-3 py-2 font-medium">{t(`kinds.${e.kind}`)}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{t(`domains.${e.domain}`)}</td>
-                    <td className="px-3 py-2">{persona(e)}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{detail(e)}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{amount(e)}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="px-3">{e.actor?.username ?? t("system")}</TableCell>
+                    <TableCell className="px-3 font-medium">{t(`kinds.${e.kind}`)}</TableCell>
+                    <TableCell className="px-3 text-muted-foreground">{t(`domains.${e.domain}`)}</TableCell>
+                    <TableCell className="px-3">{persona(e)}</TableCell>
+                    <TableCell className="px-3 whitespace-normal text-muted-foreground">{detail(e)}</TableCell>
+                    <TableCell className="px-3 text-right tabular-nums">{amount(e)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           {cursor && (
             <div className="flex justify-center">
