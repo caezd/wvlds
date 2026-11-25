@@ -115,8 +115,11 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
 
   return (
     <div className="space-y-4">
-      {/* Les filtres restent en vue pendant qu'on parcourt le journal. */}
-      <div className="sticky top-0 z-10 -my-2 flex flex-wrap items-end gap-3 bg-background py-2">
+      {/* Les filtres restent en vue pendant qu'on parcourt le journal. Collés
+          au bord même de la zone qui défile : le décalage annule son padding
+          (p-4, md:p-6 dans WorldSettingsView), qui sinon laisse voir les
+          lignes au-dessus. */}
+      <div className="sticky -top-4 z-10 -my-2 flex flex-wrap items-end gap-3 bg-background py-2 md:-top-6">
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-kind">{t("filters.kind")}</Label>
           <select
