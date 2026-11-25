@@ -19,6 +19,7 @@ export function ColorPickerButton({
   alpha = true,
   className,
   children,
+  onClose,
 }: {
   color: string;
   onChange: (c: string) => void;
@@ -29,26 +30,36 @@ export function ColorPickerButton({
   className?: string;
   /** Posé sur la pastille, centré : l'icône d'un rôle. */
   children?: React.ReactNode;
+  /** Le sélecteur se referme : le moment d'enregistrer la couleur choisie. */
+  onClose?: () => void;
 }) {
   const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
+  const onCloseRef = React.useRef(onClose);
+  React.useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
+  const close = React.useCallback(() => {
+    setOpen(false);
+    onCloseRef.current?.();
+  }, []);
 
   React.useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+  }, [open, close]);
 
   return (
     <div ref={ref} className="relative flex">
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? close() : setOpen(true))}
         className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50", className)}
         style={{ backgroundColor: color }}
         aria-label={tCommon("chooseColor")}

@@ -121,6 +121,8 @@ export const channel = {
 // --- Throttle / debounce delays (ms) -----------------------------------------
 export const DELAY = {
   MARK_READ_THROTTLE: 800,
+  // Sauvegarde automatique des réglages : délai sans frappe avant l'envoi
+  AUTOSAVE: 800,
   TYPING_THROTTLE: 1500,
   TYPING_TIMEOUT: 4000,
   // Âge minimal du dernier sync avant qu'un retour d'onglet redéclenche refreshAll

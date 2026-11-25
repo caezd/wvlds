@@ -85,7 +85,9 @@
     "help": "Help",
     "helpFor": "Help: {title}",
     "increase": "Increase",
-    "decrease": "Decrease"
+    "decrease": "Decrease",
+    "autoSaving": "Saving…",
+    "autoSaved": "Saved"
   },
   "colorPicker": {
     "presets": "Preset colors",
@@ -1309,8 +1311,6 @@
         "badgeStyle": "Badge style",
         "badgeStyleHelp": "The colour and icon of the badge shown on personas behind on payments.",
         "resetStyle": "Default style",
-        "save": "Save tax",
-        "saved": "Tax saved.",
         "invalid": "Check the amount and the recurrence."
       }
     },

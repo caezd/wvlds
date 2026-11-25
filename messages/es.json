@@ -85,7 +85,9 @@
     "help": "Ayuda",
     "helpFor": "Ayuda: {title}",
     "increase": "Aumentar",
-    "decrease": "Disminuir"
+    "decrease": "Disminuir",
+    "autoSaving": "Guardando…",
+    "autoSaved": "Guardado"
   },
   "colorPicker": {
     "presets": "Colores predefinidos",
@@ -1309,8 +1311,6 @@
         "badgeStyle": "Estilo de la insignia",
         "badgeStyleHelp": "El color y el icono de la insignia de las personas atrasadas.",
         "resetStyle": "Estilo predeterminado",
-        "save": "Guardar el impuesto",
-        "saved": "Impuesto guardado.",
         "invalid": "Revise el importe y la periodicidad."
       }
     },

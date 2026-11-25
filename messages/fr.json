@@ -85,7 +85,9 @@
     "help": "Aide",
     "helpFor": "Aide : {title}",
     "increase": "Augmenter",
-    "decrease": "Diminuer"
+    "decrease": "Diminuer",
+    "autoSaving": "Enregistrement…",
+    "autoSaved": "Enregistré"
   },
   "colorPicker": {
     "presets": "Couleurs prédéfinies",
@@ -1309,8 +1311,6 @@
         "badgeStyle": "Style du badge",
         "badgeStyleHelp": "La couleur et l’icône du badge des personas en retard.",
         "resetStyle": "Style par défaut",
-        "save": "Enregistrer la taxe",
-        "saved": "Taxe enregistrée.",
         "invalid": "Vérifiez le montant et la récurrence."
       }
     },

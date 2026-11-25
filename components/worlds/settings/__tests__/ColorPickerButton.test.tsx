@@ -27,6 +27,24 @@ describe("ColorPickerButton", () => {
     expect(screen.queryByRole("group", { name: "Couleurs prédéfinies" })).toBeNull();
   });
 
+  it("prévient quand il se referme : clic extérieur ou nouveau clic sur la pastille", async () => {
+    const onClose = vi.fn();
+    render(
+      <div>
+        <ColorPickerButton color="#18181b" onChange={() => {}} onClose={onClose} />
+        <p>dehors</p>
+      </div>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    expect(onClose).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText("dehors"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it("montre le code de la couleur en cours", async () => {
     render(<ColorPickerButton color="#123456" onChange={() => {}} />);
     await userEvent.click(screen.getByRole("button", { name: "Choisir une couleur" }));
