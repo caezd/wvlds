@@ -127,6 +127,32 @@ describe("WorldActivityTab", () => {
     ));
   });
 
+  it("la période se choisit au calendrier, du premier au dernier jour, et s'efface", async () => {
+    fetchWorldActivity.mockResolvedValue({ entries: [], cursor: null });
+    monter();
+    const periode = screen.getByRole("button", { name: /Période/ });
+    expect(periode).toHaveTextContent("Toutes les dates");
+    await userEvent.click(periode);
+    await screen.findByRole("grid");
+    // Le mois en cours s'affiche d'abord.
+    const now = new Date();
+    const jour = (d: number) =>
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const bouton = (d: number) =>
+      within(screen.getByRole("grid")).getAllByRole("button").find((b) => b.closest("[data-day]") && b.textContent === String(d)
+        && !b.closest("[data-outside]") && !b.closest(".rdp-outside"))!;
+    await userEvent.click(bouton(3));
+    await userEvent.click(bouton(12));
+    await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
+      expect.anything(), "w1", expect.objectContaining({ from: jour(3), to: jour(12) }), null,
+    ));
+
+    await userEvent.click(screen.getByRole("button", { name: "Toutes les dates" }));
+    await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
+      expect.anything(), "w1", expect.objectContaining({ from: null, to: null }), null,
+    ));
+  });
+
   it("aucun persona ne correspond : un message", async () => {
     fetchWorldActivity.mockResolvedValue({ entries: [], cursor: null });
     monter();

@@ -3015,8 +3015,8 @@
       "allKinds": "Tous les types",
       "persona": "Persona",
       "allPersonas": "Tous les personas",
-      "from": "Du",
-      "to": "Au"
+      "period": "Période",
+      "allDates": "Toutes les dates"
     },
     "kinds": {
       "balance_adjust": "Ajustement d’argent",

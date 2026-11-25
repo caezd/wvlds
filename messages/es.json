@@ -3015,8 +3015,8 @@
       "allKinds": "Todos los tipos",
       "persona": "Persona",
       "allPersonas": "Todos los personas",
-      "from": "Desde",
-      "to": "Hasta"
+      "period": "Período",
+      "allDates": "Todas las fechas"
     },
     "kinds": {
       "balance_adjust": "Ajuste de dinero",

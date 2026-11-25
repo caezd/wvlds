@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, History, Loader2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import type { DateRange } from "react-day-picker";
+import { enUS, es, fr } from "react-day-picker/locale";
+import { CalendarDays, Check, ChevronsUpDown, History, Loader2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -17,7 +19,7 @@ import {
 } from "@/lib/worldActivity";
 import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -138,23 +140,12 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="activity-from">{t("filters.from")}</Label>
-          <Input
-            id="activity-from"
-            type="date"
-            className="h-9 w-auto"
-            value={filters.from ?? ""}
-            onChange={(e) => set({ from: e.target.value || null })}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="activity-to">{t("filters.to")}</Label>
-          <Input
-            id="activity-to"
-            type="date"
-            className="h-9 w-auto"
-            value={filters.to ?? ""}
-            onChange={(e) => set({ to: e.target.value || null })}
+          <Label htmlFor="activity-period">{t("filters.period")}</Label>
+          <PeriodPicker
+            id="activity-period"
+            from={filters.from}
+            to={filters.to}
+            onChange={(from, to) => set({ from, to })}
           />
         </div>
       </div>
@@ -255,6 +246,78 @@ function PersonaCombobox({
             </CommandGroup>
           </CommandList>
         </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+const CALENDAR_LOCALES = { fr, en: enUS, es } as const;
+
+/** AAAA-MM-JJ du jour local. */
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function dayOf(key: string | null): Date | undefined {
+  const m = key ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(key) : null;
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : undefined;
+}
+
+/** Le filtre par période : une plage choisie au calendrier, bornes comprises. */
+function PeriodPicker({
+  id,
+  from,
+  to,
+  onChange,
+}: {
+  id: string;
+  from: string | null;
+  to: string | null;
+  onChange: (from: string | null, to: string | null) => void;
+}) {
+  const t = useTranslations("worldActivity");
+  const locale = useLocale();
+  const [open, setOpen] = useState(false);
+  const range: DateRange | undefined = from ? { from: dayOf(from), to: dayOf(to) } : undefined;
+  const format = (d: Date) => d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+  const label = range?.from
+    ? range.to && dayKey(range.to) !== dayKey(range.from)
+      ? `${format(range.from)} – ${format(range.to)}`
+      : format(range.from)
+    : t("filters.allDates");
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button id={id} type="button" variant="outline" className="h-9 justify-start font-normal">
+          <CalendarDays className="mr-1 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+          {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0">
+        <Calendar
+          mode="range"
+          locale={CALENDAR_LOCALES[locale as keyof typeof CALENDAR_LOCALES] ?? fr}
+          selected={range}
+          defaultMonth={range?.from}
+          onSelect={(r) => onChange(r?.from ? dayKey(r.from) : null, r?.to ? dayKey(r.to) : r?.from ? dayKey(r.from) : null)}
+        />
+        {from && (
+          <div className="border-t border-border p-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                onChange(null, null);
+                setOpen(false);
+              }}
+            >
+              {t("filters.allDates")}
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

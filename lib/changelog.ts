@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Fonctionnalité",
     area: "Membres",
-    text: "Journal d’activité du monde, dans Paramètres › Membres › Journal, pour qui gère l’économie.\n- ajustements d’argent, dons et retraits d’objets, achats et reventes en boutique, emplacements d’inventaire, échanges entre personas\n- auteur, date et motif de chaque mouvement ; filtres par type, persona (cherché par son nom) et période\n- la trace reste même si le persona est supprimé\n- les gains automatiques n’y figurent pas",
+    text: "Journal d’activité du monde, dans Paramètres › Membres › Journal, pour qui gère l’économie.\n- ajustements d’argent, dons et retraits d’objets, achats et reventes en boutique, emplacements d’inventaire, échanges entre personas\n- auteur, date et motif de chaque mouvement ; filtres par type, persona (cherché par son nom) et période (choisie au calendrier)\n- la trace reste même si le persona est supprimé\n- les gains automatiques n’y figurent pas",
   },
   {
     date: "2026-11-24",
