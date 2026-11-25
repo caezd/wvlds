@@ -3031,14 +3031,22 @@
       "who": "Who",
       "action": "Action",
       "domain": "Domain",
-      "persona": "Persona",
-      "detail": "Detail",
-      "amount": "Amount"
+      "detail": "Detail"
     },
     "domains": {
       "economy": "Economy"
     },
     "slots": "{slots, plural, one {# slot} other {# slots}}",
+    "summary": {
+      "purchase": "<b>{persona}</b> buys {items} from {shop} for <b>{amount}</b>",
+      "sale": "<b>{persona}</b> sells {items} to {shop} for <b>{amount}</b>",
+      "transfer": "<b>{persona}</b> gives {gift} to <b>{target}</b>",
+      "gain": "<b>{persona}</b> receives <b>{amount}</b>",
+      "loss": "<b>{persona}</b> loses <b>{amount}</b>",
+      "inventory": "<b>{persona}</b>’s inventory: {items}",
+      "slots": "<b>{persona}</b> buys {slots} for <b>{amount}</b>",
+      "and": "{a} and {b}"
+    },
     "deletedPersona": "Deleted persona",
     "system": "System",
     "empty": "No activity yet.",

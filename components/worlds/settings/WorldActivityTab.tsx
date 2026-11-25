@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { DateRange } from "react-day-picker";
 import { enUS, es, fr } from "react-day-picker/locale";
@@ -91,27 +91,48 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
 
   const set = (patch: Partial<ActivityFilters>) => setFilters((f) => ({ ...f, ...patch }));
 
-  const persona = (e: WorldActivityEntry): string => {
-    const from = e.persona_name ?? t("deletedPersona");
-    if (e.kind !== "transfer") return from;
-    return `${from} → ${e.target_persona_name ?? t("deletedPersona")}`;
-  };
+  const strong = (chunks: ReactNode) => <span className="font-medium text-foreground">{chunks}</span>;
+  const nameOf = (name: string | null) => name ?? t("deletedPersona");
+  const money = (value: number) => formatAmount(Math.abs(value), units);
 
-  /** Les objets, la boutique, le motif : ce qui précise l'action. */
-  const detail = (e: WorldActivityEntry): string => {
-    const parts: string[] = [];
-    if (e.kind === "slots_purchase") parts.push(t("slots", { slots: e.data.slots ?? 0 }));
-    if (e.items.length > 0) parts.push(formatActivityItems(e.items, { signed: e.kind === "item_adjust" }));
-    if (e.data.shop_name) parts.push(e.data.shop_name);
-    if (e.note) parts.push(`« ${e.note} »`);
-    return parts.join(" · ");
-  };
-
-  /** Ce que l'événement a fait au solde ; un échange montre la somme donnée. */
-  const amount = (e: WorldActivityEntry): string => {
-    if (e.kind === "transfer") return e.amount > 0 ? formatAmount(e.amount, units) : "";
-    const effect = activityBalanceEffect(e);
-    return effect === 0 ? "" : formatAmount(effect, units, { signed: true });
+  /** L'action en une phrase : qui, quoi, avec qui, combien ; le motif à la suite. */
+  const summary = (e: WorldActivityEntry): ReactNode => {
+    const persona = nameOf(e.persona_name);
+    const items = formatActivityItems(e.items, { signed: e.kind === "item_adjust" });
+    let sentence: ReactNode;
+    switch (e.kind) {
+      case "purchase":
+      case "sale":
+        sentence = t.rich(`summary.${e.kind}`, {
+          persona, items, shop: e.data.shop_name ?? "—", amount: money(e.amount), b: strong,
+        });
+        break;
+      case "transfer": {
+        const parts = [e.amount > 0 ? money(e.amount) : "", items].filter(Boolean);
+        const gift = parts.length === 2 ? t("summary.and", { a: parts[0], b: parts[1] }) : (parts[0] ?? "—");
+        sentence = t.rich("summary.transfer", { persona, gift, target: nameOf(e.target_persona_name), b: strong });
+        break;
+      }
+      case "balance_adjust": {
+        const effect = activityBalanceEffect(e);
+        sentence = t.rich(effect < 0 ? "summary.loss" : "summary.gain", { persona, amount: money(effect), b: strong });
+        break;
+      }
+      case "item_adjust":
+        sentence = t.rich("summary.inventory", { persona, items, b: strong });
+        break;
+      case "slots_purchase":
+        sentence = t.rich("summary.slots", {
+          persona, slots: t("slots", { slots: e.data.slots ?? 0 }), amount: money(e.amount), b: strong,
+        });
+        break;
+    }
+    return (
+      <>
+        {sentence}
+        {e.note && ` · « ${e.note} »`}
+      </>
+    );
   };
 
   return (
@@ -170,11 +191,11 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  {(["date", "who", "action", "domain", "persona", "detail", "amount"] as const).map((c) => (
+                  {(["date", "who", "action", "domain", "detail"] as const).map((c) => (
                     <TableHead
                       key={c}
                       scope="col"
-                      className={cn("px-3 text-xs uppercase tracking-wide text-muted-foreground", c === "amount" && "text-right")}
+                      className="px-3 text-xs uppercase tracking-wide text-muted-foreground"
                     >
                       {t(`columns.${c}`)}
                     </TableHead>
@@ -190,9 +211,7 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
                     <TableCell className="px-3">{e.actor?.username ?? t("system")}</TableCell>
                     <TableCell className="px-3 font-medium">{t(`kinds.${e.kind}`)}</TableCell>
                     <TableCell className="px-3 text-muted-foreground">{t(`domains.${e.domain}`)}</TableCell>
-                    <TableCell className="px-3">{persona(e)}</TableCell>
-                    <TableCell className="px-3 whitespace-normal text-muted-foreground">{detail(e)}</TableCell>
-                    <TableCell className="px-3 text-right tabular-nums">{amount(e)}</TableCell>
+                    <TableCell className="px-3 whitespace-normal text-muted-foreground">{summary(e)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

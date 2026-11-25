@@ -3031,14 +3031,22 @@
       "who": "Quién",
       "action": "Acción",
       "domain": "Ámbito",
-      "persona": "Persona",
-      "detail": "Detalle",
-      "amount": "Importe"
+      "detail": "Detalle"
     },
     "domains": {
       "economy": "Economía"
     },
     "slots": "{slots, plural, one {# espacio} other {# espacios}}",
+    "summary": {
+      "purchase": "<b>{persona}</b> compra {items} en {shop} por <b>{amount}</b>",
+      "sale": "<b>{persona}</b> vende {items} a {shop} por <b>{amount}</b>",
+      "transfer": "<b>{persona}</b> da {gift} a <b>{target}</b>",
+      "gain": "<b>{persona}</b> recibe <b>{amount}</b>",
+      "loss": "<b>{persona}</b> pierde <b>{amount}</b>",
+      "inventory": "Inventario de <b>{persona}</b>: {items}",
+      "slots": "<b>{persona}</b> compra {slots} por <b>{amount}</b>",
+      "and": "{a} y {b}"
+    },
     "deletedPersona": "Persona eliminado",
     "system": "Sistema",
     "empty": "Aún no hay actividad.",

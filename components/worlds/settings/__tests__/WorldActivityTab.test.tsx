@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe("WorldActivityTab", () => {
-  it("un tableau : date, auteur, action, domaine, persona, détail, montant", async () => {
+  it("un tableau : date, auteur, action, domaine, puis le résumé de l'action", async () => {
     fetchWorldActivity.mockResolvedValue({
       entries: [
         entree({ id: "1", kind: "purchase", amount: 250, items: [objet("Épée", 2)], data: { shop_name: "Forge" } }),
@@ -61,25 +61,26 @@ describe("WorldActivityTab", () => {
         entree({ id: "5", kind: "item_adjust", items: [objet("Lanterne", -1)] }),
         entree({ id: "6", kind: "slots_purchase", amount: 30, data: { slots: 2 } }),
         entree({ id: "7", kind: "balance_adjust", amount: 5, persona_name: null, actor: null }),
+        entree({ id: "8", kind: "transfer", amount: 0, items: [objet("Clé", 1)], target_persona_name: null }),
       ],
       cursor: null,
     });
     monter();
     const lignes = await screen.findAllByTestId("activity-item");
     expect(screen.getAllByRole("columnheader").map((c) => c.textContent)).toEqual(
-      ["Date", "Qui", "Action", "Domaine", "Persona", "Détail", "Montant"],
+      ["Date", "Qui", "Action", "Domaine", "Détail"],
     );
     // Sans la date (rendue par DateDisplay, simulée).
     const cellules = lignes.map((tr) => within(tr).getAllByRole("cell").slice(1).map((c) => c.textContent));
-    expect(cellules[0]).toEqual(["cae", "Achat", "Économie", "Brom", "Épée ×2 · Forge", "−2 po 50 pc"]);
-    expect(cellules[1]).toEqual(["cae", "Revente", "Économie", "Brom", "Potion · Herboriste", "+40 pc"]);
-    // L'échange : du donneur au receveur, la somme donnée.
-    expect(cellules[2]).toEqual(["cae", "Échange", "Économie", "Brom → Ysolde", "Clé", "1 po 5 pc"]);
-    expect(cellules[3]).toEqual(["cae", "Ajustement d’argent", "Économie", "Brom", "« Amende »", "−1 po"]);
-    expect(cellules[4]).toEqual(["cae", "Don ou retrait d’objet", "Économie", "Brom", "−1 Lanterne", ""]);
-    expect(cellules[5]).toEqual(["cae", "Emplacements d’inventaire", "Économie", "Brom", "2 emplacements", "−30 pc"]);
+    expect(cellules[0]).toEqual(["cae", "Achat", "Économie", "Brom achète Épée ×2 à Forge pour 2 po 50 pc"]);
+    expect(cellules[1]).toEqual(["cae", "Revente", "Économie", "Brom revend Potion à Herboriste pour 40 pc"]);
+    expect(cellules[2]).toEqual(["cae", "Échange", "Économie", "Brom donne 1 po 5 pc et Clé à Ysolde"]);
+    expect(cellules[3]).toEqual(["cae", "Ajustement d’argent", "Économie", "Brom perd 1 po · « Amende »"]);
+    expect(cellules[4]).toEqual(["cae", "Don ou retrait d’objet", "Économie", "Inventaire de Brom : −1 Lanterne"]);
+    expect(cellules[5]).toEqual(["cae", "Emplacements d’inventaire", "Économie", "Brom achète 2 emplacements pour 30 pc"]);
     // Persona supprimé, auteur inconnu (la base) : la trace reste lisible.
-    expect(cellules[6]).toEqual(["Système", "Ajustement d’argent", "Économie", "Persona supprimé", "", "+5 pc"]);
+    expect(cellules[6]).toEqual(["Système", "Ajustement d’argent", "Économie", "Persona supprimé reçoit 5 pc"]);
+    expect(cellules[7][3]).toBe("Brom donne Clé à Persona supprimé");
   });
 
   it("vide : un message", async () => {
