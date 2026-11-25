@@ -13,6 +13,7 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
+import { PersonaTaxBadge } from "@/components/personas/PersonaTaxBadge";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 import { ReactionEmoji } from "../reactions/ReactionEmoji";
@@ -136,6 +137,7 @@ export function ChatroomMessageHeader({
             </strong>
             <PersonaStatusBadge status={message.persona?.narrative_status} compact />
             <PersonaNpcBadge isNpc={message.persona?.is_npc} compact />
+            <PersonaTaxBadge personaId={message.persona?.id} />
             <UserProfileSheetTrigger userId={userId} label={playerUsername}>
               <span className="text-muted-foreground text-xs hover:text-foreground hover:underline transition-colors">
                 {message.persona?.is_npc

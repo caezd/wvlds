@@ -29,6 +29,7 @@ import { narrativeStatusOf } from "@/lib/personaStatus";
 import { reviewStatusOf } from "@/lib/personaReview";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
 import { PersonaNpcBadge } from "./PersonaNpcBadge";
+import { PersonaTaxBadge } from "./PersonaTaxBadge";
 // La relecture n'apparaît que fiche ouverte, et seulement aux relecteurs :
 // chargée à ce moment-là plutôt qu'avec chaque salon.
 const PersonaReviewSection = dynamic(() => import("./PersonaReviewPanel").then((m) => m.PersonaReviewSection));
@@ -707,13 +708,17 @@ export function usePersonaProfile({
       isNpc || narrativeStatus !== "alive" || (reviewActive && reviewStatus !== "approved") || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
         <>
           <PersonaNpcBadge isNpc={isNpc} />
+          <PersonaTaxBadge personaId={personaId} />
           <PersonaStatusBadge status={narrativeStatus} />
           <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} />
           {!isNpc && ownerStatus && ownerEffectiveStatus !== "active" && (
             <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
           )}
         </>
-      ) : undefined,
+      ) : (
+        // Le défaut de taxe (migration 255) se lit à part : il ne change pas la condition.
+        <PersonaTaxBadge personaId={personaId} />
+      ),
     isFollowing,
     followBusy,
     onToggleFollow: toggleFollow,
@@ -742,11 +747,13 @@ export function usePersonaProfile({
         icon: Backpack,
         content: (
           <PersonaInventoryTab
+            personaId={personaId}
             personaName={name ?? label ?? ""}
             wallet={wallet}
             inventory={inventory}
             canEdit={isNpc ? membershipWorldId === worldId && can("npc.manage") : !!viewerId && viewerId === userId}
             canManage={membershipWorldId === worldId && can("economy.manage")}
+            canPayTax={!isNpc && !!viewerId && viewerId === userId}
           />
         ),
       }] : []),

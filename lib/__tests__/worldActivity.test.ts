@@ -36,11 +36,11 @@ function entree(partial: Partial<WorldActivityEntry> = {}): WorldActivityEntry {
 }
 
 describe("migration 254", () => {
-  it("les genres du journal sont ceux de la base", () => {
+  it("les genres du journal sont ceux de la base (la 255 y ajoute la taxe)", () => {
     const m = sql.match(/world_activity_kind_check CHECK \(kind IN \(([^)]*)\)\)/);
     expect(m).not.toBeNull();
     const enBase = [...m![1].matchAll(/'(\w+)'/g)].map((x) => x[1]);
-    expect(enBase).toEqual([...ACTIVITY_KINDS]);
+    expect(enBase).toEqual(ACTIVITY_KINDS.slice(0, enBase.length));
   });
 
   it("le journal s'écrit par la base seule : aucune policy d'écriture", () => {
@@ -79,6 +79,9 @@ describe("activityBalanceEffect", () => {
     // L'échange : vu du donneur.
     expect(activityBalanceEffect(entree({ kind: "transfer", amount: 10 }))).toBe(-10);
     expect(activityBalanceEffect(entree({ kind: "item_adjust", amount: 0 }))).toBe(0);
+    // La taxe payée sort de la bourse ; une dette annulée n'y touche pas.
+    expect(activityBalanceEffect(entree({ kind: "tax_payment", amount: 100 }))).toBe(-100);
+    expect(activityBalanceEffect(entree({ kind: "tax_waive", amount: 100 }))).toBe(0);
   });
 });
 

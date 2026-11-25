@@ -46,8 +46,14 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-25",
     category: "Fonctionnalité",
+    area: "Monde",
+    text: "Taxe des personas, dans Paramètres › Fonctions › Économie › Devises.\n- un montant fixe, tous les N jours, semaines ou mois, à partir d’une date de départ\n- paiement par le joueur (bouton dans l’onglet Inventaire du persona) ou retrait automatique dès que la bourse le permet\n- options : dettes qui s’accumulent ou non, délai pour les nouveaux personas\n- un persona en retard porte un badge à côté de son nom (messages, fiche) ; texte du badge au choix\n- qui gère l’économie peut annuler une dette ; paiements et annulations au journal d’activité",
+  },
+  {
+    date: "2026-11-25",
+    category: "Fonctionnalité",
     area: "Membres",
-    text: "Journal d’activité du monde, dans Paramètres › Membres › Journal, pour qui gère l’économie.\n- ajustements d’argent, dons et retraits d’objets, achats et reventes en boutique, emplacements d’inventaire, échanges entre personas\n- auteur, date et motif de chaque mouvement ; filtres par type, persona (cherché par son nom) et période (choisie au calendrier)\n- la trace reste même si le persona est supprimé\n- les gains automatiques n’y figurent pas",
+    text: "Journal d’activité du monde, dans Paramètres › Membres › Journal, pour qui gère l’économie.\n- ajustements d’argent, dons et retraits d’objets, achats et reventes en boutique, emplacements d’inventaire, échanges entre personas, taxe payée ou annulée\n- auteur, date et motif de chaque mouvement ; filtres par type, persona (cherché par son nom) et période (choisie au calendrier)\n- la trace reste même si le persona est supprimé\n- les gains automatiques n’y figurent pas",
   },
   {
     date: "2026-11-24",

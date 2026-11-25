@@ -186,6 +186,16 @@ export type World = {
   gain_daily_login?: number | null;
   gain_message_cooldown?: number | null;
   gain_daily_cap?: number | null;
+  /** Taxe des personas (migration 255), voir lib/worldTax. */
+  tax_enabled?: boolean | null;
+  tax_amount?: number | null;
+  tax_every?: number | null;
+  tax_unit?: "day" | "week" | "month" | null;
+  tax_anchor?: string | null;
+  tax_mode?: "manual" | "auto" | null;
+  tax_accumulate?: boolean | null;
+  tax_grace_new?: boolean | null;
+  tax_badge_label?: string | null;
   currency_units?: unknown;
   /** Inventaire des personas (migration 247), voir lib/personaInventory. */
   inventory_mode?: "free" | "catalog" | "held" | null;

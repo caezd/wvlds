@@ -62,6 +62,8 @@ describe("WorldActivityTab", () => {
         entree({ id: "6", kind: "slots_purchase", amount: 30, data: { slots: 2 } }),
         entree({ id: "7", kind: "balance_adjust", amount: 5, persona_name: null, actor: null }),
         entree({ id: "8", kind: "transfer", amount: 0, items: [objet("Clé", 1)], target_persona_name: null }),
+        entree({ id: "9", kind: "tax_payment", amount: 300, data: { periods: 2 }, actor: null }),
+        entree({ id: "10", kind: "tax_waive", amount: 150, data: { periods: 1 } }),
       ],
       cursor: null,
     });
@@ -81,6 +83,9 @@ describe("WorldActivityTab", () => {
     // Persona supprimé, auteur inconnu (la base) : la trace reste lisible.
     expect(cellules[6]).toEqual(["Système", "Ajustement d’argent", "Économie", "Persona supprimé reçoit 5 pc"]);
     expect(cellules[7][3]).toBe("Brom donne Clé à Persona supprimé");
+    // La taxe : prélevée par la base (retrait automatique), ou annulée.
+    expect(cellules[8]).toEqual(["Système", "Paiement de taxe", "Économie", "Brom paie 2 périodes de taxe : 3 po"]);
+    expect(cellules[9]).toEqual(["cae", "Dette de taxe annulée", "Économie", "Dette de Brom annulée : 1 période, 1 po 50 pc"]);
   });
 
   it("vide : un message", async () => {

@@ -20,7 +20,8 @@ export type WalletMovement = {
     | "gain_scene_joined"
     | "gain_scene_created"
     | "gain_scene_completed"
-    | "gain_daily_login";
+    | "gain_daily_login"
+    | "tax";
   note: string | null;
   created_at: string;
 };

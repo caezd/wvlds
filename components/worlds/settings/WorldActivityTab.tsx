@@ -118,6 +118,12 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
       case "item_adjust":
         sentence = t.rich("summary.inventory", { persona, items, b: strong });
         break;
+      case "tax_payment":
+      case "tax_waive":
+        sentence = t.rich(`summary.${e.kind}`, {
+          persona, periods: t("periods", { periods: e.data.periods ?? 1 }), amount: money(e.amount), b: strong,
+        });
+        break;
       case "slots_purchase":
         sentence = t.rich("summary.slots", {
           persona, slots: t("slots", { slots: e.data.slots ?? 0 }), amount: money(e.amount), b: strong,

@@ -47,6 +47,7 @@ import { WorldCurrencySettings } from "./WorldCurrencySettings";
 import { WorldInventorySettings } from "./WorldInventorySettings";
 import { ShopManager } from "@/components/worlds/shops/ShopManager";
 import { WorldGainsSettings } from "./WorldGainsSettings";
+import { WorldTaxSettings } from "./WorldTaxSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { ArrowRightLeft, BookOpen, Clock, Coins, Map as MapIcon, MessagesSquare, Package, Store, UserRound, type LucideIcon } from "lucide-react";
@@ -508,6 +509,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             />
                             {/* Les gains automatiques (migration 252) : la monnaie se gagne en jouant. */}
                             <WorldGainsSettings
+                                world={world}
+                                onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
+                            />
+                            {/* La taxe des personas (migration 255). */}
+                            <WorldTaxSettings
                                 world={world}
                                 onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
                             />

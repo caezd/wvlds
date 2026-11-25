@@ -33,6 +33,7 @@ import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { PersonaJournalSection } from "@/components/personas/PersonaJournalSection";
 import { PersonaInventoryTab } from "@/components/personas/PersonaInventorySection";
+import { PersonaTaxBadge } from "@/components/personas/PersonaTaxBadge";
 import { usePersonaWallet } from "@/hooks/usePersonaWallet";
 import { usePersonaInventory } from "@/hooks/usePersonaInventory";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
@@ -431,6 +432,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">
                   {persona.name}
                   <PersonaNpcBadge isNpc={persona.is_npc} />
+                  <PersonaTaxBadge personaId={persona.id} />
                 </div>
                 {presenceLine && !persona.is_npc && (
                   <div className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -513,11 +515,13 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   {showInventory && (
                     <TabsContent value="__inventory__" className="px-5 py-4">
                       <PersonaInventoryTab
+                        personaId={persona.id}
                         personaName={persona.name}
                         wallet={wallet}
                         inventory={inventory}
                         canEdit={canEditInventory}
                         canManage={canManageWallet}
+                        canPayTax={!!selfId && persona.user_id === selfId && !persona.is_npc}
                       />
                     </TabsContent>
                   )}

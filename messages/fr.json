@@ -1276,6 +1276,39 @@
         "save": "Enregistrer les gains",
         "saved": "Gains enregistrés.",
         "invalid": "Montants entiers et positifs ; délai d’une journée au plus."
+      },
+      "taxForm": {
+        "title": "Taxe",
+        "help": "Une somme que chaque persona doit payer à intervalle régulier. Un persona en retard porte un badge à côté de son nom.",
+        "enable": "Lever une taxe",
+        "amount": "Montant",
+        "amountLabel": "Montant de la taxe",
+        "amountIn": "{label} en {unit}",
+        "recurrence": "Récurrence",
+        "every": "Tous les",
+        "unitLabel": "Unité de la récurrence",
+        "units": {
+          "day": "{count, plural, one {jour} other {jours}}",
+          "week": "{count, plural, one {semaine} other {semaines}}",
+          "month": "mois"
+        },
+        "anchor": "Départ",
+        "anchorHelp": "Le début de la première période.",
+        "mode": "Paiement",
+        "modeHelp": "Par le joueur : un bouton dans l’inventaire du persona. Automatique : la somme est prélevée dès que la bourse le permet.",
+        "modes": {
+          "manual": "Par le joueur",
+          "auto": "Retrait automatique"
+        },
+        "accumulate": "Les dettes s’accumulent",
+        "accumulateHelp": "Chaque période manquée reste due. Sinon, seule la dernière période impayée compte.",
+        "grace": "Délai pour les nouveaux personas",
+        "graceHelp": "Un nouveau persona ne doit rien avant la fin de sa première période.",
+        "badge": "Texte du badge",
+        "badgeHelp": "Affiché à côté du nom d’un persona en retard.",
+        "save": "Enregistrer la taxe",
+        "saved": "Taxe enregistrée.",
+        "invalid": "Vérifiez le montant et la récurrence."
       }
     },
     "timelinePicker": {
@@ -1533,8 +1566,29 @@
         "gain_scene_joined": "Gain : scène rejointe",
         "gain_scene_created": "Gain : scène créée",
         "gain_scene_completed": "Gain : scène terminée",
-        "gain_daily_login": "Gain : connexion du jour"
+        "gain_daily_login": "Gain : connexion du jour",
+        "tax": "Taxe"
       }
+    },
+    "tax": {
+      "badge": "Impayé",
+      "badgeHint": "{periods, plural, one {# période de taxe impayée} other {# périodes de taxe impayées}}",
+      "title": "Taxe",
+      "rate": {
+        "day": "{amount} {count, plural, one {par jour} other {tous les # jours}}",
+        "week": "{amount} {count, plural, one {par semaine} other {toutes les # semaines}}",
+        "month": "{amount} {count, plural, one {par mois} other {tous les # mois}}"
+      },
+      "upToDate": "À jour",
+      "overdue": "En retard : {periods, plural, one {# période} other {# périodes}}, {amount}",
+      "due": "À payer : {amount}",
+      "auto": "Prélevée automatiquement dès que la bourse le permet.",
+      "pay": "Payer la taxe",
+      "paid": "Taxe payée.",
+      "insufficient": "Solde insuffisant.",
+      "waive": "Annuler la dette",
+      "waived": "Dette annulée.",
+      "failed": "Impossible pour l’instant."
     },
     "inventory": {
       "tab": "Inventaire",
@@ -3025,7 +3079,9 @@
       "slots_purchase": "Emplacements d’inventaire",
       "purchase": "Achat",
       "sale": "Revente",
-      "transfer": "Échange"
+      "transfer": "Échange",
+      "tax_payment": "Paiement de taxe",
+      "tax_waive": "Dette de taxe annulée"
     },
     "columns": {
       "date": "Date",
@@ -3038,6 +3094,7 @@
       "economy": "Économie"
     },
     "slots": "{slots, plural, one {# emplacement} other {# emplacements}}",
+    "periods": "{periods, plural, one {# période} other {# périodes}}",
     "summary": {
       "purchase": "<b>{persona}</b> achète {items} à {shop} pour <b>{amount}</b>",
       "sale": "<b>{persona}</b> revend {items} à {shop} pour <b>{amount}</b>",
@@ -3046,7 +3103,9 @@
       "loss": "<b>{persona}</b> perd <b>{amount}</b>",
       "inventory": "Inventaire de <b>{persona}</b> : {items}",
       "slots": "<b>{persona}</b> achète {slots} pour <b>{amount}</b>",
-      "and": "{a} et {b}"
+      "and": "{a} et {b}",
+      "tax_payment": "<b>{persona}</b> paie {periods} de taxe : <b>{amount}</b>",
+      "tax_waive": "Dette de <b>{persona}</b> annulée : {periods}, <b>{amount}</b>"
     },
     "deletedPersona": "Persona supprimé",
     "system": "Système",

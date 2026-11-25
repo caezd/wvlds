@@ -1276,6 +1276,39 @@
         "save": "Guardar las ganancias",
         "saved": "Ganancias guardadas.",
         "invalid": "Importes enteros y positivos; un intervalo de un día como máximo."
+      },
+      "taxForm": {
+        "title": "Impuesto",
+        "help": "Una suma que cada persona debe pagar a intervalos regulares. Una persona atrasada lleva una insignia junto a su nombre.",
+        "enable": "Cobrar un impuesto",
+        "amount": "Importe",
+        "amountLabel": "Importe del impuesto",
+        "amountIn": "{label} en {unit}",
+        "recurrence": "Periodicidad",
+        "every": "Cada",
+        "unitLabel": "Unidad de la periodicidad",
+        "units": {
+          "day": "{count, plural, one {día} other {días}}",
+          "week": "{count, plural, one {semana} other {semanas}}",
+          "month": "{count, plural, one {mes} other {meses}}"
+        },
+        "anchor": "Inicio",
+        "anchorHelp": "El comienzo del primer periodo.",
+        "mode": "Pago",
+        "modeHelp": "Por el jugador: un botón en el inventario de la persona. Automático: la suma se retira en cuanto la bolsa lo permite.",
+        "modes": {
+          "manual": "Por el jugador",
+          "auto": "Retiro automático"
+        },
+        "accumulate": "Las deudas se acumulan",
+        "accumulateHelp": "Cada periodo no pagado sigue debiéndose. Si no, solo cuenta el último periodo impago.",
+        "grace": "Plazo para las personas nuevas",
+        "graceHelp": "Una persona nueva no debe nada antes del final de su primer periodo.",
+        "badge": "Texto de la insignia",
+        "badgeHelp": "Se muestra junto al nombre de una persona atrasada.",
+        "save": "Guardar el impuesto",
+        "saved": "Impuesto guardado.",
+        "invalid": "Revise el importe y la periodicidad."
       }
     },
     "timelinePicker": {
@@ -1533,8 +1566,29 @@
         "gain_scene_joined": "Ganancia: escena a la que se une",
         "gain_scene_created": "Ganancia: escena creada",
         "gain_scene_completed": "Ganancia: escena terminada",
-        "gain_daily_login": "Ganancia: conexión del día"
+        "gain_daily_login": "Ganancia: conexión del día",
+        "tax": "Impuesto"
       }
+    },
+    "tax": {
+      "badge": "Impago",
+      "badgeHint": "{periods, plural, one {# periodo de impuesto impago} other {# periodos de impuesto impagos}}",
+      "title": "Impuesto",
+      "rate": {
+        "day": "{amount} {count, plural, one {por día} other {cada # días}}",
+        "week": "{amount} {count, plural, one {por semana} other {cada # semanas}}",
+        "month": "{amount} {count, plural, one {por mes} other {cada # meses}}"
+      },
+      "upToDate": "Al día",
+      "overdue": "Atrasado: {periods, plural, one {# periodo} other {# periodos}}, {amount}",
+      "due": "Por pagar: {amount}",
+      "auto": "Se retira automáticamente en cuanto la bolsa lo permite.",
+      "pay": "Pagar el impuesto",
+      "paid": "Impuesto pagado.",
+      "insufficient": "Saldo insuficiente.",
+      "waive": "Anular la deuda",
+      "waived": "Deuda anulada.",
+      "failed": "No es posible por ahora."
     },
     "inventory": {
       "tab": "Inventario",
@@ -3025,7 +3079,9 @@
       "slots_purchase": "Espacios de inventario",
       "purchase": "Compra",
       "sale": "Venta",
-      "transfer": "Intercambio"
+      "transfer": "Intercambio",
+      "tax_payment": "Pago de impuesto",
+      "tax_waive": "Deuda de impuesto anulada"
     },
     "columns": {
       "date": "Fecha",
@@ -3038,6 +3094,7 @@
       "economy": "Economía"
     },
     "slots": "{slots, plural, one {# espacio} other {# espacios}}",
+    "periods": "{periods, plural, one {# periodo} other {# periodos}}",
     "summary": {
       "purchase": "<b>{persona}</b> compra {items} en {shop} por <b>{amount}</b>",
       "sale": "<b>{persona}</b> vende {items} a {shop} por <b>{amount}</b>",
@@ -3046,7 +3103,9 @@
       "loss": "<b>{persona}</b> pierde <b>{amount}</b>",
       "inventory": "Inventario de <b>{persona}</b>: {items}",
       "slots": "<b>{persona}</b> compra {slots} por <b>{amount}</b>",
-      "and": "{a} y {b}"
+      "and": "{a} y {b}",
+      "tax_payment": "<b>{persona}</b> paga {periods} de impuesto: <b>{amount}</b>",
+      "tax_waive": "Deuda de <b>{persona}</b> anulada: {periods}, <b>{amount}</b>"
     },
     "deletedPersona": "Persona eliminado",
     "system": "Sistema",

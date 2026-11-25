@@ -23,6 +23,7 @@ import { CatalogPicker, RarityMark } from "@/components/personas/fields/shared";
 import { useCatalogDetail } from "@/components/personas/fields/CatalogFieldViews";
 import { indexCatalog } from "@/lib/worldCatalog";
 import { PersonaWalletSection, type PersonaWallet } from "@/components/personas/PersonaWalletSection";
+import { PersonaTaxBlock } from "@/components/personas/PersonaTaxSection";
 import { ownerCanAdd } from "@/lib/personaInventory";
 import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
 import type { InventoryResult, InventoryRow, usePersonaInventory } from "@/hooks/usePersonaInventory";
@@ -41,21 +42,36 @@ const ADD_TRIGGER =
  * active, les objets si son inventaire l'est.
  */
 export function PersonaInventoryTab({
+  personaId,
   personaName,
   wallet,
   inventory,
   canEdit,
   canManage,
+  canPayTax = false,
 }: {
+  /** Pour la taxe (migration 255) ; sans lui, pas de section Taxe. */
+  personaId?: string | null;
   personaName: string;
   wallet: PersonaWallet;
   inventory: PersonaInventory;
   canEdit: boolean;
   canManage: boolean;
+  /** Le joueur du persona : il paie sa taxe. */
+  canPayTax?: boolean;
 }) {
   return (
     <div className="space-y-6">
       {wallet.status === "on" && <PersonaWalletSection personaName={personaName} wallet={wallet} canManage={canManage} />}
+      {wallet.status === "on" && personaId && (
+        <PersonaTaxBlock
+          personaId={personaId}
+          units={wallet.units}
+          canPay={canPayTax}
+          canManage={canManage}
+          onPaid={() => void wallet.refresh?.()}
+        />
+      )}
       {inventory.status === "on" && (
         <PersonaInventorySection
           personaName={personaName}

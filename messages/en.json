@@ -1276,6 +1276,39 @@
         "save": "Save earnings",
         "saved": "Earnings saved.",
         "invalid": "Whole, positive amounts; a delay of one day at most."
+      },
+      "taxForm": {
+        "title": "Tax",
+        "help": "An amount every persona must pay at a regular interval. A persona behind on payments gets a badge next to their name.",
+        "enable": "Levy a tax",
+        "amount": "Amount",
+        "amountLabel": "Tax amount",
+        "amountIn": "{label} in {unit}",
+        "recurrence": "Recurrence",
+        "every": "Every",
+        "unitLabel": "Recurrence unit",
+        "units": {
+          "day": "{count, plural, one {day} other {days}}",
+          "week": "{count, plural, one {week} other {weeks}}",
+          "month": "{count, plural, one {month} other {months}}"
+        },
+        "anchor": "Start",
+        "anchorHelp": "The start of the first period.",
+        "mode": "Payment",
+        "modeHelp": "By the player: a button in the persona’s inventory. Automatic: the amount is withdrawn as soon as the purse allows.",
+        "modes": {
+          "manual": "By the player",
+          "auto": "Automatic withdrawal"
+        },
+        "accumulate": "Debts add up",
+        "accumulateHelp": "Every missed period stays due. Otherwise, only the last unpaid period counts.",
+        "grace": "Grace period for new personas",
+        "graceHelp": "A new persona owes nothing until the end of their first period.",
+        "badge": "Badge text",
+        "badgeHelp": "Shown next to the name of a persona behind on payments.",
+        "save": "Save tax",
+        "saved": "Tax saved.",
+        "invalid": "Check the amount and the recurrence."
       }
     },
     "timelinePicker": {
@@ -1533,8 +1566,29 @@
         "gain_scene_joined": "Earning: scene joined",
         "gain_scene_created": "Earning: scene created",
         "gain_scene_completed": "Earning: scene completed",
-        "gain_daily_login": "Earning: daily visit"
+        "gain_daily_login": "Earning: daily visit",
+        "tax": "Tax"
       }
+    },
+    "tax": {
+      "badge": "Unpaid",
+      "badgeHint": "{periods, plural, one {# unpaid tax period} other {# unpaid tax periods}}",
+      "title": "Tax",
+      "rate": {
+        "day": "{amount} {count, plural, one {per day} other {every # days}}",
+        "week": "{amount} {count, plural, one {per week} other {every # weeks}}",
+        "month": "{amount} {count, plural, one {per month} other {every # months}}"
+      },
+      "upToDate": "Up to date",
+      "overdue": "Overdue: {periods, plural, one {# period} other {# periods}}, {amount}",
+      "due": "Due: {amount}",
+      "auto": "Withdrawn automatically as soon as the purse allows.",
+      "pay": "Pay the tax",
+      "paid": "Tax paid.",
+      "insufficient": "Insufficient balance.",
+      "waive": "Cancel the debt",
+      "waived": "Debt cancelled.",
+      "failed": "Not possible right now."
     },
     "inventory": {
       "tab": "Inventory",
@@ -3025,7 +3079,9 @@
       "slots_purchase": "Inventory slots",
       "purchase": "Purchase",
       "sale": "Sale",
-      "transfer": "Trade"
+      "transfer": "Trade",
+      "tax_payment": "Tax payment",
+      "tax_waive": "Tax debt cancelled"
     },
     "columns": {
       "date": "Date",
@@ -3038,6 +3094,7 @@
       "economy": "Economy"
     },
     "slots": "{slots, plural, one {# slot} other {# slots}}",
+    "periods": "{periods, plural, one {# period} other {# periods}}",
     "summary": {
       "purchase": "<b>{persona}</b> buys {items} from {shop} for <b>{amount}</b>",
       "sale": "<b>{persona}</b> sells {items} to {shop} for <b>{amount}</b>",
@@ -3046,7 +3103,9 @@
       "loss": "<b>{persona}</b> loses <b>{amount}</b>",
       "inventory": "<b>{persona}</b>’s inventory: {items}",
       "slots": "<b>{persona}</b> buys {slots} for <b>{amount}</b>",
-      "and": "{a} and {b}"
+      "and": "{a} and {b}",
+      "tax_payment": "<b>{persona}</b> pays {periods} of tax: <b>{amount}</b>",
+      "tax_waive": "<b>{persona}</b>’s debt cancelled: {periods}, <b>{amount}</b>"
     },
     "deletedPersona": "Deleted persona",
     "system": "System",

@@ -16,6 +16,8 @@ export const ACTIVITY_KINDS = [
   "purchase",
   "sale",
   "transfer",
+  "tax_payment",
+  "tax_waive",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -47,7 +49,7 @@ export type WorldActivityEntry = {
   items: ActivityItem[];
   note: string | null;
   ref_id: string | null;
-  data: { shop_name?: string; slots?: number; chat_id?: string };
+  data: { shop_name?: string; slots?: number; chat_id?: string; periods?: number };
   created_at: string;
 };
 
@@ -88,8 +90,10 @@ export function activityBalanceEffect(entry: Pick<WorldActivityEntry, "kind" | "
     case "purchase":
     case "slots_purchase":
     case "transfer":
+    case "tax_payment":
       return -entry.amount;
     case "item_adjust":
+    case "tax_waive":
       return 0;
   }
 }
