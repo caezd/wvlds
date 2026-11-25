@@ -219,7 +219,7 @@ describe("TimelineSettings — couleurs", () => {
     render(<Harnais />);
     const cartes = [
       screen.getByTestId("timeline-preview").parentElement as HTMLElement,
-      screen.getByRole("region", { name: "Règles des salons" }),
+      screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }).closest(".divide-y") as HTMLElement,
     ];
     for (const c of cartes) expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-card", "border-border"]));
     const champs = [

@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Interface",
     area: "Monde",
-    text: "Paramètres du monde : nouvelle présentation, alignée sur le reste de l’application.\n- titre de la page, interrupteur et boutons d’ajout dans la barre du haut\n- une carte par section, sur une colonne, comme les paramètres du compte\n- menu : seules les fonctions désactivées sont marquées\n- choix présentés en cartes : visibilité, public visé, avatars, ajout d’objets\n- fonction désactivée : un encadré pour l’activer, ses réglages repliés dessous\n- Général : aperçu de la carte de l’Explorateur ; icône et bannière en vignettes\n- Fiche par défaut : interrupteur et « Éditer la fiche » en haut\n- une phrase sous chaque page, section et réglage qui en a besoin ; aides gardées pour les détails rares\n- suppression du monde confirmée dans une boîte",
+    text: "Paramètres du monde : nouvelle présentation, alignée sur le reste de l’application.\n- titre de la page, interrupteur et boutons d’ajout dans la barre du haut\n- menu : seules les fonctions désactivées sont marquées\n- choix présentés en cartes : visibilité, public visé, avatars, ajout d’objets\n- fonction désactivée : un encadré pour l’activer, ses réglages repliés dessous\n- Général : aperçu de la carte de l’Explorateur ; icône et bannière en vignettes\n- Fiche par défaut : interrupteur et « Éditer la fiche » en haut\n- une phrase sous chaque page, section et réglage qui en a besoin ; aides gardées pour les détails rares\n- suppression du monde confirmée dans une boîte",
   },
   {
     date: "2026-11-25",

@@ -142,8 +142,24 @@ describe("SettingsSection", () => {
   });
 });
 
-describe("ToggleList", () => {
-  it("dans la carte d'une section, sans second cadre, d'un bord à l'autre", () => {
+describe("Sections à plat", () => {
+  it("une section n'est pas une carte : un trait la sépare de la précédente, sans fond", () => {
+    render(
+      <div>
+        <SettingsSection title="Visibilité"><p>a</p></SettingsSection>
+        <SettingsSection title="Tags"><p>b</p></SettingsSection>
+      </div>,
+    );
+    for (const nom of ["Visibilité", "Tags"]) {
+      const classes = screen.getByRole("region", { name: nom }).className.split(" ");
+      expect(classes).not.toContain("bg-card");
+      expect(classes).toContain("border-t");
+    }
+    // La première de la page n'a pas de trait au-dessus d'elle.
+    expect(screen.getByRole("region", { name: "Visibilité" }).className.split(" ")).toContain("first:border-t-0");
+  });
+
+  it("ses listes d'interrupteurs restent bordées", () => {
     render(
       <SettingsSection title="Options">
         <ToggleList label="options">
@@ -152,18 +168,6 @@ describe("ToggleList", () => {
       </SettingsSection>,
     );
     const liste = screen.getByRole("group", { name: "options" });
-    expect(liste).toHaveAttribute("data-flush");
-    expect(liste.className.split(" ")).not.toContain("rounded-lg");
-  });
-
-  it("hors d'une section, une liste bordée", () => {
-    render(
-      <ToggleList label="options">
-        <ToggleItem title="Bulles" checked={false} onCheckedChange={() => {}} />
-      </ToggleList>,
-    );
-    const liste = screen.getByRole("group", { name: "options" });
-    expect(liste).not.toHaveAttribute("data-flush");
     expect(liste.className.split(" ")).toEqual(expect.arrayContaining(["rounded-lg", "bg-card"]));
   });
 });

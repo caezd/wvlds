@@ -115,7 +115,7 @@ export function WorldInventorySettings({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Les trois modes en cartes : chacune dit en clair ce qu'elle permet. */}
       <SettingsSection title={t("mode.title")} description={t("mode.help")}>
         <SettingsChoiceCards

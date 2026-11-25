@@ -609,7 +609,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             ))}
                         </TabsPrimitive.List>
                         {/* Grisé tant que l’inventaire est coupé. */}
-                        <TabsPrimitive.Content value="settings" className="pt-4">
+                        <TabsPrimitive.Content value="settings" className="pt-6">
                             <InactiveOptions inactive={!enableInventory} feature={{ onActivate: () => void handleEnableToggle("inventory", true), disabled: togglingEnable }}>
                                 <WorldInventorySettings
                                     world={world}
@@ -617,7 +617,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                                 />
                             </InactiveOptions>
                         </TabsPrimitive.Content>
-                        <TabsPrimitive.Content value="items" className={cn("pt-4", FILL)}>
+                        <TabsPrimitive.Content value="items" className={cn("pt-6", FILL)}>
                             <InactiveOptions inactive={!enableInventory} className={FILL} feature={{ onActivate: () => void handleEnableToggle("inventory", true), disabled: togglingEnable }}>
                                 <WorldCatalogBoardSection worldId={world.id} type="inventory" />
                             </InactiveOptions>

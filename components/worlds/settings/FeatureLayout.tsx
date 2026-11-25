@@ -12,9 +12,9 @@ import { ChevronRight, Plus, PowerOff } from "lucide-react";
 import { InteractiveCard } from "@/components/ui/interactive-card";
 
 /**
- * La mise en page des paramètres d'un monde, calquée sur les paramètres du
- * compte : une colonne, une carte par section (titre, phrase, réglages).
- * Le titre de la page, son interrupteur et ses actions montent dans la barre
+ * La mise en page des paramètres d'un monde : des sections à plat, séparées
+ * par un trait, en deux colonnes (titre à gauche, réglages à droite) quand la
+ * page a la place. Le titre de la page, son interrupteur et ses actions montent dans la barre
  * d'en-tête du panneau (WorldPanelHeader), comme sur Membres ou Personas :
  * voir SettingsHeaderProvider.
  *
@@ -27,11 +27,8 @@ import { InteractiveCard } from "@/components/ui/interactive-card";
 export const SURFACE = "border border-border bg-card";
 /** Un champ dans une carte ou sur la page : saisie, sélecteur, petite case. */
 export const FIELD = "border-border bg-background shadow-none hover:bg-background";
-/**
- * La largeur de toutes les pages des paramètres d'un monde : une colonne de
- * lecture, plus large pour une page qui tient un tableau (`data-fill-page`).
- */
-export const SETTINGS_PAGE_WIDTH = "w-full max-w-3xl has-[[data-fill-page]]:max-w-5xl";
+/** La largeur de toutes les pages des paramètres d'un monde. */
+export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
 /**
  * Un maillon de la chaîne qui donne toute la hauteur restante à une page
  * (l'onglet Objets de l'Inventaire) : flex en colonne, s'étire, et peut
@@ -61,9 +58,6 @@ export function useSettingsHeaderMode(): boolean {
   const slots = React.useContext(SettingsHeaderContext);
   return !!(slots?.title && slots.actions);
 }
-
-/** Les sections d'une carte : ses listes s'étendent jusqu'aux bords, sans second cadre. */
-const InSectionCardContext = React.createContext(false);
 
 /** Un titre suivi de son aide. */
 export function TitleWithHelp({ title, help, className }: { title: string; help?: string; className?: string }) {
@@ -131,7 +125,7 @@ export function FeaturePage({
   );
 
   return (
-    <div className={cn("@container min-w-0 space-y-4", fill && FILL)}>
+    <div className={cn("@container min-w-0 space-y-6", fill && FILL)}>
       {inHeader ? (
         shown && (
           <>
@@ -175,11 +169,12 @@ function Crumb() {
 }
 
 /**
- * Une section : une carte, comme dans les paramètres du compte — titre,
- * compteur et phrase en tête, réglages dessous. L'aide (`help`) reste pour un
- * détail rare ; l'explication utile va dans `description`, visible.
- * `layout` ne sert plus qu'à marquer la section (`data-layout`) : toutes
- * s'empilent désormais.
+ * Une section, à plat (pas de carte : trop de cartes alourdissent la page).
+ * Par défaut en deux colonnes : titre, compteur et sous-titre à gauche,
+ * réglages à droite, un trait au-dessus. `stacked` : le contenu passe sous
+ * l'en-tête, pour ce qui a besoin de toute la largeur (tableau, liste,
+ * journal). L'aide (`help`) reste pour un détail rare ; l'explication utile
+ * va dans `description`, visible.
  */
 export function SettingsSection({
   title,
@@ -188,7 +183,7 @@ export function SettingsSection({
   help,
   meta,
   aside,
-  layout = "stacked",
+  layout = "columns",
   className,
   children,
 }: {
@@ -200,7 +195,7 @@ export function SettingsSection({
   help?: string;
   /** Une donnée sous le titre (« 12 mois · 365 jours »), pas une description. */
   meta?: React.ReactNode;
-  /** À droite du titre : une action secondaire ou l'indicateur d'enregistrement. */
+  /** Sous le titre : une action secondaire ou l'indicateur d'enregistrement. */
   aside?: React.ReactNode;
   layout?: "columns" | "stacked";
   className?: string;
@@ -210,24 +205,24 @@ export function SettingsSection({
     <section
       aria-label={title}
       data-layout={layout}
-      className={cn("rounded-lg", SURFACE, className)}
+      className={cn(
+        "grid gap-4 border-t border-border pt-6 first:border-t-0 first:pt-0",
+        layout === "columns" && "@2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10",
+        className,
+      )}
     >
-      <div className="flex items-start justify-between gap-3 px-5 pt-4">
-        <div className="min-w-0 space-y-0.5">
-          <h4 className="flex min-w-0 items-center gap-2 text-base font-semibold">
-            <TitleWithHelp title={title} help={help} />
-            {count !== undefined && (
-              <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
-            )}
-          </h4>
-          {description && <p className={DESCRIPTION}>{description}</p>}
-          {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
-        </div>
-        {aside && <div className="shrink-0">{aside}</div>}
+      <div className="space-y-1">
+        <h4 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+          <TitleWithHelp title={title} help={help} />
+          {count !== undefined && (
+            <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
+          )}
+        </h4>
+        {description && <p className={DESCRIPTION}>{description}</p>}
+        {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
+        {aside}
       </div>
-      <InSectionCardContext.Provider value={true}>
-        <div className="min-w-0 space-y-3 px-5 pb-5 pt-4">{children}</div>
-      </InSectionCardContext.Provider>
+      <div className="min-w-0 space-y-3">{children}</div>
     </section>
   );
 }
@@ -395,20 +390,8 @@ export function SettingsSegmented<T extends string>({
 
 /** Une liste bordée de réglages, une ligne chacun. */
 export function ToggleList({ children, className, label }: { children: React.ReactNode; className?: string; /** Nomme la liste (groupe) quand une page en a plusieurs. */ label?: string }) {
-  // Dans la carte d'une section : les lignes vont d'un bord à l'autre, un
-  // trait au-dessus, sans second cadre (dernière de la carte : jusqu'en bas).
-  const inCard = React.useContext(InSectionCardContext);
   return (
-    <div
-      role={label ? "group" : undefined}
-      aria-label={label}
-      data-flush={inCard || undefined}
-      className={cn(
-        "divide-y divide-border",
-        inCard ? "-mx-5 border-y border-border px-1 last:-mb-5 last:border-b-0" : cn("rounded-lg", SURFACE),
-        className,
-      )}
-    >
+    <div role={label ? "group" : undefined} aria-label={label} className={cn("divide-y divide-border rounded-lg", SURFACE, className)}>
       {children}
     </div>
   );
