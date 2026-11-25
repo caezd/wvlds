@@ -119,8 +119,8 @@ describe("WorldTaxSettings (migration 255)", () => {
     };
     expect(dernier()).toEqual(attendu);
     expect(onUpdated).toHaveBeenLastCalledWith(attendu);
-    expect(screen.getAllByText("Enregistré").length).toBeGreaterThan(0);
-    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith("Enregistré", { id: "autosave" });
+    expect(screen.queryByText("Enregistré")).toBeNull();
   });
 
   it("un champ vidé (récurrence) n'est pas envoyé", async () => {
@@ -187,13 +187,13 @@ describe("WorldTaxSettings (migration 255)", () => {
     expect(anchor.getHours()).toBe(0);
   });
 
-  it("un refus : un toast, l'indicateur ne dit pas « Enregistré »", async () => {
+  it("un refus : un toast d'erreur, aucun « Enregistré »", async () => {
     setWorldTax.mockResolvedValue({ ok: false, error: "x" });
     const user = utilisateur();
     render(<WorldTaxSettings world={monde()} />);
     await user.click(screen.getByRole("switch", { name: "Lever une taxe" }));
     await attendre();
     expect(toast.error).toHaveBeenCalled();
-    expect(screen.queryByText("Enregistré")).toBeNull();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

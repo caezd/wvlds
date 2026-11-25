@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Taxe des personas, dans Paramètres › Fonctions › Économie › Devises.\n- un montant fixe, tous les N jours, semaines ou mois, à partir d’une date de départ\n- paiement par le joueur (bouton dans l’onglet Inventaire du persona) ou retrait automatique dès que la bourse le permet\n- options : dettes qui s’accumulent ou non, délai pour les nouveaux personas\n- badge facultatif à côté du nom des personas en retard (messages, fiche) ; texte, couleur et icône au choix\n- qui gère l’économie peut annuler une dette ; paiements et annulations au journal d’activité",
+    text: "Taxe des personas, dans Paramètres › Fonctions › Économie › Devises.\n- un montant fixe, tous les N jours, semaines ou mois, à partir d’une date de départ\n- paiement par le joueur (bouton dans l’onglet Inventaire du persona) ou retrait automatique dès que la bourse le permet\n- options : dettes qui s’accumulent ou non, délai pour les nouveaux personas\n- badge facultatif à côté du nom des personas en retard (messages, fiche) ; texte, couleur et icône au choix\n- qui gère l’économie peut annuler une dette ; paiements et annulations au journal d’activité\n- réglages enregistrés d’eux-mêmes, confirmés par un toast",
   },
   {
     date: "2026-11-25",

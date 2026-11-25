@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { useAutoSave } from "@/hooks/useAutoSave";
 
@@ -11,7 +14,10 @@ function monter(save: (v: number) => Promise<boolean>, initial: Props = { value:
   });
 }
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.useFakeTimers();
+});
 afterEach(() => vi.useRealTimers());
 
 describe("useAutoSave", () => {
@@ -34,6 +40,24 @@ describe("useAutoSave", () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(save).toHaveBeenCalledWith(3);
     expect(result.current.status).toBe("saved");
+  });
+
+  it("une réussite s'annonce dans une seule pastille de toast, reprise d'un envoi à l'autre", async () => {
+    const save = vi.fn().mockResolvedValue(true);
+    const { rerender } = monter(save);
+    rerender({ value: 2, valid: true });
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    rerender({ value: 3, valid: true });
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(toast.success).toHaveBeenCalledTimes(2);
+    expect(toast.success).toHaveBeenLastCalledWith("Enregistré", { id: "autosave" });
+  });
+
+  it("un échec ne s'annonce pas comme une réussite", async () => {
+    const { rerender } = monter(vi.fn().mockResolvedValue(false));
+    rerender({ value: 2, valid: true });
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("n'enregistre pas une valeur invalide, ni une valeur égale à la dernière enregistrée", async () => {
