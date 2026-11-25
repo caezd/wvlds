@@ -61,4 +61,29 @@ describe("AnnouncementDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onNavigate).toHaveBeenCalled();
   });
+
+  it("un message de bienvenue : pas de lien vers le monde, mais la page du wiki liée (migration 264)", async () => {
+    const onOpenChange = vi.fn();
+    const onNavigate = vi.fn();
+    render(
+      <AnnouncementDialog
+        notif={{ ...notif, metadata: { welcome: true, world_name: "Ygg", body: "Bienvenue", wiki_page: { slug: "guide arrivant", title: "Guide" } } }}
+        worldName={null}
+        open
+        onOpenChange={onOpenChange}
+        onNavigate={onNavigate}
+      />,
+    );
+    expect(screen.queryByRole("link", { name: "announcement.openWorld" })).not.toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Guide/ });
+    expect(link).toHaveAttribute("href", "/w/w1?view=wiki&page=guide%20arrivant");
+    await userEvent.setup().click(link);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onNavigate).toHaveBeenCalled();
+  });
+
+  it("un message de bienvenue sans page liée n'a aucun bouton", () => {
+    render(<AnnouncementDialog notif={{ ...notif, metadata: { welcome: true, body: "Bienvenue" } }} worldName={null} open onOpenChange={() => {}} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
 });

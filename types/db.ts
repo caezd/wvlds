@@ -300,6 +300,8 @@ export type NotificationMeta = {
   signed_as_world?: boolean;
   /** Message de bienvenue (migration 229). */
   welcome?: boolean;
+  /** Sa page du wiki liée (migration 264), résolue à l'envoi. */
+  wiki_page?: { slug: string; title: string } | null;
   /** Annonce (migration 235) : étiquette, image d'en-tête, modifiée après envoi. */
   label?: string | null;
   image_url?: string | null;

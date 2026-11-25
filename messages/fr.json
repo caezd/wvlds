@@ -1402,7 +1402,9 @@
         "editorTitle": "Message de bienvenue",
         "editorDescription": "Envoyé à chaque nouveau membre, depuis votre compte une fois enregistré.",
         "titlePlaceholder": "Bienvenue dans '{world}'",
-        "previewDialogTitle": "Aperçu du message de bienvenue"
+        "previewDialogTitle": "Aperçu du message de bienvenue",
+        "wikiPage": "Page du wiki à lire",
+        "wikiPageHelp": "Proposée en bouton dans la notification ouverte. Seules les pages publiées et non restreintes sont proposées."
       },
       "kindBanner": "Bandeau",
       "kindBannerHelp": "Un titre et un texte en tête de l'accueil du monde, jusqu'à ce qu'on le ferme.",

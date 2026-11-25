@@ -107,14 +107,14 @@ describe("sendAnnouncementTest", () => {
     expect(await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "message", title: "ignoré", body: " Coucou " }))
       .toEqual({ ok: true });
     expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", {
-      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou", p_as_world: false, p_welcome: false,
+      p_world_id: "w1", p_kind: "message", p_title: null, p_body: "Coucou", p_as_world: false, p_welcome: false, p_wiki_page_id: null,
     });
   });
 
   it("marque l'essai d'un message de bienvenue (migration 263)", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
-    await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "notification", title: "Salut", body: "b", welcome: true });
-    expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", expect.objectContaining({ p_welcome: true }));
+    await sendAnnouncementTest({ rpc } as never, { worldId: "w1", kind: "notification", title: "Salut", body: "b", welcome: true, wikiPageId: "p1" });
+    expect(rpc).toHaveBeenCalledWith("send_world_announcement_test", expect.objectContaining({ p_welcome: true, p_wiki_page_id: "p1" }));
   });
 
   it("nomme le plafond des essais", async () => {
@@ -201,8 +201,16 @@ describe("message de bienvenue", () => {
     expect(await saveWorldWelcome({ rpc } as never, { worldId: "w1", enabled: true, kind: "message", title: "x", body: " Salut " }))
       .toEqual({ ok: true });
     expect(rpc).toHaveBeenCalledWith("save_world_welcome", {
-      p_world_id: "w1", p_enabled: true, p_kind: "message", p_title: null, p_body: "Salut", p_as_world: false,
+      p_world_id: "w1", p_enabled: true, p_kind: "message", p_title: null, p_body: "Salut", p_as_world: false, p_wiki_page_id: null,
     });
+  });
+
+  it("saveWorldWelcome lie une page du wiki à une notification seulement (migration 264)", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    await saveWorldWelcome({ rpc } as never, { worldId: "w1", enabled: true, kind: "notification", title: "T", body: "B", wikiPageId: "p1" });
+    expect(rpc).toHaveBeenLastCalledWith("save_world_welcome", expect.objectContaining({ p_wiki_page_id: "p1" }));
+    await saveWorldWelcome({ rpc } as never, { worldId: "w1", enabled: true, kind: "message", title: "", body: "B", wikiPageId: "p1" });
+    expect(rpc).toHaveBeenLastCalledWith("save_world_welcome", expect.objectContaining({ p_wiki_page_id: null }));
   });
 });
 

@@ -16,25 +16,34 @@ export type WikiPageRef = { id: string; title: string; slug: string; icon: strin
 
 export const MAX_LINKED_PAGES = 10;
 
-/** Les pages (pas les dossiers) d'un monde, une fois par montage. */
-export function useWorldWikiPages(worldId: string, enabled = true): WikiPageRef[] | null {
+/**
+ * Les pages (pas les dossiers) d'un monde, une fois par montage.
+ * `readableOnly` : seulement celles que tout membre peut lire, publiées et
+ * non restreintes (le guide d'un message de bienvenue, migration 264).
+ */
+export function useWorldWikiPages(
+  worldId: string,
+  enabled = true,
+  { readableOnly = false }: { readableOnly?: boolean } = {},
+): WikiPageRef[] | null {
   const supabase = useMemo(() => createClient(), []);
   const [pages, setPages] = useState<WikiPageRef[] | null>(null);
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("world_wiki_pages")
         .select("id, title, slug, icon")
         .eq("world_id", worldId)
         .eq("is_folder", false)
-        .is("deleted_at", null)
-        .order("title");
+        .is("deleted_at", null);
+      if (readableOnly) query = query.eq("is_restricted", false).not("published_at", "is", null);
+      const { data } = await query.order("title");
       if (!cancelled) setPages((data ?? []) as WikiPageRef[]);
     })();
     return () => { cancelled = true; };
-  }, [supabase, worldId, enabled]);
+  }, [supabase, worldId, enabled, readableOnly]);
   return pages;
 }
 
@@ -82,18 +91,24 @@ export function WikiPagePicker({
   worldId,
   value,
   onChange,
+  pages: givenPages,
+  max = MAX_LINKED_PAGES,
 }: {
   worldId: string;
   value: string[];
   onChange: (pageIds: string[]) => void;
+  /** Pages déjà lues par le parent : pas de seconde lecture. */
+  pages?: WikiPageRef[] | null;
+  max?: number;
 }) {
   const t = useTranslations("catalogue");
   const [open, setOpen] = useState(false);
-  const pages = useWorldWikiPages(worldId);
+  const fetched = useWorldWikiPages(worldId, givenPages === undefined);
+  const pages = givenPages === undefined ? fetched : givenPages;
   const byId = useMemo(() => new Map((pages ?? []).map((p) => [p.id, p])), [pages]);
   const chosen = value.map((id) => byId.get(id)).filter((p): p is WikiPageRef => !!p);
   const remaining = (pages ?? []).filter((p) => !value.includes(p.id));
-  const full = value.length >= MAX_LINKED_PAGES;
+  const full = value.length >= max;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">

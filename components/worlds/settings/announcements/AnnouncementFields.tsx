@@ -73,9 +73,12 @@ function useAnnouncementTest(worldId: string) {
   const supabase = React.useMemo(() => createClient(), []);
   const [testing, setTesting] = React.useState(false);
   const sendTest = React.useCallback(
-    async (kind: AnnouncementKind, title: string, body: string, asWorld = false, welcome = false) => {
+    async (kind: AnnouncementKind, title: string, body: string, asWorld = false, welcome?: { wikiPageId: string | null }) => {
       setTesting(true);
-      const res = await sendAnnouncementTest(supabase, { worldId, kind, title, body, asWorld, ...(welcome && { welcome }) });
+      const res = await sendAnnouncementTest(supabase, {
+        worldId, kind, title, body, asWorld,
+        ...(welcome && { welcome: true, wikiPageId: welcome.wikiPageId }),
+      });
       setTesting(false);
       if (!res.ok) {
         toast.error(errorMessage(res.reason));
@@ -99,7 +102,7 @@ export function AnnouncementTestButton({
   body,
   asWorld,
   disabled,
-  welcome = false,
+  welcome,
   testId = "announcement-test",
 }: {
   worldId: string;
@@ -108,8 +111,8 @@ export function AnnouncementTestButton({
   body: string;
   asWorld: boolean;
   disabled: boolean;
-  /** Essai du message de bienvenue. */
-  welcome?: boolean;
+  /** Essai du message de bienvenue, et sa page du wiki liée. */
+  welcome?: { wikiPageId: string | null };
   testId?: string;
 }) {
   const t = useTranslations("worlds.announcements");

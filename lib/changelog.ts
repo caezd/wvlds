@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-25",
+    category: "Fonctionnalité",
+    area: "Membres",
+    text: "Message de bienvenue en notification : une page du wiki à proposer.\n- bouton vers la page dans la notification ouverte, à la place de « Ouvrir le monde »\n- pages publiées et non restreintes seulement\n- pas de page liée en message privé",
+  },
+  {
+    date: "2026-11-25",
     category: "Correctif",
     area: "Notifications",
     text: "Message de bienvenue en notification : « … vous souhaite la bienvenue », au lieu d’une annonce.\n- même libellé dans l’aperçu et l’essai\n- titre suggéré prérempli\n- une annonce ouverte depuis les notifications reste affichée ; lue à sa fermeture",

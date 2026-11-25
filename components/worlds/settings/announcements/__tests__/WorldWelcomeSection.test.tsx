@@ -30,11 +30,25 @@ vi.mock("@/lib/worldAnnouncements", async (importOriginal) => {
   };
 });
 
+// Les pages lisibles par un nouveau membre ; le sélecteur réduit à un bouton.
+const wiki = vi.hoisted(() => ({ calls: [] as unknown[][] }));
+vi.mock("@/components/worlds/catalogue/WikiPagePicker", () => ({
+  useWorldWikiPages: (...a: unknown[]) => {
+    wiki.calls.push(a);
+    return [{ id: "p1", title: "Guide de l'arrivant", slug: "guide", icon: null }];
+  },
+  WikiPagePicker: ({ value, onChange, max }: { value: string[]; onChange: (v: string[]) => void; max?: number }) => (
+    <button type="button" data-testid="wiki-picker" data-max={max} onClick={() => onChange(value.length ? [] : ["p1"])}>
+      {value.join(",") || "none"}
+    </button>
+  ),
+}));
+
 import { WorldWelcomeSection } from "../WorldWelcomeSection";
 
 const sample = { username: "mojkkin", world: "Ygg" };
 const SAVED = {
-  enabled: true, kind: "notification" as const, title: "Bienvenue {username}", body: "Ravi de vous voir dans {world}.",
+  enabled: true, kind: "notification" as const, title: "Bienvenue {username}", body: "Ravi de vous voir dans {world}.", wiki_page_id: "p1",
   sent_count: 4, updated_at: "2026-11-22T10:00:00Z", author: { username: "Thaddeus" },
 };
 
@@ -72,7 +86,7 @@ describe("WorldWelcomeSection", () => {
     api.welcome.mockResolvedValue({ ...SAVED, kind: "message", title: null, body: "Salut {username}", sent_count: 0 });
     await user.click(save);
     await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", enabled: true, kind: "message", title: "", body: "Salut {username}", asWorld: false,
+      worldId: "w1", enabled: true, kind: "message", title: "", body: "Salut {username}", asWorld: false, wikiPageId: null,
     }));
     expect(toast.success).toHaveBeenCalledWith("saved");
     await waitFor(() => expect(screen.queryByTestId("welcome-editor")).not.toBeInTheDocument());
@@ -91,7 +105,7 @@ describe("WorldWelcomeSection", () => {
     const toggle = screen.getByRole("switch", { name: "enable" });
     expect(toggle).toHaveAttribute("aria-checked", "true");
     await user.click(toggle);
-    await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ worldId: "w1", enabled: false })));
+    await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ worldId: "w1", enabled: false, wikiPageId: "p1" })));
     expect(toast.success).toHaveBeenCalledWith("disabledToast");
   });
 
@@ -113,7 +127,7 @@ describe("WorldWelcomeSection", () => {
     await user.type(title, "Salut");
     await user.click(within(editor).getByTestId("welcome-test"));
     await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), {
-      worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.", asWorld: false, welcome: true,
+      worldId: "w1", kind: "notification", title: "Salut", body: "Ravi de vous voir dans {world}.", asWorld: false, welcome: true, wikiPageId: "p1",
     }));
     expect(toast.success).toHaveBeenCalledWith("testSent");
   });
@@ -196,5 +210,40 @@ describe("WorldWelcomeSection", () => {
     await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       kind: "notification", asWorld: true,
     })));
+  });
+
+  it("lie une page du wiki à une notification : choix, aperçu, essai, enregistrement (migration 264)", async () => {
+    api.welcome.mockResolvedValue({ ...SAVED, wiki_page_id: null });
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(await screen.findByTestId("welcome-edit"));
+    const editor = await screen.findByTestId("welcome-editor");
+    // Seules les pages qu'un nouveau membre peut lire.
+    expect(wiki.calls.at(-1)).toEqual(["w1", true, { readableOnly: true }]);
+    const picker = within(editor).getByTestId("wiki-picker");
+    expect(picker).toHaveAttribute("data-max", "1");
+    await user.click(picker);
+
+    const direct = within(editor).getByTestId("welcome-live-preview");
+    expect(within(direct).getByTestId("welcome-live-preview-opened")).toHaveTextContent("Guide de l'arrivant");
+    // Pas de lien vers le monde dans un message de bienvenue.
+    expect(within(direct).queryByText("announcement.openWorld")).toBeNull();
+
+    await user.click(within(editor).getByTestId("welcome-test"));
+    await waitFor(() => expect(api.test).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ welcome: true, wikiPageId: "p1" })));
+    await user.click(within(editor).getByTestId("welcome-save"));
+    await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: "notification", wikiPageId: "p1" })));
+  });
+
+  it("pas de page liée en message privé : le texte y est simple", async () => {
+    api.welcome.mockResolvedValue({ ...SAVED, kind: "message", title: null });
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(await screen.findByTestId("welcome-edit"));
+    const editor = await screen.findByTestId("welcome-editor");
+    expect(within(editor).queryByTestId("wiki-picker")).not.toBeInTheDocument();
+    await user.type(within(editor).getByTestId("welcome-text"), "!");
+    await user.click(within(editor).getByTestId("welcome-save"));
+    await waitFor(() => expect(api.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: "message", wikiPageId: null })));
   });
 });

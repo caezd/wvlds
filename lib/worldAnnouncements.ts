@@ -188,6 +188,8 @@ export async function sendAnnouncementTest(
   input: Omit<SendAnnouncementInput, "roleIds" | "filters" | "bannerDays"> & {
     /** Essai du message de bienvenue : notifié comme tel (migration 263). */
     welcome?: boolean;
+    /** Sa page du wiki liée (migration 264). */
+    wikiPageId?: string | null;
   },
 ): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
   const { error } = await supabase.rpc(RPC.SEND_WORLD_ANNOUNCEMENT_TEST, {
@@ -197,6 +199,7 @@ export async function sendAnnouncementTest(
     p_body: input.body.trim(),
     p_as_world: input.kind !== "message" && !!input.asWorld,
     p_welcome: !!input.welcome,
+    p_wiki_page_id: input.kind !== "message" ? input.wikiPageId ?? null : null,
   });
   if (error) {
     console.error("[worldAnnouncements] essai", error);
@@ -308,6 +311,8 @@ export type WorldWelcome = {
   signed_as_world: boolean;
   /** L'expéditeur : la dernière personne à l'avoir enregistré. */
   author: { username: string | null } | null;
+  /** Page du wiki proposée au nouveau membre, en notification (migration 264). */
+  wiki_page_id?: string | null;
 };
 
 export async function fetchWorldWelcome(
@@ -316,7 +321,7 @@ export async function fetchWorldWelcome(
 ): Promise<WorldWelcome | null> {
   const { data, error } = await supabase
     .from(TABLE.WORLD_WELCOME_MESSAGES)
-    .select("enabled, kind, title, body, sent_count, updated_at, signed_as_world, author:author_id(username)")
+    .select("enabled, kind, title, body, sent_count, updated_at, signed_as_world, wiki_page_id, author:author_id(username)")
     .eq("world_id", worldId)
     .maybeSingle();
   if (error || !data) return null;
@@ -326,7 +331,11 @@ export async function fetchWorldWelcome(
 /** Enregistre le modèle (et l'active), ou le coupe avec `enabled: false`. */
 export async function saveWorldWelcome(
   supabase: Pick<SupabaseClient, "rpc">,
-  input: { worldId: string; enabled: boolean; kind: AnnouncementKind; title: string; body: string; asWorld?: boolean },
+  input: {
+    worldId: string; enabled: boolean; kind: AnnouncementKind; title: string; body: string; asWorld?: boolean;
+    /** Notification seulement : un message privé reste du texte simple. */
+    wikiPageId?: string | null;
+  },
 ): Promise<{ ok: true } | { ok: false; reason: AnnouncementErrorReason }> {
   const { error } = await supabase.rpc(RPC.SAVE_WORLD_WELCOME, {
     p_world_id: input.worldId,
@@ -335,6 +344,7 @@ export async function saveWorldWelcome(
     p_title: input.kind !== "message" ? input.title.trim() : null,
     p_body: input.body.trim(),
     p_as_world: input.kind !== "message" && !!input.asWorld,
+    p_wiki_page_id: input.kind !== "message" ? input.wikiPageId ?? null : null,
   });
   if (error) {
     console.error("[worldAnnouncements] bienvenue", error);

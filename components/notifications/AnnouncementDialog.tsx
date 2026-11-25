@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Megaphone } from "lucide-react";
+import { BookOpenText, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -43,6 +43,11 @@ export function AnnouncementDialog({
     // Essai que l'auteur s'est envoyé (migration 228) ; un message privé
     // essayé n'a pas de titre.
     const isTest = notif.metadata?.test === true;
+    // Un message de bienvenue (migration 229) : le nouveau membre est déjà
+    // dans le monde ; à la place, la page du wiki liée (migration 264).
+    const isWelcome = notif.metadata?.welcome === true;
+    const wikiPage = isWelcome ? notif.metadata?.wiki_page ?? null : null;
+    const follow = () => { onOpenChange(false); onNavigate?.(); };
     const title = notif.content
         ?? (isTest && notif.metadata?.kind === "message" ? t("announcement.testMessageTitle") : t("announcement.fallbackTitle"));
 
@@ -83,10 +88,20 @@ export function AnnouncementDialog({
                         <MarkdownRenderer content={body} />
                     </div>
                 )}
-                {notif.world_id && (
+                {notif.world_id && wikiPage && (
                     <DialogFooter>
                         <Button asChild variant="outline">
-                            <Link href={`/w/${notif.world_id}`} onClick={() => { onOpenChange(false); onNavigate?.(); }}>
+                            <Link href={`/w/${notif.world_id}?view=wiki&page=${encodeURIComponent(wikiPage.slug)}`} onClick={follow}>
+                                <BookOpenText className="h-4 w-4" />
+                                {wikiPage.title}
+                            </Link>
+                        </Button>
+                    </DialogFooter>
+                )}
+                {notif.world_id && !isWelcome && (
+                    <DialogFooter>
+                        <Button asChild variant="outline">
+                            <Link href={`/w/${notif.world_id}`} onClick={follow}>
                                 {t("announcement.openWorld")}
                             </Link>
                         </Button>

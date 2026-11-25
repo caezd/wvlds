@@ -31,6 +31,8 @@ const WELCOME_KINDS: readonly AnnouncementKind[] = ["message", "notification"];
 import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage } from "./AnnouncementFields";
 import { AnnouncementLivePreview, AnnouncementPreviewButton } from "./AnnouncementLivePreview";
 import { EMPTY_EXTRAS } from "@/components/worlds/announcements/AnnouncementExtrasFields";
+import { WikiPagePicker, useWorldWikiPages } from "@/components/worlds/catalogue/WikiPagePicker";
+import { LabelWithHelp } from "../LabelWithHelp";
 
 /**
  * Message de bienvenue (migration 229) : un modèle envoyé à chaque nouveau
@@ -85,6 +87,7 @@ export function WorldWelcomeSection({
       title: welcome.title ?? "",
       body: welcome.body,
       asWorld: welcome.signed_as_world,
+      wikiPageId: welcome.wiki_page_id ?? null,
     });
     setToggling(false);
     if (!res.ok) {
@@ -190,7 +193,11 @@ function WelcomeEditor({
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
   const [asWorld, setAsWorld] = React.useState(false);
+  const [wikiPageId, setWikiPageId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  // Une page du wiki à proposer au nouveau membre (migration 264) : parmi
+  // celles que tout membre peut lire. En notification seulement.
+  const wikiPages = useWorldWikiPages(worldId, open, { readableOnly: true });
 
   // Le brouillon repart du modèle enregistré à chaque ouverture.
   const [wasOpen, setWasOpen] = React.useState(open);
@@ -202,6 +209,7 @@ function WelcomeEditor({
       setTitle(initial?.title ?? (nextKind === "notification" ? suggestedTitle : ""));
       setBody(initial?.body ?? "");
       setAsWorld(!!initial?.signed_as_world);
+      setWikiPageId(initial?.wiki_page_id ?? null);
     }
   }
 
@@ -211,6 +219,8 @@ function WelcomeEditor({
   }
 
   const valid = isAnnouncementValid(kind, title, body);
+  const linkedPageId = kind === "notification" ? wikiPageId : null;
+  const linkedPage = (wikiPages ?? []).find((page) => page.id === linkedPageId) ?? null;
   // L'aperçu (fenêtre, et colonne en direct sur grand écran). Le message de
   // bienvenue n'a ni étiquette, ni image, ni place sur l'accueil.
   const previewProps = {
@@ -222,11 +232,12 @@ function WelcomeEditor({
     asWorld: kind === "notification" && asWorld,
     extras: EMPTY_EXTRAS,
     welcome: true,
+    wikiPage: linkedPage,
   };
 
   async function save() {
     setSaving(true);
-    const res = await saveWorldWelcome(supabase, { worldId, enabled: true, kind, title, body, asWorld });
+    const res = await saveWorldWelcome(supabase, { worldId, enabled: true, kind, title, body, asWorld, wikiPageId: linkedPageId });
     setSaving(false);
     if (!res.ok) {
       toast.error(errorMessage(res.reason));
@@ -281,6 +292,20 @@ function WelcomeEditor({
               testIdPrefix="welcome"
             />
           </div>
+          {kind === "notification" && (
+            <div className="space-y-2">
+              <SectionLabel as="div">
+                <LabelWithHelp help={t("wikiPageHelp")}>{t("wikiPage")}</LabelWithHelp>
+              </SectionLabel>
+              <WikiPagePicker
+                worldId={worldId}
+                pages={wikiPages}
+                max={1}
+                value={wikiPageId ? [wikiPageId] : []}
+                onChange={(ids) => setWikiPageId(ids[0] ?? null)}
+              />
+            </div>
+          )}
         </div>
         {/* Sur grand écran, l'aperçu en direct à droite, qui reste en vue. */}
         <aside className="hidden lg:block" aria-label={tA("previewLive")} data-testid="welcome-live-preview-aside">
@@ -298,7 +323,7 @@ function WelcomeEditor({
             body={body}
             asWorld={kind === "notification" && asWorld}
             disabled={!valid}
-            welcome
+            welcome={{ wikiPageId: linkedPageId }}
             testId="welcome-test"
           />
           <AnnouncementPreviewButton {...previewProps} dialogTitle={t("previewDialogTitle")} />

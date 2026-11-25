@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, Megaphone } from "lucide-react";
+import { BookOpenText, Eye, Megaphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -34,6 +34,8 @@ export type AnnouncementPreviewProps = {
   extras: AnnouncementExtrasValue;
   /** Message de bienvenue : la cloche le dit, sans parler d'annonce. */
   welcome?: boolean;
+  /** Page du wiki liée au message de bienvenue (migration 264). */
+  wikiPage?: { title: string } | null;
 };
 
 /** Un endroit où l'annonce paraît, sous sa légende. */
@@ -63,6 +65,7 @@ export function AnnouncementLivePreview({
   asWorld,
   extras,
   welcome = false,
+  wikiPage = null,
   testId = "announcement-preview",
 }: AnnouncementPreviewProps & { testId?: string }) {
   const t = useTranslations("worlds.announcements");
@@ -112,6 +115,14 @@ export function AnnouncementLivePreview({
               </p>
               <AnnouncementImage src={extras.imageUrl} />
               {body ? <MarkdownRenderer content={body} /> : null}
+              {wikiPage && (
+                <div className="flex justify-end">
+                  <Button type="button" variant="outline" size="sm" tabIndex={-1} className="pointer-events-none">
+                    <BookOpenText className="h-4 w-4" />
+                    {wikiPage.title}
+                  </Button>
+                </div>
+              )}
             </div>
           </Place>
         </>

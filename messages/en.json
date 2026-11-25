@@ -1402,7 +1402,9 @@
         "editorTitle": "Welcome message",
         "editorDescription": "Sent to every new member, from your account once saved.",
         "titlePlaceholder": "Welcome to '{world}'",
-        "previewDialogTitle": "Welcome message preview"
+        "previewDialogTitle": "Welcome message preview",
+        "wikiPage": "Wiki page to read",
+        "wikiPageHelp": "Offered as a button in the opened notification. Only published, unrestricted pages are listed."
       },
       "kindBanner": "Banner",
       "kindBannerHelp": "A title and text at the top of the world's home page, until dismissed.",
