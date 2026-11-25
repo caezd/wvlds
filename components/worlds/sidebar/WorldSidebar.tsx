@@ -13,7 +13,7 @@ import {
 import { getTranslations } from "next-intl/server";
 import { canOpenWorldSettings } from "@/lib/worldPermissions";
 import { worldHasShops } from "@/lib/worldShops";
-import { worldHasGains } from "@/lib/worldGains";
+import { worldHasDailyGain } from "@/lib/worldGains";
 import { DailyGainClaim } from "@/components/economy/DailyGainClaim";
 import {
   BookOpenText,
@@ -91,7 +91,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   // Les boutiques vendent des objets contre la monnaie du monde (migration 249).
   const hasShops = featureFlags.world_economy && worldHasShops(world);
   // Le gain de la première visite du jour (migration 252) : la barre reste montée d'une page du monde à l'autre.
-  const claimsDailyGain = featureFlags.world_economy && worldHasGains(world) && Number(world.gain_daily_login ?? 0) > 0;
+  const claimsDailyGain = featureFlags.world_economy && worldHasDailyGain(world);
 
   const worldBase = `/w/${worldId}`;
 

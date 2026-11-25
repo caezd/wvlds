@@ -4,10 +4,12 @@ import path from "node:path";
 
 import {
   GAIN_KINDS,
+  MAX_GAIN,
   MAX_GAIN_COOLDOWN_MINUTES,
   cappedGain,
   gainSettingsOf,
   gainSettingsSchema,
+  worldHasDailyGain,
   worldHasGains,
 } from "@/lib/worldGains";
 
@@ -53,10 +55,56 @@ describe("gainSettingsSchema", () => {
     expect(gainSettingsSchema.safeParse({ ...ok, gain_daily_cap: 200 }).success).toBe(true);
   });
   it("refuse le négatif, le décimal, un délai trop long, une colonne inconnue", () => {
-    expect(gainSettingsSchema.safeParse({ ...ok, gain_message: -1 }).success).toBe(false);
+    expect(gainSettingsSchema.safeParse({ ...ok, gain_message: -MAX_GAIN - 1 }).success).toBe(false);
+    expect(gainSettingsSchema.safeParse({ ...ok, gain_daily_cap: -1 }).success).toBe(false);
+    expect(gainSettingsSchema.safeParse({ ...ok, gain_message_cooldown: -1 }).success).toBe(false);
     expect(gainSettingsSchema.safeParse({ ...ok, gain_message: 1.5 }).success).toBe(false);
     expect(gainSettingsSchema.safeParse({ ...ok, gain_message_cooldown: MAX_GAIN_COOLDOWN_MINUTES + 1 }).success).toBe(false);
     expect(gainSettingsSchema.safeParse({ ...ok, enable_gains: true }).success).toBe(false);
+  });
+});
+
+describe("gains négatifs (migration 261)", () => {
+  it("un gain peut retirer : chaque montant accepte un négatif", () => {
+    const zero = gainSettingsOf({});
+    for (const kind of GAIN_KINDS) {
+      expect(gainSettingsSchema.safeParse({ ...zero, [`gain_${kind}`]: -5 }).success).toBe(true);
+    }
+  });
+
+  it("la connexion du jour se réclame dès que son montant n'est pas nul, gain ou perte", () => {
+    expect(worldHasDailyGain({ enable_economy: true, gain_daily_login: 5 })).toBe(true);
+    expect(worldHasDailyGain({ enable_economy: true, gain_daily_login: -5 })).toBe(true);
+    expect(worldHasDailyGain({ enable_economy: true, gain_daily_login: 0 })).toBe(false);
+    expect(worldHasDailyGain({ enable_economy: false, gain_daily_login: 5 })).toBe(false);
+  });
+
+  it("le plafond ne rogne pas une perte", () => {
+    expect(cappedGain(-10, 100, 100)).toBe(-10);
+  });
+
+  const sql = readFileSync(path.join(process.cwd(), "migrations/261_world_gains_negative.sql"), "utf8");
+
+  it("la base accepte les montants négatifs, pas le plafond ni le délai", () => {
+    expect(sql).toMatch(/gain_message BETWEEN -1000000000000 AND 1000000000000/);
+    expect(sql).toMatch(/gain_daily_cap IS NULL OR gain_daily_cap BETWEEN 0 AND 1000000000000/);
+    expect(sql).toMatch(/gain_message_cooldown BETWEEN 0 AND 1440/);
+  });
+
+  it("une perte ne vide la bourse que jusqu'à zéro ; le plafond ne compte que ce qui est gagné", () => {
+    expect(sql).toMatch(/IF v_amount = 0 THEN\s+RETURN 0;/);
+    expect(sql).toMatch(/v_amount := GREATEST\(v_amount, -v_balance\)/);
+    expect(sql).toMatch(/sum\(GREATEST\(l\.delta, 0\)\)/);
+    expect(sql).toMatch(/IF v_amount > 0 AND w\.gain_daily_cap IS NOT NULL THEN/);
+  });
+
+  it("les déclencheurs se réveillent pour un montant non nul", () => {
+    expect(sql).toMatch(/w\.gain_message <> 0 OR w\.gain_scene_joined <> 0 OR w\.gain_scene_created <> 0/);
+    expect(sql).toMatch(/w\.gain_scene_completed <> 0/);
+    expect(sql).toMatch(/w\.gain_daily_login <> 0/);
+    const triggers = sql.match(/CREATE OR REPLACE FUNCTION public\.tg_[a-z_]*gains?[a-z_]*\(\)[\s\S]*?\$\$;/g) ?? [];
+    expect(triggers.length).toBe(2);
+    for (const body of triggers) expect(body).toMatch(/EXCEPTION WHEN OTHERS THEN\s+RAISE WARNING/);
   });
 });
 

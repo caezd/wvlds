@@ -1251,11 +1251,15 @@
       "tradesSameAccountHelp": "Lets a player move money and items from one of their personas to another.",
       "gainsForm": {
         "title": "Earnings",
-        "help": "World currency earned by playing: per message and on the first visit of the day. An amount of zero earns nothing.",
+        "help": "World currency earned by playing: per message and on the first visit of the day. An amount of zero earns nothing; “−” takes money away, never below zero.",
         "limits": "Gain limits",
         "limitsHelp": "What bounds gains: the delay only applies to messages, the cap to all gains together.",
         "amountIn": "{label} in {unit}",
         "nothing": "Earns nothing",
+        "loss": "Takes from the purse, down to zero",
+        "sign": "Direction: {label}",
+        "plus": "Gives",
+        "minus": "Takes",
         "message": "Per message",
         "messageHelp": "Each in-character message visible to everyone.",
         "scene_joined": "Per scene joined",
@@ -1277,7 +1281,7 @@
         "zeroCap": "Cap at zero: no gains are paid anymore",
         "save": "Save earnings",
         "saved": "Earnings saved.",
-        "invalid": "Whole, positive amounts; a delay of one day at most."
+        "invalid": "Whole amounts; a positive cap; a delay of one day at most."
       },
       "taxForm": {
         "title": "Tax",
@@ -3065,7 +3069,8 @@
     }
   },
   "gains": {
-    "daily": "Daily earning: {amount} for your personas."
+    "daily": "Daily earning: {amount} for your personas.",
+    "dailyLoss": "Daily login: {amount} taken from your personas."
   },
   "worldActivity": {
     "title": "Activity log",

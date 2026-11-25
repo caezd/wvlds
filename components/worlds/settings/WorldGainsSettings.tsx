@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AmountInput } from "@/components/economy/AmountInput";
+import { SignedAmountInput } from "@/components/economy/SignedAmountInput";
 import { setWorldGains } from "@/app/actions/worldCatalog";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
@@ -26,7 +27,8 @@ const SHOWN_GAIN_KINDS: readonly GainKind[] = GAIN_KINDS.filter((k) => k === "me
 
 /**
  * Les gains automatiques (migrations 252, 253), dans la page Devises : un
- * montant par déclencheur, saisi palier par palier (vide ou zéro : rien),
+ * montant par déclencheur, saisi palier par palier (vide ou zéro : rien ;
+ * « − » : retire, migration 261),
  * puis, dans une seconde section, les limites — délai entre deux messages
  * payés, plafond par jour —, enregistrés d'un bouton.
  * La base paie.
@@ -81,8 +83,26 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
           {SHOWN_GAIN_KINDS.map((kind) => {
             const value = draft[columnOf(kind)];
             return (
-              <GainField key={kind} label={t(kind)} help={t(`${kind}Help`)} status={value === 0 ? t("nothing") : null}>
-                {amount(t(kind), `gain-${kind}`, value || null, (v) => setDraft((d) => ({ ...d, [columnOf(kind)]: v ?? 0 })), "0")}
+              <GainField
+                key={kind}
+                label={t(kind)}
+                help={t(`${kind}Help`)}
+                status={value === 0 ? t("nothing") : value < 0 ? t("loss") : null}
+              >
+                {/* Un gain peut retirer (migration 261) : son sens devant les cases. */}
+                <SignedAmountInput
+                  compact
+                  units={units}
+                  value={value || null}
+                  onChange={(v) => setDraft((d) => ({ ...d, [columnOf(kind)]: v ?? 0 }))}
+                  idPrefix={`gain-${kind}`}
+                  placeholder="0"
+                  fieldClassName={FIELD}
+                  labelOf={(unit) => t("amountIn", { label: t(kind), unit: unit.name })}
+                  signLabel={t("sign", { label: t(kind) })}
+                  plusLabel={t("plus")}
+                  minusLabel={t("minus")}
+                />
               </GainField>
             );
           })}

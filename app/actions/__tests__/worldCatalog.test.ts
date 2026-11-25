@@ -304,10 +304,10 @@ describe("setWorldGains (migration 252)", () => {
         expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith(gains);
     });
 
-    it("refuse un montant négatif ou une colonne en plus, sans appeler Supabase", async () => {
+    it("refuse un plafond négatif ou une colonne en plus, sans appeler Supabase", async () => {
         const mock = createSupabaseMock();
         use(mock);
-        expect((await setWorldGains(id, { ...gains, gain_message: -1 })).ok).toBe(false);
+        expect((await setWorldGains(id, { ...gains, gain_daily_cap: -1 })).ok).toBe(false);
         expect((await setWorldGains(id, { ...gains, enable_gains: true } as never)).ok).toBe(false);
         expect(mock.from).not.toHaveBeenCalled();
     });

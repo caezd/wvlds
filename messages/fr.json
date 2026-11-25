@@ -1251,11 +1251,15 @@
       "tradesSameAccountHelp": "Permet à un joueur de faire passer argent et objets d’un de ses personas à un autre.",
       "gainsForm": {
         "title": "Gains",
-        "help": "La monnaie du monde gagnée en jouant : par message et à la première visite du jour. Un montant vide ou à zéro ne rapporte rien.",
+        "help": "La monnaie du monde gagnée en jouant : par message et à la première visite du jour. Un montant vide ou à zéro ne rapporte rien ; « − » retire, sans descendre sous zéro.",
         "limits": "Limites des gains",
         "limitsHelp": "Ce qui borne les gains : le délai ne vaut que pour les messages, le plafond pour tous les gains à la fois.",
         "amountIn": "{label} en {unit}",
         "nothing": "Ne rapporte rien",
+        "loss": "Retire de la bourse, jusqu’à zéro",
+        "sign": "Sens : {label}",
+        "plus": "Donne",
+        "minus": "Retire",
         "message": "Par message",
         "messageHelp": "Chaque message en persona, visible de tous.",
         "scene_joined": "Par scène rejointe",
@@ -1277,7 +1281,7 @@
         "zeroCap": "Plafond à zéro : plus aucun gain n’est versé",
         "save": "Enregistrer les gains",
         "saved": "Gains enregistrés.",
-        "invalid": "Montants entiers et positifs ; délai d’une journée au plus."
+        "invalid": "Montants entiers ; plafond positif ; délai d’une journée au plus."
       },
       "taxForm": {
         "title": "Taxe",
@@ -3065,7 +3069,8 @@
     }
   },
   "gains": {
-    "daily": "Gain du jour : {amount} pour vos personas."
+    "daily": "Gain du jour : {amount} pour vos personas.",
+    "dailyLoss": "Connexion du jour : {amount} retirés à vos personas."
   },
   "worldActivity": {
     "title": "Journal",

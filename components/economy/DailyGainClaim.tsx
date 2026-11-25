@@ -34,7 +34,10 @@ export function DailyGainClaim({ worldId, currencyUnits }: { worldId: string; cu
       .rpc("claim_daily_gain", { p_world: worldId })
       .then(({ data }: { data: unknown }) => {
         const total = Number(data ?? 0);
-        if (total > 0) toast.success(t("daily", { amount: formatAmount(total, currencyUnitsOf(currencyUnits)) }));
+        const units = currencyUnitsOf(currencyUnits);
+        if (total > 0) toast.success(t("daily", { amount: formatAmount(total, units) }));
+        // Un gain négatif (migration 261) : ce qui a été retiré.
+        else if (total < 0) toast.info(t("dailyLoss", { amount: formatAmount(-total, units) }));
       });
     // Les paliers ne changent pas le gain : seule l'entrée dans un monde compte.
     // eslint-disable-next-line react-hooks/exhaustive-deps

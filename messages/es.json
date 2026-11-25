@@ -1251,11 +1251,15 @@
       "tradesSameAccountHelp": "Permite a un jugador pasar dinero y objetos de uno de sus personas a otro.",
       "gainsForm": {
         "title": "Ganancias",
-        "help": "La moneda del mundo que se gana jugando: por mensaje y en la primera visita del día. Un importe de cero no aporta nada.",
+        "help": "La moneda del mundo que se gana jugando: por mensaje y en la primera visita del día. Un importe de cero no aporta nada; «−» retira, sin bajar de cero.",
         "limits": "Límites de ganancias",
         "limitsHelp": "Lo que limita las ganancias: el intervalo solo vale para los mensajes, el límite para todas las ganancias a la vez.",
         "amountIn": "{label} en {unit}",
         "nothing": "No otorga nada",
+        "loss": "Retira de la bolsa, hasta cero",
+        "sign": "Sentido: {label}",
+        "plus": "Da",
+        "minus": "Retira",
         "message": "Por mensaje",
         "messageHelp": "Cada mensaje en persona, visible para todos.",
         "scene_joined": "Por escena a la que se une",
@@ -1277,7 +1281,7 @@
         "zeroCap": "Límite en cero: ya no se paga ninguna ganancia",
         "save": "Guardar las ganancias",
         "saved": "Ganancias guardadas.",
-        "invalid": "Importes enteros y positivos; un intervalo de un día como máximo."
+        "invalid": "Importes enteros; tope positivo; plazo de un día como máximo."
       },
       "taxForm": {
         "title": "Impuesto",
@@ -3065,7 +3069,8 @@
     }
   },
   "gains": {
-    "daily": "Ganancia del día: {amount} para sus personas."
+    "daily": "Ganancia del día: {amount} para sus personas.",
+    "dailyLoss": "Conexión del día: {amount} retirados a sus personas."
   },
   "worldActivity": {
     "title": "Registro",

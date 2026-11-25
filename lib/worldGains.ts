@@ -7,7 +7,8 @@ import { MAX_CURRENCY_VALUE } from "@/lib/worldCurrency";
  * les personas quand ils jouent — un message, une scène créée, rejointe ou
  * terminée, la première visite du jour. Réglés par monde dans la page
  * Devises, sans interrupteur : un montant à zéro ne paie rien. Un délai entre
- * deux messages payés et un plafond par jour tiennent les abus.
+ * deux messages payés et un plafond par jour tiennent les abus. Un montant
+ * négatif retire, jusqu'à vider la bourse (migration 261).
  *
  * Fonctions pures, voir `lib/__tests__/worldGains.test.ts`. Les bornes sont
  * celles de la base, qui tranche en dernier ressort.
@@ -51,7 +52,9 @@ export function gainSettingsOf(row: GainRow | null | undefined): GainSettings {
   };
 }
 
-const amount = z.number().int().min(0).max(MAX_GAIN);
+/** Un gain peut retirer (migration 261) ; le plafond, lui, reste positif. */
+const amount = z.number().int().min(-MAX_GAIN).max(MAX_GAIN);
+const positive = z.number().int().min(0).max(MAX_GAIN);
 
 /** Ce que l'action serveur accepte. */
 export const gainSettingsSchema = z.strictObject({
@@ -61,7 +64,7 @@ export const gainSettingsSchema = z.strictObject({
   gain_scene_completed: amount,
   gain_daily_login: amount,
   gain_message_cooldown: z.number().int().min(0).max(MAX_GAIN_COOLDOWN_MINUTES),
-  gain_daily_cap: amount.nullable(),
+  gain_daily_cap: positive.nullable(),
 });
 
 /** Les gains ne demandent que l'économie : ce sont leurs montants qui décident. */
@@ -69,8 +72,15 @@ export function worldHasGains(world: { enable_economy?: boolean | null } | null 
   return !!world && world.enable_economy === true;
 }
 
-/** Ce qu'un gain crédite vraiment, une fois le plafond du jour appliqué. Miroir de `economy_gain`. */
+/** La connexion du jour se réclame dès que son montant n'est pas nul, gain ou perte. */
+export function worldHasDailyGain(
+  world: { enable_economy?: boolean | null; gain_daily_login?: number | string | null } | null | undefined,
+): boolean {
+  return worldHasGains(world) && Number(world?.gain_daily_login ?? 0) !== 0;
+}
+
+/** Ce qu'un gain crédite vraiment, une fois le plafond du jour appliqué ; une perte n'y entre pas. Miroir de `economy_gain`. */
 export function cappedGain(amount: number, gainedToday: number, cap: number | null): number {
-  if (cap === null) return amount;
+  if (cap === null || amount < 0) return amount;
   return Math.max(0, Math.min(amount, cap - gainedToday));
 }

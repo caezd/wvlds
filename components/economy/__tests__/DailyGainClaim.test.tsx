@@ -14,7 +14,7 @@ vi.stubGlobal("localStorage", {
 });
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import { DailyGainClaim } from "@/components/economy/DailyGainClaim";
 import { createClient } from "@/lib/supabase/client";
@@ -51,6 +51,13 @@ describe("DailyGainClaim (migration 252)", () => {
     renderClaim();
     await waitFor(() => expect(mock.client.rpc).toHaveBeenCalledWith("claim_daily_gain", { p_world: "w1" }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Gain du jour : 4 po 50 pa pour vos personas."));
+  });
+
+  it("un gain négatif (migration 261) : la somme retirée est annoncée, pas comme un gain", async () => {
+    setup(-250);
+    renderClaim();
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith("Connexion du jour : 2 po 50 pa retirés à vos personas."));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("rien à gagner : pas d'annonce", async () => {
