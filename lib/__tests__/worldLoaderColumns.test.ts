@@ -14,7 +14,7 @@ describe("getWorldById — les options du monde", () => {
   const select = /getWorldById = cache\([\s\S]*?\.select\(\s*"([^"]+)"/.exec(source)?.[1] ?? "";
   const columns = new Set(select.split(",").map((c) => c.trim()));
 
-  it.each(["enable_economy", "enable_inventory", "enable_shops", "enable_trades", "trades_same_account", "tax_enabled", "tax_amount", "tax_every", "tax_unit", "tax_anchor", "tax_mode", "tax_accumulate", "tax_grace_new", "tax_badge_label"])("lit %s", (column) => {
+  it.each(["enable_economy", "enable_inventory", "enable_shops", "enable_trades", "trades_same_account", "tax_enabled", "tax_amount", "tax_every", "tax_unit", "tax_anchor", "tax_mode", "tax_accumulate", "tax_grace_new", "tax_badge_label", "tax_badge_color", "tax_badge_icon"])("lit %s", (column) => {
     expect(columns.has(column)).toBe(true);
   });
 });

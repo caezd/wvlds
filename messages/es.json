@@ -1306,6 +1306,9 @@
         "graceHelp": "Una persona nueva no debe nada antes del final de su primer periodo.",
         "badge": "Texto de la insignia",
         "badgeHelp": "Se muestra junto al nombre de una persona atrasada.",
+        "badgeStyle": "Estilo de la insignia",
+        "badgeStyleHelp": "El color y el icono de la insignia de las personas atrasadas.",
+        "resetStyle": "Estilo predeterminado",
         "save": "Guardar el impuesto",
         "saved": "Impuesto guardado.",
         "invalid": "Revise el importe y la periodicidad."

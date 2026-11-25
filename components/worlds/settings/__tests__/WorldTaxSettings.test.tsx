@@ -4,6 +4,15 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const setWorldTax = vi.fn();
+vi.mock("@/components/ui/LucideIconPicker", () => ({
+  LucideIconPicker: ({ trigger, onChange }: { trigger: React.ReactNode; onChange: (n: string) => void }) => (
+    <span>
+      {trigger}
+      <button type="button" onClick={() => onChange("skull")}>choisir crâne</button>
+    </span>
+  ),
+}));
+vi.mock("@/components/ui/LazyLucideIcon", () => ({ LazyLucideIcon: ({ name }: { name: string }) => <svg data-icon={name} /> }));
 vi.mock("@/app/actions/worldTax", () => ({
   setWorldTax: (...args: unknown[]) => setWorldTax(...args),
 }));
@@ -30,6 +39,8 @@ const monde = (patch: Record<string, unknown> = {}) =>
     tax_accumulate: true,
     tax_grace_new: true,
     tax_badge_label: null,
+    tax_badge_color: null,
+    tax_badge_icon: null,
     ...patch,
   }) as unknown as World;
 const enregistrer = () => screen.getByRole("button", { name: "Enregistrer la taxe" });
@@ -73,6 +84,8 @@ describe("WorldTaxSettings (migration 255)", () => {
       tax_accumulate: false,
       tax_grace_new: false,
       tax_badge_label: "Mauvais payeur",
+      tax_badge_color: null,
+      tax_badge_icon: null,
     };
     await waitFor(() => expect(setWorldTax).toHaveBeenCalledWith("w1", attendu));
     expect(onUpdated).toHaveBeenCalledWith(attendu);
@@ -87,6 +100,30 @@ describe("WorldTaxSettings (migration 255)", () => {
     await user.click(enregistrer());
     await waitFor(() =>
       expect(setWorldTax).toHaveBeenCalledWith("w1", expect.objectContaining({ tax_badge_label: null })),
+    );
+  });
+
+  it("le badge se personnalise : couleur, icône, aperçu ; « Par défaut » les retire", async () => {
+    render(<WorldTaxSettings world={monde({ tax_badge_label: "Fauché" })} />);
+    const user = userEvent.setup();
+    const apercu = screen.getByTestId("tax-badge-preview");
+    expect(apercu).toHaveTextContent("Fauché");
+
+    await user.click(screen.getByRole("button", { name: "Choisir une couleur" }));
+    await user.click(screen.getByRole("button", { name: "Vert" }));
+    await user.click(screen.getByRole("button", { name: "choisir crâne" }));
+    expect(apercu.querySelector('[data-icon="skull"]')).not.toBeNull();
+    expect(apercu.querySelector("[data-tax-overdue]")).toHaveStyle({ color: "#5fcf5a" });
+
+    await user.click(enregistrer());
+    await waitFor(() =>
+      expect(setWorldTax).toHaveBeenLastCalledWith("w1", expect.objectContaining({ tax_badge_color: "#5fcf5a", tax_badge_icon: "skull" })),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Style par défaut" }));
+    await user.click(enregistrer());
+    await waitFor(() =>
+      expect(setWorldTax).toHaveBeenLastCalledWith("w1", expect.objectContaining({ tax_badge_color: null, tax_badge_icon: null })),
     );
   });
 

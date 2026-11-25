@@ -12,6 +12,7 @@ import {
 import { ACTIVITY_KINDS } from "@/lib/worldActivity";
 
 const sql = readFileSync(path.join(process.cwd(), "migrations/255_world_tax.sql"), "utf8");
+const sql256 = readFileSync(path.join(process.cwd(), "migrations/256_world_tax_badge_style.sql"), "utf8");
 
 describe("migration 255", () => {
   it("les genres du journal sont ceux de la base, taxe comprise", () => {
@@ -63,6 +64,18 @@ describe("migration 255", () => {
   });
 });
 
+describe("migration 256", () => {
+  it("la couleur et l'icône du badge, contrôlées par la base", () => {
+    expect(sql256).toMatch(/tax_badge_color IS NULL OR public\.is_hex_color\(tax_badge_color\)/);
+    expect(sql256).toMatch(/char_length\(tax_badge_icon\) <= 64/);
+  });
+
+  it("la vue du badge les rend, sans perdre ses colonnes", () => {
+    expect(sql256).toMatch(/CREATE OR REPLACE VIEW public\.persona_tax_overdue[\s\S]*badge_label,[\s\S]*w\.tax_badge_color AS badge_color,[\s\S]*w\.tax_badge_icon\s+AS badge_icon/);
+    expect(sql256).toContain("security_invoker = true");
+  });
+});
+
 describe("taxSettingsSchema", () => {
   const ok = {
     tax_enabled: true,
@@ -74,11 +87,14 @@ describe("taxSettingsSchema", () => {
     tax_accumulate: true,
     tax_grace_new: true,
     tax_badge_label: "Impayé",
+    tax_badge_color: "#e8553a",
+    tax_badge_icon: "skull",
   };
 
   it("accepte des réglages complets", () => {
     expect(taxSettingsSchema.safeParse(ok).success).toBe(true);
     expect(taxSettingsSchema.safeParse({ ...ok, tax_badge_label: null }).success).toBe(true);
+    expect(taxSettingsSchema.safeParse({ ...ok, tax_badge_color: null, tax_badge_icon: null }).success).toBe(true);
   });
 
   it("refuse les valeurs hors bornes et les clés inconnues", () => {
@@ -88,6 +104,8 @@ describe("taxSettingsSchema", () => {
     expect(taxSettingsSchema.safeParse({ ...ok, tax_mode: "x" }).success).toBe(false);
     expect(taxSettingsSchema.safeParse({ ...ok, tax_badge_label: "x".repeat(25) }).success).toBe(false);
     expect(taxSettingsSchema.safeParse({ ...ok, autre: 1 }).success).toBe(false);
+    expect(taxSettingsSchema.safeParse({ ...ok, tax_badge_color: "rouge" }).success).toBe(false);
+    expect(taxSettingsSchema.safeParse({ ...ok, tax_badge_icon: "Skull Icon" }).success).toBe(false);
   });
 });
 
@@ -96,7 +114,7 @@ describe("taxSettingsOf", () => {
     const s = taxSettingsOf({});
     expect(s).toMatchObject({
       tax_enabled: false, tax_amount: 0, tax_every: 1, tax_unit: "month", tax_mode: "manual",
-      tax_accumulate: true, tax_grace_new: true, tax_badge_label: null,
+      tax_accumulate: true, tax_grace_new: true, tax_badge_label: null, tax_badge_color: null, tax_badge_icon: null,
     });
     expect(typeof s.tax_anchor).toBe("string");
   });

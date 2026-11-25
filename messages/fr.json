@@ -1306,6 +1306,9 @@
         "graceHelp": "Un nouveau persona ne doit rien avant la fin de sa première période.",
         "badge": "Texte du badge",
         "badgeHelp": "Affiché à côté du nom d’un persona en retard.",
+        "badgeStyle": "Style du badge",
+        "badgeStyleHelp": "La couleur et l’icône du badge des personas en retard.",
+        "resetStyle": "Style par défaut",
         "save": "Enregistrer la taxe",
         "saved": "Taxe enregistrée.",
         "invalid": "Vérifiez le montant et la récurrence."

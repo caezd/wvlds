@@ -1306,6 +1306,9 @@
         "graceHelp": "A new persona owes nothing until the end of their first period.",
         "badge": "Badge text",
         "badgeHelp": "Shown next to the name of a persona behind on payments.",
+        "badgeStyle": "Badge style",
+        "badgeStyleHelp": "The colour and icon of the badge shown on personas behind on payments.",
+        "resetStyle": "Default style",
         "save": "Save tax",
         "saved": "Tax saved.",
         "invalid": "Check the amount and the recurrence."

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { MAX_CURRENCY_VALUE } from "@/lib/worldCurrency";
+import { hexColorSchema } from "@/lib/inputSchemas";
 
 /**
  * La taxe des personas (migration 255) : un montant fixe, dû par chaque
@@ -20,6 +21,8 @@ export type TaxMode = (typeof TAX_MODES)[number];
 
 export const MAX_TAX_EVERY = 365;
 export const MAX_TAX_BADGE_LENGTH = 24;
+/** Un nom d'icône Lucide, en kebab-case (« circle-alert »). */
+export const TAX_BADGE_ICON = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type TaxSettings = {
   tax_enabled: boolean;
@@ -35,6 +38,10 @@ export type TaxSettings = {
   tax_grace_new: boolean;
   /** `null` : le texte de l'application. */
   tax_badge_label: string | null;
+  /** Couleur du badge (migration 256) ; `null` : celle de l'application. */
+  tax_badge_color: string | null;
+  /** Icône Lucide du badge ; `null` : celle de l'application. */
+  tax_badge_icon: string | null;
 };
 
 type TaxRow = Partial<Record<keyof TaxSettings, unknown>>;
@@ -53,6 +60,8 @@ export function taxSettingsOf(row: TaxRow | null | undefined): TaxSettings {
     tax_accumulate: row?.tax_accumulate !== false,
     tax_grace_new: row?.tax_grace_new !== false,
     tax_badge_label: label,
+    tax_badge_color: typeof row?.tax_badge_color === "string" && row.tax_badge_color ? row.tax_badge_color : null,
+    tax_badge_icon: typeof row?.tax_badge_icon === "string" && row.tax_badge_icon ? row.tax_badge_icon : null,
   };
 }
 
@@ -67,6 +76,8 @@ export const taxSettingsSchema = z.strictObject({
   tax_accumulate: z.boolean(),
   tax_grace_new: z.boolean(),
   tax_badge_label: z.string().trim().min(1).max(MAX_TAX_BADGE_LENGTH).nullable(),
+  tax_badge_color: hexColorSchema.nullable(),
+  tax_badge_icon: z.string().max(64).regex(TAX_BADGE_ICON).nullable(),
 });
 
 /** Une dette non réglée (`persona_tax_dues`). */

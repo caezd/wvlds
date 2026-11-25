@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
  * (`invalidateTaxBadges`).
  */
 
-export type TaxBadge = { periods: number; label: string | null };
+export type TaxBadge = { periods: number; label: string | null; color: string | null; icon: string | null };
 
 const cache = new Map<string, TaxBadge | null>();
 const pending = new Set<string>();
@@ -30,12 +30,18 @@ async function flush() {
   if (ids.length === 0) return;
   const { data, error } = await createClient()
     .from("persona_tax_overdue")
-    .select("persona_id, periods, badge_label")
+    .select("persona_id, periods, badge_label, badge_color, badge_icon")
     .in("persona_id", ids);
   if (error) return;
   for (const id of ids) cache.set(id, null);
-  for (const row of (data ?? []) as { persona_id: string; periods: number; badge_label: string | null }[]) {
-    cache.set(row.persona_id, { periods: Number(row.periods), label: row.badge_label });
+  type Row = { persona_id: string; periods: number; badge_label: string | null; badge_color?: string | null; badge_icon?: string | null };
+  for (const row of (data ?? []) as Row[]) {
+    cache.set(row.persona_id, {
+      periods: Number(row.periods),
+      label: row.badge_label,
+      color: row.badge_color ?? null,
+      icon: row.badge_icon ?? null,
+    });
   }
   emit();
 }

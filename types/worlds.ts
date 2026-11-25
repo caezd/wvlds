@@ -196,6 +196,8 @@ export type World = {
   tax_accumulate?: boolean | null;
   tax_grace_new?: boolean | null;
   tax_badge_label?: string | null;
+  tax_badge_color?: string | null;
+  tax_badge_icon?: string | null;
   currency_units?: unknown;
   /** Inventaire des personas (migration 247), voir lib/personaInventory. */
   inventory_mode?: "free" | "catalog" | "held" | null;

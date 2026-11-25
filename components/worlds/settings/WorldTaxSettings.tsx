@@ -4,13 +4,17 @@ import * as React from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { enUS, es, fr } from "react-day-picker/locale";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Shapes } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AmountInput } from "@/components/economy/AmountInput";
+import { DEFAULT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
+import { TaxBadgeView } from "@/components/personas/PersonaTaxBadge";
+import { ColorPickerButton } from "./ColorPickerButton";
 import { setWorldTax } from "@/app/actions/worldTax";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
@@ -44,6 +48,7 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
   const t = useTranslations("worlds.settings.taxForm");
   const tTax = useTranslations("personas.tax");
   const tCommon = useTranslations("common");
+  const tIcon = useTranslations("iconPicker");
   const locale = useLocale();
   const units = React.useMemo(() => currencyUnitsOf(world.currency_units), [world.currency_units]);
   const [saved, setSaved] = React.useState<TaxSettings>(() => taxSettingsOf(world));
@@ -202,6 +207,45 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
               onChange={(e) => setBadge(e.target.value)}
               className={cn("h-9 w-44 shrink-0", FIELD)}
             />
+          }
+        />
+        <ToggleItem
+          title={t("badgeStyle")}
+          help={t("badgeStyleHelp")}
+          control={
+            <div className="flex shrink-0 items-center gap-2">
+              <span data-testid="tax-badge-preview" className="flex">
+                <TaxBadgeView
+                  label={badge.trim() || tTax("badge")}
+                  color={draft.tax_badge_color}
+                  icon={draft.tax_badge_icon}
+                />
+              </span>
+              <ColorPickerButton
+                color={draft.tax_badge_color ?? DEFAULT_COLOR_PRESETS[1].value}
+                onChange={(c) => set({ tax_badge_color: c })}
+                className="h-9 w-9"
+              />
+              <LucideIconPicker
+                value={draft.tax_badge_icon ?? ""}
+                onChange={(name) => set({ tax_badge_icon: name || null })}
+                trigger={
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label={tIcon("chooseIcon")}>
+                    <Shapes className="h-4 w-4" aria-hidden />
+                  </Button>
+                }
+              />
+              {(draft.tax_badge_color || draft.tax_badge_icon) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => set({ tax_badge_color: null, tax_badge_icon: null })}
+                >
+                  {t("resetStyle")}
+                </Button>
+              )}
+            </div>
           }
         />
       </ToggleList>

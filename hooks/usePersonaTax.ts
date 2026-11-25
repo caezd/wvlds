@@ -9,7 +9,7 @@ import { taxSettingsOf, type TaxDue, type TaxSettings } from "@/lib/worldTax";
 export type TaxPayResult = { ok: true } | { ok: false; error: "insufficient" | "failed" };
 
 const WORLD_COLUMNS =
-  "enable_economy, tax_enabled, tax_amount, tax_every, tax_unit, tax_anchor, tax_mode, tax_accumulate, tax_grace_new, tax_badge_label";
+  "enable_economy, tax_enabled, tax_amount, tax_every, tax_unit, tax_anchor, tax_mode, tax_accumulate, tax_grace_new, tax_badge_label, tax_badge_color, tax_badge_icon";
 
 /**
  * La taxe d'un persona (migration 255) : les réglages de son monde et ses
