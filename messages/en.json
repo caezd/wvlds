@@ -3013,6 +3013,7 @@
     "filters": {
       "kind": "Type",
       "allKinds": "All types",
+      "kindsCount": "{count, plural, one {# type} other {# types}}",
       "persona": "Persona",
       "allPersonas": "All personas",
       "period": "Period",

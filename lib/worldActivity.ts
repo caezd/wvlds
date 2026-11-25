@@ -52,7 +52,8 @@ export type WorldActivityEntry = {
 };
 
 export type ActivityFilters = {
-  kind?: ActivityKind | null;
+  /** Types retenus ; vide ou absent : tous. */
+  kinds?: readonly ActivityKind[];
   personaId?: string | null;
   /** Jours locaux, AAAA-MM-JJ, bornes comprises. */
   from?: string | null;
@@ -117,7 +118,7 @@ export async function fetchWorldActivity(
 ): Promise<ActivityPage> {
   let query = supabase.from("world_activity").select(COLUMNS).eq("world_id", worldId).eq("domain", domain);
 
-  if (filters.kind) query = query.eq("kind", filters.kind);
+  if (filters.kinds?.length) query = query.in("kind", [...filters.kinds]);
   if (filters.personaId && UUID.test(filters.personaId)) {
     query = query.or(`persona_id.eq.${filters.personaId},target_persona_id.eq.${filters.personaId}`);
   }

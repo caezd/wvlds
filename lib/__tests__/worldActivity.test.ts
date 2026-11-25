@@ -134,21 +134,27 @@ describe("fetchWorldActivity", () => {
     );
   });
 
-  it("filtres : genre, persona (donneur ou receveur), période en jours locaux", async () => {
+  it("filtres : types (plusieurs), persona (donneur ou receveur), période en jours locaux", async () => {
     const mock = createSupabaseMock({ results: [{ data: [] }] });
     const pid = "6f1c2d3e-0000-4000-8000-000000000001";
     await fetchWorldActivity(mock.client as never, "w1", {
-      kind: "transfer",
+      kinds: ["transfer", "sale"],
       personaId: pid,
       from: "2026-11-01",
       to: "2026-11-24",
     });
     const b = mock.builders[0].builder;
-    expect(b.eq).toHaveBeenCalledWith("kind", "transfer");
+    expect(b.in).toHaveBeenCalledWith("kind", ["transfer", "sale"]);
     expect(b.or).toHaveBeenCalledWith(`persona_id.eq.${pid},target_persona_id.eq.${pid}`);
     expect(b.gte).toHaveBeenCalledWith("created_at", new Date(2026, 10, 1).toISOString());
     // Le dernier jour est compris : on s'arrête au lendemain minuit.
     expect(b.lt).toHaveBeenCalledWith("created_at", new Date(2026, 10, 25).toISOString());
+  });
+
+  it("aucun type coché : tous les types", async () => {
+    const mock = createSupabaseMock({ results: [{ data: [] }] });
+    await fetchWorldActivity(mock.client as never, "w1", { kinds: [] });
+    expect(mock.builders[0].builder.in).not.toHaveBeenCalled();
   });
 
   it("un identifiant de persona mal formé est ignoré (rien n'entre dans le filtre brut)", async () => {

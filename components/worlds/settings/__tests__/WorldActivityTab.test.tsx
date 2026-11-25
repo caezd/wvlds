@@ -93,12 +93,28 @@ describe("WorldActivityTab", () => {
     fetchWorldActivity.mockResolvedValue({ entries: [], cursor: null });
     monter();
     await waitFor(() => expect(fetchWorldActivity).toHaveBeenCalledTimes(1));
-    expect(fetchWorldActivity.mock.calls[0].slice(1, 4)).toEqual(["w1", { kind: null, personaId: null, from: null, to: null }, null]);
+    expect(fetchWorldActivity.mock.calls[0].slice(1, 4)).toEqual(["w1", { kinds: [], personaId: null, from: null, to: null }, null]);
 
-    await userEvent.selectOptions(screen.getByLabelText("Type"), "transfer");
+    // Les types se cochent, plusieurs à la fois.
+    const types = screen.getByRole("combobox", { name: "Type" });
+    expect(types).toHaveTextContent("Tous les types");
+    await userEvent.click(types);
+    await userEvent.click(await screen.findByRole("option", { name: "Échange" }));
+    await userEvent.click(screen.getByRole("option", { name: "Achat" }));
     await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
-      expect.anything(), "w1", expect.objectContaining({ kind: "transfer" }), null,
+      expect.anything(), "w1", expect.objectContaining({ kinds: ["purchase", "transfer"] }), null,
     ));
+    // La liste reste ouverte pour cocher la suite ; le bouton dit combien.
+    expect(screen.getByRole("option", { name: "Échange" })).toHaveAttribute("data-checked", "true");
+    expect(screen.getByRole("option", { name: "Revente" })).toHaveAttribute("data-checked", "false");
+    expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("2 types");
+    // Décocher.
+    await userEvent.click(screen.getByRole("option", { name: "Achat" }));
+    await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
+      expect.anything(), "w1", expect.objectContaining({ kinds: ["transfer"] }), null,
+    ));
+    expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("Échange");
+    await userEvent.keyboard("{Escape}");
 
     // Le persona se cherche par son nom, parmi ceux du monde.
     const persona = screen.getByRole("combobox", { name: "Persona" });
@@ -108,7 +124,7 @@ describe("WorldActivityTab", () => {
     expect(screen.queryByRole("option", { name: "Brom" })).toBeNull();
     await userEvent.click(screen.getByRole("option", { name: "Ysolde" }));
     await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
-      expect.anything(), "w1", expect.objectContaining({ kind: "transfer", personaId: "p2" }), null,
+      expect.anything(), "w1", expect.objectContaining({ kinds: ["transfer"], personaId: "p2" }), null,
     ));
     expect(screen.getByRole("combobox", { name: "Persona" })).toHaveTextContent("Ysolde");
     expect(mock.builders[0].table).toBe("personas");

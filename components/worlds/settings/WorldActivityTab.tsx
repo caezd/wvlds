@@ -28,10 +28,7 @@ import DateDisplay from "@/components/date-display";
 import { cn } from "@/lib/utils";
 import { SURFACE } from "./FeatureLayout";
 
-const SELECT_CLASS =
-  "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary";
-
-const NO_FILTERS: Required<ActivityFilters> = { kind: null, personaId: null, from: null, to: null };
+const NO_FILTERS: Required<ActivityFilters> = { kinds: [], personaId: null, from: null, to: null };
 
 /**
  * Le journal d'activité d'un monde (migration 254) : l'économie pour
@@ -144,17 +141,7 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
       <div className="sticky -top-4 z-10 flex flex-wrap items-end gap-3 bg-background py-2 md:-top-6">
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-kind">{t("filters.kind")}</Label>
-          <select
-            id="activity-kind"
-            className={SELECT_CLASS}
-            value={filters.kind ?? ""}
-            onChange={(e) => set({ kind: (e.target.value || null) as ActivityKind | null })}
-          >
-            <option value="">{t("filters.allKinds")}</option>
-            {ACTIVITY_KINDS.map((k) => (
-              <option key={k} value={k}>{t(`kinds.${k}`)}</option>
-            ))}
-          </select>
+          <KindsCombobox id="activity-kind" value={filters.kinds} onChange={(kinds) => set({ kinds })} />
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-persona">{t("filters.persona")}</Label>
@@ -228,6 +215,68 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         </>
       )}
     </div>
+  );
+}
+
+/** Le filtre par type : plusieurs se cochent, la liste reste ouverte. */
+function KindsCombobox({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: readonly ActivityKind[];
+  onChange: (kinds: ActivityKind[]) => void;
+}) {
+  const t = useTranslations("worldActivity");
+  const [open, setOpen] = useState(false);
+  // L'ordre de la base, quel que soit l'ordre des clics.
+  const toggle = (kind: ActivityKind) =>
+    onChange(ACTIVITY_KINDS.filter((k) => (k === kind ? !value.includes(k) : value.includes(k))));
+  const label =
+    value.length === 0
+      ? t("filters.allKinds")
+      : value.length === 1
+        ? t(`kinds.${value[0]}`)
+        : t("filters.kindsCount", { count: value.length });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-56 justify-between font-normal"
+        >
+          <span className="truncate">{label}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-0">
+        <Command>
+          <CommandList>
+            <CommandGroup>
+              <CommandItem value="__all" data-checked={value.length === 0} onSelect={() => onChange([])}>
+                <Check className={cn("h-3.5 w-3.5", value.length === 0 ? "opacity-100" : "opacity-0")} aria-hidden />
+                {t("filters.allKinds")}
+              </CommandItem>
+              {ACTIVITY_KINDS.map((k) => {
+                const checked = value.includes(k);
+                return (
+                  <CommandItem key={k} value={k} data-checked={checked} onSelect={() => toggle(k)}>
+                    <Check className={cn("h-3.5 w-3.5", checked ? "opacity-100" : "opacity-0")} aria-hidden />
+                    {t(`kinds.${k}`)}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
