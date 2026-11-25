@@ -1116,7 +1116,8 @@
           "world": "World",
           "features": "Features",
           "rooms": "Rooms & personas",
-          "members": "Members"
+          "members": "Members",
+          "communications": "Communications"
         },
         "subgroups": {
           "economy": "Economy"
@@ -1404,7 +1405,8 @@
         "titlePlaceholder": "Welcome to '{world}'",
         "previewDialogTitle": "Welcome message preview",
         "wikiPage": "Wiki page to read",
-        "wikiPageHelp": "Offered as a button in the opened notification. Only published, unrestricted pages are listed."
+        "wikiPageHelp": "Offered as a button in the opened notification. Only published, unrestricted pages are listed.",
+        "sectionTitle": "Sending to new members"
       },
       "kindBanner": "Banner",
       "kindBannerHelp": "A title and text at the top of the world's home page, until dismissed.",

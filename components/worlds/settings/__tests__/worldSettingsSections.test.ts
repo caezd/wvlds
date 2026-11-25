@@ -12,7 +12,17 @@ import {
 describe("worldSettingsSections", () => {
   it("retire les sections interdites, puis les groupes vides", () => {
     const groups = visibleSettingsGroups((id) => id === "roles" || id === "reports");
-    expect(groups).toEqual([{ id: "members", sections: ["roles", "reports"] }]);
+    expect(groups).toEqual([
+      { id: "members", sections: ["roles"] },
+      { id: "communications", sections: ["reports"] },
+    ]);
+  });
+
+  it("Communications : annonces, message de bienvenue et signalements ; Membres : rôles et journal", () => {
+    const groups = visibleSettingsGroups(() => true);
+    expect(groups.find((g) => g.id === "communications")?.sections).toEqual(["announcements", "welcome", "reports"]);
+    expect(groups.find((g) => g.id === "members")?.sections).toEqual(["roles", "activity"]);
+    expect(groups.at(-1)?.id).toBe("communications");
   });
 
   it("Général et Communauté ouvrent le menu, hors groupe ; Monde ne garde que la page d'accueil", () => {

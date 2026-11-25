@@ -1116,7 +1116,8 @@
           "world": "Monde",
           "features": "Fonctions",
           "rooms": "Salons & personas",
-          "members": "Membres"
+          "members": "Membres",
+          "communications": "Communications"
         },
         "subgroups": {
           "economy": "Économie"
@@ -1404,7 +1405,8 @@
         "titlePlaceholder": "Bienvenue dans '{world}'",
         "previewDialogTitle": "Aperçu du message de bienvenue",
         "wikiPage": "Page du wiki à lire",
-        "wikiPageHelp": "Proposée en bouton dans la notification ouverte. Seules les pages publiées et non restreintes sont proposées."
+        "wikiPageHelp": "Proposée en bouton dans la notification ouverte. Seules les pages publiées et non restreintes sont proposées.",
+        "sectionTitle": "Envoi aux nouveaux membres"
       },
       "kindBanner": "Bandeau",
       "kindBannerHelp": "Un titre et un texte en tête de l'accueil du monde, jusqu'à ce qu'on le ferme.",

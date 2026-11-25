@@ -46,7 +46,6 @@ import { FIELD, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout"
 import { AnnouncementTestButton, BodyEditor, KindPicker, isAnnouncementValid, useAnnouncementErrorMessage } from "./announcements/AnnouncementFields";
 import { AnnouncementFiltersPanel } from "./announcements/AnnouncementFiltersPanel";
 import { AnnouncementDetails, HistoryRow } from "./announcements/AnnouncementHistory";
-import { WorldWelcomeSection } from "./announcements/WorldWelcomeSection";
 import { AnnouncementLivePreview, AnnouncementPreviewButton } from "./announcements/AnnouncementLivePreview";
 import { ScheduleDialog, ScheduledList } from "./announcements/ScheduledAnnouncements";
 import {
@@ -469,9 +468,6 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
           </ul>
         )}
       </SettingsSection>
-
-      {/* ── Bienvenue ────────────────────────────────────── */}
-      <WorldWelcomeSection worldId={worldId} worldName={worldName} dmsEnabled={dmsEnabled} sample={sample} />
       </div>
 
       <AnnouncementDetails

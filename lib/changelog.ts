@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-25",
+    category: "Interface",
+    area: "Monde",
+    text: "Paramètres du monde : nouvelle section Communications.\n- Annonces, Message de bienvenue et Signalements\n- message de bienvenue sur sa propre page\n- Membres : Rôles et Journal",
+  },
+  {
+    date: "2026-11-25",
     category: "Fonctionnalité",
     area: "Membres",
     text: "Message de bienvenue en notification : une page du wiki à proposer.\n- bouton vers la page dans la notification ouverte, à la place de « Ouvrir le monde »\n- pages publiées et non restreintes seulement\n- pas de page liée en message privé",

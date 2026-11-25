@@ -74,9 +74,9 @@ beforeEach(() => {
 });
 
 describe("WorldSettingsView — Journal", () => {
-  it("rangé sous Membres, après les signalements ; la page reçoit la monnaie du monde", async () => {
+  it("rangé sous Membres, après les rôles ; la page reçoit la monnaie du monde", async () => {
     monter();
-    expect(entrees("Membres")).toEqual(["Rôles", "Annonces", "Signalements", "Journal"]);
+    expect(entrees("Membres")).toEqual(["Rôles", "Journal"]);
     await userEvent.click(within(nav()).getByRole("button", { name: "Journal" }));
     expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
     expect(screen.getByText("journal de w1 en po/pc")).toBeInTheDocument();
@@ -91,6 +91,6 @@ describe("WorldSettingsView — Journal", () => {
   it("derrière le drapeau de l'économie", () => {
     acces.economy = false;
     monter();
-    expect(entrees("Membres")).toEqual(["Rôles", "Annonces", "Signalements"]);
+    expect(entrees("Membres")).toEqual(["Rôles"]);
   });
 });

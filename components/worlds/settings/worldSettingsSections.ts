@@ -43,7 +43,10 @@ export const SETTINGS_GROUPS = [
   { id: "features", sections: FEATURE_SECTIONS },
   { id: "rooms", sections: ["categories", "groups", "relations"] },
   // Journal (migration 254) : l'activité du monde, l'économie pour l'instant.
-  { id: "members", sections: ["roles", "announcements", "reports", "activity"] },
+  { id: "members", sections: ["roles", "activity"] },
+  // Ce que l'équipe dit aux membres, et ce qu'ils lui signalent ; le message
+  // de bienvenue a sa page, sous la permission des annonces.
+  { id: "communications", sections: ["announcements", "welcome", "reports"] },
 ] as const;
 
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];

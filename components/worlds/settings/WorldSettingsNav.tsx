@@ -9,6 +9,7 @@ import {
   Clock,
   Coins,
   Flag,
+  HandHeart,
   FolderTree,
   Globe,
   History,
@@ -58,6 +59,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   roles: Shield,
   announcements: Megaphone,
   reports: Flag,
+  welcome: HandHeart,
   activity: History,
 };
 
@@ -89,6 +91,7 @@ export function useSettingsSectionLabel() {
         case "roles": return t("tabRoles");
         case "announcements": return t("tabAnnouncements");
         case "reports": return t("tabReports");
+        case "welcome": return t("announcements.welcome.title");
         case "activity": return tActivity("title");
       }
     },

@@ -71,6 +71,7 @@ import { WorldActivityTab } from "./WorldActivityTab";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { WorldRolesTab } from "./WorldRolesTab";
 import { WorldAnnouncementsTab } from "./WorldAnnouncementsTab";
+import { WorldWelcomeTab } from "./announcements/WorldWelcomeSection";
 import { FeaturePage, SETTINGS_PAGE_WIDTH, SettingsSection } from "./FeatureLayout";
 import { WorldSettingsNav, useSettingsSectionLabel } from "./WorldSettingsNav";
 import {
@@ -149,6 +150,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                 return can("chatrooms.manage");
             // Annonces (migration 227) : écrire à tous les membres.
             case "announcements":
+            case "welcome":
                 return can("members.announce");
             // Journal (migration 254) : l'économie, lue par qui la gère.
             case "activity":
@@ -691,6 +693,11 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                 worldId={world.id}
                                 worldName={world.name}
                             />
+                        ))}
+
+                        {/* ── Message de bienvenue ─────────────────────── */}
+                        {shown === "welcome" && page("welcome", (
+                            <WorldWelcomeTab key={`welcome-${world.id}`} worldId={world.id} worldName={world.name} />
                         ))}
 
                         {/* ── Signalements ─────────────────────────────── */}

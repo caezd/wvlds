@@ -33,6 +33,9 @@ vi.mock("@/components/worlds/settings/WorldReportsTab", () => ({ WorldReportsTab
 vi.mock("@/components/worlds/settings/WorldAnnouncementsTab", () => ({
   WorldAnnouncementsTab: () => <div data-testid="announcements-tab" />,
 }));
+vi.mock("@/components/worlds/settings/announcements/WorldWelcomeSection", () => ({
+  WorldWelcomeTab: () => <div data-testid="welcome-tab" />,
+}));
 vi.mock("@/components/worlds/settings/WorldCommunityTab", () => ({ WorldCommunityTab: () => <div data-testid="community-tab" /> }));
 vi.mock("@/components/worlds/settings/WorldPersonaTemplateSection", () => ({ WorldPersonaTemplateSection: () => <div /> }));
 vi.mock("@/components/worlds/settings/WorldCategoryManager", () => ({ WorldCategoryManager: () => <div data-testid="categories-tab" /> }));
@@ -78,11 +81,24 @@ describe("WorldSettingsView — menu de gauche", () => {
   it("Général et Communauté en tête, hors groupe ; puis quatre groupes, dans l'ordre", () => {
     monter();
     expect(enTete()).toEqual(["Général", "Communauté"]);
-    expect(groupes()).toEqual(["settings-group-world", "settings-group-features", "settings-group-rooms", "settings-group-members"]);
+    expect(groupes()).toEqual(["settings-group-world", "settings-group-features", "settings-group-rooms", "settings-group-members", "settings-group-communications"]);
     expect(entrees("Monde")).toEqual(["Page d'accueil"]);
     expect(entrees("Fonctions")).toEqual(["Carte", "Wiki", "Personas", "Chronologie", "Objets"]);
     expect(entrees("Salons & personas")).toEqual(["Catégories", "Groupes", "Relations"]);
-    expect(entrees("Membres")).toEqual(["Rôles", "Annonces", "Signalements"]);
+    expect(entrees("Membres")).toEqual(["Rôles"]);
+    expect(entrees("Communications")).toEqual(["Annonces", "Message de bienvenue", "Signalements"]);
+  });
+
+  it("le message de bienvenue a sa propre page, sous la même permission que les annonces", async () => {
+    acces.perms = new Set(["members.announce"]);
+    acces.owner = false;
+    monter();
+    expect(groupes()).toEqual(["settings-group-communications"]);
+    expect(entrees("Communications")).toEqual(["Annonces", "Message de bienvenue"]);
+    await userEvent.click(within(nav()).getByRole("button", { name: "Message de bienvenue" }));
+    expect(screen.getByTestId("welcome-tab")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Message de bienvenue" })).toBeInTheDocument();
+    expect(pushState).toHaveBeenCalledWith(null, "", "/w/w1?view=settings&section=welcome");
   });
 
   it("ouvre « Général » d'emblée, avec la zone de danger du propriétaire", () => {

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Bell, Loader2, MessageSquare, PenLine } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -33,6 +35,19 @@ import { AnnouncementLivePreview, AnnouncementPreviewButton } from "./Announceme
 import { EMPTY_EXTRAS } from "@/components/worlds/announcements/AnnouncementExtrasFields";
 import { WikiPagePicker, useWorldWikiPages } from "@/components/worlds/catalogue/WikiPagePicker";
 import { LabelWithHelp } from "../LabelWithHelp";
+
+/**
+ * La page « Message de bienvenue » des paramètres (groupe Communications) :
+ * la section, avec les messages privés permis ou non et les valeurs
+ * d'exemple des variables.
+ */
+export function WorldWelcomeTab({ worldId, worldName }: { worldId: string; worldName: string }) {
+  const tA = useTranslations("worlds.announcements");
+  const { direct_messages: dmsEnabled } = useFeatureFlags();
+  const { username } = useCurrentUser();
+  const sample = { username: username ?? tA("sampleUsername"), world: worldName };
+  return <WorldWelcomeSection worldId={worldId} worldName={worldName} dmsEnabled={dmsEnabled} sample={sample} />;
+}
 
 /**
  * Message de bienvenue (migration 229) : un modèle envoyé à chaque nouveau
@@ -100,7 +115,7 @@ export function WorldWelcomeSection({
 
   return (
     <SettingsSection
-      title={t("title")}
+      title={t("sectionTitle")}
       help={t("help")}
       aside={<StatusPill active={enabled} onLabel={tSettings("statusOn")} offLabel={tSettings("statusOff")} />}
     >
