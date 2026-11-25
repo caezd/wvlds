@@ -22,6 +22,7 @@ describe("setWorldTax (migration 255)", () => {
     tax_mode: "auto" as const,
     tax_accumulate: false,
     tax_grace_new: true,
+    tax_badge_enabled: true,
     tax_badge_label: "Impayé",
     tax_badge_color: "#e8553a",
     tax_badge_icon: "skull",

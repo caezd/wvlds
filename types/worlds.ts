@@ -195,6 +195,7 @@ export type World = {
   tax_mode?: "manual" | "auto" | null;
   tax_accumulate?: boolean | null;
   tax_grace_new?: boolean | null;
+  tax_badge_enabled?: boolean | null;
   tax_badge_label?: string | null;
   tax_badge_color?: string | null;
   tax_badge_icon?: string | null;

@@ -209,65 +209,75 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
                 onCheckedChange={(v) => set({ tax_grace_new: v })}
               />
               <ToggleItem
-                title={t("badge")}
-                help={t("badgeHelp")}
-                control={
-                  <Input
-                    aria-label={t("badge")}
-                    maxLength={MAX_TAX_BADGE_LENGTH}
-                    placeholder={tTax("badge")}
-                    value={badge}
-                    onChange={(e) => setBadge(e.target.value)}
-                    className={cn("h-9 w-44 shrink-0", FIELD)}
-                  />
-                }
+                title={t("badgeEnabled")}
+                help={t("badgeEnabledHelp")}
+                checked={draft.tax_badge_enabled}
+                onCheckedChange={(v) => set({ tax_badge_enabled: v })}
               />
-              <ToggleItem
-                title={t("badgeStyle")}
-                help={t("badgeStyleHelp")}
-                control={
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span data-testid="tax-badge-preview" className="flex">
-                      <TaxBadgeView
-                        label={badge.trim() || tTax("badge")}
-                        color={pendingColor ?? draft.tax_badge_color}
-                        icon={draft.tax_badge_icon}
+              <InactiveOptions inactive={!draft.tax_badge_enabled}>
+                <div className="divide-y divide-border">
+                  <ToggleItem
+                    title={t("badge")}
+                    help={t("badgeHelp")}
+                    control={
+                      <Input
+                        aria-label={t("badge")}
+                        maxLength={MAX_TAX_BADGE_LENGTH}
+                        placeholder={tTax("badge")}
+                        value={badge}
+                        onChange={(e) => setBadge(e.target.value)}
+                        className={cn("h-9 w-44 shrink-0", FIELD)}
                       />
-                    </span>
-                    <ColorPickerButton
-                      color={pendingColor ?? draft.tax_badge_color ?? DEFAULT_COLOR_PRESETS[1].value}
-                      onChange={setPendingColor}
-                      onClose={() => {
-                        if (pendingColor) set({ tax_badge_color: pendingColor });
-                        setPendingColor(null);
-                      }}
-                      className="h-9 w-9"
-                    />
-                    <LucideIconPicker
-                      value={draft.tax_badge_icon ?? ""}
-                      onChange={(name) => set({ tax_badge_icon: name || null })}
-                      trigger={
-                        <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label={tIcon("chooseIcon")}>
-                          <Shapes className="h-4 w-4" aria-hidden />
-                        </Button>
-                      }
-                    />
-                    {(draft.tax_badge_color || draft.tax_badge_icon) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setPendingColor(null);
-                          set({ tax_badge_color: null, tax_badge_icon: null });
-                        }}
-                      >
-                        {t("resetStyle")}
-                      </Button>
-                    )}
-                  </div>
-                }
-              />
+                    }
+                  />
+                  <ToggleItem
+                    title={t("badgeStyle")}
+                    help={t("badgeStyleHelp")}
+                    control={
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span data-testid="tax-badge-preview" className="flex">
+                          <TaxBadgeView
+                            label={badge.trim() || tTax("badge")}
+                            color={pendingColor ?? draft.tax_badge_color}
+                            icon={draft.tax_badge_icon}
+                          />
+                        </span>
+                        <ColorPickerButton
+                          color={pendingColor ?? draft.tax_badge_color ?? DEFAULT_COLOR_PRESETS[1].value}
+                          onChange={setPendingColor}
+                          onClose={() => {
+                            if (pendingColor) set({ tax_badge_color: pendingColor });
+                            setPendingColor(null);
+                          }}
+                          className="h-9 w-9"
+                        />
+                        <LucideIconPicker
+                          value={draft.tax_badge_icon ?? ""}
+                          onChange={(name) => set({ tax_badge_icon: name || null })}
+                          trigger={
+                            <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label={tIcon("chooseIcon")}>
+                              <Shapes className="h-4 w-4" aria-hidden />
+                            </Button>
+                          }
+                        />
+                        {(draft.tax_badge_color || draft.tax_badge_icon) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPendingColor(null);
+                              set({ tax_badge_color: null, tax_badge_icon: null });
+                            }}
+                          >
+                            {t("resetStyle")}
+                          </Button>
+                        )}
+                      </div>
+                    }
+                  />
+                </div>
+              </InactiveOptions>
             </div>
           </InactiveOptions>
         </ToggleList>

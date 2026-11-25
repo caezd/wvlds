@@ -13,6 +13,7 @@ import { ACTIVITY_KINDS } from "@/lib/worldActivity";
 
 const sql = readFileSync(path.join(process.cwd(), "migrations/255_world_tax.sql"), "utf8");
 const sql256 = readFileSync(path.join(process.cwd(), "migrations/256_world_tax_badge_style.sql"), "utf8");
+const sql257 = readFileSync(path.join(process.cwd(), "migrations/257_world_tax_badge_toggle.sql"), "utf8");
 
 describe("migration 255", () => {
   it("les genres du journal sont ceux de la base, taxe comprise", () => {
@@ -76,6 +77,15 @@ describe("migration 256", () => {
   });
 });
 
+describe("migration 257", () => {
+  it("le badge s'active à part, coupé par défaut ; la vue n'en rend aucun tant qu'il l'est", () => {
+    expect(sql257).toMatch(/tax_badge_enabled boolean NOT NULL DEFAULT false/);
+    expect(sql257).toMatch(/WHERE w\.tax_enabled AND w\.enable_economy AND w\.tax_badge_enabled/);
+    expect(sql257).toContain("security_invoker = true");
+    expect(sql257).toMatch(/w\.tax_badge_color AS badge_color,\s+w\.tax_badge_icon\s+AS badge_icon/);
+  });
+});
+
 describe("taxSettingsSchema", () => {
   const ok = {
     tax_enabled: true,
@@ -86,6 +96,7 @@ describe("taxSettingsSchema", () => {
     tax_mode: "manual",
     tax_accumulate: true,
     tax_grace_new: true,
+    tax_badge_enabled: true,
     tax_badge_label: "Impayé",
     tax_badge_color: "#e8553a",
     tax_badge_icon: "skull",
@@ -114,7 +125,7 @@ describe("taxSettingsOf", () => {
     const s = taxSettingsOf({});
     expect(s).toMatchObject({
       tax_enabled: false, tax_amount: 0, tax_every: 1, tax_unit: "month", tax_mode: "manual",
-      tax_accumulate: true, tax_grace_new: true, tax_badge_label: null, tax_badge_color: null, tax_badge_icon: null,
+      tax_accumulate: true, tax_grace_new: true, tax_badge_enabled: false, tax_badge_label: null, tax_badge_color: null, tax_badge_icon: null,
     });
     expect(typeof s.tax_anchor).toBe("string");
   });

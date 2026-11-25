@@ -1306,6 +1306,8 @@
         "accumulateHelp": "Cada periodo no pagado sigue debiéndose. Si no, solo cuenta el último periodo impago.",
         "grace": "Plazo para las personas nuevas",
         "graceHelp": "Una persona nueva no debe nada antes del final de su primer periodo.",
+        "badgeEnabled": "Mostrar una insignia",
+        "badgeEnabledHelp": "Una insignia junto al nombre de las personas atrasadas.",
         "badge": "Texto de la insignia",
         "badgeHelp": "Se muestra junto al nombre de una persona atrasada.",
         "badgeStyle": "Estilo de la insignia",

@@ -39,6 +39,7 @@ const monde = (patch: Record<string, unknown> = {}) =>
     tax_mode: "manual",
     tax_accumulate: true,
     tax_grace_new: true,
+    tax_badge_enabled: false,
     tax_badge_label: null,
     tax_badge_color: null,
     tax_badge_icon: null,
@@ -68,13 +69,14 @@ describe("WorldTaxSettings (migration 255)", () => {
   it("désactivée : ses options sont grisées et inertes, jusqu'à l'activation", async () => {
     const user = utilisateur();
     render(<WorldTaxSettings world={monde()} />);
-    expect(screen.getByTestId("inactive-options")).toBeInTheDocument();
+    expect(screen.getAllByTestId("inactive-options").length).toBeGreaterThan(0);
     expect(screen.getByRole("spinbutton", { name: "Montant de la taxe en Or" })).toBeDisabled();
     expect(screen.getByRole("switch", { name: "Les dettes s’accumulent" })).toBeDisabled();
     expect(screen.getByRole("switch", { name: "Lever une taxe" })).toBeEnabled();
 
     await user.click(screen.getByRole("switch", { name: "Lever une taxe" }));
-    expect(screen.queryByTestId("inactive-options")).toBeNull();
+    // Seul le badge, coupé par défaut, reste grisé.
+    expect(screen.getAllByTestId("inactive-options")).toHaveLength(1);
     expect(screen.getByRole("spinbutton", { name: "Montant de la taxe en Or" })).toBeEnabled();
   });
 
@@ -95,6 +97,9 @@ describe("WorldTaxSettings (migration 255)", () => {
     await user.click(within(paiement).getByRole("radio", { name: "Retrait automatique" }));
     await user.click(screen.getByRole("switch", { name: "Les dettes s’accumulent" }));
     await user.click(screen.getByRole("switch", { name: "Délai pour les nouveaux personas" }));
+    // Le badge s'active à part ; ses réglages, grisés jusque-là.
+    expect(screen.getByRole("textbox", { name: "Texte du badge" })).toBeDisabled();
+    await user.click(screen.getByRole("switch", { name: "Afficher un badge" }));
     await user.type(screen.getByRole("textbox", { name: "Texte du badge" }), "Mauvais payeur");
     await attendre();
 
@@ -107,6 +112,7 @@ describe("WorldTaxSettings (migration 255)", () => {
       tax_mode: "auto",
       tax_accumulate: false,
       tax_grace_new: false,
+      tax_badge_enabled: true,
       tax_badge_label: "Mauvais payeur",
       tax_badge_color: null,
       tax_badge_icon: null,
@@ -127,7 +133,7 @@ describe("WorldTaxSettings (migration 255)", () => {
 
   it("un badge vide reprend le texte par défaut", async () => {
     const user = utilisateur();
-    render(<WorldTaxSettings world={monde({ tax_enabled: true, tax_badge_label: "Fauché" })} />);
+    render(<WorldTaxSettings world={monde({ tax_enabled: true, tax_badge_enabled: true, tax_badge_label: "Fauché" })} />);
     expect(screen.getByRole("textbox", { name: "Texte du badge" })).toHaveAttribute("placeholder", "Impayé");
     await user.clear(screen.getByRole("textbox", { name: "Texte du badge" }));
     await attendre();
@@ -136,7 +142,7 @@ describe("WorldTaxSettings (migration 255)", () => {
 
   it("la couleur part à la fermeture du sélecteur, pas pendant qu'on la choisit", async () => {
     const user = utilisateur();
-    render(<WorldTaxSettings world={monde({ tax_enabled: true, tax_badge_label: "Fauché" })} />);
+    render(<WorldTaxSettings world={monde({ tax_enabled: true, tax_badge_enabled: true, tax_badge_label: "Fauché" })} />);
     const apercu = screen.getByTestId("tax-badge-preview");
     expect(apercu).toHaveTextContent("Fauché");
 
@@ -155,7 +161,7 @@ describe("WorldTaxSettings (migration 255)", () => {
 
   it("l'icône, puis « Style par défaut » : chacun s'enregistre", async () => {
     const user = utilisateur();
-    render(<WorldTaxSettings world={monde({ tax_enabled: true })} />);
+    render(<WorldTaxSettings world={monde({ tax_enabled: true, tax_badge_enabled: true })} />);
     const apercu = screen.getByTestId("tax-badge-preview");
     await user.click(screen.getByRole("button", { name: "choisir crâne" }));
     expect(apercu.querySelector('[data-icon="skull"]')).not.toBeNull();

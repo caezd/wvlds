@@ -36,6 +36,8 @@ export type TaxSettings = {
   tax_accumulate: boolean;
   /** Un nouveau persona ne doit rien avant la fin de sa première période. */
   tax_grace_new: boolean;
+  /** Un badge à côté du nom des personas en retard (migration 257). */
+  tax_badge_enabled: boolean;
   /** `null` : le texte de l'application. */
   tax_badge_label: string | null;
   /** Couleur du badge (migration 256) ; `null` : celle de l'application. */
@@ -59,6 +61,7 @@ export function taxSettingsOf(row: TaxRow | null | undefined): TaxSettings {
     tax_mode: mode,
     tax_accumulate: row?.tax_accumulate !== false,
     tax_grace_new: row?.tax_grace_new !== false,
+    tax_badge_enabled: row?.tax_badge_enabled === true,
     tax_badge_label: label,
     tax_badge_color: typeof row?.tax_badge_color === "string" && row.tax_badge_color ? row.tax_badge_color : null,
     tax_badge_icon: typeof row?.tax_badge_icon === "string" && row.tax_badge_icon ? row.tax_badge_icon : null,
@@ -75,6 +78,7 @@ export const taxSettingsSchema = z.strictObject({
   tax_mode: z.enum(TAX_MODES),
   tax_accumulate: z.boolean(),
   tax_grace_new: z.boolean(),
+  tax_badge_enabled: z.boolean(),
   tax_badge_label: z.string().trim().min(1).max(MAX_TAX_BADGE_LENGTH).nullable(),
   tax_badge_color: hexColorSchema.nullable(),
   tax_badge_icon: z.string().max(64).regex(TAX_BADGE_ICON).nullable(),
