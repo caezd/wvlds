@@ -176,7 +176,7 @@ function GainField({
   children: React.ReactNode;
 }) {
   return (
-    <div role="group" aria-label={label} className="grid items-center gap-x-4 gap-y-1.5 @md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]">
+    <div role="group" aria-label={label} className="grid items-center gap-x-4 gap-y-1.5 @md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
       <div className="min-w-0">
         <p className="text-sm">
           <TitleWithHelp title={label} help={help} />

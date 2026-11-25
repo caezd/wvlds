@@ -46,7 +46,7 @@ export function SignedAmountInput({
       onClick={() => choose(neg)}
       className={cn(
         "w-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        negative === neg ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+        negative === neg ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
       {symbol}
