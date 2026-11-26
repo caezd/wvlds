@@ -29,6 +29,8 @@ export type SharePreview = {
   memberCount: number;
   /** Nom du salon visé, s'il est ouvert ou public ; null sinon. */
   chatroomName: string | null;
+  /** Monde privé : la base n'en donne que le nom (migration 268). */
+  isPrivate: boolean;
 };
 
 /**
@@ -67,6 +69,20 @@ export function parseSharePreview(data: unknown): SharePreview | null {
   const id = texte(d.id);
   const name = texte(d.name);
   if (!id || !name) return null;
+  if (d.private === true) {
+    return {
+      id,
+      name,
+      description: null,
+      iconUrl: null,
+      bannerUrl: null,
+      color: null,
+      ageRestricted: false,
+      memberCount: 0,
+      chatroomName: null,
+      isPrivate: true,
+    };
+  }
   const count = Number(d.member_count);
   return {
     id,
@@ -78,17 +94,22 @@ export function parseSharePreview(data: unknown): SharePreview | null {
     ageRestricted: d.age_restricted === true,
     memberCount: Number.isFinite(count) && count > 0 ? Math.floor(count) : 0,
     chatroomName: texte(d.chatroom_name),
+    isPrivate: false,
   };
 }
 
-/** Textes de l'image d'aperçu d'un monde ; le lien d'un salon montre celle de son monde. */
-export function shareCardContent(
+export type WorldCardContent = { name: string; meta: string; locked: boolean };
+
+/**
+ * La carte d'un monde dans l'image d'aperçu : son nom, et au-dessus ses
+ * membres — ou « Monde privé · sur invitation ». Un cadenas tient la place de
+ * l'icône quand la base n'en donne pas : monde privé ou 18+. Le lien d'un
+ * salon montre la carte de son monde.
+ */
+export function worldCardContent(
   p: SharePreview,
-  labels: { publicWorld: string; ageRestricted: string },
-): { surtitle: string; title: string; subtitle: string | null } {
-  return {
-    surtitle: p.ageRestricted ? `${labels.publicWorld} · ${labels.ageRestricted}` : labels.publicWorld,
-    title: p.name,
-    subtitle: p.description,
-  };
+  labels: { privateWorld: string; members: (count: number) => string },
+): WorldCardContent {
+  if (p.isPrivate) return { name: p.name, meta: labels.privateWorld, locked: true };
+  return { name: p.name, meta: labels.members(p.memberCount), locked: p.ageRestricted };
 }

@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/login-form";
 import { NEXT_PARAM, safeNextPath, shareTargetFromNext } from "@/lib/sharePreview";
 import { getSharePreview } from "@/lib/sharePreviewServer";
+import { ogImage, ogLocaleTag } from "@/lib/siteMetadata";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -11,10 +12,6 @@ async function lireNext(searchParams: Props["searchParams"]): Promise<string | n
   return safeNextPath(typeof v === "string" ? v : null);
 }
 
-/** Adresse de l'image d'aperçu d'un monde (app/api/og) ; un salon montre celle de son monde. */
-function ogImage(worldId: string, locale: string): string {
-  return `/api/og?w=${worldId}&lang=${locale}`;
-}
 
 /**
  * Titre d'onglet — les pages d'auth s'appelaient toutes « WVLDS ».
@@ -31,13 +28,24 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   if (!cible || !preview) return { title: t("signin") };
 
   const locale = await getLocale();
-  const image = ogImage(preview.id, locale);
+  // Un salon montre l'image de son monde (app/api/og) ; l'adresse canonique
+  // reste le lien partagé, sans ses paramètres.
+  const image = ogImage(`/api/og?w=${preview.id}&lang=${locale}`, `${preview.name} · WVLDS`);
+  const url = `/${cible.kind === "world" ? "w" : "c"}/${cible.id}`;
   const title = preview.chatroomName ? `${preview.chatroomName} · ${preview.name}` : preview.name;
   const description = preview.description ?? undefined;
   return {
     title,
     description,
-    openGraph: { type: "website", siteName: "WVLDS", title, description, images: [{ url: image, width: 1200, height: 630 }] },
+    openGraph: {
+      type: "website",
+      siteName: "WVLDS",
+      url,
+      title,
+      description,
+      locale: ogLocaleTag(locale),
+      images: [image],
+    },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }

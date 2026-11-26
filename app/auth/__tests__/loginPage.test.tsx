@@ -28,6 +28,7 @@ const MONDE: SharePreview = {
   ageRestricted: false,
   memberCount: 7,
   chatroomName: null,
+  isPrivate: false,
 };
 const sp = (v: Record<string, string>) => ({ searchParams: Promise.resolve(v) });
 
@@ -51,15 +52,32 @@ describe("page de connexion arrivée depuis un lien partagé", () => {
     expect(JSON.stringify(meta.openGraph)).toContain(`/api/og?w=${W}&lang=fr`);
   });
 
+  it("lien de monde : adresse canonique du monde, image décrite, langue de l'aperçu", async () => {
+    getSharePreview.mockResolvedValue(MONDE);
+    const meta = await generateMetadata(sp({ next: `/w/${W}?onglet=wiki` }));
+    const image = { url: `/api/og?w=${W}&lang=fr`, width: 1200, height: 630, alt: "Hextech · WVLDS" };
+    expect(meta.openGraph).toMatchObject({ url: `/w/${W}`, locale: "fr_FR", images: [image] });
+    expect(meta.twitter).toMatchObject({ images: [image] });
+  });
+
   it("lien de salon : le salon nommé dans le titre, l'image d'aperçu est celle du monde", async () => {
     getSharePreview.mockResolvedValue({ ...MONDE, chatroomName: "La taverne" });
     const meta = await generateMetadata(sp({ next: `/c/${C}` }));
     expect(meta.title).toBe("La taverne · Hextech");
     expect(JSON.stringify(meta.openGraph)).toContain(`/api/og?w=${W}&lang=fr`);
     expect(JSON.stringify(meta.twitter)).toContain(`/api/og?w=${W}&lang=fr`);
+    expect(meta.openGraph).toMatchObject({ url: `/c/${C}` });
   });
 
-  it("monde non public : rien ne sort, la page reste « Connexion »", async () => {
+  it("monde privé : son nom en titre, l'image du monde, sans description", async () => {
+    getSharePreview.mockResolvedValue({ ...MONDE, name: "FINAL COCKTASY", isPrivate: true, description: null });
+    const meta = await generateMetadata(sp({ next: `/w/${W}` }));
+    expect(meta.title).toBe("FINAL COCKTASY");
+    expect(meta.description).toBeUndefined();
+    expect(JSON.stringify(meta.openGraph)).toContain(`/api/og?w=${W}&lang=fr`);
+  });
+
+  it("monde absent ou supprimé : rien ne sort, la page reste « Connexion »", async () => {
     getSharePreview.mockResolvedValue(null);
     const meta = await generateMetadata(sp({ next: `/w/${W}` }));
     expect(meta.title).toBe("Connexion");

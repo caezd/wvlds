@@ -44,6 +44,7 @@ describe("layout des écrans de connexion : colonne droite", () => {
       ageRestricted: false,
       memberCount: 3,
       chatroomName: null,
+      isPrivate: false,
     });
     render(await AuthLayout({ children: <p>formulaire</p> }));
     expect(getSharePreview).toHaveBeenCalledWith({ kind: "world", id: W });

@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-26",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Liens partagés : un lien de monde ou de salon présente le monde à qui n’est pas connecté.\n- page de connexion : bannière, nom, description et membres d’un monde public ; retour au lien une fois connecté\n- aperçu des liens (Discord, iMessage…) : titre, description et image du monde ; un lien de salon reprend l’image de son monde\n- image d’aperçu aux couleurs de WVLDS, en français, anglais ou espagnol : bannière du monde en fond, son icône à côté du nom\n- monde privé : rien n’en sort ; monde 18+ : son nom seulement",
+    text: "Liens partagés : un lien de monde ou de salon présente le monde à qui n’est pas connecté.\n- page de connexion : bannière, nom, description et membres d’un monde public ; retour au lien une fois connecté\n- aperçu des liens (Discord, iMessage…) : titre, description et image du monde ; un lien de salon reprend l’image de son monde\n- image d’aperçu en français, anglais ou espagnol : bannière du monde en fond, carte du monde (icône, membres, nom) aux couleurs de l’application ; décrite pour les lecteurs d’écran\n- monde privé : son nom seul, avec un cadenas, « sur invitation » ; monde 18+ : nom et membres, un cadenas à la place de l’icône",
   },
   {
     date: "2026-11-26",

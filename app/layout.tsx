@@ -12,6 +12,7 @@ import { getCurrentProfile } from "@/lib/currentRequest";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import { ROOT_PROVIDER_NAMESPACES, pickMessages } from "@/lib/clientMessages";
+import { siteMetadata } from "@/lib/siteMetadata";
 
 // Base des adresses absolues des métadonnées (images d'aperçu comprises).
 // En production, le domaine du projet : VERCEL_URL est celle du déploiement
@@ -24,14 +25,8 @@ const defaultUrl =
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000";
 
-/** Langue d'un aperçu de lien, au format OpenGraph. */
-const OG_LOCALES: Record<string, string> = { fr: "fr_FR", en: "en_US", es: "es_ES" };
-
 export async function generateMetadata(): Promise<Metadata> {
   const [t, locale] = await Promise.all([getTranslations("meta"), getLocale()]);
-  // L'image d'aperçu (app/api/og) reçoit la langue dans son adresse : les
-  // robots qui la demandent n'envoient pas le cookie de langue.
-  const image = `/api/og?lang=${locale}`;
   return {
     metadataBase: new URL(defaultUrl),
     applicationName: "WVLDS",
@@ -43,15 +38,8 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s · WVLDS",
     },
     description: t("description"),
-    openGraph: {
-      type: "website",
-      siteName: "WVLDS",
-      title: "WVLDS",
-      description: t("description"),
-      locale: OG_LOCALES[locale] ?? OG_LOCALES.fr,
-      images: [{ url: image, width: 1200, height: 630 }],
-    },
-    twitter: { card: "summary_large_image", title: "WVLDS", description: t("description"), images: [image] },
+    // Aperçu des liens (lib/siteMetadata) : l'accroche, l'image traduite.
+    ...siteMetadata(t("description"), locale),
     appleWebApp: {
       capable: true,
       title: "WVLDS",

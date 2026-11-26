@@ -1568,6 +1568,7 @@
     "share": {
       "publicWorld": "Mundo público",
       "ageRestricted": "18+",
+      "privateWorld": "Mundo privado · solo con invitación",
       "members": "{count, plural, one {# miembro} other {# miembros}}",
       "joinPrompt": "Inicie sesión para unirse a <b>{name}</b>."
     }

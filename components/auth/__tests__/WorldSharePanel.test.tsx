@@ -13,6 +13,7 @@ const MONDE: SharePreview = {
   ageRestricted: false,
   memberCount: 7,
   chatroomName: null,
+  isPrivate: false,
 };
 
 describe("WorldSharePanel : le monde d'un lien partagé, colonne droite de la connexion", () => {
@@ -44,6 +45,28 @@ describe("WorldSharePanel : le monde d'un lien partagé, colonne droite de la co
     expect(screen.getByText("18+")).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
     expect(container.innerHTML).not.toContain("banner.webp");
+  });
+
+  it("un monde privé : un cadenas et son nom, rien d'autre", () => {
+    const { container } = render(
+      <WorldSharePanel
+        preview={{
+          ...MONDE,
+          name: "FINAL COCKTASY",
+          isPrivate: true,
+          description: null,
+          iconUrl: null,
+          bannerUrl: null,
+          memberCount: 0,
+        }}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "FINAL COCKTASY" })).toBeInTheDocument();
+    expect(screen.getByText("Monde privé · sur invitation")).toBeInTheDocument();
+    expect(container.querySelector("svg.lucide-lock")).not.toBeNull();
+    expect(screen.queryByText("Monde public")).toBeNull();
+    expect(screen.queryByText(/membre/)).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
   });
 
   it("sans bannière, la couleur du monde sert de fond", () => {

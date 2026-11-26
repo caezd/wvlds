@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 
-import { OG_ICON_SIZE, OG_SIZE, OgCard, loadGeist, ogLocale, ogTexts } from "@/lib/ogCard";
+import { OG_ICON_SIZE, OG_SIZE, OgCard, OgWorldCard, loadGeist, ogLocale, ogTitle, ogWorldTexts } from "@/lib/ogCard";
 import { loadOgImage } from "@/lib/ogImages";
 import { shareTargetFromNext } from "@/lib/sharePreview";
 import { getSharePreview } from "@/lib/sharePreviewServer";
@@ -10,13 +10,13 @@ import { getSharePreview } from "@/lib/sharePreviewServer";
  * Image d'aperçu des liens (OpenGraph), 1200×630.
  *
  *   /api/og?lang=fr          générique : l'accroche de l'application
- *   /api/og?w=<id>&lang=en   un monde public, sa bannière en fond et son icône
+ *   /api/og?w=<id>&lang=en   un monde : sa bannière en fond, sa carte
  *
  * Le lien d'un salon montre l'image de son monde (app/auth/login/page.tsx).
  * Joignable sans session (le middleware laisse passer /api) : ce sont les
- * robots d'aperçu qui la demandent. Un monde non public, ou un id invalide,
- * donne l'image générique — jamais une erreur qui trahirait son existence.
- * Un monde 18+ n'a ni bannière ni icône : la base ne les envoie pas.
+ * robots d'aperçu qui la demandent. Un monde supprimé, ou un id invalide,
+ * donne l'image générique — jamais une erreur. Un monde privé ou 18+ n'a ni
+ * bannière ni icône (la base ne les envoie pas) : un cadenas à la place.
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -29,8 +29,13 @@ export async function GET(request: NextRequest) {
     // Deux fois la taille affichée, pour rester net.
     loadOgImage(preview?.iconUrl, { width: OG_ICON_SIZE * 2, height: OG_ICON_SIZE * 2, format: "png" }),
   ]);
+  const carte = preview ? (
+    <OgWorldCard {...ogWorldTexts(locale, preview)} banner={banner} icon={icon} />
+  ) : (
+    <OgCard title={ogTitle(locale)} />
+  );
 
-  return new ImageResponse(<OgCard {...ogTexts(locale, preview)} banner={banner} icon={icon} />, {
+  return new ImageResponse(carte, {
     ...OG_SIZE,
     fonts: fonts.length ? fonts : undefined,
     headers: { "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" },
