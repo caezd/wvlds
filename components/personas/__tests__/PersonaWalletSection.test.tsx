@@ -81,6 +81,29 @@ describe("PersonaWalletSection (migration 246)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("le montant se saisit aussi avec les boutons −/+ de chaque palier", async () => {
+    const user = userEvent.setup();
+    render(<PersonaWalletSection personaName="Lia" wallet={wallet()} canManage />);
+    await user.click(screen.getByRole("button", { name: "Ajuster" }));
+    const dialog = await screen.findByRole("dialog", { name: "Ajuster la bourse de Lia" });
+    const plus = within(dialog).getByRole("button", { name: "Augmenter : Montant en Argent" });
+    await user.click(plus);
+    await user.click(plus);
+    await user.click(within(dialog).getByRole("button", { name: "Valider" }));
+    await waitFor(() => expect(adjust).toHaveBeenCalledWith(200, ""));
+  });
+
+  it("un transfert se lit « Transfert » dans les mouvements", () => {
+    render(
+      <PersonaWalletSection
+        personaName="Lia"
+        wallet={wallet({ ledger: [{ ...mouvement("m1", -100), kind: "transfer" }] })}
+        canManage={false}
+      />,
+    );
+    expect(within(screen.getByRole("list", { name: "Mouvements" })).getByText("Transfert")).toBeInTheDocument();
+  });
+
   it("un solde insuffisant est signalé, le dialogue reste ouvert", async () => {
     adjust.mockResolvedValue({ ok: false, error: "insufficient" });
     const user = userEvent.setup();

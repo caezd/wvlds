@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SectionLabel } from "@/components/ui/section-label";
 import {
@@ -21,8 +22,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AmountInput } from "@/components/economy/AmountInput";
+import { Money } from "@/components/economy/Money";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
-import { currencyUnitsOf, formatAmount } from "@/lib/worldCurrency";
+import { currencyUnitsOf } from "@/lib/worldCurrency";
 import { MAX_TRANSFER_ITEMS, transferBlockContent, transferIsEmpty, type TransferItemSnapshot } from "@/lib/worldTrades";
 import type { usePersonaTransfer } from "@/hooks/usePersonaTransfer";
 import { GameBlockSurface } from "./GameBlockShell";
@@ -52,6 +54,7 @@ export function TransferDialog({
 }) {
   const t = useTranslations("trades");
   const tCommon = useTranslations("common");
+  const tEconomy = useTranslations("economy");
   const { load } = transfer;
   const [to, setTo] = useState<string | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
@@ -99,7 +102,7 @@ export function TransferDialog({
     const res = await transfer.send({ to, amount: amount && amount > 0 ? amount : null, items, chatId });
     setSending(false);
     if (!res.ok) {
-      toast.error(t(`errors.${res.error}`));
+      toast.error(res.error === "funds" ? tEconomy("insufficientFunds") : t(`errors.${res.error}`));
       return;
     }
     onSend(transferBlockContent(res.id));
@@ -153,7 +156,7 @@ export function TransferDialog({
               <div className="flex items-baseline justify-between gap-2">
                 <SectionLabel as="p">{t("amount")}</SectionLabel>
                 <span className="text-xs text-muted-foreground">
-                  {t("balance", { amount: formatAmount(transfer.balance, transfer.units) })}
+                  {t.rich("balance", { amount: () => <Money amount={transfer.balance} units={transfer.units} /> })}
                 </span>
               </div>
               <AmountInput
@@ -164,7 +167,7 @@ export function TransferDialog({
                 idPrefix="transfer-amount"
                 labelOf={(unit) => t("amountIn", { unit: unit.name })}
               />
-              {overBalance && <p className="text-xs text-destructive">{t("errors.funds")}</p>}
+              {overBalance && <p className="text-xs text-destructive">{tEconomy("insufficientFunds")}</p>}
             </section>
           )}
 
@@ -197,19 +200,15 @@ export function TransferDialog({
                           {name}
                         </Label>
                         {checked ? (
-                          <Input
-                            type="number"
+                          <NumberInput
                             min={1}
                             max={row.quantity}
-                            step={1}
-                            inputMode="numeric"
-                            className="h-8 w-20"
                             aria-label={t("quantityOf", { name })}
-                            value={Number.isFinite(picked[row.id]) ? picked[row.id] : ""}
-                            onChange={(e) => setPicked((prev) => ({ ...prev, [row.id]: e.target.valueAsNumber }))}
+                            value={Number.isFinite(picked[row.id]) ? picked[row.id] : null}
+                            onValueChange={(v) => setPicked((prev) => ({ ...prev, [row.id]: v ?? NaN }))}
                           />
                         ) : (
-                          <span className="w-20 text-right text-xs text-muted-foreground tabular-nums">×{row.quantity}</span>
+                          <span className="w-32 text-right text-xs text-muted-foreground tabular-nums">×{row.quantity}</span>
                         )}
                       </li>
                     );
@@ -298,7 +297,7 @@ export function TransferBlockView({ id, authorPersonaId }: { id: string; authorP
           <p className="text-sm font-medium">
             {t("given", { from: row.from?.name ?? "?", to: row.to?.name ?? "?" })}
           </p>
-          {amount > 0 && <p className="text-sm tabular-nums">{formatAmount(amount, units)}</p>}
+          {amount > 0 && <Money amount={amount} units={units} className="block text-sm" />}
           {row.items.length > 0 && (
             <ul className="flex flex-wrap gap-1.5">
               {row.items.map((item, i) => (

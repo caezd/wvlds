@@ -44,7 +44,7 @@ describe("TransferDialog", () => {
     const transfer = transferOf();
     render(<TransferDialog open onOpenChange={() => {}} transfer={transfer} chatId="ch1" onSend={() => {}} />);
     expect(transfer.load).toHaveBeenCalled();
-    expect(screen.getByText("Solde : 4 po 50 pa")).toBeInTheDocument();
+    expect(screen.getByText(/^Solde :/)).toHaveTextContent("Solde : 4 po 50 pa");
   });
 
   it("donne de l'argent et un objet, puis poste le bloc", async () => {
@@ -60,9 +60,8 @@ describe("TransferDialog", () => {
     await user.click(screen.getByRole("radio", { name: "Aria" }));
     await user.type(screen.getByRole("spinbutton", { name: "Montant en Or" }), "1");
     await user.click(screen.getByRole("checkbox", { name: "Potion" }));
-    const qty = screen.getByRole("spinbutton", { name: "Quantité de Potion" });
-    await user.clear(qty);
-    await user.type(qty, "2");
+    expect(screen.getByRole("spinbutton", { name: "Quantité de Potion" })).toHaveValue(1);
+    await user.click(screen.getByRole("button", { name: "Augmenter : Quantité de Potion" }));
 
     expect(submit).toBeEnabled();
     await user.click(submit);

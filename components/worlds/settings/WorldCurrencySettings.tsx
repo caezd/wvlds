@@ -7,6 +7,8 @@ import { Coins, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyAppearancePicker, removeCurrencyImage } from "@/components/economy/CurrencyAppearancePicker";
+import { Money } from "@/components/economy/Money";
 import { setWorldCurrency } from "@/app/actions/worldCatalog";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { messageErreurAction } from "@/lib/actionErrors";
@@ -18,9 +20,9 @@ import {
   MAX_CURRENCY_UNITS,
   currencyUnitsOf,
   currencyUnitsSchema,
-  formatAmount,
   ratioRowsOf,
   unitsFromRatioRows,
+  type CurrencyAppearance,
   type CurrencyRatioRow,
   type CurrencyUnit,
 } from "@/lib/worldCurrency";
@@ -74,6 +76,11 @@ export function WorldCurrencySettings({
 
   const patchRow = (i: number, patch: Partial<CurrencyRatioRow>) =>
     setRows((current) => current.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  /** Remplace tout l'aspect d'un palier (migration 265) : les clés absentes sont retirées. */
+  const setAppearance = (i: number, appearance: CurrencyAppearance) =>
+    setRows((current) =>
+      current.map((r, j) => (j === i ? { name: r.name, short: r.short, ratio: r.ratio, ...appearance } : r)),
+    );
 
   const labelOf = (row: CurrencyRatioRow, i: number) => row.name.trim() || t("fallbackName", { n: i + 1 });
 
@@ -84,7 +91,7 @@ export function WorldCurrencySettings({
 
   // L'exemple : cinq fois le deuxième plus petit palier, plus trois unités de base.
   const second = shown[shown.length - 2];
-  const example = shown.length > 0 ? formatAmount(second ? 5 * second.value + 3 : 5, shown) : null;
+  const example = shown.length > 0 ? (second ? 5 * second.value + 3 : 5) : null;
   const chain = shown
     .slice(0, -1)
     .map((unit, i) => t("conversion", { from: unit.name, ratio: unit.value / shown[i + 1].value, to: shown[i + 1].name }))
@@ -106,7 +113,7 @@ export function WorldCurrencySettings({
           className="mt-3 break-words text-3xl font-semibold tracking-tight tabular-nums"
           data-testid="currency-preview-amount"
         >
-          {example ?? "—"}
+          {example === null ? "—" : <Money amount={example} units={shown} />}
         </p>
         {chain && <p className="mt-2 text-xs tabular-nums text-muted-foreground">{chain}</p>}
       </div>
@@ -125,7 +132,7 @@ export function WorldCurrencySettings({
             return (
               <div
                 key={i}
-                className="grid grid-cols-[minmax(0,1fr)_5rem_2.5rem] items-center gap-x-2 gap-y-1.5 @xl:grid-cols-[minmax(0,1fr)_5rem_minmax(0,16rem)_2.5rem]"
+                className="grid grid-cols-[minmax(0,1fr)_5rem_5.25rem] items-center gap-x-2 gap-y-1.5 @xl:grid-cols-[minmax(0,1fr)_5rem_minmax(0,16rem)_5.25rem]"
               >
                 <Input
                   value={row.name}
@@ -162,17 +169,28 @@ export function WorldCurrencySettings({
                     <span className="truncate text-xs @xl:text-sm">{t("base")}</span>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="col-start-3 row-start-1 size-10 text-muted-foreground @xl:col-start-4"
-                  disabled={rows.length === 1}
-                  aria-label={t("remove", { name: labelOf(row, i) })}
-                  onClick={() => setRows((current) => current.filter((_, j) => j !== i))}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="col-start-3 row-start-1 flex justify-end gap-1 @xl:col-start-4">
+                  <CurrencyAppearancePicker
+                    worldId={world.id}
+                    unit={row}
+                    label={labelOf(row, i)}
+                    onChange={(appearance) => setAppearance(i, appearance)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-10 text-muted-foreground"
+                    disabled={rows.length === 1}
+                    aria-label={t("remove", { name: labelOf(row, i) })}
+                    onClick={() => {
+                      void removeCurrencyImage(world.id, row.image);
+                      setRows((current) => current.filter((_, j) => j !== i));
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}

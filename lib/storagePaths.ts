@@ -151,6 +151,15 @@ export function catalogItemImagePath(worldId: string, itemId: string, type?: str
   return `${catalogItemImagePrefix(worldId, itemId)}/${nomDeFichierPourType(type)}`;
 }
 
+/**
+ * L'image d'un palier de monnaie (migration 265) : un dossier `currency/` par
+ * monde, que la policy du bucket `worlds` ouvre à qui gère l'économie. Les
+ * paliers n'ont pas d'identifiant : chaque envoi tire un nom neuf.
+ */
+export function currencyImagePath(worldId: string, type?: string): string {
+  return `world-${worldId}/currency/${nomDeFichierPourType(type)}`;
+}
+
 /** Dossier de la bannière d'une catégorie du catalogue. Voir la migration 185. */
 export function catalogCategoryBannerPrefix(worldId: string, categoryId: string): string {
   return `world-${worldId}/category-${categoryId}`;

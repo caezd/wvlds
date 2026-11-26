@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
 import { useWorldShops } from "@/hooks/useWorldShops";
-import { formatAmount } from "@/lib/worldCurrency";
+import { Money } from "@/components/economy/Money";
 import { ShopFront } from "./ShopFront";
 
 /**
@@ -60,7 +60,9 @@ export function WorldShops({
                   {shops.personas.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
-                      <span className="text-muted-foreground tabular-nums">· {formatAmount(p.balance, shops.units)}</span>
+                      <span className="text-muted-foreground">
+                        · <Money amount={p.balance} units={shops.units} />
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -25,7 +25,8 @@ import { indexCatalog } from "@/lib/worldCatalog";
 import { PersonaWalletSection, type PersonaWallet } from "@/components/personas/PersonaWalletSection";
 import { PersonaTaxBlock } from "@/components/personas/PersonaTaxSection";
 import { ownerCanAdd } from "@/lib/personaInventory";
-import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
+import { Money } from "@/components/economy/Money";
+import type { CurrencyUnit } from "@/lib/worldCurrency";
 import type { InventoryResult, InventoryRow, usePersonaInventory } from "@/hooks/usePersonaInventory";
 
 export type PersonaInventory = ReturnType<typeof usePersonaInventory>;
@@ -112,6 +113,7 @@ export function PersonaInventorySection({
   onSpent?: () => void;
 }) {
   const t = useTranslations("personas.inventory");
+  const tEconomy = useTranslations("economy");
   const [creating, setCreating] = useState(false);
   const [extending, setExtending] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -130,7 +132,7 @@ export function PersonaInventorySection({
     setBusy(true);
     const res = await action();
     setBusy(false);
-    if (!res.ok) toast.error(t(`errors.${res.error}`));
+    if (!res.ok) toast.error(res.error === "funds" ? tEconomy("insufficientFunds") : t(`errors.${res.error}`));
     return res.ok;
   }
 
@@ -256,7 +258,10 @@ export function PersonaInventorySection({
             <DialogHeader>
               <DialogTitle>{t("extendTitle")}</DialogTitle>
               <DialogDescription>
-                {t("extendDescription", { price: formatAmount(extension.cost, units), name: personaName })}
+                {t.rich("extendDescription", {
+                  price: () => <Money amount={extension.cost} units={units} />,
+                  name: personaName,
+                })}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

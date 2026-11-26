@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
-import { formatAmount } from "@/lib/worldCurrency";
+import { Money } from "@/components/economy/Money";
 import { buybackPriceOf, maxPurchasable, type WorldShop } from "@/lib/worldShops";
 import type { ShopBuyer, useWorldShops } from "@/hooks/useWorldShops";
 import { TradeDialog, type TradeTarget } from "./ShopDialogs";
@@ -59,13 +59,15 @@ export function ShopFront({ shop, shops, buyer }: { shop: WorldShop; shops: Shop
               </div>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span className="text-sm font-medium text-foreground tabular-nums">{formatAmount(article.price, shops.units)}</span>
+                <Money amount={article.price} units={shops.units} className="text-sm font-medium text-foreground" />
                 {soldOut ? (
                   <Badge tone="outline">{t("soldOut")}</Badge>
                 ) : (
                   article.stock !== null && <span>{t("inStock", { count: article.stock })}</span>
                 )}
-                {buyback !== null && <span>{t("buybackAt", { price: formatAmount(buyback, shops.units) })}</span>}
+                {buyback !== null && (
+                  <span>{t.rich("buybackAt", { price: () => <Money amount={buyback} units={shops.units} /> })}</span>
+                )}
                 {held > 0 && <span>{t("held", { count: held })}</span>}
               </div>
 

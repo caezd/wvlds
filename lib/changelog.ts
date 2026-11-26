@@ -45,6 +45,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-25",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "Monnaie : un aspect pour chaque palier, dans Paramètres › Fonctions › Économie › Devises.\n- couleur, icône ou image, après le nombre partout où un montant s’affiche : bourse, historique, boutiques, transferts, taxe\n- la couleur teinte l’icône, ou l’abréviation s’il n’y a pas d’icône\n- aperçu dans la page Devises",
+  },
+  {
+    date: "2026-11-25",
+    category: "Interface",
+    area: "Monde",
+    text: "Économie : saisies et mots harmonisés.\n- montants et quantités saisis partout avec les boutons −/+ : ajustement de la bourse, achat, revente, transfert, prix, stock\n- un seul mot par notion : **Transfert** (composeur, historique de la bourse, réglages), **Revente** (boutiques), **Solde** et **Montant**",
+  },
+  {
+    date: "2026-11-25",
     category: "Interface",
     area: "Monde",
     text: "Paramètres du monde : nouvelle présentation, alignée sur le reste de l’application.\n- titre de la page et boutons d’ajout dans la barre du haut ; pages sans sous-titre\n- interrupteur d’activation en haut de la page, avec son libellé\n- menu : une icône dit si chaque fonction est activée ou désactivée\n- choix présentés en cartes : visibilité, public visé, avatars, ajout d’objets\n- fonction désactivée : un encadré le signale, ses réglages repliés dessous\n- Général : aperçu de la carte de l’Explorateur ; icône et bannière en vignettes\n- Fiche par défaut : « Éditer la fiche » dans la barre du haut\n- une phrase sous chaque section et réglage qui en a besoin ; aides gardées pour les détails rares\n- suppression du monde confirmée dans une boîte",
@@ -106,19 +118,19 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Échanges : un bloc **Transférer** dans le composeur, pour donner de l’argent ou des objets à un autre persona du monde.\n- transfert immédiat : la bourse et l’inventaire du destinataire sont crédités à l’envoi\n- le message montre qui a donné quoi à qui, tel que la base l’a enregistré\n- à activer dans Paramètres › Fonctions › Économie › Échanges\n- échanges entre personas d’un même compte : option à part, coupée par défaut",
+    text: "Transferts : un bloc **Transférer** dans le composeur, pour donner de l’argent ou des objets à un autre persona du monde.\n- transfert immédiat : la bourse et l’inventaire du destinataire sont crédités à l’envoi\n- le message montre qui a donné quoi à qui, tel que la base l’a enregistré\n- à activer dans Paramètres › Fonctions › Économie › Transferts\n- transferts entre personas d’un même compte : option à part, coupée par défaut",
   },
   {
     date: "2026-11-24",
     category: "Interface",
     area: "Monde",
-    text: "Paramètres › Fonctions : une sous-catégorie **Économie** (Devises, Objets, Boutiques, Échanges) ; le catalogue se sépare en deux vues.\n- **Objets** et **Compétences** : une vue chacune dans le menu du monde, à la place du Catalogue\n- réglages des compétences et des faceclaims dans Fonctions › Personas\n- faceclaims retirés du catalogue",
+    text: "Paramètres › Fonctions : une sous-catégorie **Économie** (Devises, Objets, Boutiques, Transferts) ; le catalogue se sépare en deux vues.\n- **Objets** et **Compétences** : une vue chacune dans le menu du monde, à la place du Catalogue\n- réglages des compétences et des faceclaims dans Fonctions › Personas\n- faceclaims retirés du catalogue",
   },
   {
     date: "2026-11-24",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Boutiques : une vue **Boutiques** dans le menu du monde, à activer dans Paramètres › Fonctions › Économie › Boutiques (avec la monnaie et les objets).\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte, seulement quand l’équipe tient l’inventaire (pas quand les joueurs ajoutent eux-mêmes leurs objets) : prix de rachat propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, articles, prix et stocks gérés depuis la page de réglages Boutiques ; un lien « Gérer les boutiques » y mène depuis la vue\n- une boutique fermée ne se voit que de qui gère l’économie",
+    text: "Boutiques : une vue **Boutiques** dans le menu du monde, à activer dans Paramètres › Fonctions › Économie › Boutiques (avec la monnaie et les objets).\n- plusieurs boutiques par monde, une par onglet\n- chacune vend des objets du catalogue, à un prix dans la monnaie du monde\n- stock limité ou illimité, au choix pour chaque article\n- achat pour un de vos personas, payé sur sa bourse ; l’objet rejoint son inventaire\n- revente si la boutique l’accepte, seulement quand l’équipe tient l’inventaire (pas quand les joueurs ajoutent eux-mêmes leurs objets) : prix de revente propre à l’article ou pourcentage du prix ; l’objet revendu revient dans le stock\n- boutiques, articles, prix et stocks gérés depuis la page de réglages Boutiques ; un lien « Gérer les boutiques » y mène depuis la vue\n- une boutique fermée ne se voit que de qui gère l’économie",
   },
   {
     date: "2026-11-24",

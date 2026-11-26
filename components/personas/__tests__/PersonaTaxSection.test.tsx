@@ -32,11 +32,14 @@ beforeEach(() => {
   waive.mockResolvedValue(true);
 });
 
+/** Une ligne du bloc, montant compris (rendu par <Money>, dans son propre élément). */
+const ligne = (texte: string) => screen.getByText((_, el) => el?.tagName === "P" && el.textContent === texte);
+
 describe("PersonaTaxSection (migration 255)", () => {
   it("le montant, la récurrence, ce qui reste à payer", () => {
     render(<PersonaTaxSection tax={taxe()} units={UNITS} canPay canManage={false} />);
-    expect(screen.getByText("1 po 50 pc par mois")).toBeInTheDocument();
-    expect(screen.getByText("À payer : 1 po 50 pc")).toBeInTheDocument();
+    expect(ligne("1 po 50 pc par mois")).toBeInTheDocument();
+    expect(ligne("À payer : 1 po 50 pc")).toBeInTheDocument();
   });
 
   it("à jour : rien à payer, pas de bouton", () => {
@@ -47,7 +50,7 @@ describe("PersonaTaxSection (migration 255)", () => {
 
   it("en retard : les périodes échues et leur total", () => {
     render(<PersonaTaxSection tax={taxe({ dues: [PASSE, EN_COURS] })} units={UNITS} canPay={false} canManage={false} />);
-    expect(screen.getByText("En retard : 1 période, 1 po 50 pc")).toBeInTheDocument();
+    expect(ligne("En retard : 1 période, 1 po 50 pc")).toBeInTheDocument();
   });
 
   it("le joueur paie ; un solde trop maigre l'en informe", async () => {

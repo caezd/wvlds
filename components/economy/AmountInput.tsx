@@ -18,7 +18,8 @@ function countsOf(value: number | null, units: readonly CurrencyUnit[]): number[
 
 /**
  * Un montant saisi palier par palier (« 2 Or 50 Argent »), recomposé en
- * unités de base. `units` du plus grand au plus petit, comme les rend
+ * unités de base. Chaque palier a son champ −/+ (NumberInput), le même que
+ * pour toute quantité ; `compact` serre les cases pour les réglages. `units` du plus grand au plus petit, comme les rend
  * `currencyUnitsOf`. Toutes les cases vides : `null`.
  */
 export function AmountInput({
@@ -27,7 +28,6 @@ export function AmountInput({
   onChange,
   idPrefix,
   labelOf,
-  stepper = false,
   compact = false,
   placeholder,
   fieldClassName,
@@ -38,8 +38,6 @@ export function AmountInput({
   idPrefix: string;
   /** Le nom accessible d'une case (« Prix en Or »). */
   labelOf: (unit: CurrencyUnit) => string;
-  /** Des boutons −/+ à côté de chaque case (NumberInput). */
-  stepper?: boolean;
   /**
    * Une rangée de cases qui se partagent la largeur, sans intitulé au-dessus : l'abréviation du
    * palier dans la case (« [ 12 S ] »). Pour les réglages, sous un seul libellé.
@@ -95,31 +93,18 @@ export function AmountInput({
   return (
     <div className="flex flex-wrap gap-3">
       {units.map((unit, i) => (
-        <div key={unit.value} className={stepper ? "space-y-1" : "w-28 space-y-1"}>
+        <div key={unit.value} className="space-y-1">
           <Label htmlFor={`${idPrefix}-${unit.value}`} className="text-xs text-muted-foreground">
             {unit.name}
           </Label>
-          {stepper ? (
-            <NumberInput
-              id={`${idPrefix}-${unit.value}`}
-              min={0}
-              aria-label={labelOf(unit)}
-              value={Number.isFinite(counts[i]) ? counts[i] : null}
-              onValueChange={(v) => update(i, v === null ? NaN : v)}
-            />
-          ) : (
-            <Input
-              id={`${idPrefix}-${unit.value}`}
-              type="number"
-              min={0}
-              step={1}
-              inputMode="numeric"
-              {...digitsOnly}
-              aria-label={labelOf(unit)}
-              value={Number.isFinite(counts[i]) ? counts[i] : ""}
-              onChange={(e) => update(i, e.target.valueAsNumber)}
-            />
-          )}
+          <NumberInput
+            id={`${idPrefix}-${unit.value}`}
+            min={0}
+            {...digitsOnly}
+            aria-label={labelOf(unit)}
+            value={Number.isFinite(counts[i]) ? counts[i] : null}
+            onValueChange={(v) => update(i, v === null ? NaN : v)}
+          />
         </div>
       ))}
     </div>

@@ -7,13 +7,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AmountInput } from "@/components/economy/AmountInput";
+import { Money } from "@/components/economy/Money";
 import { addWorldShop, addWorldShopItem, updateWorldShop, updateWorldShopItem } from "@/app/actions/worldShops";
 import { ERR_ARTICLE_EN_DOUBLE, messageErreurAction } from "@/lib/actionErrors";
-import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
+import type { CurrencyUnit } from "@/lib/worldCurrency";
 import {
   MAX_SHOP_DESCRIPTION_LENGTH,
   MAX_SHOP_NAME_LENGTH,
@@ -24,10 +26,8 @@ import {
 import type { ShopBuyer, ShopResult } from "@/hooks/useWorldShops";
 
 /** Un entier saisi, ou `null` si la case est vide. */
-function intOrNull(raw: string): number | null {
-  if (raw.trim() === "") return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
+function intOrNull(n: number | null): number | null {
+  return n !== null && Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
 /** Un libellé et sa phrase d'explication, visible : la raison d'une case grisée se lit sans ouvrir d'aide. */
@@ -86,7 +86,7 @@ function ShopForm({
   const [description, setDescription] = useState(shop?.description ?? "");
   const [isOpen, setIsOpen] = useState(shop?.is_open ?? true);
   const [buyback, setBuyback] = useState(shop?.buyback_enabled ?? false);
-  const [percent, setPercent] = useState(shop?.buyback_percent?.toString() ?? "");
+  const [percent, setPercent] = useState<number | null>(shop?.buyback_percent ?? null);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -143,17 +143,7 @@ function ShopForm({
         {allowBuyback && buyback && (
           <div className="flex items-center justify-between gap-3">
             <LabelWithDescription htmlFor="shop-percent" label={t("buybackPercent")} description={t("buybackPercentHelp")} />
-            <Input
-              id="shop-percent"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
-              inputMode="numeric"
-              className="w-24"
-              value={percent}
-              onChange={(e) => setPercent(e.target.value)}
-            />
+            <NumberInput id="shop-percent" min={0} max={100} value={percent} onValueChange={setPercent} />
           </div>
         )}
       </div>
@@ -213,7 +203,7 @@ function ShopItemForm({
   const t = useTranslations("shops");
   const tCommon = useTranslations("common");
   const [price, setPrice] = useState<number | null>(target.item?.price ?? null);
-  const [stock, setStock] = useState(target.item?.stock?.toString() ?? "");
+  const [stock, setStock] = useState<number | null>(target.item?.stock ?? null);
   const [buyback, setBuyback] = useState<number | null>(target.item?.buyback_price ?? null);
   const [saving, setSaving] = useState(false);
 
@@ -250,17 +240,13 @@ function ShopItemForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="shop-stock">{t("stock")}</Label>
-          <Input
+          <NumberInput
             id="shop-stock"
-            type="number"
             min={0}
             max={MAX_SHOP_STOCK}
-            step={1}
-            inputMode="numeric"
-            className="w-32"
             placeholder={t("stockPlaceholder")}
             value={stock}
-            onChange={(e) => setStock(e.target.value)}
+            onValueChange={setStock}
           />
         </div>
         {allowBuyback && (
@@ -319,7 +305,7 @@ export function TradeDialog({
           <DialogTitle>{title}</DialogTitle>
           {buyer && (
             <DialogDescription>
-              {t("tradeDescription", { name: buyer.name, balance: formatAmount(buyer.balance, units) })}
+              {t.rich("tradeDescription", { name: buyer.name, balance: () => <Money amount={buyer.balance} units={units} /> })}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -341,7 +327,8 @@ function TradeForm({
   onDone: () => void;
 }) {
   const t = useTranslations("shops");
-  const [raw, setRaw] = useState("1");
+  const tEconomy = useTranslations("economy");
+  const [raw, setRaw] = useState<number | null>(1);
   const [busy, setBusy] = useState(false);
   const quantity = intOrNull(raw) ?? 0;
   const valid = quantity >= 1 && quantity <= target.max;
@@ -351,7 +338,7 @@ function TradeForm({
     const res = await run(target, quantity);
     setBusy(false);
     if (!res.ok) {
-      toast.error(t(`errors.${res.error}`));
+      toast.error(res.error === "funds" ? tEconomy("insufficientFunds") : t(`errors.${res.error}`));
       return;
     }
     toast.success(t(target.mode === "buy" ? "bought" : "sold"));
@@ -363,25 +350,22 @@ function TradeForm({
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="trade-quantity">{t("quantity")}</Label>
-          <Input
+          <NumberInput
             id="trade-quantity"
-            type="number"
+            aria-label={t("quantity")}
             min={1}
             max={Math.max(1, target.max)}
-            step={1}
-            inputMode="numeric"
-            className="w-24"
             value={raw}
-            onChange={(e) => setRaw(e.target.value)}
+            onValueChange={setRaw}
           />
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">{t("total")}</p>
-          <p className="text-sm font-medium tabular-nums">{formatAmount(target.unitPrice * quantity, units)}</p>
+          <Money amount={target.unitPrice * quantity} units={units} className="block text-sm font-medium" />
         </div>
       </div>
       {target.mode === "buy" && target.max === 0 && (
-        <p className="text-sm text-destructive">{t("errors.funds")}</p>
+        <p className="text-sm text-destructive">{tEconomy("insufficientFunds")}</p>
       )}
       <DialogFooter>
         <Button type="button" disabled={!valid || busy} onClick={() => void confirm()}>

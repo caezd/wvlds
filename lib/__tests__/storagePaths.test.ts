@@ -10,6 +10,7 @@ import {
   mapImagePrefix,
   pinBannerPath,
   pinBannerPrefix,
+  currencyImagePath,
 } from "@/lib/storagePaths";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -193,5 +194,19 @@ describe("les chemins que la policy de stockage accepte", () => {
 
   it("la bannière d'un lieu", () => {
     expect(pinBannerPath(MONDE, CARTE, "image/webp")).toMatch(ACCEPTE_PAR_LA_POLICY);
+  });
+});
+
+describe("l'image d'un palier de monnaie (migration 265)", () => {
+  // Le motif de la migration 265 : un dossier `currency/` par monde, écrit par qui gère l'économie.
+  const ACCEPTE_PAR_LA_POLICY =
+    /^world-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/currency\//;
+  const MONDE = "f1e4d2c9-e56f-454a-bde2-8f9eade06e65";
+
+  it("se range sous world-<id>/currency/, avec un nom imprévisible", () => {
+    const chemin = currencyImagePath(MONDE, "image/webp");
+    expect(chemin).toMatch(ACCEPTE_PAR_LA_POLICY);
+    expect(chemin).toMatch(/\.webp$/);
+    expect(chemin).not.toBe(currencyImagePath(MONDE, "image/webp"));
   });
 });

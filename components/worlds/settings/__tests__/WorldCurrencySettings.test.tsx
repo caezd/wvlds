@@ -8,6 +8,32 @@ const setWorldCurrency = vi.fn();
 vi.mock("@/app/actions/worldCatalog", () => ({
   setWorldCurrency: (...args: unknown[]) => setWorldCurrency(...args),
 }));
+vi.mock("@/components/ui/LucideIconPicker", () => ({
+  LucideIconPicker: ({ trigger, onChange }: { trigger: React.ReactNode; onChange: (n: string) => void }) => (
+    <span>
+      {trigger}
+      <button type="button" onClick={() => onChange("skull")}>choisir crâne</button>
+    </span>
+  ),
+}));
+vi.mock("@/components/ui/LazyLucideIcon", () => ({ LazyLucideIcon: ({ name }: { name: string }) => <svg data-icon={name} /> }));
+const upload = vi.fn();
+const remove = vi.fn();
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({
+    storage: {
+      from: () => ({
+        upload: (...args: unknown[]) => upload(...args),
+        remove: (...args: unknown[]) => remove(...args),
+        getPublicUrl: (path: string) => ({ data: { publicUrl: `https://cdn.test/${path}` } }),
+      }),
+    },
+  }),
+}));
+vi.mock("@/lib/imageUtils", async (original) => ({
+  ...(await original<typeof import("@/lib/imageUtils")>()),
+  toWebP: async (file: File) => file,
+}));
 
 import { WorldCurrencySettings } from "@/components/worlds/settings/WorldCurrencySettings";
 import type { World } from "@/types/worlds";
@@ -27,6 +53,8 @@ beforeEach(() => {
   // shouldAdvanceTime : user-event attend entre deux frappes, le temps doit couler.
   vi.useFakeTimers({ shouldAdvanceTime: true });
   setWorldCurrency.mockResolvedValue({ ok: true });
+  upload.mockResolvedValue({ error: null });
+  remove.mockResolvedValue({ error: null });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -137,5 +165,50 @@ describe("WorldCurrencySettings (migration 246)", () => {
     await attendre();
     expect(toast.error).toHaveBeenCalled();
     expect(screen.getByRole("textbox", { name: "Nom du palier 1" })).toHaveValue("Écu");
+  });
+});
+
+describe("WorldCurrencySettings : aspect des paliers (migration 265)", () => {
+  /** Le dernier appel de sauvegarde : les paliers envoyés. */
+  const envoyes = () => setWorldCurrency.mock.calls.at(-1)?.[1] as Array<Record<string, unknown>>;
+
+  it("une icône choisie pour un palier s'enregistre avec lui", async () => {
+    const user = utilisateur();
+    render(<WorldCurrencySettings world={monde()} />);
+    await user.click(screen.getByRole("button", { name: "Aspect : Or" }));
+    await user.click(await screen.findByRole("button", { name: "choisir crâne" }));
+    await attendre();
+    expect(envoyes()[0]).toEqual({ name: "Or", short: "po", value: 10_000, icon: "skull" });
+    expect(envoyes()[1]).toEqual(OR[1]);
+  });
+
+  it("une image téléversée remplace l'icône", async () => {
+    const user = utilisateur();
+    const avecIcone = [{ ...OR[0], icon: "coins" }, OR[1], OR[2]];
+    render(<WorldCurrencySettings world={monde({ currency_units: avecIcone })} />);
+    await user.click(screen.getByRole("button", { name: "Aspect : Or" }));
+    const fichier = new File(["x"], "or.png", { type: "image/png" });
+    await user.upload(await screen.findByLabelText("Image du palier"), fichier);
+    await attendre();
+    expect(upload).toHaveBeenCalledWith(expect.stringMatching(/^world-w1\/currency\//), fichier, expect.anything());
+    const or = envoyes()[0];
+    expect(or.image).toMatch(/^https:\/\/cdn\.test\/world-w1\/currency\//);
+    expect(or.icon).toBeUndefined();
+  });
+
+  it("« Retirer l'aspect » rend au palier son abréviation seule", async () => {
+    const user = utilisateur();
+    const habille = [{ ...OR[0], icon: "coins", color: "#d4a017" }, OR[1], OR[2]];
+    render(<WorldCurrencySettings world={monde({ currency_units: habille })} />);
+    await user.click(screen.getByRole("button", { name: "Aspect : Or" }));
+    await user.click(await screen.findByRole("button", { name: "Retirer l’aspect" }));
+    await attendre();
+    expect(envoyes()[0]).toEqual(OR[0]);
+  });
+
+  it("l'aperçu montre l'aspect choisi", () => {
+    const habille = [OR[0], { ...OR[1], icon: "coins" }, OR[2]];
+    render(<WorldCurrencySettings world={monde({ currency_units: habille })} />);
+    expect(screen.getByTestId("currency-preview-amount").querySelector("[data-icon='coins']")).not.toBeNull();
   });
 });

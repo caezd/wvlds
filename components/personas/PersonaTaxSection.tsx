@@ -7,8 +7,9 @@ import { Landmark } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/section-label";
+import { Money } from "@/components/economy/Money";
 import { usePersonaTax, type TaxPayResult } from "@/hooks/usePersonaTax";
-import { formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
+import type { CurrencyUnit } from "@/lib/worldCurrency";
 import { taxStatusOf, type TaxDue, type TaxSettings } from "@/lib/worldTax";
 import { cn } from "@/lib/utils";
 
@@ -40,18 +41,20 @@ export function PersonaTaxSection({
   onPaid?: () => void;
 }) {
   const t = useTranslations("personas.tax");
+  const tEconomy = useTranslations("economy");
   const [busy, setBusy] = useState(false);
   if (tax.status !== "on" || !tax.settings) return null;
   const { settings } = tax;
   const state = taxStatusOf(tax.dues);
-  const money = (v: number) => formatAmount(v, units);
+  /** Le montant d'une phrase, à la place de sa balise `<amount>`. */
+  const money = (v: number) => <Money amount={v} units={units} />;
 
   async function pay() {
     setBusy(true);
     const res = await tax.pay();
     setBusy(false);
     if (!res.ok) {
-      toast.error(t(res.error === "insufficient" ? "insufficient" : "failed"));
+      toast.error(res.error === "insufficient" ? tEconomy("insufficientFunds") : t("failed"));
       return;
     }
     toast.success(t("paid"));
@@ -80,13 +83,13 @@ export function PersonaTaxSection({
       <div className="min-w-0 flex-1 space-y-0.5">
         <SectionLabel>{t("title")}</SectionLabel>
         <p className="text-sm tabular-nums">
-          {t(`rate.${settings.tax_unit}`, { amount: money(settings.tax_amount), count: settings.tax_every })}
+          {t.rich(`rate.${settings.tax_unit}`, { amount: () => money(settings.tax_amount), count: settings.tax_every })}
         </p>
         <p className={cn("text-sm", state.overdueCount > 0 ? "text-destructive" : "text-muted-foreground")}>
           {state.overdueCount > 0
-            ? t("overdue", { periods: state.overdueCount, amount: money(state.overdueTotal) })
+            ? t.rich("overdue", { periods: state.overdueCount, amount: () => money(state.overdueTotal) })
             : state.unpaidCount > 0
-              ? t("due", { amount: money(state.unpaidTotal) })
+              ? t.rich("due", { amount: () => money(state.unpaidTotal) })
               : t("upToDate")}
         </p>
         {settings.tax_mode === "auto" && <p className="text-xs text-muted-foreground">{t("auto")}</p>}

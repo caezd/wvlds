@@ -17,8 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AmountInput } from "@/components/economy/AmountInput";
+import { Money } from "@/components/economy/Money";
 import { cn } from "@/lib/utils";
-import { amountFromCounts, formatAmount, type CurrencyUnit } from "@/lib/worldCurrency";
+import type { CurrencyUnit } from "@/lib/worldCurrency";
 import type { AdjustResult, WalletMovement } from "@/hooks/usePersonaWallet";
 
 const MAX_NOTE_LENGTH = 200;
@@ -59,9 +61,12 @@ export function PersonaWalletSection({
         </span>
         <div className="min-w-0 flex-1">
           <SectionLabel>{t("balance")}</SectionLabel>
-          <div data-testid="persona-wallet-balance" className="text-lg font-semibold tabular-nums">
-            {formatAmount(wallet.balance, wallet.units)}
-          </div>
+          <Money
+            data-testid="persona-wallet-balance"
+            amount={wallet.balance}
+            units={wallet.units}
+            className="block text-lg font-semibold"
+          />
         </div>
         {canManage && (
           <Button variant="outline" size="sm" onClick={() => setAdjusting(true)}>
@@ -78,14 +83,12 @@ export function PersonaWalletSection({
           <ul aria-labelledby="persona-wallet-history" className="divide-y divide-border rounded-md border border-border">
             {wallet.ledger.map((m) => (
               <li key={m.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <span
-                  className={cn(
-                    "shrink-0 font-medium tabular-nums",
-                    m.delta > 0 ? "text-success" : "text-destructive",
-                  )}
-                >
-                  {formatAmount(m.delta, wallet.units, { signed: true })}
-                </span>
+                <Money
+                  amount={m.delta}
+                  units={wallet.units}
+                  signed
+                  className={cn("shrink-0 font-medium", m.delta > 0 ? "text-success" : "text-destructive")}
+                />
                 <span className="min-w-0 flex-1 truncate text-muted-foreground">
                   {m.note || t(`kinds.${m.kind}`)}
                 </span>
@@ -125,17 +128,19 @@ function AdjustDialog({
   adjust: PersonaWallet["adjust"];
 }) {
   const t = useTranslations("personas.wallet");
+  const tEconomy = useTranslations("economy");
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [counts, setCounts] = useState<number[]>([]);
+  const [amount, setAmount] = useState(0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const amount = amountFromCounts(counts, units);
+  // Le champ de montant garde sa saisie : on le remonte à chaque remise à zéro.
+  const [round, setRound] = useState(0);
 
   function reset() {
     setDirection(1);
-    setCounts([]);
+    setAmount(0);
     setNote("");
+    setRound((r) => r + 1);
   }
 
   async function submit() {
@@ -143,7 +148,7 @@ function AdjustDialog({
     const res = await adjust(direction * amount, note.trim());
     setSaving(false);
     if (!res.ok) {
-      toast.error(t(res.error === "insufficient" ? "insufficient" : "failed"));
+      toast.error(res.error === "insufficient" ? tEconomy("insufficientFunds") : t("failed"));
       return;
     }
     toast.success(t("adjusted"));
@@ -179,32 +184,14 @@ function AdjustDialog({
               </Button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-3">
-            {units.map((unit, i) => (
-              <div key={unit.value} className="w-28 space-y-1">
-                <Label htmlFor={`wallet-unit-${unit.value}`} className="text-xs text-muted-foreground">
-                  {unit.name}
-                </Label>
-                <Input
-                  id={`wallet-unit-${unit.value}`}
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  aria-label={t("amountIn", { unit: unit.name })}
-                  value={Number.isFinite(counts[i]) ? counts[i] : ""}
-                  onChange={(e) => {
-                    const v = e.target.valueAsNumber;
-                    setCounts((current) => {
-                      const next = [...current];
-                      next[i] = v;
-                      return next;
-                    });
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+          <AmountInput
+            key={round}
+            units={units}
+            value={null}
+            onChange={(v) => setAmount(v ?? 0)}
+            idPrefix="wallet-unit"
+            labelOf={(unit) => t("amountIn", { unit: unit.name })}
+          />
           <div className="space-y-1">
             <Label htmlFor="wallet-note">{t("note")}</Label>
             <Input

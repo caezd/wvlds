@@ -95,9 +95,10 @@ describe("WorldShops (migration 249)", () => {
     renderShops();
     await user.click(within(card("Épée")).getByRole("button", { name: "Acheter" }));
     const dialog = await screen.findByRole("dialog", { name: "Acheter : Épée" });
-    const qty = within(dialog).getByRole("spinbutton", { name: "Quantité" });
-    await user.clear(qty);
-    await user.type(qty, "2");
+    expect(within(dialog).getByRole("spinbutton", { name: "Quantité" })).toHaveValue(1);
+    // Le même champ que partout : les boutons −/+ à côté de la case.
+    await user.click(within(dialog).getByRole("button", { name: "Augmenter : Quantité" }));
+    expect(within(dialog).getByRole("spinbutton", { name: "Quantité" })).toHaveValue(2);
     expect(within(dialog).getByText("5 po")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Acheter" }));
     await waitFor(() => expect(state.buy).toHaveBeenCalledWith("p1", "i1", 2));
@@ -113,12 +114,12 @@ describe("WorldShops (migration 249)", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Solde insuffisant."));
   });
 
-  it("revendre : seulement ce qu'on porte, au prix de rachat", async () => {
+  it("revendre : seulement ce qu'on porte, au prix de revente", async () => {
     const state = shops();
     const user = userEvent.setup();
     renderShops();
     expect(within(card("Casque")).queryByRole("button", { name: "Revendre" })).toBeNull();
-    expect(within(card("Épée")).getByText("Rachat 1 po 25 pa")).toBeInTheDocument();
+    expect(within(card("Épée")).getByText(/^Revente :/)).toHaveTextContent("Revente : 1 po 25 pa");
     await user.click(within(card("Épée")).getByRole("button", { name: "Revendre" }));
     const dialog = await screen.findByRole("dialog", { name: "Revendre : Épée" });
     await user.click(within(dialog).getByRole("button", { name: "Revendre" }));
@@ -129,8 +130,8 @@ describe("WorldShops (migration 249)", () => {
     shops({ buyback: false });
     renderShops();
     expect(within(card("Épée")).queryByRole("button", { name: "Revendre" })).toBeNull();
-    expect(within(card("Épée")).queryByText(/Rachat/)).toBeNull();
-    expect(screen.queryByText("Rachète ses objets")).toBeNull();
+    expect(within(card("Épée")).queryByText(/^Revente :/)).toBeNull();
+    expect(screen.queryByText("Revente acceptée")).toBeNull();
   });
 
   it("sans persona dans le monde : on regarde, on n'achète pas", () => {

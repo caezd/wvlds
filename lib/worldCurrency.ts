@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { hexColorSchema, httpUrlSchema, lucideIconSchema } from "@/lib/inputSchemas";
+
 /**
  * La monnaie d'un monde (migration 246), réglée dans Paramètres › Fonctions ›
  * Économie.
@@ -19,11 +21,33 @@ export type CurrencyUnit = {
   short: string;
   /** Valeur en unités de base ; l'unité de base vaut 1. */
   value: number;
+} & CurrencyAppearance;
+
+/**
+ * L'aspect facultatif d'un palier (migration 265), rendu par `<Money>` : une
+ * image, ou une icône Lucide ; la couleur teinte l'icône, ou l'abréviation
+ * quand il n'y en a pas. Une clé absente : rien de ce côté.
+ */
+export type CurrencyAppearance = {
+  color?: string;
+  icon?: string;
+  image?: string;
 };
+
+const APPEARANCE_KEYS = ["color", "icon", "image"] as const;
+
+/** Les seules clés d'aspect renseignées d'un palier ou d'une ligne. */
+export function appearanceOf(source: CurrencyAppearance): CurrencyAppearance {
+  const out: CurrencyAppearance = {};
+  for (const key of APPEARANCE_KEYS) if (source[key]) out[key] = source[key];
+  return out;
+}
 
 export const MAX_CURRENCY_UNITS = 5;
 export const MAX_CURRENCY_NAME_LENGTH = 30;
 export const MAX_CURRENCY_SHORT_LENGTH = 6;
+/** Le nom d'une icône Lucide, en kebab-case ; tenu aussi par la base. */
+export const MAX_CURRENCY_ICON_LENGTH = 64;
 /** Plafond de la valeur d'un palier ; tenu aussi par la base. */
 export const MAX_CURRENCY_VALUE = 1_000_000_000_000;
 
@@ -33,6 +57,9 @@ const unitSchema = z.strictObject({
   name: z.string().trim().min(1).max(MAX_CURRENCY_NAME_LENGTH),
   short: z.string().trim().max(MAX_CURRENCY_SHORT_LENGTH),
   value: z.number().int().min(1).max(MAX_CURRENCY_VALUE),
+  color: hexColorSchema.optional(),
+  icon: lucideIconSchema.min(1).max(MAX_CURRENCY_ICON_LENGTH).optional(),
+  image: httpUrlSchema.optional(),
 });
 
 function byValueDesc(units: readonly CurrencyUnit[]): CurrencyUnit[] {
@@ -108,7 +135,7 @@ export function amountFromCounts(counts: readonly number[], units: readonly Curr
  * Une ligne de l'éditeur des paliers : le taux dit combien du palier suivant
  * vaut celui-ci (« 1 Or = 100 Argent ») ; celui de l'unité de base est 1.
  */
-export type CurrencyRatioRow = { name: string; short: string; ratio: number };
+export type CurrencyRatioRow = { name: string; short: string; ratio: number } & CurrencyAppearance;
 
 export function ratioRowsOf(units: readonly CurrencyUnit[]): CurrencyRatioRow[] {
   const sorted = byValueDesc(units);
@@ -116,6 +143,7 @@ export function ratioRowsOf(units: readonly CurrencyUnit[]): CurrencyRatioRow[] 
     name: u.name,
     short: u.short,
     ratio: i < sorted.length - 1 ? u.value / sorted[i + 1].value : 1,
+    ...appearanceOf(u),
   }));
 }
 
@@ -125,7 +153,7 @@ export function unitsFromRatioRows(rows: readonly CurrencyRatioRow[]): CurrencyU
   let value = 1;
   for (let i = rows.length - 1; i >= 0; i--) {
     if (i < rows.length - 1) value *= Math.max(1, Math.floor(rows[i].ratio));
-    out.unshift({ name: rows[i].name, short: rows[i].short, value });
+    out.unshift({ name: rows[i].name, short: rows[i].short, value, ...appearanceOf(rows[i]) });
   }
   return out;
 }

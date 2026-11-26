@@ -4,6 +4,7 @@ import path from "node:path";
 
 import {
   DEFAULT_CURRENCY_UNITS,
+  MAX_CURRENCY_ICON_LENGTH,
   MAX_CURRENCY_UNITS,
   MAX_CURRENCY_VALUE,
   amountFromCounts,
@@ -57,7 +58,57 @@ describe("currencyUnitsSchema", () => {
   });
 
   it("refuse un champ inconnu", () => {
-    expect(ok([{ name: "Or", short: "", value: 1, color: "#fff" }])).toBe(false);
+    expect(ok([{ name: "Or", short: "", value: 1, rate: 2 }])).toBe(false);
+  });
+
+  it("accepte un aspect par palier : couleur, icône, image (migration 265)", () => {
+    expect(ok([{ name: "Or", short: "po", value: 1, color: "#d4a017", icon: "coins" }])).toBe(true);
+    expect(ok([{ name: "Or", short: "po", value: 1, color: "#d4a01780" }])).toBe(true);
+    expect(ok([{ name: "Or", short: "po", value: 1, image: "https://exemple.org/or.webp" }])).toBe(true);
+  });
+
+  it("refuse un aspect mal formé", () => {
+    expect(ok([{ name: "Or", short: "", value: 1, color: "doré" }])).toBe(false);
+    expect(ok([{ name: "Or", short: "", value: 1, icon: "Coins<script>" }])).toBe(false);
+    expect(ok([{ name: "Or", short: "", value: 1, icon: "a".repeat(65) }])).toBe(false);
+    expect(ok([{ name: "Or", short: "", value: 1, image: "javascript:alert(1)" }])).toBe(false);
+  });
+});
+
+describe("aspect des paliers", () => {
+  const ASPECT: CurrencyUnit[] = [
+    { name: "Or", short: "po", value: 100, color: "#d4a017", icon: "coins" },
+    { name: "Cuivre", short: "pc", value: 1, image: "https://exemple.org/cuivre.webp" },
+  ];
+
+  it("currencyUnitsOf garde l'aspect", () => {
+    expect(currencyUnitsOf(ASPECT)).toEqual(ASPECT);
+  });
+
+  it("l'éditeur par taux garde l'aspect de chaque palier", () => {
+    const rows = ratioRowsOf(ASPECT);
+    expect(rows[0]).toMatchObject({ color: "#d4a017", icon: "coins" });
+    expect(rows[1]).toMatchObject({ image: "https://exemple.org/cuivre.webp" });
+    expect(unitsFromRatioRows(rows)).toEqual(ASPECT);
+  });
+
+  it("un palier sans aspect n'en reçoit pas de clé vide", () => {
+    expect(Object.keys(unitsFromRatioRows(ratioRowsOf(GOLD))[0]).sort()).toEqual(["name", "short", "value"]);
+  });
+});
+
+describe("migration 265", () => {
+  const sql = readFileSync(path.join(process.cwd(), "migrations/265_currency_appearance.sql"), "utf8");
+
+  it("la base accepte les mêmes clés que l'interface", () => {
+    expect(sql).toContain("k NOT IN ('name', 'short', 'value', 'color', 'icon', 'image')");
+    expect(sql).toContain("public.is_hex_color(v_entry->>'color')");
+    expect(sql).toContain("public.is_http_url(v_entry->>'image')");
+    expect(sql).toContain(`char_length(v_entry->>'icon') BETWEEN 1 AND ${MAX_CURRENCY_ICON_LENGTH}`);
+  });
+
+  it("les images des paliers se déposent sous world-<id>/currency/, pour qui gère l'économie", () => {
+    expect(sql).toMatch(/\/currency\/'\s+AND public\.has_world_permission\([^;]+'economy\.manage'\)/);
   });
 });
 

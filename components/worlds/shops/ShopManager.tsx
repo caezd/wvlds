@@ -13,7 +13,7 @@ import { CatalogPicker } from "@/components/personas/fields/shared";
 import { deleteWorldShop, removeWorldShopItem } from "@/app/actions/worldShops";
 import { useWorldShops, type ShopArticle } from "@/hooks/useWorldShops";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { formatAmount } from "@/lib/worldCurrency";
+import { Money } from "@/components/economy/Money";
 import { buybackPriceOf, type WorldShop } from "@/lib/worldShops";
 import { SettingsEmpty } from "@/components/worlds/settings/FeatureLayout";
 import { ShopDialog, ShopItemDialog, type ShopItemTarget } from "./ShopDialogs";
@@ -161,13 +161,13 @@ function ManagedShop({
               <li key={article.id} aria-label={entry.name} className="flex items-center gap-3 px-2 py-1.5">
                 <CatalogVisual icon={entry.icon} lucideIcon={entry.lucide_icon} imageUrl={entry.image_url} size={28} />
                 <span className="min-w-0 flex-1 truncate text-sm">{entry.name}</span>
-                <span className="text-sm tabular-nums">{formatAmount(article.price, shops.units)}</span>
+                <Money amount={article.price} units={shops.units} className="text-sm" />
                 <span className="w-24 text-right text-xs text-muted-foreground">
                   {article.stock === null ? t("stockPlaceholder") : t("inStock", { count: article.stock })}
                 </span>
                 {buyback !== null && (
                   <span className="hidden text-xs text-muted-foreground sm:inline">
-                    {t("buybackAt", { price: formatAmount(buyback, shops.units) })}
+                    {t.rich("buybackAt", { price: () => <Money amount={buyback} units={shops.units} /> })}
                   </span>
                 )}
                 <div className="flex shrink-0 gap-1">
