@@ -33,7 +33,8 @@ const CLIENT_FILES = FILES.filter((f) => /^["']use client["']/.test(f.src.replac
 
 function namespacesUsedIn(files: { src: string }[], call: "useTranslations" | "getTranslations") {
     const found = new Set<string>();
-    const re = new RegExp(`${call}\\(\\s*["']([A-Za-z0-9_]+)["']`, "g");
+    // `useTranslations("auth.usernameRequired")` lit `auth` : le premier segment compte.
+    const re = new RegExp(`${call}\\(\\s*["']([A-Za-z0-9_]+)(?:\\.[A-Za-z0-9_.]*)?["']`, "g");
     for (const { src } of files) {
         for (const m of src.matchAll(re)) found.add(m[1]);
     }
@@ -78,11 +79,21 @@ describe("découpage des messages envoyés au client", () => {
         "components/forgot-password-form.tsx",
         "components/sign-up-form.tsx",
         "components/update-password-form.tsx",
+        "components/auth/UsernameField.tsx",
     ];
+
+    // Montés dans l'arbre protégé, mais sous un NextIntlClientProvider qui leur
+    // rend `auth` (cf. app/(protected)/layout.tsx) : la fenêtre « Choisissez
+    // votre pseudo », pour les comptes sans pseudo.
+    const OWN_AUTH_PROVIDER_FILES = ["components/UsernameRequiredDialog.tsx"];
 
     const PROTECTED_CLIENT_FILES = CLIENT_FILES.filter((f) => {
         const rel = f.path.slice(ROOT.length + 1).replace(/\\/g, "/");
-        return !rel.startsWith("app/auth/") && !AUTH_TREE_CLIENT_FILES.includes(rel);
+        return (
+            !rel.startsWith("app/auth/") &&
+            !AUTH_TREE_CLIENT_FILES.includes(rel) &&
+            !OWN_AUTH_PROVIDER_FILES.includes(rel)
+        );
     });
 
     it("aucun namespace retiré n'est lu par un composant client de l'arbre protégé", () => {

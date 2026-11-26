@@ -4,7 +4,7 @@ import AppShell from "@/components/sidebar/AppShell";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
 import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { NextIntlClientProvider } from "next-intl";
-import { shellMessages } from "@/lib/clientMessages";
+import { shellMessages, withRouteMessages } from "@/lib/clientMessages";
 import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -35,12 +35,7 @@ export default async function PageLayout({
     getCurrentProfile(),
   ]);
 
-  let usernameDialog: React.ReactNode = null;
   let localeSync: React.ReactNode = null;
-
-  if (!profile?.username) {
-    usernameDialog = <UsernameRequiredDialog userId={userId} />;
-  }
 
   // Sync DB locale preference to cookie when they differ (e.g. new device login)
   if (profile?.locale) {
@@ -52,6 +47,14 @@ export default async function PageLayout({
   }
 
   const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+
+  // La fenêtre lit le namespace `auth`, absent du tronc commun : elle reçoit le
+  // sien, pour ce seul cas.
+  const usernameDialog = profile?.username ? null : (
+    <NextIntlClientProvider locale={locale} messages={withRouteMessages(messages, ["auth"])}>
+      <UsernameRequiredDialog userId={userId} />
+    </NextIntlClientProvider>
+  );
 
   return (
     <NextIntlClientProvider locale={locale} messages={shellMessages(messages)}>

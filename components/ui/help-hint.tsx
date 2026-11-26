@@ -23,6 +23,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
  */
 export function HelpHint({
   title,
+  label,
   children,
   side = "top",
   align = "end",
@@ -30,6 +31,11 @@ export function HelpHint({
 }: {
   /** Ce que l'aide explique : donne son nom au bouton. */
   title?: string;
+  /**
+   * Le nom complet du bouton, à la place de « Aide : <title> » : pour un arbre
+   * qui n'a pas le namespace `common` (les pages d'authentification).
+   */
+  label?: string;
   /** L'explication. */
   children: React.ReactNode;
   side?: "top" | "bottom" | "left" | "right";
@@ -44,7 +50,7 @@ export function HelpHint({
       <HoverCardTrigger asChild>
         <button
           type="button"
-          aria-label={title ? t("helpFor", { title }) : t("help")}
+          aria-label={label ?? (title ? t("helpFor", { title }) : t("help"))}
           aria-describedby={descriptionId}
           aria-expanded={open}
           // Au toucher (ni survol ni focus visibles), un appui bascule la

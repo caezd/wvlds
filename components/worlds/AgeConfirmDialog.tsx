@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -12,12 +12,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useMyBirthDate } from "@/hooks/useMyBirthDate";
 import { AgeVerificationFields } from "./AgeVerificationFields";
 
 /**
- * Dialog de confirmation d'âge : l'utilisateur choisit sa date de naissance ;
- * le bouton de confirmation ne s'active que si elle correspond à un majeur.
- * `onConfirm` n'est appelé qu'avec une date valide (>= 18 ans).
+ * La confirmation d'âge avant d'entrer dans un monde 18+, selon la date de
+ * naissance du compte (migration 266) :
+ *  - majeur connu : rien à demander, `onConfirm(null)` part dès l'ouverture ;
+ *  - mineur connu : la fenêtre le dit, sans moyen de confirmer ;
+ *  - sans date : elle est demandée ; `onConfirm` reçoit celle d'un majeur,
+ *    que la base enregistre dans le compte.
  */
 export function AgeConfirmDialog({
   worldName,
@@ -28,42 +32,62 @@ export function AgeConfirmDialog({
   worldName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: (birthDate: string | null) => void;
 }) {
   const t = useTranslations("explore");
-  const [adult, setAdult] = useState(false);
+  const tCommon = useTranslations("common");
+  const known = useMyBirthDate({ enabled: open });
+  const [birthDate, setBirthDate] = useState<string | null>(null);
 
-  // Réinitialise la validité à chaque ouverture (les champs sont remontés).
+  // Réinitialise la saisie à chaque ouverture (les champs sont remontés).
   useEffect(() => {
-    if (open) setAdult(false);
+    if (open) setBirthDate(null);
   }, [open]);
 
+  // Majeur connu : une seule confirmation par ouverture.
+  const autoConfirmed = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      autoConfirmed.current = false;
+      return;
+    }
+    if (known.status === "adult" && !autoConfirmed.current) {
+      autoConfirmed.current = true;
+      onConfirm(null);
+    }
+  }, [open, known.status, onConfirm]);
+
+  const shown = open && (known.status === "unknown" || known.status === "minor");
+  const minor = known.status === "minor";
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={shown} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("ageConfirmTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t("ageConfirmDescription", { name: worldName })}
+            {minor ? t("ageRestrictedUnderage") : t("ageConfirmDescription", { name: worldName })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {open && <AgeVerificationFields onAdultChange={setAdult} />}
+        {shown && !minor && <AgeVerificationFields onBirthDateChange={setBirthDate} />}
 
         <AlertDialogFooter>
-          <AlertDialogCancel>{t("ageConfirmCancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={!adult}
-            onClick={(e) => {
-              if (!adult) {
-                e.preventDefault();
-                return;
-              }
-              onConfirm();
-            }}
-          >
-            {t("ageConfirmContinue")}
-          </AlertDialogAction>
+          <AlertDialogCancel>{minor ? tCommon("close") : t("ageConfirmCancel")}</AlertDialogCancel>
+          {!minor && (
+            <AlertDialogAction
+              disabled={!birthDate}
+              onClick={(e) => {
+                if (!birthDate) {
+                  e.preventDefault();
+                  return;
+                }
+                onConfirm(birthDate);
+              }}
+            >
+              {t("ageConfirmContinue")}
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -168,9 +168,9 @@ export function WorldStatsDialog({
           worldName={world.name}
           open={ageConfirmOpen}
           onOpenChange={setAgeConfirmOpen}
-          onConfirm={() => {
+          onConfirm={(birthDate) => {
             setAgeConfirmOpen(false);
-            join(true);
+            join(true, birthDate);
           }}
         />
       )}

@@ -11,6 +11,7 @@ export const TABLE = {
   PERSONAS: "personas",
   PERSONA_FOLLOWS: "persona_follows",
   PROFILES: "profiles",
+  PROFILE_BIRTH_DATES: "profile_birth_dates",
   WORLDS: "worlds",
   WORLD_MEMBERS: "world_members",
   USER_EQUIPPED_COSMETICS: "user_equipped_cosmetics",

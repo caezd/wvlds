@@ -55,9 +55,9 @@ export function JoinWorldButton({
           worldName={worldName}
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
-          onConfirm={() => {
+          onConfirm={(birthDate) => {
             setConfirmOpen(false);
-            join(true);
+            join(true, birthDate);
           }}
         />
       )}

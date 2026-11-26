@@ -94,12 +94,13 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
             });
     }, [notif.world_id, notif.recipient_id, supabase]);
 
-    async function doAccept(ageConfirmed: boolean) {
+    async function doAccept(ageConfirmed: boolean, birthDate: string | null = null) {
         if (!notif.world_id || acting) return;
         setActing(true);
         const { error } = await supabase.rpc(RPC.ACCEPT_WORLD_INVITATION, {
             p_world_id: notif.world_id,
             p_age_confirmed: ageConfirmed,
+            p_birth_date: birthDate,
         });
         if (!error) {
             setStatus("accepted");
@@ -174,9 +175,9 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
                     worldName={notif.content ?? t("invite.worldFallback")}
                     open={confirmOpen}
                     onOpenChange={setConfirmOpen}
-                    onConfirm={() => {
+                    onConfirm={(birthDate) => {
                         setConfirmOpen(false);
-                        void doAccept(true);
+                        void doAccept(true, birthDate);
                     }}
                 />
             )}

@@ -1499,7 +1499,6 @@
       "addButton": "Add username",
       "placeholder": "username",
       "helper": "This username will be visible to other members of your worlds. You can change it later from your profile.",
-      "invalidError": "The username must be 3 to 32 characters long (letters, numbers, underscore).",
       "continue": "Continue",
       "saving": "Saving…"
     },
@@ -1517,8 +1516,32 @@
     "errorSignupDisabled": "Sign-ups are temporarily closed.",
     "errorSessionExpired": "Your session has expired. Please sign in again.",
     "errorPasswordsDoNotMatch": "The passwords do not match.",
-    "errorUsernameFormat": "The username must be 3 to 32 characters long (letters, digits, underscore).",
-    "errorUsernameTaken": "This username is already taken."
+    "errorUsernameTaken": "This username is already taken.",
+    "alreadyRegistered": "Already have an account? <link>Sign in here</link>.",
+    "signUpSubmit": "Sign up",
+    "signUpPending": "Creating your account…",
+    "username": {
+      "label": "Username",
+      "placeholder": "my_username",
+      "hint": "Visible to other members. Letters without accents, digits and underscore (_), 3 to 32 characters.",
+      "spaces": "No spaces in the username.",
+      "invalidChars": "Letters without accents, digits and underscore (_) only.",
+      "tooShort": "At least 3 characters.",
+      "tooLong": "At most 32 characters.",
+      "checking": "Checking…",
+      "available": "This username is available.",
+      "taken": "This username is already taken.",
+      "error": "This username can’t be checked right now."
+    },
+    "birthDate": {
+      "label": "Date of birth",
+      "day": "Day",
+      "month": "Month",
+      "year": "Year",
+      "invalid": "This date doesn’t exist.",
+      "hint": "Your date of birth stays private."
+    },
+    "helpFor": "Help: {title}"
   },
   "explore": {
     "title": "Explore",
@@ -1553,7 +1576,9 @@
     "statsMessages": "Messages",
     "statsMembers": "Members",
     "statsPersonas": "Personas",
-    "statsDialogDescription": "Statistics and information about the world."
+    "statsDialogDescription": "Statistics and information about the world.",
+    "ageConfirmSaved": "It will be saved to your account, so you won’t have to enter it again.",
+    "ageRestrictedUnderage": "This world is restricted to people 18 and over."
   },
   "personas": {
     "wallet": {

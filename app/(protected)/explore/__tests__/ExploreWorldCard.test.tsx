@@ -89,7 +89,7 @@ describe("ExploreWorldCard", () => {
     await user.click(screen.getByRole("button", { name: /avalonia/i }));
     await user.click(await screen.findByRole("button", { name: /rejoindre/i }));
 
-    await waitFor(() => expect(joinPublicWorld).toHaveBeenCalledWith("w1", false));
+    await waitFor(() => expect(joinPublicWorld).toHaveBeenCalledWith("w1", false, null));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/w/w1"));
   });
 

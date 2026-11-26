@@ -9,9 +9,9 @@ export function useJoinWorld(worldId: string) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  function join(ageConfirmed: boolean) {
+  function join(ageConfirmed: boolean, birthDate: string | null = null) {
     startTransition(async () => {
-      const { error } = await joinPublicWorld(worldId, ageConfirmed);
+      const { error } = await joinPublicWorld(worldId, ageConfirmed, birthDate);
       if (!error) {
         // `join` est appelé depuis la confirmation d'âge (AlertDialog) ou
         // depuis WorldStatsDialog, qui n'a pas forcément fini de se fermer.

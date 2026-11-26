@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isAdult, MIN_AGE } from "@/lib/age";
+import { birthDateFromParts, isAdult, isAdultIso, MIN_AGE } from "@/lib/age";
 
 // Date de référence fixe pour des tests déterministes.
 const NOW = new Date(2026, 6, 15); // 15 juillet 2026
@@ -44,5 +44,23 @@ describe("isAdult", () => {
 
   it("MIN_AGE vaut 18", () => {
     expect(MIN_AGE).toBe(18);
+  });
+});
+
+describe("birthDateFromParts / isAdultIso (date de naissance enregistrée)", () => {
+  it("compose une date ISO, mois et jour sur deux chiffres", () => {
+    expect(birthDateFromParts(1990, 3, 4, NOW)).toBe("1990-03-04");
+  });
+
+  it("refuse une date qui n'existe pas, future ou d'avant 1900", () => {
+    expect(birthDateFromParts(2001, 2, 30, NOW)).toBeNull();
+    expect(birthDateFromParts(2027, 1, 1, NOW)).toBeNull();
+    expect(birthDateFromParts(1899, 12, 31, NOW)).toBeNull();
+  });
+
+  it("dit l'âge d'une date ISO comme isAdult", () => {
+    expect(isAdultIso("2008-07-15", NOW)).toBe(true);
+    expect(isAdultIso("2008-07-16", NOW)).toBe(false);
+    expect(isAdultIso("pas une date", NOW)).toBe(false);
   });
 });

@@ -9,18 +9,27 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ERR_NON_AUTHENTIFIE, ERR_NOM_UTILISATEUR_PRIS } from "@/lib/actionErrors";
 import { messageErreurAuth } from "@/lib/authErrors";
-
-const USERNAME_RE = /^[A-Za-z0-9_]{3,32}$/;
+import { BirthDateFields } from "@/components/BirthDateFields";
+import { UsernameField } from "@/components/auth/UsernameField";
+import { useUsernameAvailability } from "@/hooks/useUsernameAvailability";
 
 export function UpdatePasswordForm() {
   const t = useTranslations("auth");
   const [username, setUsername] = useState("");
   const [needsUsername, setNeedsUsername] = useState(false);
+  const [birthDate, setBirthDate] = useState<string | null>(null);
+  const [birthDateFilled, setBirthDateFilled] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const availability = useUsernameAvailability(username);
+  // Compte invité (sans pseudo) : pseudo libre et date de naissance, comme à
+  // l'inscription (migration 266).
+  const accountReady =
+    !needsUsername ||
+    ((availability.status === "available" || availability.status === "error") && birthDate !== null);
 
   // Le champ username n'est affiché que si le profil n'en a pas encore
   // (cas d'une invitation) — pas lors d'une simple réinitialisation.
@@ -48,11 +57,7 @@ export function UpdatePasswordForm() {
       return;
     }
 
-    const trimmed = username.trim();
-    if (needsUsername && !USERNAME_RE.test(trimmed)) {
-      setError(t("errorUsernameFormat"));
-      return;
-    }
+    if (!accountReady) return;
 
     const supabase = createClient();
     setIsLoading(true);
@@ -64,7 +69,7 @@ export function UpdatePasswordForm() {
       if (needsUsername) {
         const { error: profileError } = await supabase
           .from("profiles")
-          .update({ username: trimmed })
+          .update({ username })
           .eq("id", userData.user.id);
         if (profileError) {
           if (/unique|duplicate/i.test(profileError.message)) {
@@ -72,6 +77,8 @@ export function UpdatePasswordForm() {
           }
           throw profileError;
         }
+        const { error: birthError } = await supabase.rpc("set_my_birth_date", { p_birth_date: birthDate });
+        if (birthError) throw birthError;
       }
 
       const { error } = await supabase.auth.updateUser({ password });
@@ -102,19 +109,21 @@ export function UpdatePasswordForm() {
       <div className="my-4">
         <form onSubmit={handleSubmit}>
           {needsUsername && (
-            <div className="mb-6 flex gap-3 flex-col">
-              <Label htmlFor="username">Nom d&apos;utilisateur</Label>
-              <Input
-                id="username"
-                type="text"
-                required
-                minLength={3}
-                maxLength={32}
-                pattern="[A-Za-z0-9_]{3,32}"
-                placeholder="mon_pseudo"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+            <div className="mb-6 flex flex-col gap-6">
+              <UsernameField id="username" value={username} onChange={setUsername} availability={availability} />
+              <BirthDateFields
+                labels={{
+                  legend: t("birthDate.label"),
+                  day: t("birthDate.day"),
+                  month: t("birthDate.month"),
+                  year: t("birthDate.year"),
+                }}
+                help={{ label: t("helpFor", { title: t("birthDate.label") }), text: t("birthDate.hint") }}
+                error={birthDateFilled && birthDate === null ? t("birthDate.invalid") : null}
+                onChange={(next, filled) => {
+                  setBirthDate(next);
+                  setBirthDateFilled(filled);
+                }}
               />
             </div>
           )}
@@ -143,7 +152,7 @@ export function UpdatePasswordForm() {
             />
           </div>
           {error && <p className="text-sm text-destructive mb-4">{error}</p>}
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading || !accountReady}>
             {isLoading ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </form>

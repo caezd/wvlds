@@ -31,7 +31,7 @@ describe("UsernameRequiredDialog", () => {
     expect(screen.getByPlaceholderText("pseudo")).toBeInTheDocument();
   });
 
-  it("rejette un pseudo invalide sans appeler Supabase", async () => {
+  it("signale en direct un pseudo mal formé, sans interroger la base (migration 266)", async () => {
     const mock = createSupabaseMock({ results: [] });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
@@ -39,15 +39,32 @@ describe("UsernameRequiredDialog", () => {
     render(<UsernameRequiredDialog userId="u1" />);
 
     await user.click(screen.getByRole("button", { name: /ajouter un pseudo/i }));
-    await user.type(screen.getByPlaceholderText("pseudo"), "ab");
-    await user.click(screen.getByRole("button", { name: /continuer/i }));
+    await user.type(screen.getByPlaceholderText("pseudo"), "mon pseudo");
 
-    expect(await screen.findByText(/entre 3 et 32 caractères/i)).toBeInTheDocument();
+    expect(await screen.findByText("Pas d’espace dans le pseudo.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continuer/i })).toBeDisabled();
+    expect(mock.rpc).not.toHaveBeenCalled();
     expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("signale en direct un pseudo déjà pris (migration 266)", async () => {
+    const mock = createSupabaseMock({ results: [] });
+    mock.rpc.mockResolvedValue({ data: false, error: null });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+
+    render(<UsernameRequiredDialog userId="u1" />);
+
+    await user.click(screen.getByRole("button", { name: /ajouter un pseudo/i }));
+    await user.type(screen.getByPlaceholderText("pseudo"), "Brom");
+
+    expect(await screen.findByText("Ce pseudo est déjà pris.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continuer/i })).toBeDisabled();
   });
 
   it("enregistre le pseudo et rafraîchit la page en cas de succès", async () => {
     const mock = createSupabaseMock({ results: [{ data: null, error: null }] });
+    mock.rpc.mockResolvedValue({ data: true, error: null });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
 
@@ -55,6 +72,7 @@ describe("UsernameRequiredDialog", () => {
 
     await user.click(screen.getByRole("button", { name: /ajouter un pseudo/i }));
     await user.type(screen.getByPlaceholderText("pseudo"), "mon_pseudo");
+    await screen.findByText("Ce pseudo est disponible.");
     await user.click(screen.getByRole("button", { name: /continuer/i }));
 
     await waitFor(() => {
@@ -70,6 +88,8 @@ describe("UsernameRequiredDialog", () => {
     const mock = createSupabaseMock({
       results: [{ data: null, error: { message: "duplicate key value violates unique constraint" } }],
     });
+    // Libre à la vérification, pris entre-temps : l'enregistrement le dit.
+    mock.rpc.mockResolvedValue({ data: true, error: null });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
 
@@ -77,6 +97,7 @@ describe("UsernameRequiredDialog", () => {
 
     await user.click(screen.getByRole("button", { name: /ajouter un pseudo/i }));
     await user.type(screen.getByPlaceholderText("pseudo"), "mon_pseudo");
+    await screen.findByText("Ce pseudo est disponible.");
     await user.click(screen.getByRole("button", { name: /continuer/i }));
 
     expect(await screen.findByText(/déjà pris/i)).toBeInTheDocument();

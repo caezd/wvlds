@@ -1498,7 +1498,6 @@
       "addButton": "Añadir nombre de usuario",
       "placeholder": "usuario",
       "helper": "Este nombre de usuario será visible para los demás miembros de sus mundos. Podrá cambiarlo más tarde desde su perfil.",
-      "invalidError": "El nombre de usuario debe tener entre 3 y 32 caracteres (letras, números, guión bajo).",
       "continue": "Continuar",
       "saving": "Guardando…",
       "dialogDescription": "Elija un nombre de usuario para seguir usando la aplicación."
@@ -1517,8 +1516,32 @@
     "errorSignupDisabled": "Los registros están cerrados temporalmente.",
     "errorSessionExpired": "Su sesión ha expirado. Vuelva a iniciar sesión.",
     "errorPasswordsDoNotMatch": "Las contraseñas no coinciden.",
-    "errorUsernameFormat": "El nombre de usuario debe tener entre 3 y 32 caracteres (letras, dígitos, guion bajo).",
-    "errorUsernameTaken": "Este nombre de usuario ya está en uso."
+    "errorUsernameTaken": "Este nombre de usuario ya está en uso.",
+    "alreadyRegistered": "¿Ya tiene una cuenta? <link>Inicie sesión aquí</link>.",
+    "signUpSubmit": "Registrarse",
+    "signUpPending": "Creando la cuenta…",
+    "username": {
+      "label": "Seudónimo",
+      "placeholder": "mi_seudonimo",
+      "hint": "Visible para los demás miembros. Letras sin tilde, cifras y guion bajo (_), de 3 a 32 caracteres.",
+      "spaces": "Sin espacios en el seudónimo.",
+      "invalidChars": "Solo letras sin tilde, cifras y guion bajo (_).",
+      "tooShort": "Al menos 3 caracteres.",
+      "tooLong": "Como máximo 32 caracteres.",
+      "checking": "Comprobando…",
+      "available": "Este seudónimo está disponible.",
+      "taken": "Este seudónimo ya está en uso.",
+      "error": "No se puede comprobar este seudónimo por el momento."
+    },
+    "birthDate": {
+      "label": "Fecha de nacimiento",
+      "day": "Día",
+      "month": "Mes",
+      "year": "Año",
+      "invalid": "Esta fecha no existe.",
+      "hint": "Su fecha de nacimiento es privada."
+    },
+    "helpFor": "Ayuda: {title}"
   },
   "explore": {
     "title": "Explorar",
@@ -1553,7 +1576,9 @@
     "statsMessages": "Mensajes",
     "statsMembers": "Miembros",
     "statsPersonas": "Personajes",
-    "statsDialogDescription": "Estadísticas e información del mundo."
+    "statsDialogDescription": "Estadísticas e información del mundo.",
+    "ageConfirmSaved": "Se guardará en su cuenta: no tendrá que volver a indicarla.",
+    "ageRestrictedUnderage": "Este mundo está reservado a mayores de 18 años."
   },
   "personas": {
     "wallet": {
