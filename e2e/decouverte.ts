@@ -63,7 +63,7 @@ export async function trouverLienSalon(page: Page): Promise<string | null> {
   // que la barre est rendue. Sur `/explore`, il n'y en a pas — on n'attend pas
   // plus que le délai.
   const attendreBarre = () =>
-    page.getByTestId("world-picker-trigger").waitFor({ state: "attached", timeout: 15_000 }).catch(() => {});
+    page.getByTestId("world-picker-trigger").filter({ visible: true }).waitFor({ state: "attached", timeout: 15_000 }).catch(() => {});
 
   const nomsEssayes = new Set<string>();
 
@@ -72,7 +72,9 @@ export async function trouverLienSalon(page: Page): Promise<string | null> {
     const ici = await premierSalon();
     if (ici) return ici;
 
-    const trigger = page.getByTestId("world-picker-trigger");
+    // Seul le vrai sélecteur : la copie serveur du streaming peut encore
+    // traîner, cachée, quelques millisecondes (cf. announcements.authed.spec).
+    const trigger = page.getByTestId("world-picker-trigger").filter({ visible: true });
     if (!(await trigger.count())) return null;
 
     await trigger.click();

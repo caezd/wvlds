@@ -49,6 +49,30 @@ async function attendreArrivee(page: Page): Promise<void> {
   }
 }
 
+/**
+ * Laisse finir les animations en cours avant de mesurer.
+ *
+ * Un texte qui apparaît en fondu se mesure sinon à mi-chemin : l'aperçu du
+ * dernier message de la chatbox (`animate-in fade-in`, 300 ms, rejouée à
+ * chaque message) est ainsi ressorti à 1.91:1 quand un message arrivait juste
+ * avant l'analyse — puis à son contraste normal une fois posé. Les animations
+ * sans fin (indicateurs de chargement, pulsations) sont ignorées, et l'attente
+ * plafonne : une page qui n'arrête jamais de bouger reste mesurée telle quelle.
+ */
+async function attendreAnimations(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => undefined)),
+      ),
+      new Promise((r) => setTimeout(r, 2_000)),
+    ]),
+  );
+}
+
 /** Le symptôme d'une navigation survenue pendant l'analyse. */
 const CONTEXTE_DETRUIT = "Execution context was destroyed";
 
@@ -69,6 +93,7 @@ async function analyser(page: Page) {
   for (let tentative = 0; ; tentative++) {
     await attendreArrivee(page);
     try {
+      await attendreAnimations(page);
       return await new AxeBuilder({ page }).withTags(REGLES).analyze();
     } catch (erreur) {
       const message = erreur instanceof Error ? erreur.message : String(erreur);
