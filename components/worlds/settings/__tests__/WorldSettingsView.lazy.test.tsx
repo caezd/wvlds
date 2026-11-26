@@ -107,6 +107,7 @@ describe("WorldSettingsView — chargement à la demande", () => {
   it("l'état de la fiche par défaut vient du serveur, sans monter sa page", () => {
     monter({ hasPersonaTemplate: true });
     expect(within(nav()).getByRole("button", { name: "Fiche par défaut" })).not.toHaveAttribute("data-off");
+    expect(within(nav()).getByRole("button", { name: "Fiche par défaut" })).toHaveAccessibleDescription("Activé");
     expect(mounts.template).toBe(0);
     cleanup();
     monter({ hasPersonaTemplate: false });

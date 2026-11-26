@@ -388,12 +388,9 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
      *  `ownTitle` : la page porte déjà le sien (FeaturePage), pas de doublon. */
     // Toutes les pages ont la même largeur et la même mise en page que celles
     // des fonctions (FeaturePage) : titre, puis sections à deux colonnes.
-    // Le sous-titre d'une page qui n'en porte pas elle-même.
-    const pageDescription = (id: SettingsSectionId): string | undefined =>
-        id === "roles" ? t("roles.hierarchyHelp") : id === "reports" ? t("reportsIntro") : undefined;
     const page = (id: SettingsSectionId, children: React.ReactNode, ownTitle = false) => (
         <div className={SETTINGS_PAGE_WIDTH} data-settings-page={id}>
-            {ownTitle ? children : <FeaturePage title={sectionLabel(id)} description={pageDescription(id)}>{children}</FeaturePage>}
+            {ownTitle ? children : <FeaturePage title={sectionLabel(id)}>{children}</FeaturePage>}
         </div>
     );
 

@@ -34,37 +34,28 @@ function AvecEnTete({ children }: { children: React.ReactNode }) {
 
 /**
  * Les briques communes des pages de réglages : le texte d'explication se lit
- * en clair (sous-titre de page, de section, description de rangée), l'aide
- * cachée devient l'exception.
+ * en clair (sous-titre de section, description de rangée), l'aide cachée
+ * devient l'exception.
  */
 describe("FeaturePage", () => {
-  it("affiche son sous-titre sous le titre", () => {
-    render(<FeaturePage title="Devises" description="Une monnaie propre au monde." />);
-    const heading = screen.getByRole("heading", { name: "Devises" });
-    expect(heading).toBeInTheDocument();
-    expect(screen.getByText("Une monnaie propre au monde.")).toBeVisible();
-  });
-
-  it("un interrupteur sans libellé visible, nommé pour les lecteurs d'écran", async () => {
+  it("son interrupteur d'activation est dans la page, avec son libellé visible", async () => {
     const onChange = vi.fn();
     render(
       <FeaturePage
         title="Carte"
-        toggle={{ ariaLabel: "Activer la carte", checked: false, onCheckedChange: onChange }}
+        toggle={{ label: "Activer la carte", checked: false, onCheckedChange: onChange }}
       />,
     );
-    const toggle = screen.getByRole("switch", { name: "Activer la carte" });
-    await userEvent.setup().click(toggle);
+    expect(screen.getByText("Activer la carte")).toBeVisible();
+    await userEvent.setup().click(screen.getByRole("switch", { name: "Activer la carte" }));
     expect(onChange).toHaveBeenCalledWith(true);
-    // Plus d'« Activée » / « Désactivée » accordé au genre de la fonction.
-    expect(screen.queryByText(/Activée|Désactivée/)).not.toBeInTheDocument();
   });
 
   it("l'aide de l'interrupteur dit ce que la désactivation garde", () => {
     render(
       <FeaturePage
         title="Carte"
-        toggle={{ ariaLabel: "Activer la carte", checked: true, onCheckedChange: () => {}, help: "Rien n'est supprimé." }}
+        toggle={{ label: "Activer la carte", checked: true, onCheckedChange: () => {}, help: "Rien n'est supprimé." }}
       />,
     );
     expect(screen.getByRole("button", { name: /Aide/ })).toBeInTheDocument();
@@ -72,24 +63,21 @@ describe("FeaturePage", () => {
 });
 
 describe("FeaturePage dans la barre d'en-tête", () => {
-  it("son titre, ses actions et son interrupteur montent dans l'en-tête ; la page garde son sous-titre", () => {
+  it("son titre et ses actions montent dans l'en-tête ; l'interrupteur reste dans la page", () => {
     render(
       <AvecEnTete>
         <FeaturePage
           title="Chatbox"
-          description="Une discussion hors-jeu."
           actions={<button type="button">Nouvelle salle</button>}
-          toggle={{ ariaLabel: "Activer la chatbox", checked: true, onCheckedChange: () => {} }}
+          toggle={{ label: "Activer la chatbox", checked: true, onCheckedChange: () => {} }}
         />
       </AvecEnTete>,
     );
     expect(within(screen.getByTestId("titre")).getByRole("heading", { name: "Chatbox" })).toBeInTheDocument();
-    const actions = screen.getByTestId("actions");
-    expect(within(actions).getByRole("button", { name: "Nouvelle salle" })).toBeInTheDocument();
-    expect(within(actions).getByRole("switch", { name: "Activer la chatbox" })).toBeInTheDocument();
+    expect(within(screen.getByTestId("actions")).getByRole("button", { name: "Nouvelle salle" })).toBeInTheDocument();
     const page = screen.getByTestId("page");
+    expect(within(page).getByRole("switch", { name: "Activer la chatbox" })).toBeInTheDocument();
     expect(within(page).queryByRole("heading")).toBeNull();
-    expect(within(page).getByText("Une discussion hors-jeu.")).toBeVisible();
   });
 
   it("une page montée mais cachée n'écrit pas dans l'en-tête", () => {
@@ -173,19 +161,16 @@ describe("Sections à plat", () => {
 });
 
 describe("InactiveOptions d'une fonction", () => {
-  it("une tuile qui l'active, et ses réglages repliés, inertes", async () => {
-    const onActivate = vi.fn();
+  it("une tuile qui le dit, et ses réglages repliés, inertes", async () => {
     const user = userEvent.setup();
     render(
-      <InactiveOptions inactive feature={{ onActivate }}>
+      <InactiveOptions inactive feature>
         <input aria-label="Nom" />
       </InactiveOptions>,
     );
     expect(screen.getByText("Cette fonction est désactivée.")).toBeInTheDocument();
     await user.click(screen.getByText("Voir ses réglages"));
     expect(screen.getByRole("textbox", { name: "Nom" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Activer" }));
-    expect(onActivate).toHaveBeenCalledOnce();
   });
 
   it("une option coupée dans une page (sans `feature`) : seulement grisée, sans tuile", () => {

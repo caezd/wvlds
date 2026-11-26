@@ -313,9 +313,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             page: (
                 <FeaturePage
                     title={t("nav.map")}
-                    description={t("enableMapHelp")}
                     toggle={{
-                        ariaLabel: t("enableMap"),
+                        label: t("enableMap"),
                         help: tSettings("disableKeeps"),
                         checked: enableMap,
                         disabled: togglingMap,
@@ -332,9 +331,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             page: (
                 <FeaturePage
                     title={tSettings("wiki")}
-                    description={t("enableWikiHelp")}
                     toggle={{
-                        ariaLabel: t("enableWiki"),
+                        label: t("enableWiki"),
                         help: tSettings("disableKeeps"),
                         checked: enableWiki,
                         disabled: togglingWiki,
@@ -342,7 +340,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                     }}
                 >
                     {/* Le nom du lien : visible même sans wiki, grisé jusqu'à son activation. */}
-                    <InactiveOptions inactive={!enableWiki} feature={{ onActivate: () => void handleWikiToggle(true), disabled: togglingWiki }}>
+                    <InactiveOptions inactive={!enableWiki} feature>
                         <SettingsSection title={tSettings("wikiLinkName")} description={t("wikiLabelHelp")}>
                             <FormField
                                 control={form.control}
@@ -380,7 +378,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             page: (
                 <WorldPersonaTemplateSection
                         title={tSettings("personaSheet")}
-                        description={tSettings("personasHelp")}
                         worldId={world.id}
                         restrictSkills={restrictSkills}
                         reviewEnabled={!!world.persona_review_enabled}
@@ -397,16 +394,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             page: (
                 <FeaturePage
                     title={t("tabSkills")}
-                    description={tSettings("skillsHelp")}
                     toggle={{
-                        ariaLabel: tSettings("enableSkills"),
+                        label: tSettings("enableSkills"),
                         checked: enableSkills,
                         disabled: togglingEnable,
                         onCheckedChange: v => void handleEnableToggle("skills", v),
                     }}
                     fill={section === "skills"}
                 >
-                    <InactiveOptions inactive={!enableSkills} className={FILL} feature={{ onActivate: () => void handleEnableToggle("skills", true), disabled: togglingEnable }}>
+                    <InactiveOptions inactive={!enableSkills} className={FILL} feature>
                         <div className={cn(FILL, "gap-6")}>
                             <ToggleList className="shrink-0">
                                 <ToggleItem
@@ -438,15 +434,14 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             page: (
                 <FeaturePage
                     title={tCatalogue("faceclaims")}
-                    description={tSettings("faceclaimsHelp")}
                     toggle={{
-                        ariaLabel: tSettings("enableFaceclaims"),
+                        label: tSettings("enableFaceclaims"),
                         checked: enableFaceclaims,
                         disabled: togglingFaceclaims,
                         onCheckedChange: v => void handleFaceclaimsToggle(v),
                     }}
                 >
-                    <InactiveOptions inactive={!enableFaceclaims} feature={{ onActivate: () => void handleFaceclaimsToggle(true), disabled: togglingFaceclaims }}>
+                    <InactiveOptions inactive={!enableFaceclaims} feature>
                         <ToggleList>
                             <ToggleItem
                                 title={tSettings("requireFaceclaim")}
@@ -469,16 +464,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 page: (
                     <FeaturePage
                         title={t("nav.timeline")}
-                        description={tSettings("timelineHelp")}
                         toggle={{
-                            ariaLabel: t("enableTimeline"),
+                            label: t("enableTimeline"),
                             checked: timelineEnabled,
                             disabled: togglingTimeline,
                             onCheckedChange: v => void handleTimelineToggle(v),
                         }}
                     >
                         {/* Visibles même désactivée : on voit ce que la chronologie règle. */}
-                        <InactiveOptions inactive={!timelineEnabled} feature={{ onActivate: () => void handleTimelineToggle(true), disabled: togglingTimeline }}>
+                        <InactiveOptions inactive={!timelineEnabled} feature>
                             <TimelineSettings
                                 config={timelineConfig}
                                 onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}
@@ -500,9 +494,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 page: (
                     <FeaturePage
                         title={tSettings("chatbox")}
-                        description={tSettings("chatboxHelp")}
                         toggle={{
-                            ariaLabel: tSettings("enableChatbox"),
+                            label: tSettings("enableChatbox"),
                             help: tSettings("disableKeeps"),
                             checked: enableLiveChat,
                             disabled: togglingLiveChat,
@@ -510,7 +503,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         }}
                     >
                         {/* Les salles : visibles même chatbox coupée, grisées. */}
-                        <InactiveOptions inactive={!enableLiveChat} feature={{ onActivate: () => void handleLiveChatToggle(true), disabled: togglingLiveChat }}>
+                        <InactiveOptions inactive={!enableLiveChat} feature>
                             <WorldLiveChannelsSettings worldId={world.id} />
                             <WorldLiveChatOptionsSettings
                                 world={world}
@@ -541,16 +534,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 page: (
                     <FeaturePage
                         title={tSettings("economy.currencies")}
-                        description={tSettings("economy.help")}
                         toggle={{
-                            ariaLabel: tSettings("economy.enable"),
+                            label: tSettings("economy.enable"),
                             help: tSettings("disableKeeps"),
                             checked: enableEconomy,
                             disabled: togglingEconomy,
                             onCheckedChange: v => void handleEconomyToggle(v),
                         }}
                     >
-                        <InactiveOptions inactive={!enableEconomy} feature={{ onActivate: () => void handleEconomyToggle(true), disabled: togglingEconomy }}>
+                        <InactiveOptions inactive={!enableEconomy} feature>
                             <WorldCurrencySettings
                                 world={world}
                                 onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
@@ -578,9 +570,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
             page: (
                 <FeaturePage
                     title={tSettings("inventoryPage")}
-                    description={tSettings("inventoryItemsHelp")}
                     toggle={{
-                        ariaLabel: tSettings("enableInventory"),
+                        label: tSettings("enableInventory"),
                         checked: enableInventory,
                         disabled: togglingEnable,
                         onCheckedChange: v => void handleEnableToggle("inventory", v),
@@ -610,7 +601,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         </TabsPrimitive.List>
                         {/* Grisé tant que l’inventaire est coupé. */}
                         <TabsPrimitive.Content value="settings" className="pt-6">
-                            <InactiveOptions inactive={!enableInventory} feature={{ onActivate: () => void handleEnableToggle("inventory", true), disabled: togglingEnable }}>
+                            <InactiveOptions inactive={!enableInventory} feature>
                                 <WorldInventorySettings
                                     world={world}
                                     onUpdated={(patch) => onUpdated?.({ ...world, ...patch } as World)}
@@ -618,7 +609,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             </InactiveOptions>
                         </TabsPrimitive.Content>
                         <TabsPrimitive.Content value="items" className={cn("pt-6", FILL)}>
-                            <InactiveOptions inactive={!enableInventory} className={FILL} feature={{ onActivate: () => void handleEnableToggle("inventory", true), disabled: togglingEnable }}>
+                            <InactiveOptions inactive={!enableInventory} className={FILL} feature>
                                 <WorldCatalogBoardSection worldId={world.id} type="inventory" />
                             </InactiveOptions>
                         </TabsPrimitive.Content>
@@ -635,9 +626,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 page: (
                     <FeaturePage
                         title={tShops("title")}
-                        description={tSettings("shopsHelp")}
                         toggle={{
-                            ariaLabel: tSettings("enableShops"),
+                            label: tSettings("enableShops"),
                             checked: enableShops,
                             // Sans monnaie ni objets, une boutique n'aurait rien à vendre.
                             disabled: togglingShops || !enableEconomy || !enableInventory,
@@ -648,7 +638,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                             <p className="text-sm text-muted-foreground">{tSettings("shopsNeedEconomy")}</p>
                         )}
                         {/* Boutiques, articles, prix, stocks et rachats (la vue du monde ne garde que la vitrine). */}
-                        <InactiveOptions inactive={!shopsOpen} feature={{ onActivate: enableEconomy && enableInventory ? () => void handleShopsToggle(true) : undefined, disabled: togglingShops }}>
+                        <InactiveOptions inactive={!shopsOpen} feature>
                             <ShopManager worldId={world.id} />
                         </InactiveOptions>
                     </FeaturePage>
@@ -664,9 +654,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                 page: (
                     <FeaturePage
                         title={tSettings("trades")}
-                        description={tSettings("tradesHelp")}
                         toggle={{
-                            ariaLabel: tSettings("enableTrades"),
+                            label: tSettings("enableTrades"),
                             checked: enableTrades,
                             // Sans monnaie ni objets, rien à échanger.
                             disabled: togglingTrades || !tradesPossible,
@@ -676,7 +665,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated, section
                         {!tradesPossible && (
                             <p className="text-sm text-muted-foreground">{tSettings("tradesNeedSomething")}</p>
                         )}
-                        <InactiveOptions inactive={!tradesOpen} feature={{ onActivate: tradesPossible ? () => void handleTradesToggle("enable_trades", true) : undefined, disabled: togglingTrades }}>
+                        <InactiveOptions inactive={!tradesOpen} feature>
                             <ToggleList>
                                 <ToggleItem
                                     title={tSettings("tradesSameAccount")}

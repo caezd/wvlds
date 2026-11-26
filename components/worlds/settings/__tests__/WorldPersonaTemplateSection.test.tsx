@@ -97,7 +97,7 @@ describe("WorldPersonaTemplateSection — validation des fiches (migration 184)"
     render(<WorldPersonaTemplateSection title="Fiche par défaut" worldId="w1" reviewEnabled />);
     // L'interrupteur de la fiche, dans l'en-tête de la page, éteint.
     expect(await screen.findByText("Cette fonction est désactivée.")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Fiche par défaut" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("switch", { name: "Activer la fiche par défaut" })).toHaveAttribute("aria-checked", "false");
     await user.click(screen.getByText("Voir ses réglages"));
     const validation = screen.getByRole("switch", { name: "Validation des fiches" });
     expect(validation).toBeDisabled();
@@ -107,13 +107,13 @@ describe("WorldPersonaTemplateSection — validation des fiches (migration 184)"
     expect(screen.queryByRole("button", { name: "Éditer la fiche" })).toBeNull();
   });
 
-  it("la tuile de la fiche désactivée la crée", async () => {
+  it("l'interrupteur de la page crée la fiche", async () => {
     vi.mocked(getWorldPersonaTemplate).mockResolvedValue({ ok: true, templateId: null });
     vi.mocked(setWorldPersonaTemplate).mockResolvedValue({ ok: true, templateId: "tpl2" });
     const user = userEvent.setup();
     setup();
     render(<WorldPersonaTemplateSection title="Fiche par défaut" worldId="w1" />);
-    await user.click(await screen.findByRole("button", { name: "Activer" }));
+    await user.click(await screen.findByRole("switch", { name: "Activer la fiche par défaut" }));
     expect(setWorldPersonaTemplate).toHaveBeenCalledWith("w1", true);
     expect(await screen.findByRole("button", { name: "Éditer la fiche" })).toBeEnabled();
   });

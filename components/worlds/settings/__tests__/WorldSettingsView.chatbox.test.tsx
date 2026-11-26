@@ -78,7 +78,7 @@ describe("WorldSettingsView — Chatbox (migration 237)", () => {
     await userEvent.click(screen.getByRole("switch", { name: "Activer la chatbox" }));
     expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_live_chat", true);
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ enable_live_chat: true }));
-    expect(within(nav()).getByRole("button", { name: "Chatbox" })).not.toHaveAccessibleDescription();
+    expect(within(nav()).getByRole("button", { name: "Chatbox" })).toHaveAccessibleDescription("Activé");
   });
 
   it("la page porte le réglage des messages conservés, à la valeur du monde (migration 239)", async () => {
@@ -90,7 +90,7 @@ describe("WorldSettingsView — Chatbox (migration 237)", () => {
 
   it("un monde qui l'a activée la montre active", () => {
     monter({ enable_live_chat: true });
-    expect(within(nav()).getByRole("button", { name: "Chatbox" })).not.toHaveAccessibleDescription();
+    expect(within(nav()).getByRole("button", { name: "Chatbox" })).toHaveAccessibleDescription("Activé");
     expect(within(nav()).getByRole("button", { name: "Chatbox" })).not.toHaveAttribute("data-off");
   });
 });

@@ -134,8 +134,8 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(fonctions).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
       ["Carte", "Wiki", "Catalogue", "Inventaire"],
     );
-    // Seule l'exception se marque : une fonction désactivée, lue en description.
-    expect(within(nav).getByRole("button", { name: "Carte" })).not.toHaveAccessibleDescription();
+    // Chaque fonction porte son état : une icône, lue en description.
+    expect(within(nav).getByRole("button", { name: "Carte" })).toHaveAccessibleDescription("Activé");
     expect(within(nav).getByRole("button", { name: "Wiki" })).toHaveAccessibleDescription("Désactivé");
 
     // « Général » d'emblée : aucune page « Fonctions » visible.
@@ -149,28 +149,27 @@ describe("WorldSettingsView — carte et wiki", () => {
 
     await userEvent.click(within(nav).getByRole("button", { name: "Carte" }));
     expect(screen.getByRole("region", { name: "Carte" })).toBeVisible();
-    // Le titre et l'interrupteur montent dans la barre d'en-tête : « Paramètres › Carte ».
+    // Le titre monte dans la barre d'en-tête (« Paramètres › Carte ») ; l'interrupteur reste dans la page.
     const titre = screen.getByTestId("settings-header-title");
     expect(within(titre).getByRole("heading", { name: "Carte" })).toBeInTheDocument();
     expect(within(titre).queryByRole("heading", { name: "Inventaire" })).toBeNull();
-    const actions = screen.getByTestId("settings-header-actions");
-    expect(within(actions).getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
-    expect(within(actions).getAllByRole("switch")).toHaveLength(1);
+    expect(within(screen.getByRole("region", { name: "Carte" })).getByRole("switch", { name: "Activer la carte" })).toHaveAttribute("aria-checked", "true");
     expect(screen.queryByRole("region", { name: "Inventaire" })).toBeNull();
   });
 
-  it("objets : une fonction coupée se dit en une tuile, qui l'active ; ses réglages, repliés, restent inertes", async () => {
+  it("objets : une fonction coupée se dit en une tuile ; ses réglages, repliés, restent inertes ; l'interrupteur de la page l'active", async () => {
     monter({ enable_inventory: false } as Partial<World>);
     await userEvent.click(screen.getByRole("button", { name: "Inventaire" }));
     const page = screen.getByRole("region", { name: "Inventaire" });
-    expect(screen.getByRole("switch", { name: "Activer l’inventaire" })).toHaveAttribute("aria-checked", "false");
+    const interrupteur = within(page).getByRole("switch", { name: "Activer l’inventaire" });
+    expect(interrupteur).toHaveAttribute("aria-checked", "false");
     const tuile = within(page).getByTestId("feature-off");
     expect(within(tuile).getByText("Cette fonction est désactivée.")).toBeInTheDocument();
     // L'aperçu replié : les réglages se lisent, mais ne se changent pas.
     await userEvent.click(within(tuile).getByText("Voir ses réglages"));
     expect(within(page).getByRole("radio", { name: /^Libre/ })).toBeDisabled();
     expect(within(page).getByRole("spinbutton", { name: "Emplacements de départ" })).toBeDisabled();
-    await userEvent.click(within(tuile).getByRole("button", { name: "Activer" }));
+    await userEvent.click(interrupteur);
     await waitFor(() => expect(setWorldFeature).toHaveBeenCalledWith("w1", "enable_inventory", true));
   });
 
@@ -181,8 +180,8 @@ describe("WorldSettingsView — carte et wiki", () => {
     expect(within(personas).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(
       ["Fiche par défaut", "Compétences", "Faceclaims", "Groupes", "Relations"],
     );
-    // Les pages « Fonctions » y gardent leur état : rien pour une fonction active.
-    expect(within(personas).getByRole("button", { name: "Compétences" })).not.toHaveAccessibleDescription();
+    // Les pages « Fonctions » y gardent leur état.
+    expect(within(personas).getByRole("button", { name: "Compétences" })).toHaveAccessibleDescription("Activé");
   });
 
   it("Fiche par défaut : le modèle de fiche, sans les compétences ni les faceclaims", async () => {

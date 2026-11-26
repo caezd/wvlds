@@ -33,7 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/section-label";
-import { FeatureOffMark } from "./FeatureLayout";
+import { FeatureStatusMark } from "./FeatureLayout";
 import {
   isFeatureSection,
   subgroupOf,
@@ -148,16 +148,18 @@ export function WorldSettingsNav({
   const tSettings = useTranslations("worlds.settings");
   const label = useSettingsSectionLabel();
   const off = tSettings("statusOff");
+  const on = tSettings("statusOn");
 
   function entry(id: SettingsSectionId) {
     const Icon = ICONS[id];
     const isSelected = id === selected;
-    // Seule l'exception se marque : une fonction désactivée (grisée, avec
-    // son icône), pas les fonctions actives.
+    // Chaque fonction porte son état : une icône allumée ou coupée ; une
+    // fonction désactivée est en plus grisée.
     const isOff = isFeatureSection(id) && featureStatus[id] === false;
     // Le Catalogue est réservé : « Bientôt » à la place de l'état.
     const soon = id === "catalog";
-    const describedBy = isOff || soon ? `settings-status-${id}` : undefined;
+    const isOn = isFeatureSection(id) && featureStatus[id] === true && !soon;
+    const describedBy = isOff || isOn || soon ? `settings-status-${id}` : undefined;
     return (
       <li key={id}>
         <button
@@ -179,7 +181,7 @@ export function WorldSettingsNav({
         >
           <Icon className={cn("size-4 shrink-0", isOff && !isSelected && "opacity-50")} aria-hidden />
           <span className={cn("min-w-0 flex-1 truncate", isOff && !isSelected && "opacity-60")}>{label(id)}</span>
-          {isOff && <FeatureOffMark id={`settings-status-${id}`} label={off} />}
+          {(isOff || isOn) && <FeatureStatusMark on={isOn} id={`settings-status-${id}`} label={isOn ? on : off} />}
           {soon && (
             <Badge id={`settings-status-${id}`} tone="neutral" className="text-muted-foreground">
               {tSettings("catalogFeature.soon")}

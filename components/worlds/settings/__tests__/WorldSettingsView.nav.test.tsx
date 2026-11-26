@@ -141,12 +141,6 @@ describe("WorldSettingsView — menu de gauche", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
-  it("Rôles : la hiérarchie en sous-titre de la page", async () => {
-    monter();
-    await userEvent.click(within(nav()).getByRole("button", { name: "Rôles" }));
-    expect(screen.getByText(/^Du plus haut au plus bas/)).toBeVisible();
-  });
-
   it("la zone de danger reste au propriétaire", () => {
     acces.owner = false;
     monter();

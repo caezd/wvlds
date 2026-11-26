@@ -4,11 +4,10 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { HelpHint } from "@/components/ui/help-hint";
 import { createPortal } from "react-dom";
-import { ChevronRight, Plus, PowerOff } from "lucide-react";
+import { ChevronRight, Plus, Power, PowerOff } from "lucide-react";
 import { InteractiveCard } from "@/components/ui/interactive-card";
 
 /**
@@ -69,19 +68,17 @@ export function TitleWithHelp({ title, help, className }: { title: string; help?
   );
 }
 
-/** Le sous-titre d'une page ou d'une section : l'explication, en clair. */
+/** Le sous-titre d'une section : l'explication, en clair. */
 const DESCRIPTION = "text-sm text-muted-foreground text-pretty";
 
 /**
- * Une page : titre, sous-titre (à quoi sert la page), et pour une fonction
- * son interrupteur. Dans les paramètres d'un monde, le titre, l'interrupteur
- * et les actions (`actions` : « Nouveau groupe ») montent dans la barre
- * d'en-tête ; la page ne garde que son sous-titre. L'interrupteur n'a pas de
- * libellé visible : son aide dit ce que la désactivation garde.
+ * Une page : titre, sans sous-titre, et pour une fonction son interrupteur.
+ * Dans les paramètres d'un monde, le titre et les actions (`actions` :
+ * « Nouveau groupe ») montent dans la barre d'en-tête ; l'interrupteur
+ * d'activation reste dans la page, en première rangée, avec son libellé.
  */
 export function FeaturePage({
   title,
-  description,
   toggle,
   actions,
   back,
@@ -89,17 +86,16 @@ export function FeaturePage({
   children,
 }: {
   title: string;
-  /** Une phrase : à quoi sert la page. */
-  description?: React.ReactNode;
   /** Les boutons de la page (en-tête, à droite), en `outline` comme sur Membres. */
   actions?: React.ReactNode;
   /** La page parente, dans le fil d'Ariane de l'en-tête (la fiche d'un groupe). */
   back?: { label: string; onClick: () => void };
   /** La page prend toute la hauteur restante (voir FILL). */
   fill?: boolean;
+  /** L'activation de la fonction : une rangée en haut de la page, pas dans l'en-tête. */
   toggle?: {
-    /** Le nom de l'interrupteur pour les lecteurs d'écran : « Activer la carte ». */
-    ariaLabel: string;
+    /** Le libellé de l'interrupteur : « Activer la carte ». */
+    label: string;
     checked: boolean;
     disabled?: boolean;
     onCheckedChange: (checked: boolean) => void;
@@ -112,16 +108,21 @@ export function FeaturePage({
   const shown = React.useContext(PageShownContext);
   const inHeader = !!(slots?.title && slots.actions);
 
-  const toggleNode = toggle && (
-    <span className="flex shrink-0 items-center gap-2">
-      {toggle.help && <HelpHint title={toggle.ariaLabel}>{toggle.help}</HelpHint>}
+  const toggleId = React.useId();
+  // À plat, comme une section : un trait la sépare des réglages.
+  const toggleRow = toggle && (
+    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border pb-6 last:border-b-0 last:pb-0">
+      <span className="flex min-w-0 items-center gap-2">
+        <label htmlFor={toggleId} className="text-sm font-semibold">{toggle.label}</label>
+        {toggle.help && <HelpHint title={toggle.label}>{toggle.help}</HelpHint>}
+      </span>
       <Switch
+        id={toggleId}
         checked={toggle.checked}
         disabled={toggle.disabled}
         onCheckedChange={toggle.onCheckedChange}
-        aria-label={toggle.ariaLabel}
       />
-    </span>
+    </div>
   );
 
   return (
@@ -148,16 +149,16 @@ export function FeaturePage({
               </>,
               slots!.title!,
             )}
-            {(actions || toggleNode) && createPortal(<>{actions}{toggleNode}</>, slots!.actions!)}
+            {actions && createPortal(actions, slots!.actions!)}
           </>
         )
       ) : (
         <header className="flex shrink-0 items-start justify-between gap-4">
           <h3 className="min-w-0 text-xl font-semibold tracking-tight">{title}</h3>
-          {(actions || toggleNode) && <span className="flex shrink-0 items-center gap-2 pt-1">{actions}{toggleNode}</span>}
+          {actions && <span className="flex shrink-0 items-center gap-2 pt-1">{actions}</span>}
         </header>
       )}
-      {description && <p className={cn(DESCRIPTION, "max-w-prose shrink-0")}>{description}</p>}
+      {toggleRow}
       {children}
     </div>
   );
@@ -470,7 +471,8 @@ export function InactiveOptions({
   inactive: boolean;
   /** Pour le cadre grisé seulement (actives, les options sont rendues telles quelles). */
   className?: string;
-  feature?: { onActivate?: () => void; disabled?: boolean };
+  /** Une fonction coupée : une tuile le dit, ses réglages repliés dessous. */
+  feature?: boolean;
   children: React.ReactNode;
 }) {
   const t = useTranslations("worlds.settings");
@@ -496,11 +498,6 @@ export function InactiveOptions({
           <PowerOff className="size-4" aria-hidden />
         </span>
         <p className="text-sm text-muted-foreground">{t("featureOff")}</p>
-        {feature.onActivate && (
-          <Button type="button" size="sm" disabled={feature.disabled} onClick={feature.onActivate}>
-            {t("featureOffActivate")}
-          </Button>
-        )}
       </div>
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
@@ -514,13 +511,18 @@ export function InactiveOptions({
 }
 
 /**
- * Une fonction désactivée, dans le menu : on ne marque que l'exception. Une
- * icône discrète ; le mot (« Désactivé ») se lit en description.
+ * L'état d'une fonction, dans le menu : une icône discrète, allumée ou
+ * coupée ; le mot (« Activé », « Désactivé ») se lit en description.
  */
-export function FeatureOffMark({ id, label }: { id?: string; label: string }) {
+export function FeatureStatusMark({ on, id, label }: { on: boolean; id?: string; label: string }) {
+  const Icon = on ? Power : PowerOff;
   return (
-    <span data-testid="feature-status" className="flex shrink-0 items-center text-muted-foreground">
-      <PowerOff className="size-3.5" aria-hidden />
+    <span
+      data-testid="feature-status"
+      data-on={on || undefined}
+      className={cn("flex shrink-0 items-center", on ? "text-success" : "text-muted-foreground")}
+    >
+      <Icon className="size-3.5" aria-hidden />
       <span id={id} className="sr-only">{label}</span>
     </span>
   );

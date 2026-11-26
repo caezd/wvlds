@@ -44,16 +44,14 @@ import { messageErreurAction } from "@/lib/actionErrors";
  */
 export function WorldPersonaTemplateSection({
   title,
-  description,
   worldId,
   restrictSkills,
   reviewEnabled = false,
   onReviewEnabledChange,
   onActiveChange,
 }: {
-  /** Le titre et le sous-titre de la page (Paramètres › Fiche par défaut). */
+  /** Le titre de la page (Paramètres › Fiche par défaut). */
   title: string;
-  description?: string;
   worldId: string;
   restrictSkills?: boolean;
   /** Validation des fiches (migration 184) : option complémentaire de la fiche par défaut. */
@@ -146,15 +144,14 @@ export function WorldPersonaTemplateSection({
     if (loaded) onActiveChange?.(!!templateId);
   }, [loaded, templateId, onActiveChange]);
 
-  // Comme les autres fonctions : l'interrupteur de la fiche et son bouton
-  // d'édition dans l'en-tête, ses options dessous (voir FeatureLayout) ; les
+  // Comme les autres fonctions : l'interrupteur de la fiche en haut de la
+  // page, son bouton d'édition dans l'en-tête, ses options dessous (voir FeatureLayout) ; les
   // dialogues passent par des portails.
   return (
     <FeaturePage
       title={title}
-      description={description}
       toggle={{
-        ariaLabel: t("defaultSheet"),
+        label: tSettings("enableDefaultSheet"),
         checked: !!templateId,
         disabled: !loaded || toggling,
         onCheckedChange: (v) => void handleToggle(v),
@@ -171,7 +168,7 @@ export function WorldPersonaTemplateSection({
       {/* Sans fiche, ses options restent lisibles, repliées sous la tuile. */}
       <InactiveOptions
         inactive={loaded && !templateId}
-        feature={{ onActivate: () => void handleToggle(true), disabled: toggling }}
+        feature
       >
         <ToggleList>
           <ToggleItem
