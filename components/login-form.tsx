@@ -55,7 +55,7 @@ export function LoginForm() {
 
     return (
         <>
-            <h2 className="text-xl font-semibold md:text-2xl">Connexion</h2>
+            <h2 className="text-xl font-semibold md:text-2xl">{t("signin")}</h2>
             <p className="text-muted-foreground">
                 <Link href="/auth/sign-up" className="underline">
                     {t("newUser")}

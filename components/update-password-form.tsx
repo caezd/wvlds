@@ -99,12 +99,10 @@ export function UpdatePasswordForm() {
   return (
     <>
       <h2 className="text-xl font-semibold md:text-2xl">
-        {needsUsername ? "Finaliser votre compte" : "Définir un mot de passe"}
+        {needsUsername ? t("updatePassword.finishTitle") : t("updatePassword.setTitle")}
       </h2>
       <p className="text-muted-foreground">
-        {needsUsername
-          ? "Choisissez un nom d'utilisateur et un mot de passe pour accéder à votre compte."
-          : "Choisissez un mot de passe pour accéder à votre compte."}
+        {needsUsername ? t("updatePassword.finishDescription") : t("updatePassword.setDescription")}
       </p>
       <div className="my-4">
         <form onSubmit={handleSubmit}>
@@ -151,7 +149,7 @@ export function UpdatePasswordForm() {
           </div>
           {error && <p className="text-sm text-destructive mb-4">{error}</p>}
           <Button type="submit" className="w-full" disabled={isLoading || !accountReady}>
-            {isLoading ? "Enregistrement…" : "Enregistrer"}
+            {isLoading ? t("updatePassword.saving") : t("updatePassword.save")}
           </Button>
         </form>
       </div>

@@ -32,6 +32,7 @@ describe("UpdatePasswordForm : finaliser un compte invité (migration 266)", () 
     const user = userEvent.setup();
     render(<UpdatePasswordForm />);
 
+    expect(await screen.findByRole("heading", { name: "Finaliser votre compte" })).toBeInTheDocument();
     await user.type(await screen.findByLabelText("Pseudo"), "Lia_92");
     expect(await screen.findByText("Ce pseudo est disponible.")).toBeInTheDocument();
 
@@ -65,6 +66,8 @@ describe("UpdatePasswordForm : finaliser un compte invité (migration 266)", () 
     const { mock } = setup({ username: "Lia" });
     render(<UpdatePasswordForm />);
     await waitFor(() => expect(mock.from).toHaveBeenCalledWith("profiles"));
+    expect(screen.getByRole("heading", { name: "Définir un mot de passe" })).toBeInTheDocument();
+    expect(screen.getByText("Choisissez un mot de passe pour accéder à votre compte.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Pseudo")).toBeNull();
     expect(screen.queryByRole("group", { name: "Date de naissance" })).toBeNull();
   });

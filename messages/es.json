@@ -1543,7 +1543,28 @@
     },
     "helpFor": "Ayuda: {title}",
     "showPassword": "Mostrar la contraseña",
-    "hidePassword": "Ocultar la contraseña"
+    "hidePassword": "Ocultar la contraseña",
+    "forgotPasswordTitle": "Contraseña olvidada",
+    "beta": "Wvlds está en beta.",
+    "backToSignin": "Volver al inicio de sesión",
+    "invite": {
+      "checking": "Comprobando…",
+      "checkingDescription": "Espere mientras establecemos su sesión.",
+      "invalidTitle": "Enlace no válido",
+      "invalid": "Este enlace no es válido o ha caducado."
+    },
+    "errorPage": {
+      "title": "Se ha producido un error.",
+      "description": "Es posible que el enlace haya caducado o ya se haya utilizado. Inténtelo de nuevo desde la página de inicio de sesión."
+    },
+    "updatePassword": {
+      "finishTitle": "Complete su cuenta",
+      "finishDescription": "Elija un seudónimo, su fecha de nacimiento y una contraseña para acceder a su cuenta.",
+      "setTitle": "Defina una contraseña",
+      "setDescription": "Elija una contraseña para acceder a su cuenta.",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    }
   },
   "explore": {
     "title": "Explorar",

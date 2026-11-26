@@ -53,7 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-26",
     category: "Correctif",
     area: "Compte",
-    text: "Fenêtre « Choisissez votre pseudo » : textes affichés à la place de leurs clés ; pseudo vérifié pendant la saisie.",
+    text: "Écrans de connexion entièrement traduits (français, anglais, espagnol).\n- connexion, mot de passe oublié, nouveau mot de passe, invitation, page d’erreur\n- lien invalide ou expiré : une phrase claire au lieu du message technique en anglais\n- fenêtre « Choisissez votre pseudo » : textes affichés à la place de leurs clés ; pseudo vérifié pendant la saisie",
   },
   {
     date: "2026-11-25",

@@ -3,10 +3,18 @@
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export default function InvitePage() {
+  const t = useTranslations("auth");
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  // Les messages de Supabase (anglais, techniques) vont au journal ; le
+  // visiteur lit une seule phrase, dans sa langue.
+  const [invalid, setInvalid] = useState(false);
+  const fail = (detail: unknown) => {
+    console.error("[invite]", detail);
+    setInvalid(true);
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -19,7 +27,7 @@ export default function InvitePage() {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setError(error.message);
+          fail(error.message);
           return;
         }
         router.replace("/");
@@ -33,19 +41,19 @@ export default function InvitePage() {
       const errorDescription = hashParams.get("error_description");
 
       if (errorDescription) {
-        setError(errorDescription.replace(/\+/g, " "));
+        fail(errorDescription);
         return;
       }
 
       if (!access_token || !refresh_token) {
-        setError("Lien d'invitation invalide ou expiré.");
+        fail("jetons absents");
         return;
       }
 
       const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
 
       if (error || !data.session) {
-        setError(error?.message ?? "Impossible d'établir la session.");
+        fail(error?.message ?? "session absente");
         return;
       }
 
@@ -63,15 +71,13 @@ export default function InvitePage() {
     void handle();
   }, [router]);
 
-  if (error) {
+  if (invalid) {
     return (
       <div>
-        <h2 className="text-xl font-semibold md:text-2xl text-destructive">
-          Lien invalide
-        </h2>
-        <p className="text-muted-foreground mt-2">{error}</p>
+        <h2 className="text-xl font-semibold md:text-2xl text-destructive">{t("invite.invalidTitle")}</h2>
+        <p className="text-muted-foreground mt-2">{t("invite.invalid")}</p>
         <a href="/auth/login" className="underline text-sm mt-4 inline-block">
-          Retour à la connexion
+          {t("backToSignin")}
         </a>
       </div>
     );
@@ -79,12 +85,8 @@ export default function InvitePage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold md:text-2xl">
-        Vérification en cours…
-      </h2>
-      <p className="text-muted-foreground mt-2">
-        Veuillez patienter pendant que nous établissons votre session.
-      </p>
+      <h2 className="text-xl font-semibold md:text-2xl">{t("invite.checking")}</h2>
+      <p className="text-muted-foreground mt-2">{t("invite.checkingDescription")}</p>
     </div>
   );
 }

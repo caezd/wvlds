@@ -1543,7 +1543,28 @@
     },
     "helpFor": "Help: {title}",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "forgotPasswordTitle": "Forgot your password",
+    "beta": "Wvlds is in beta.",
+    "backToSignin": "Back to sign in",
+    "invite": {
+      "checking": "Checking…",
+      "checkingDescription": "Please wait while we set up your session.",
+      "invalidTitle": "Invalid link",
+      "invalid": "This link is invalid or has expired."
+    },
+    "errorPage": {
+      "title": "Something went wrong.",
+      "description": "The link may have expired or already been used. Try again from the sign-in page."
+    },
+    "updatePassword": {
+      "finishTitle": "Complete your account",
+      "finishDescription": "Choose a username, your date of birth and a password to access your account.",
+      "setTitle": "Set a password",
+      "setDescription": "Choose a password to access your account.",
+      "save": "Save",
+      "saving": "Saving…"
+    }
   },
   "explore": {
     "title": "Explore",

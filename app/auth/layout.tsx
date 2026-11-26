@@ -1,6 +1,6 @@
 import Logo from "@/components/logo";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { pickMessages } from "@/lib/clientMessages";
 
 export default async function AuthLayout({
@@ -16,7 +16,7 @@ export default async function AuthLayout({
   // que le namespace `auth` — vérifié par lib/__tests__/clientMessages.test.ts.
   // On ne sérialise donc plus les 37 Ko du catalogue complet sur la toute
   // première page qu'un visiteur charge.
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, t] = await Promise.all([getLocale(), getMessages(), getTranslations("auth")]);
   return (
     <NextIntlClientProvider locale={locale} messages={pickMessages(messages, ["auth"])}>
     <div className="bg-background flex flex-col md:flex-row-reverse md:h-screen">
@@ -40,9 +40,7 @@ export default async function AuthLayout({
                 ></path>
               </svg>
             </div>
-            <div className="max-w-60 -mt-1 text-muted-foreground">
-              Wvlds est en beta.
-            </div>
+            <div className="max-w-60 -mt-1 text-muted-foreground">{t("beta")}</div>
           </div>
         </div>
       </section>

@@ -1,36 +1,30 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+
+/**
+ * L'échec d'un lien de confirmation (cf. app/auth/confirm/route.ts). Le
+ * message de Supabase, passé dans `?error=`, n'est pas affiché : il est en
+ * anglais et technique ; la page dit l'essentiel dans la langue du visiteur.
+ */
+export async function generateMetadata() {
+  const t = await getTranslations("auth");
+  return { title: t("errorPage.title") };
+}
 
 export default async function Page({
-  searchParams,
+  // Le paramètre reste dans l'URL (utile au diagnostic), sans être affiché.
+  searchParams: _searchParams,
 }: {
-  searchParams: Promise<{ error: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const params = await searchParams;
-
+  const t = await getTranslations("auth");
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                Sorry, something went wrong.
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {params?.error ? (
-                <p className="text-sm text-muted-foreground">
-                  Code error: {params.error}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  An unspecified error occurred.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+    <div>
+      <h2 className="text-xl font-semibold md:text-2xl">{t("errorPage.title")}</h2>
+      <p className="mt-2 text-muted-foreground">{t("errorPage.description")}</p>
+      <Link href="/auth/login" className="mt-4 inline-block text-sm underline">
+        {t("backToSignin")}
+      </Link>
     </div>
   );
 }

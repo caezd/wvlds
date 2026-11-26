@@ -1543,7 +1543,28 @@
     },
     "helpFor": "Aide : {title}",
     "showPassword": "Afficher le mot de passe",
-    "hidePassword": "Masquer le mot de passe"
+    "hidePassword": "Masquer le mot de passe",
+    "forgotPasswordTitle": "Mot de passe oublié",
+    "beta": "Wvlds est en bêta.",
+    "backToSignin": "Retour à la connexion",
+    "invite": {
+      "checking": "Vérification en cours…",
+      "checkingDescription": "Veuillez patienter pendant que nous établissons votre session.",
+      "invalidTitle": "Lien invalide",
+      "invalid": "Ce lien est invalide ou a expiré."
+    },
+    "errorPage": {
+      "title": "Une erreur est survenue.",
+      "description": "Le lien a peut-être expiré ou déjà servi. Réessayez depuis la page de connexion."
+    },
+    "updatePassword": {
+      "finishTitle": "Finaliser votre compte",
+      "finishDescription": "Choisissez un pseudo, votre date de naissance et un mot de passe pour accéder à votre compte.",
+      "setTitle": "Définir un mot de passe",
+      "setDescription": "Choisissez un mot de passe pour accéder à votre compte.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    }
   },
   "explore": {
     "title": "Explorer",
