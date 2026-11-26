@@ -1541,7 +1541,9 @@
       "invalid": "Cette date n’existe pas.",
       "hint": "Votre date de naissance reste privée."
     },
-    "helpFor": "Aide : {title}"
+    "helpFor": "Aide : {title}",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe"
   },
   "explore": {
     "title": "Explorer",

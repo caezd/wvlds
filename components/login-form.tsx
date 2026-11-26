@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -76,10 +77,9 @@ export function LoginForm() {
                     </div>
                     <div className="mb-6 flex gap-3 flex-col relative">
                         <Label htmlFor="password">{t("password")}</Label>
-                        <Input
+                        <PasswordInput
                             id="password"
                             name="password"
-                            type="password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}

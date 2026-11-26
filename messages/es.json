@@ -1541,7 +1541,9 @@
       "invalid": "Esta fecha no existe.",
       "hint": "Su fecha de nacimiento es privada."
     },
-    "helpFor": "Ayuda: {title}"
+    "helpFor": "Ayuda: {title}",
+    "showPassword": "Mostrar la contraseña",
+    "hidePassword": "Ocultar la contraseña"
   },
   "explore": {
     "title": "Explorar",

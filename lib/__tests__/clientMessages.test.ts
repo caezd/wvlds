@@ -80,6 +80,7 @@ describe("découpage des messages envoyés au client", () => {
         "components/sign-up-form.tsx",
         "components/update-password-form.tsx",
         "components/auth/UsernameField.tsx",
+        "components/auth/PasswordInput.tsx",
     ];
 
     // Montés dans l'arbre protégé, mais sous un NextIntlClientProvider qui leur

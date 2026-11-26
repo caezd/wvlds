@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { BirthDateFields } from "@/components/BirthDateFields";
 import { UsernameField } from "@/components/auth/UsernameField";
@@ -109,9 +110,8 @@ export function SignUpForm() {
           />
           <div className="flex flex-col gap-3">
             <Label htmlFor="password">{t("password")}</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               required
               value={password}
@@ -120,9 +120,8 @@ export function SignUpForm() {
           </div>
           <div className="flex flex-col gap-3">
             <Label htmlFor="repeat-password">{t("confirmPassword")}</Label>
-            <Input
+            <PasswordInput
               id="repeat-password"
-              type="password"
               autoComplete="new-password"
               required
               value={repeatPassword}

@@ -46,6 +46,16 @@ describe("SignUpForm : pseudo et date de naissance (migration 266)", () => {
     expect(screen.getByLabelText("Mot de passe")).toBeInTheDocument();
   });
 
+  it("le pseudo porte une aide : ses règles, en pastille et non sous le champ", () => {
+    render(<SignUpForm />);
+    const aide = screen.getByRole("button", { name: "Aide : Pseudo" });
+    expect(aide).toHaveAccessibleDescription(
+      "Visible par les autres membres. Lettres sans accent, chiffres et tiret bas (_), de 3 à 32 caractères.",
+    );
+    // Une seule fois : la description (lecteurs d'écran), pas une ligne sous le champ.
+    expect(screen.getAllByText(/^Visible par les autres membres/)).toHaveLength(1);
+  });
+
   it("la date de naissance porte une aide : elle reste privée", () => {
     render(<SignUpForm />);
     const aide = screen.getByRole("button", { name: "Aide : Date de naissance" });

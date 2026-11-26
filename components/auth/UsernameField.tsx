@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Check, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { HelpHint } from "@/components/ui/help-hint";
 import { cn } from "@/lib/utils";
 import { USERNAME_MAX } from "@/lib/username";
 import type { UsernameAvailability } from "@/hooks/useUsernameAvailability";
@@ -35,17 +36,27 @@ export function UsernameField({
   const inputId = id ?? fallbackId;
   const statusId = `${inputId}-status`;
 
-  const bad = availability.status === "invalid" || availability.status === "taken";
+  const bad =
+    availability.status === "invalid" || availability.status === "taken";
+  // Les règles sont dans l'aide ; sous le champ, seulement l'état de la saisie.
   const message =
     availability.status === "idle"
-      ? t("username.hint")
+      ? null
       : availability.status === "invalid"
         ? t(`username.${availability.problem}`)
         : t(`username.${availability.status}`);
 
   return (
     <div className="flex flex-col gap-3">
-      <Label htmlFor={inputId}>{t("username.label")}</Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor={inputId}>{t("username.label")}</Label>
+        <HelpHint
+          label={t("helpFor", { title: t("username.label") })}
+          align="start"
+        >
+          {t("username.hint")}
+        </HelpHint>
+      </div>
       <Input
         id={inputId}
         value={value}
@@ -59,21 +70,31 @@ export function UsernameField({
         autoFocus={autoFocus}
         disabled={disabled}
         aria-invalid={bad}
-        aria-describedby={statusId}
+        aria-describedby={message ? statusId : undefined}
       />
-      <p
-        id={statusId}
-        aria-live="polite"
-        className={cn(
-          "-mt-1 flex min-h-4 items-center gap-1.5 text-xs",
-          bad ? "text-destructive" : availability.status === "available" ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {availability.status === "checking" && <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />}
-        {availability.status === "available" && <Check className="size-3.5 shrink-0" aria-hidden />}
-        {bad && <X className="size-3.5 shrink-0" aria-hidden />}
-        <span>{message}</span>
-      </p>
+      {message && (
+        <p
+          id={statusId}
+          aria-live="polite"
+          className={cn(
+            "-mt-1 flex min-h-4 items-center gap-1.5 text-xs",
+            bad
+              ? "text-destructive"
+              : availability.status === "available"
+                ? "text-foreground"
+                : "text-muted-foreground",
+          )}
+        >
+          {availability.status === "checking" && (
+            <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
+          )}
+          {availability.status === "available" && (
+            <Check className="size-3.5 shrink-0" aria-hidden />
+          )}
+          {bad && <X className="size-3.5 shrink-0" aria-hidden />}
+          <span>{message}</span>
+        </p>
+      )}
     </div>
   );
 }

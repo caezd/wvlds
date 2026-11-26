@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-26",
     category: "Fonctionnalité",
     area: "Compte",
-    text: "Inscription : pseudo et date de naissance demandés dès la création du compte.\n- pseudo vérifié pendant la saisie : format (ni espace, ni accent, ni ponctuation ; 3 à 32 caractères) et disponibilité\n- date de naissance privée, enregistrée dans le compte\n- mondes 18+ : rien à saisir pour un compte majeur, entrée refusée à un compte mineur ; sans date enregistrée, celle saisie à l’entrée est gardée\n- comptes invités : pseudo et date de naissance demandés avec le mot de passe",
+    text: "Inscription : pseudo et date de naissance demandés dès la création du compte.\n- pseudo vérifié pendant la saisie : format (ni espace, ni accent, ni ponctuation ; 3 à 32 caractères) et disponibilité\n- date de naissance privée, enregistrée dans le compte\n- mondes 18+ : rien à saisir pour un compte majeur, entrée refusée à un compte mineur ; sans date enregistrée, celle saisie à l’entrée est gardée\n- comptes invités : pseudo et date de naissance demandés avec le mot de passe\n- un œil pour afficher ou masquer le mot de passe (inscription, connexion, nouveau mot de passe)",
   },
   {
     date: "2026-11-26",
