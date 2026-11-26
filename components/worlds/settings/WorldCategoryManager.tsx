@@ -36,8 +36,7 @@ import {
 import type { ChatroomCategory } from "@/types/worlds";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
-import { cn } from "@/lib/utils";
-import { SETTINGS_ROW, SettingsAddRow, SettingsEmpty, SURFACE } from "./FeatureLayout";
+import { FIELD, SETTINGS_LIST, SETTINGS_ROW, SettingsAddRow, SettingsEmpty } from "./FeatureLayout";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -145,14 +144,16 @@ function CategoryForm({
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className={cn("space-y-3 rounded-lg p-3", SURFACE)}
+      // À plat, dans la liste : l'image en vignette à gauche, le nom et la
+      // description à droite (l'un sous l'autre sur une page étroite).
+      className="grid gap-4 py-3 @md:grid-cols-[10rem_minmax(0,1fr)]"
     >
       <div className="space-y-1.5">
         <ImagePickerCropField
           aspect={4 / 3}
           uploading={uploadingImage}
           previewSrc={imageUrl || null}
-          previewClassName="aspect-[4/3] w-full rounded-lg"
+          previewClassName="aspect-[4/3] w-full max-w-40 rounded-lg"
           changeLabel={tCommon("dropToReplace")}
           onConfirm={handleImageConfirm}
         />
@@ -167,18 +168,21 @@ function CategoryForm({
           </button>
         )}
       </div>
+      <div className="min-w-0 space-y-3">
       <Input
         autoFocus
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder={tCatalogue("categoryNamePlaceholder")}
         maxLength={60}
+        className={FIELD}
       />
       <Textarea
         value={description ?? ""}
         onChange={(e) => setDescription(e.target.value)}
         placeholder={t("settings.categoryDescriptionPlaceholder")}
         rows={2}
+        className={FIELD}
       />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
@@ -188,6 +192,7 @@ function CategoryForm({
           {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
           {initial ? tCommon("save") : tCommon("create")}
         </Button>
+      </div>
       </div>
     </form>
   );
@@ -397,7 +402,7 @@ export function WorldCategoryManager({
       <div>
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
           <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
+            <div className={SETTINGS_LIST}>
               {categories.map((category) => (
                 <CategoryRow
                   key={category.id}

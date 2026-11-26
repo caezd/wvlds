@@ -8,6 +8,8 @@
  * chargerait des données pour un onglet que la page n'affiche pas — ou on
  * afficherait un accueil privé des données de ses widgets.
  */
+import { permissionListOpensSettings } from "@/lib/worldPermissions";
+
 export type WorldPanel =
   | "settings"
   | "personas"
@@ -30,13 +32,17 @@ export type WorldPanelContext = {
   hasTimeline: boolean;
   /** Drapeau `world_economy` ET `worldHasShops` (économie, inventaire, option Boutiques). */
   hasShops: boolean;
-  canOpenSettings: boolean;
+  /**
+   * Les permissions du membre, `administrator` compris (le propriétaire ne
+   * porte que celle-là) : elles décident de l'accès aux réglages.
+   */
+  permissions: readonly string[];
 };
 
 export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPanelContext): WorldPanel {
   switch (view) {
     case "settings":
-      return ctx.canOpenSettings ? "settings" : "home";
+      return permissionListOpensSettings(ctx.permissions) ? "settings" : "home";
     case "personas":
     case "canvas":
     case "members":
@@ -58,6 +64,3 @@ export function resolveWorldPanel(view: string | null | undefined, ctx: WorldPan
       return "home";
   }
 }
-
-/** Permissions qui ouvrent l'onglet Réglages d'un monde (cf. WorldHome). */
-export const SETTINGS_PERMISSIONS = ["world.settings", "roles.manage", "categories.manage", "relations.manage", "chatrooms.manage"] as const;

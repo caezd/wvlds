@@ -83,6 +83,22 @@ describe("WorldShops (migration 249)", () => {
     expect(within(card("Casque")).getByRole("button", { name: "Acheter" })).toBeDisabled();
   });
 
+  it("le solde de l'acheteur se lit à côté du sélecteur", () => {
+    shops();
+    renderShops();
+    expect(screen.getByText("Acheter pour")).toBeInTheDocument();
+    expect(screen.getByText(/^Solde :/)).toHaveTextContent("Solde : 10 po");
+  });
+
+  it("trop cher pour l'acheteur : la carte le dit, le bouton est grisé", () => {
+    shops({ personas: [{ id: "p1", name: "Brom", avatar_url: null, balance: 200 }] });
+    renderShops();
+    expect(within(card("Épée")).getByText("Trop cher pour Brom")).toBeInTheDocument();
+    expect(within(card("Épée")).getByRole("button", { name: "Acheter" })).toBeDisabled();
+    // Épuisé l'emporte : une seule raison par carte.
+    expect(within(card("Casque")).queryByText("Trop cher pour Brom")).toBeNull();
+  });
+
   it("une boutique fermée (vue par qui gère l'économie) porte un cadenas", () => {
     shops();
     renderShops(true);
@@ -99,7 +115,8 @@ describe("WorldShops (migration 249)", () => {
     // Le même champ que partout : les boutons −/+ à côté de la case.
     await user.click(within(dialog).getByRole("button", { name: "Augmenter : Quantité" }));
     expect(within(dialog).getByRole("spinbutton", { name: "Quantité" })).toHaveValue(2);
-    expect(within(dialog).getByText("5 po")).toBeInTheDocument();
+    expect(within(dialog).getByText("Total").nextElementSibling).toHaveTextContent("5 po");
+    expect(within(dialog).getByText(/^Solde après :/)).toHaveTextContent("Solde après : 5 po");
     await user.click(within(dialog).getByRole("button", { name: "Acheter" }));
     await waitFor(() => expect(state.buy).toHaveBeenCalledWith("p1", "i1", 2));
     expect(toast.success).toHaveBeenCalledWith("Achat effectué.");
@@ -122,6 +139,7 @@ describe("WorldShops (migration 249)", () => {
     expect(within(card("Épée")).getByText(/^Revente :/)).toHaveTextContent("Revente : 1 po 25 pa");
     await user.click(within(card("Épée")).getByRole("button", { name: "Revendre" }));
     const dialog = await screen.findByRole("dialog", { name: "Revendre : Épée" });
+    expect(within(dialog).getByText(/^Solde après :/)).toHaveTextContent("Solde après : 11 po 25 pa");
     await user.click(within(dialog).getByRole("button", { name: "Revendre" }));
     await waitFor(() => expect(state.sell).toHaveBeenCalledWith("p1", "i1", 1));
   });

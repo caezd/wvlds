@@ -109,7 +109,7 @@ export function HistoryRow({
       <button
         type="button"
         onClick={onOpen}
-        className="block w-full space-y-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+        className="-mx-2 block w-[calc(100%+1rem)] space-y-1.5 rounded-md px-2 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
       >
         <span className="flex items-center gap-2 text-sm">
           <KindIcon kind={a.kind} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -213,7 +213,7 @@ export function AnnouncementDetails({
               )}
             </div>
             {confirmRetract ? (
-              <div className="space-y-3 rounded-lg border border-border bg-card p-3" data-testid="announcement-retract-confirm">
+              <div className="space-y-3 border-t border-border pt-4" data-testid="announcement-retract-confirm">
                 <p className="text-sm">
                   {isBanner
                     ? t("retractBannerConfirm", { count: current.recipient_count })

@@ -37,13 +37,13 @@ import {
   type PersonaGroupRow,
 } from "@/lib/personaGroups";
 import { WorldGroupDetail, type GroupFields, type GroupPersona } from "./WorldGroupDetail";
-import { FeaturePage, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, SETTINGS_LIST, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
 
-/** Une ligne de la liste : bordée, sur le fond des cartes ; le bouton qu'elle contient l'occupe. */
-const ROW = cn(SETTINGS_ROW, "flex-nowrap gap-1 py-1 pl-1");
+/** Une ligne de la liste, à plat ; le bouton qu'elle contient l'occupe. */
+const ROW = cn(SETTINGS_ROW, "flex-nowrap gap-1 py-1");
 /** Le bouton d'une ligne, qui ouvre la page du groupe. */
 const ROW_BUTTON =
-  "flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "-ml-2 flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 /** La ligne d'ajout, en pointillés. */
 /** Le retrait d'un sous-groupe, par niveau. */
 const INDENT_REM = 1.5;
@@ -277,7 +277,7 @@ export function WorldGroupsSettings({ worldId }: { worldId: string }) {
         {rows.length === 0 && (
           <SettingsEmpty onAdd={() => setPage({ parentId: null })} addLabel={t("newGroup")}>{t("noGroupsDefined")}</SettingsEmpty>
         )}
-        <ul className="space-y-2" aria-label={t("groups")}>
+        <ul className={SETTINGS_LIST} aria-label={t("groups")}>
           {groups.map((g) => {
             const parent = g.parent_id ? byId.get(g.parent_id) : undefined;
             const moves = keyboardMoves(tree, g.id);

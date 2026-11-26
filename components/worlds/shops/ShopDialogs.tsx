@@ -247,6 +247,8 @@ function ShopItemForm({
             placeholder={t("stockPlaceholder")}
             value={stock}
             onValueChange={setStock}
+            // Assez large pour lire « Illimité » quand le champ est vide.
+            className="w-40"
           />
         </div>
         {allowBuyback && (
@@ -309,7 +311,9 @@ export function TradeDialog({
             </DialogDescription>
           )}
         </DialogHeader>
-        {target && <TradeForm target={target} units={units} run={run} onDone={() => onOpenChange(false)} />}
+        {target && (
+          <TradeForm target={target} units={units} balance={buyer?.balance ?? null} run={run} onDone={() => onOpenChange(false)} />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -318,11 +322,14 @@ export function TradeDialog({
 function TradeForm({
   target,
   units,
+  balance,
   run,
   onDone,
 }: {
   target: TradeTarget;
   units: CurrencyUnit[];
+  /** Le solde de l'acheteur, pour dire ce qu'il en restera. */
+  balance: number | null;
   run: (target: TradeTarget, quantity: number) => Promise<ShopResult>;
   onDone: () => void;
 }) {
@@ -332,6 +339,8 @@ function TradeForm({
   const [busy, setBusy] = useState(false);
   const quantity = intOrNull(raw) ?? 0;
   const valid = quantity >= 1 && quantity <= target.max;
+  const total = target.unitPrice * quantity;
+  const after = balance === null ? null : target.mode === "buy" ? balance - total : balance + total;
 
   async function confirm() {
     setBusy(true);
@@ -361,11 +370,13 @@ function TradeForm({
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">{t("total")}</p>
-          <Money amount={target.unitPrice * quantity} units={units} className="block text-sm font-medium" />
+          <Money amount={total} units={units} className="block text-sm font-medium" />
         </div>
       </div>
-      {target.mode === "buy" && target.max === 0 && (
-        <p className="text-sm text-destructive">{tEconomy("insufficientFunds")}</p>
+      {valid && after !== null && (
+        <p className="text-right text-xs text-muted-foreground">
+          {tEconomy.rich("balanceAfter", { amount: () => <Money amount={after} units={units} /> })}
+        </p>
       )}
       <DialogFooter>
         <Button type="button" disabled={!valid || busy} onClick={() => void confirm()}>

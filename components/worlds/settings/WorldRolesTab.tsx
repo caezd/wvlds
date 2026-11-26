@@ -344,7 +344,9 @@ function RoleDetails({
   ].join(" · ");
 
   return (
-    <div className="space-y-6">
+    // Son propre conteneur : à côté de la liste des rôles, la fiche est plus
+    // étroite que la page, et ses sections passent l’une sous l’autre.
+    <div className="@container space-y-6">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
         {/* La pastille de couleur, grande, porte l'icône du rôle. */}
         <ColorPickerButton
@@ -455,7 +457,7 @@ function RoleDetails({
           <SettingsSection
             key={group}
             title={t(`groups.${group}`)}
-            meta={t("countOf", { count: onCount, total: perms.length })}
+            count={t("countOf", { count: onCount, total: perms.length })}
             aside={
               <Button
                 type="button"
@@ -463,7 +465,7 @@ function RoleDetails({
                 size="sm"
                 disabled={targets.length === 0}
                 onClick={() => onSetPermissions(targets, !allOn)}
-                className="mt-2 h-7 px-2.5 text-xs"
+                className="h-7 px-2.5 text-xs"
               >
                 {allOn ? t("disableAll") : t("enableAll")}
               </Button>

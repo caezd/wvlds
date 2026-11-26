@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
-import { FIELD, SettingsChoiceCards, SettingsSection } from "./FeatureLayout";
+import { FIELD, SettingsChoiceCards, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
 
 type ProprietesOnglet = {
@@ -193,23 +193,24 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     </SettingsSection>
 
                                     {/* -- Avatars acceptés --------------------- */}
-                                    {/* Les deux styles ne s'excluent pas : deux cartes à bascule. */}
+                                    {/* Les deux styles ne s'excluent pas : deux interrupteurs. */}
                                     <SettingsSection title={t("acceptedAvatarTypes")} description={tSettings("avatarTypesHelp")}>
-                                        <SettingsChoiceCards
-                                            multiple
-                                            label={t("acceptedAvatarTypes")}
-                                            value={[...(allowsRealAvatars ? ["real" as const] : []), ...(allowsIllustratedAvatars ? ["illustrated" as const] : [])]}
-                                            disabled={togglingAvatarType}
-                                            options={[
-                                                { value: "real", icon: Camera, label: tSettings("avatarReal") },
-                                                { value: "illustrated", icon: Palette, label: tSettings("avatarIllustrated") },
-                                            ]}
-                                            onToggle={(v) =>
-                                                v === "real"
-                                                    ? void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)
-                                                    : void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)
-                                            }
-                                        />
+                                        <ToggleList label={t("acceptedAvatarTypes")}>
+                                            <ToggleItem
+                                                icon={<Camera className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
+                                                title={tSettings("avatarReal")}
+                                                checked={allowsRealAvatars}
+                                                disabled={togglingAvatarType}
+                                                onCheckedChange={(v) => void handleAvatarTypeToggle("allows_real_avatars", v)}
+                                            />
+                                            <ToggleItem
+                                                icon={<Palette className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
+                                                title={tSettings("avatarIllustrated")}
+                                                checked={allowsIllustratedAvatars}
+                                                disabled={togglingAvatarType}
+                                                onCheckedChange={(v) => void handleAvatarTypeToggle("allows_illustrated_avatars", v)}
+                                            />
+                                        </ToggleList>
                                     </SettingsSection>
 
                                     {/* -- Tags -------------------------------- */}

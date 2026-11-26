@@ -127,7 +127,7 @@ export function WorldWelcomeSection({
           />
         </ToggleList>
         {welcome ? (
-          <div className="space-y-2 rounded-lg border border-border bg-card p-3" data-testid="welcome-summary">
+          <div className="space-y-1 border-t border-border pt-3" data-testid="welcome-summary">
             <div className="flex items-center gap-2 text-sm">
               {welcome.kind === "message" ? (
                 <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={tA("kindMessage")} />

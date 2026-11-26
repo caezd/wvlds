@@ -47,10 +47,13 @@ import {
   type LiveChannel,
 } from "@/lib/worldLiveChannels";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
+import { INLINE_INPUT, SETTINGS_LIST, SETTINGS_ROW, SettingsSection } from "./FeatureLayout";
 
-/** Une ligne de la liste : bordée, sur le fond des cartes (comme les relations). */
+/** Une ligne de la liste, à plat (comme les relations). */
 const ROW = SETTINGS_ROW;
+/** Le nom d'une salle, modifiable sur place. */
+const ROW_INPUT = cn(INLINE_INPUT, "ml-0 min-w-32 flex-1 font-medium");
+/** Un champ sans cadre, dans la ligne d'ajout. */
 const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0";
 const SWATCH = "size-6 rounded-md border-0 shadow-none";
 /** Couleur d'une salle qui n'en a pas encore : un gris neutre. */
@@ -191,14 +194,14 @@ export function WorldLiveChannelsSettings({ worldId }: { worldId: string }) {
           <Loader2 className="size-4 animate-spin" />
         </div>
       ) : (
-        <ul className="space-y-2" aria-label={t("title")} data-testid="live-channels">
+        <ul className={SETTINGS_LIST} aria-label={t("title")} data-testid="live-channels">
           {/* La salle principale : toujours là, ni renommée ni supprimée. */}
           <li className={ROW} data-testid="live-channel-main">
             <span className="flex size-6 items-center justify-center text-muted-foreground">
               <Hash className="size-4" aria-hidden />
             </span>
             <span className="min-w-32 flex-1 px-1.5 text-sm font-medium">{t("main")}</span>
-            <span className="flex items-center gap-1 pr-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Lock className="size-3" aria-hidden />
               {t("mainHint")}
             </span>
@@ -240,7 +243,7 @@ export function WorldLiveChannelsSettings({ worldId }: { worldId: string }) {
                 maxLength={LIVE_CHANNEL_NAME_MAX}
                 aria-label={t("name")}
                 // Assez étroit pour laisser la place au choix du groupe, sur la même ligne.
-                className={cn(BARE_INPUT, "min-w-20")}
+                className={cn(ROW_INPUT, "min-w-20")}
                 style={c.color ? { color: c.color } : undefined}
                 onChange={(e) => edit(c.id, { name: e.target.value })}
                 onBlur={(e) => {

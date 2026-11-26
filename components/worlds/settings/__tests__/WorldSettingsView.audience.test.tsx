@@ -36,13 +36,14 @@ vi.mock("@/components/worlds/settings/WorldCategoryManager", () => ({
   WorldCategoryManager: () => <div data-testid="category-manager-stub" />,
 }));
 const setWorldAgeRestricted = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
+const setWorldAvatarType = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
 vi.mock("@/app/actions/worldCatalog", () => ({
   setWorldFeature: vi.fn().mockResolvedValue({ ok: true }),
   setWorldRestriction: vi.fn().mockResolvedValue({ ok: true }),
   setWorldFaceclaims: vi.fn().mockResolvedValue({ ok: true }),
   setWorldAgeRestricted,
   setWorldTimeline: vi.fn().mockResolvedValue({ ok: true }),
-  setWorldAvatarType: vi.fn().mockResolvedValue({ ok: true }),
+  setWorldAvatarType,
   getWorldTags: vi.fn().mockResolvedValue({ ok: true, tags: [] }),
   addWorldTag: vi.fn().mockResolvedValue({ ok: true, tag: "" }),
   removeWorldTag: vi.fn().mockResolvedValue({ ok: true }),
@@ -112,5 +113,30 @@ describe("WorldSettingsView — public visé, en deux cartes", () => {
     await user.click(screen.getByRole("radio", { name: /^Tout public/ }));
 
     await waitFor(() => expect(setWorldAgeRestricted).toHaveBeenCalledWith("w1", false));
+  });
+});
+
+describe("WorldSettingsView — avatars acceptés", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const mock = createSupabaseMock({ results: [{ data: null, error: null }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+  });
+
+  it("deux interrupteurs indépendants, l'un enregistré sans toucher l'autre", async () => {
+    const user = userEvent.setup();
+    render(<WorldSettingsView world={{ ...BASE_WORLD, allows_illustrated_avatars: true }} />);
+    await user.click(screen.getByRole("button", { name: "Communauté" }));
+
+    const reels = screen.getByRole("switch", { name: "Avatars réels" });
+    const illustres = screen.getByRole("switch", { name: "Avatars illustrés" });
+    expect(reels).toHaveAttribute("aria-checked", "false");
+    expect(illustres).toHaveAttribute("aria-checked", "true");
+
+    await user.click(reels);
+
+    await waitFor(() => expect(setWorldAvatarType).toHaveBeenCalledWith("w1", "allows_real_avatars", true));
+    await waitFor(() => expect(reels).toHaveAttribute("aria-checked", "true"));
+    expect(illustres).toHaveAttribute("aria-checked", "true");
   });
 });

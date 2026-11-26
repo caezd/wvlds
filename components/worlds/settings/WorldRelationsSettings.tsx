@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FeaturePage, FIELD, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
+import { FeaturePage, FIELD, INLINE_INPUT, SETTINGS_LIST, SETTINGS_ROW, SettingsEmpty, SettingsSection } from "./FeatureLayout";
 import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
 
 const RT_COLUMNS = "id, world_id, name, color, dash, sort_index, mutual, marital_status";
@@ -32,9 +32,11 @@ const SOLID = "solid";
 /** La réciprocité d'un type : non, oui, ou oui et liée au statut marital des fiches. */
 type Reciprocity = "none" | "mutual" | RelationMaritalStatus;
 
-/** Une ligne d'une liste : bordée, sur le fond des cartes. */
+/** Une ligne d'une liste, à plat. */
 const ROW = SETTINGS_ROW;
-/** Un champ sans cadre, dans une ligne. */
+/** Le nom d'un type, modifiable sur place. */
+const ROW_INPUT = cn(INLINE_INPUT, "ml-0 min-w-32 flex-1 font-medium");
+/** Un champ sans cadre, dans la ligne d'ajout. */
 const BARE_INPUT = "h-8 min-w-32 flex-1 border-0 bg-transparent px-1.5 text-sm font-medium shadow-none focus-visible:ring-0";
 /** La pastille de couleur, carrée comme sur la maquette. */
 const SWATCH = "size-6 rounded-md border-0 shadow-none";
@@ -141,7 +143,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
         count={relTypes.length}
       >
         {relTypes.length === 0 && <SettingsEmpty>{t("noTypesDefined")}</SettingsEmpty>}
-        <ul className="space-y-2" aria-label={t("relTypes")}>
+        <ul className={SETTINGS_LIST} aria-label={t("relTypes")}>
           {relTypes.map((rt) => {
             const reciprocity: Reciprocity = rt.marital_status ?? (rt.mutual ? "mutual" : "none");
             return (
@@ -161,7 +163,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                 <Input
                   value={rt.name}
                   aria-label={t("typeName")}
-                  className={BARE_INPUT}
+                  className={ROW_INPUT}
                   onChange={(e) => editRelType(rt.id, { name: e.target.value })}
                   onBlur={(e) => { if (e.target.value.trim()) void saveRelType(rt.id, { name: e.target.value.trim() }); }}
                 />

@@ -30,7 +30,7 @@ import {
   setPrimaryGroup,
 } from "@/lib/personaGroupMembership";
 import { ColorPickerButton } from "./ColorPickerButton";
-import { FeaturePage, FIELD, SETTINGS_ROW, SettingsEmpty, SettingsSection, useSettingsHeaderMode } from "./FeatureLayout";
+import { FeaturePage, FIELD, SETTINGS_LIST, SETTINGS_ROW, SettingsEmpty, SettingsSection, useSettingsHeaderMode } from "./FeatureLayout";
 
 /** Un persona du monde, tel que la fiche d'un groupe le montre. */
 export type GroupPersona = {
@@ -203,7 +203,7 @@ export function WorldGroupDetail({
         </SettingsSection>
 
         <SettingsSection title={t("groupColor")}>
-          <div className={cn(SETTINGS_ROW, "pr-3")} data-group-color>
+          <div className={cn(SETTINGS_ROW, "min-h-0 py-0")} data-group-color>
             <div
               className={cn("flex rounded-md", inherited && "outline-1 outline-offset-2 outline-dashed outline-muted-foreground/60")}
               data-inherited={inherited || undefined}
@@ -333,7 +333,7 @@ function GroupMembers({
         count={members.length}
       >
         {members.length === 0 && <SettingsEmpty>{t("noMembers")}</SettingsEmpty>}
-        <ul className="space-y-2" aria-label={t("groupMembers")}>
+        <ul className={SETTINGS_LIST} aria-label={t("groupMembers")}>
           {members.map((p) => {
             const primaryId = index.primaryByPersona.get(p.id);
             const primary = primaryId === group.id;

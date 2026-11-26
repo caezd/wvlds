@@ -1149,10 +1149,7 @@
           "appearanceImage": "Imagen del nivel",
           "appearanceReset": "Quitar el aspecto"
         },
-        "currencies": "Divisas",
-        "trades": "Transferencias",
-        "enableTrades": "Activar las transferencias",
-        "tradesSameAccount": "Transferencias entre personas de una misma cuenta"
+        "currencies": "Divisas"
       },
       "inventory": {
         "title": "Inventario de las personas",
@@ -1225,10 +1222,10 @@
       "enableInventory": "Activar el inventario",
       "enableShops": "Activar las tiendas",
       "shopsNeedEconomy": "Las tiendas requieren las monedas y el inventario.",
-      "trades": "Intercambios",
-      "enableTrades": "Activar los intercambios",
+      "trades": "Transferencias",
+      "enableTrades": "Activar las transferencias",
       "tradesNeedSomething": "Active primero las divisas o el inventario.",
-      "tradesSameAccount": "Intercambios entre personas de una misma cuenta",
+      "tradesSameAccount": "Transferencias entre personas de una misma cuenta",
       "gainsForm": {
         "title": "Ganancias",
         "help": "La moneda ganada jugando. « − » delante de un importe lo retira.",
@@ -1246,14 +1243,14 @@
         "scene_completed": "Por escena terminada",
         "scene_completedHelp": "Cada persona que escribió en ella, cuando la sala termina.",
         "daily_login": "Conexión del día",
-        "daily_loginHelp": "En la primera visita del día (UTC), para cada persona.",
+        "daily_loginHelp": "En la primera visita del día, para cada persona. El día empieza a las {time}, hora de su dispositivo.",
         "cooldown": "Intervalo entre dos mensajes pagados",
         "cooldownLabel": "Intervalo entre dos mensajes pagados, en minutos",
         "minutes": "min",
         "noCooldown": "Sin intervalo: cada mensaje se paga",
         "cooldownHelp": "Se paga una vez por plazo.",
         "cap": "Límite diario",
-        "capHelp": "Por persona y por día (UTC).",
+        "capHelp": "Por persona y por día, a partir de las {time}.",
         "noCap": "Sin límite",
         "zeroCap": "Límite en cero: ya no se paga ninguna ganancia",
         "invalid": "Importes enteros; tope positivo; plazo de un día como máximo."
@@ -1576,6 +1573,7 @@
       "failed": "No se pudo actualizar la bolsa.",
       "history": "Movimientos",
       "noHistory": "Ningún movimiento.",
+      "more": "Ver más",
       "kinds": {
         "adjust": "Ajuste",
         "slots": "Espacio de inventario",
@@ -2984,7 +2982,9 @@
     "systemIdle": "{name} salió del chat (inactividad)"
   },
   "economy": {
-    "insufficientFunds": "Saldo insuficiente."
+    "insufficientFunds": "Saldo insuficiente.",
+    "balance": "Saldo: <amount></amount>",
+    "balanceAfter": "Saldo después: <amount></amount>"
   },
   "shops": {
     "title": "Tiendas",
@@ -2995,11 +2995,13 @@
     "closedHint": "Cerrada: solo la ven quienes gestionan la economía.",
     "buysBack": "Reventa aceptada",
     "buyer": "Persona comprador",
+    "buyFor": "Comprar para",
     "noPersona": "Cree un persona en este mundo para comprar.",
     "noItems": "Nada a la venta.",
     "addItem": "Poner a la venta",
     "inStock": "{count} en existencias",
     "soldOut": "Agotado",
+    "tooExpensive": "Demasiado caro para {name}",
     "buybackAt": "Reventa: <price></price>",
     "held": "{count} en su poder",
     "buy": "Comprar",
@@ -3054,7 +3056,6 @@
     "noRecipient": "Ningún persona a quien dar en este mundo.",
     "amount": "Importe",
     "amountIn": "Importe en {unit}",
-    "balance": "Saldo: <amount></amount>",
     "items": "Objetos",
     "noItems": "Este persona no lleva ningún objeto.",
     "quantityOf": "Cantidad de {name}",
@@ -3090,8 +3091,8 @@
       "item_adjust": "Objeto dado o retirado",
       "slots_purchase": "Espacios de inventario",
       "purchase": "Compra",
-      "sale": "Venta",
-      "transfer": "Intercambio",
+      "sale": "Reventa",
+      "transfer": "Transferencia",
       "tax_payment": "Pago de impuesto",
       "tax_waive": "Deuda de impuesto anulada"
     },

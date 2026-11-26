@@ -7,7 +7,7 @@ const ctx: WorldPanelContext = {
   worldMapFlag: true,
   hasTimeline: true,
   hasShops: true,
-  canOpenSettings: true,
+  permissions: ["world.settings"],
 };
 
 describe("resolveWorldPanel", () => {
@@ -48,7 +48,20 @@ describe("resolveWorldPanel", () => {
 
   it("chronologie et réglages : conditionnés", () => {
     expect(resolveWorldPanel("timeline", { ...ctx, hasTimeline: false })).toBe("home");
-    expect(resolveWorldPanel("settings", { ...ctx, canOpenSettings: false })).toBe("home");
+    expect(resolveWorldPanel("settings", { ...ctx, permissions: ["messages.post"] })).toBe("home");
     expect(resolveWorldPanel("settings", ctx)).toBe("settings");
+  });
+
+  it("réglages : le propriétaire, qui ne porte que « administrator », les ouvre", () => {
+    // Le serveur et le client résolvent la vue avec la même règle : sinon le
+    // serveur chargeait l'accueil sous une page de réglages (fiche par défaut
+    // affichée désactivée dans le menu).
+    expect(resolveWorldPanel("settings", { ...ctx, permissions: ["administrator"] })).toBe("settings");
+  });
+
+  it("réglages : toute permission qui y a une page les ouvre, comme le lien de la barre latérale", () => {
+    for (const perm of ["roles.manage", "categories.manage", "relations.manage", "personas.review", "chatrooms.manage", "members.announce", "economy.manage"]) {
+      expect(resolveWorldPanel("settings", { ...ctx, permissions: [perm] })).toBe("settings");
+    }
   });
 });

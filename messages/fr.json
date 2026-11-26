@@ -1149,10 +1149,7 @@
           "appearanceImage": "Image du palier",
           "appearanceReset": "Retirer l’aspect"
         },
-        "currencies": "Devises",
-        "trades": "Transferts",
-        "enableTrades": "Activer les transferts",
-        "tradesSameAccount": "Transferts entre personas d’un même compte"
+        "currencies": "Devises"
       },
       "inventory": {
         "title": "Inventaire des personas",
@@ -1225,10 +1222,10 @@
       "enableInventory": "Activer l’inventaire",
       "enableShops": "Activer les boutiques",
       "shopsNeedEconomy": "Les boutiques demandent les devises et l’inventaire.",
-      "trades": "Échanges",
-      "enableTrades": "Activer les échanges",
+      "trades": "Transferts",
+      "enableTrades": "Activer les transferts",
       "tradesNeedSomething": "Activez d’abord les devises ou l’inventaire.",
-      "tradesSameAccount": "Échanges entre personas d’un même compte",
+      "tradesSameAccount": "Transferts entre personas d’un même compte",
       "gainsForm": {
         "title": "Gains",
         "help": "La monnaie gagnée en jouant. « − » devant un montant le retire.",
@@ -1246,14 +1243,14 @@
         "scene_completed": "Par scène terminée",
         "scene_completedHelp": "Chaque persona qui y a écrit, quand le salon est terminé.",
         "daily_login": "Connexion du jour",
-        "daily_loginHelp": "À la première visite du jour (UTC), pour chaque persona.",
+        "daily_loginHelp": "À la première visite de la journée, pour chaque persona. La journée commence à {time}, heure de votre appareil.",
         "cooldown": "Délai entre deux messages payés",
         "cooldownLabel": "Délai entre deux messages payés, en minutes",
         "minutes": "min",
         "noCooldown": "Aucun délai : chaque message est payé",
         "cooldownHelp": "Payé une fois par délai.",
         "cap": "Plafond par jour",
-        "capHelp": "Par persona et par jour (UTC).",
+        "capHelp": "Par persona et par journée, à partir de {time}.",
         "noCap": "Sans plafond",
         "zeroCap": "Plafond à zéro : plus aucun gain n’est versé",
         "invalid": "Montants entiers ; plafond positif ; délai d’une journée au plus."
@@ -1576,6 +1573,7 @@
       "failed": "Impossible de mettre à jour la bourse.",
       "history": "Mouvements",
       "noHistory": "Aucun mouvement.",
+      "more": "Voir plus",
       "kinds": {
         "adjust": "Ajustement",
         "slots": "Emplacement d'inventaire",
@@ -2984,7 +2982,9 @@
     "systemIdle": "{name} a quitté la chatbox (inactivité)"
   },
   "economy": {
-    "insufficientFunds": "Solde insuffisant."
+    "insufficientFunds": "Solde insuffisant.",
+    "balance": "Solde : <amount></amount>",
+    "balanceAfter": "Solde après : <amount></amount>"
   },
   "shops": {
     "title": "Boutiques",
@@ -2995,11 +2995,13 @@
     "closedHint": "Fermée : seuls ceux qui gèrent l’économie la voient.",
     "buysBack": "Revente acceptée",
     "buyer": "Persona acheteur",
+    "buyFor": "Acheter pour",
     "noPersona": "Créez un persona dans ce monde pour acheter.",
     "noItems": "Rien en vente.",
     "addItem": "Mettre en vente",
     "inStock": "{count} en stock",
     "soldOut": "Épuisé",
+    "tooExpensive": "Trop cher pour {name}",
     "buybackAt": "Revente : <price></price>",
     "held": "{count} sur vous",
     "buy": "Acheter",
@@ -3054,7 +3056,6 @@
     "noRecipient": "Aucun persona à qui donner dans ce monde.",
     "amount": "Montant",
     "amountIn": "Montant en {unit}",
-    "balance": "Solde : <amount></amount>",
     "items": "Objets",
     "noItems": "Ce persona ne porte aucun objet.",
     "quantityOf": "Quantité de {name}",
@@ -3091,7 +3092,7 @@
       "slots_purchase": "Emplacements d’inventaire",
       "purchase": "Achat",
       "sale": "Revente",
-      "transfer": "Échange",
+      "transfer": "Transfert",
       "tax_payment": "Paiement de taxe",
       "tax_waive": "Dette de taxe annulée"
     },

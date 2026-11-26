@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { digitsOnly } from "@/lib/digitsOnly";
 import { currencyUnitsOf } from "@/lib/worldCurrency";
-import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, gainSettingsOf, gainSettingsSchema, type GainKind, type GainSettings } from "@/lib/worldGains";
+import { GAIN_KINDS, MAX_GAIN_COOLDOWN_MINUTES, dayStartLabel, gainSettingsOf, gainSettingsSchema, type GainKind, type GainSettings } from "@/lib/worldGains";
 import type { World } from "@/types/worlds";
 import { cn } from "@/lib/utils";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
@@ -39,7 +39,10 @@ const SHOWN_GAIN_KINDS: readonly GainKind[] = GAIN_KINDS.filter((k) => k === "me
 export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdated?: (patch: Partial<World>) => void }) {
   const t = useTranslations("worlds.settings.gainsForm");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const units = React.useMemo(() => currencyUnitsOf(world.currency_units), [world.currency_units]);
+  // La base compte en jours UTC : on dit à quelle heure de l'appareil la journée commence.
+  const dayStart = dayStartLabel(locale);
   const [draft, setDraft] = React.useState<GainSettings>(() => gainSettingsOf(world));
   const [cooldown, setCooldown] = React.useState<number | null>(draft.gain_message_cooldown);
 
@@ -80,14 +83,15 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
   // Une section : ce qui rapporte, puis ce qui le limite.
   return (
     <SettingsSection title={t("title")} description={t("help")} aside={indicator}>
-      <div className="grid gap-y-4" onBlur={flush}>
+      {/* Leur propre conteneur : la disposition suit la largeur de la colonne, pas celle de la page. */}
+      <div className="@container grid gap-y-4" onBlur={flush}>
           {SHOWN_GAIN_KINDS.map((kind) => {
             const value = draft[columnOf(kind)];
             return (
               <GainField
                 key={kind}
                 label={t(kind)}
-                description={t(`${kind}Help`)}
+                description={t(`${kind}Help`, { time: dayStart })}
                 status={value === 0 ? t("nothing") : value < 0 ? t("loss") : null}
               >
                 {/* Un gain peut retirer (migration 261) : son sens devant les cases. */}
@@ -106,7 +110,7 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
             );
           })}
       </div>
-      <div role="group" aria-labelledby="gains-limits" className="grid gap-y-4 border-t border-border pt-4" onBlur={flush}>
+      <div role="group" aria-labelledby="gains-limits" className="@container grid gap-y-4 border-t border-border pt-4" onBlur={flush}>
           <SectionLabel as="p" id="gains-limits">{t("limits")}</SectionLabel>
           <GainField label={t("cooldown")} description={t("cooldownHelp")} status={!cooldown ? t("noCooldown") : null}>
             <div className="relative">
@@ -131,7 +135,7 @@ export function WorldGainsSettings({ world, onUpdated }: { world: World; onUpdat
           {/* Le plafond borne tous les gains à la fois. Vide : sans plafond ; zéro : plus rien. */}
           <GainField
             label={t("cap")}
-            description={t("capHelp")}
+            description={t("capHelp", { time: dayStart })}
             status={cap === null ? t("noCap") : cap === 0 ? t("zeroCap") : null}
             warn={cap === 0}
           >
@@ -149,9 +153,10 @@ const NUMBER_FIELD =
 const SUFFIX = "pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center text-xs text-muted-foreground";
 
 /**
- * Un réglage, sur une ligne : son libellé, son aide et ce que veut dire la
- * valeur quand elle est vide ou nulle (« Ne rapporte rien », « Sans
- * plafond ») à gauche ; ses champs à droite, dans une colonne commune.
+ * Un réglage : son libellé, son aide et ce que veut dire la valeur quand
+ * elle est vide ou nulle (« Ne rapporte rien », « Sans plafond »), puis ses
+ * champs. Côte à côte seulement quand la colonne laisse au libellé de quoi
+ * respirer (@2xl) : un paragraphe d'aide sur six lignes ne se lit pas.
  */
 function GainField({
   label,
@@ -167,7 +172,7 @@ function GainField({
   children: React.ReactNode;
 }) {
   return (
-    <div role="group" aria-label={label} className="grid items-center gap-x-4 gap-y-1.5 @md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+    <div role="group" aria-label={label} className="grid items-center gap-x-4 gap-y-1.5 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
       <div className="min-w-0">
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>

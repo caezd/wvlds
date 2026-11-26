@@ -1149,10 +1149,7 @@
           "appearanceImage": "Tier image",
           "appearanceReset": "Remove the look"
         },
-        "currencies": "Currencies",
-        "trades": "Transfers",
-        "enableTrades": "Enable transfers",
-        "tradesSameAccount": "Transfers between personas of the same account"
+        "currencies": "Currencies"
       },
       "inventory": {
         "title": "Persona inventory",
@@ -1225,10 +1222,10 @@
       "enableInventory": "Enable inventory",
       "enableShops": "Enable shops",
       "shopsNeedEconomy": "Shops need the currency and the inventory.",
-      "trades": "Trades",
-      "enableTrades": "Enable trades",
+      "trades": "Transfers",
+      "enableTrades": "Enable transfers",
       "tradesNeedSomething": "Enable currencies or inventory first.",
-      "tradesSameAccount": "Trades between personas of the same account",
+      "tradesSameAccount": "Transfers between personas of the same account",
       "gainsForm": {
         "title": "Earnings",
         "help": "The currency earned by playing. “−” before an amount takes it away.",
@@ -1246,14 +1243,14 @@
         "scene_completed": "Per scene completed",
         "scene_completedHelp": "Each persona who wrote there, when the room is finished.",
         "daily_login": "Daily visit",
-        "daily_loginHelp": "On the first visit of the day (UTC), for each persona.",
+        "daily_loginHelp": "On the first visit of the day, for each persona. The day starts at {time}, your device's time.",
         "cooldown": "Delay between two paid messages",
         "cooldownLabel": "Delay between two paid messages, in minutes",
         "minutes": "min",
         "noCooldown": "No delay: every message is paid",
         "cooldownHelp": "Paid once per delay.",
         "cap": "Daily cap",
-        "capHelp": "Per persona and per day (UTC).",
+        "capHelp": "Per persona and per day, starting at {time}.",
         "noCap": "No cap",
         "zeroCap": "Cap at zero: no gains are paid anymore",
         "invalid": "Whole amounts; a positive cap; a delay of one day at most."
@@ -1576,11 +1573,12 @@
       "failed": "Couldn't update the purse.",
       "history": "Movements",
       "noHistory": "No movements.",
+      "more": "Show more",
       "kinds": {
         "adjust": "Adjustment",
         "slots": "Inventory slot",
         "purchase": "Purchase",
-        "sale": "Sale",
+        "sale": "Resale",
         "transfer": "Transfer",
         "gain_message": "Earning: message",
         "gain_scene_joined": "Earning: scene joined",
@@ -2984,7 +2982,9 @@
     "systemIdle": "{name} left the chat (inactive)"
   },
   "economy": {
-    "insufficientFunds": "Insufficient balance."
+    "insufficientFunds": "Insufficient balance.",
+    "balance": "Balance: <amount></amount>",
+    "balanceAfter": "Balance after: <amount></amount>"
   },
   "shops": {
     "title": "Shops",
@@ -2995,11 +2995,13 @@
     "closedHint": "Closed: only those who manage the economy can see it.",
     "buysBack": "Resale accepted",
     "buyer": "Buying persona",
+    "buyFor": "Buy for",
     "noPersona": "Create a persona in this world to buy.",
     "noItems": "Nothing for sale.",
     "addItem": "Put up for sale",
     "inStock": "{count} in stock",
     "soldOut": "Sold out",
+    "tooExpensive": "Too expensive for {name}",
     "buybackAt": "Resale: <price></price>",
     "held": "{count} carried",
     "buy": "Buy",
@@ -3025,7 +3027,7 @@
     "descriptionPlaceholder": "Optional",
     "open": "Open",
     "openHelp": "When closed, the shop is only visible to those who manage the economy.",
-    "buyback": "Buyback",
+    "buyback": "Resale",
     "buybackHelp": "The shop takes back the items it sells. A resold item returns to its stock if limited.",
     "buybackHeldOnly": "Unavailable: players add their own items. Selling back needs an inventory held by the team.",
     "buybackPercent": "Default resale (% of price)",
@@ -3054,7 +3056,6 @@
     "noRecipient": "No persona to give to in this world.",
     "amount": "Amount",
     "amountIn": "Amount in {unit}",
-    "balance": "Balance: <amount></amount>",
     "items": "Items",
     "noItems": "This persona carries no items.",
     "quantityOf": "Quantity of {name}",
@@ -3090,8 +3091,8 @@
       "item_adjust": "Item given or removed",
       "slots_purchase": "Inventory slots",
       "purchase": "Purchase",
-      "sale": "Sale",
-      "transfer": "Trade",
+      "sale": "Resale",
+      "transfer": "Transfer",
       "tax_payment": "Tax payment",
       "tax_waive": "Tax debt cancelled"
     },

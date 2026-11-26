@@ -20,17 +20,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FIELD, SettingsAddRow, SettingsEmpty, SettingsSection, SURFACE, ToggleItem, ToggleList } from "./FeatureLayout";
+import { FIELD, INLINE_INPUT, SETTINGS_LIST, SETTINGS_ROW, SettingsAddRow, SettingsEmpty, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /** Le rouge de la date actuelle, comme sur la frise : l'accent. */
 const NOW_RED_BG = "bg-accent";
 const NOW_RED_TEXT = "text-accent";
-const NOW_RED_BORDER = "border-accent/40";
 
-/** Un champ sans cadre, dans une ligne bordée. */
+/** Un champ sans cadre, dans une case bordée (les jours d'un mois) ou une ligne d'ajout. */
 const BARE_INPUT = "h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0";
-/** Une ligne d'une liste (saison, fête) : bordée, sur le fond des cartes. */
-const LIST_ROW = cn("flex h-12 items-center gap-2 rounded-lg pl-2 pr-1.5", SURFACE);
+/** Une ligne d'une liste (saison, fête), à plat. */
+const LIST_ROW = cn(SETTINGS_ROW, "flex-nowrap gap-2");
 /** Une petite case de saisie dans une ligne : une année, un jour. */
 const SMALL_BOX = cn("h-8 rounded-md border px-2 text-center text-sm focus-visible:ring-1", FIELD);
 /** Un sélecteur (shadcn) dans une ligne : aux mesures des petites cases. */
@@ -115,7 +114,7 @@ export function TimelineSettings({
     setNewHoliday({ name: "", month: newHoliday.month, day: "" });
   }
 
-  // Un mois de plus, nommé d'office « Mois N » : on le renomme dans sa tuile.
+  // Un mois de plus, nommé d'office « Mois N » : on le renomme dans sa ligne.
   function ajouterMois() {
     onPersist({
       month_names: [...config.month_names, tSettings("newMonthName", { n: nbMois + 1 })],
@@ -138,8 +137,9 @@ export function TimelineSettings({
   return (
     <div className="space-y-6">
       {/* ── En tête : la date actuelle du monde, et où en est le récit ── */}
-      <div className={cn("grid overflow-hidden rounded-lg @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]", SURFACE)}>
-        <div className="flex flex-col p-5" data-testid="timeline-preview">
+      {/* À plat : la date en grand à gauche, ses réglages à droite, un trait entre les deux. */}
+      <div className="grid gap-6 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] @2xl:gap-0">
+        <div className="flex flex-col @2xl:pr-8" data-testid="timeline-preview">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Hourglass className="size-3.5" aria-hidden />
             {tSettings("timelinePreviewLabel")}
@@ -167,7 +167,7 @@ export function TimelineSettings({
 
         <section
           aria-label={tSettings("timelineNow")}
-          className="space-y-4 border-t border-border p-5 @2xl:border-l @2xl:border-t-0"
+          className="space-y-4 border-t border-border pt-6 @2xl:border-l @2xl:border-t-0 @2xl:pl-8 @2xl:pt-0"
         >
           <div className="space-y-1">
             <p className="text-sm font-semibold">{tSettings("timelineNow")}</p>
@@ -302,7 +302,7 @@ export function TimelineSettings({
             variant="secondary"
             size="sm"
             onClick={() => onPersist({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-            className="mt-3 text-xs"
+            className="text-xs"
           >
             <RotateCcw className="size-3.5" aria-hidden />
             {tSettings("useRealMonths")}
@@ -310,23 +310,21 @@ export function TimelineSettings({
         }
       >
         {nbMois > 0 ? (
-          <ol className="grid gap-2 @lg:grid-cols-2">
+          // À plat, sur deux colonnes quand la page a la place.
+          <ol className="grid @lg:grid-cols-2 @lg:gap-x-8">
             {config.month_names.map((m, i) => (
               <li
                 key={i}
-                className={cn(
-                  "flex h-11 items-center gap-2 rounded-lg border bg-card pl-3 pr-1.5",
-                  i === moisCourant ? NOW_RED_BORDER : "border-border",
-                )}
+                className="flex h-11 items-center gap-2"
                 data-current={i === moisCourant || undefined}
               >
-                <span className={cn("w-5 shrink-0 text-xs tabular-nums", i === moisCourant ? NOW_RED_TEXT : "text-muted-foreground")}>
+                <span className={cn("w-5 shrink-0 text-xs tabular-nums", i === moisCourant ? cn(NOW_RED_TEXT, "font-semibold") : "text-muted-foreground")}>
                   {i + 1}
                 </span>
                 <Input
                   value={m}
                   aria-label={t("monthNamePlaceholder")}
-                  className={cn(BARE_INPUT, "min-w-0 flex-1 font-medium")}
+                  className={cn(INLINE_INPUT, "ml-0 min-w-0 flex-1 font-medium")}
                   onChange={(e) => {
                     const noms = [...config.month_names];
                     noms[i] = e.target.value;
@@ -383,13 +381,13 @@ export function TimelineSettings({
           saison court jusqu'à la suivante. */}
       <SettingsSection title={tSettings("timelineAges")} description={tSettings("timelineAgesHelp")} help={tSettings("timelineAgesMore")}>
         {ages.length > 0 ? (
-          <ol className="space-y-2" aria-label={tSettings("timelineAges")}>
+          <ol className={SETTINGS_LIST} aria-label={tSettings("timelineAges")}>
             {ages.map((age, i) => (
               <li key={i} className={LIST_ROW}>
                 <Input
                   value={age.name}
                   aria-label={tSettings("ageName")}
-                  className={cn(BARE_INPUT, "min-w-0 flex-1 font-medium")}
+                  className={cn(INLINE_INPUT, "min-w-0 flex-1 font-medium")}
                   onChange={(e) => majSaison(i, { name: e.target.value }, false)}
                   onBlur={(e) => majSaison(i, { name: e.target.value }, true)}
                 />
@@ -461,14 +459,14 @@ export function TimelineSettings({
           date, dans les mois qui ont déjà une entrée. */}
       <SettingsSection title={tSettings("timelineHolidays")} description={tSettings("timelineHolidaysHelp")} help={tSettings("timelineHolidaysMore")}>
         {holidays.length > 0 ? (
-          <ol className="space-y-2" aria-label={tSettings("timelineHolidays")}>
+          <ol className={SETTINGS_LIST} aria-label={tSettings("timelineHolidays")}>
             {holidays.map((fete, i) => (
               <li key={i} className={LIST_ROW}>
                 <Input
                   value={fete.name}
                   maxLength={HOLIDAY_NAME_MAX}
                   aria-label={tSettings("holidayName")}
-                  className={cn(BARE_INPUT, "min-w-0 flex-1 font-medium")}
+                  className={cn(INLINE_INPUT, "min-w-0 flex-1 font-medium")}
                   onChange={(e) => majFete(i, { name: e.target.value }, false)}
                   onBlur={(e) => majFete(i, { name: e.target.value }, true)}
                 />

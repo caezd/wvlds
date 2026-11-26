@@ -84,3 +84,13 @@ export function cappedGain(amount: number, gainedToday: number, cap: number | nu
   if (cap === null || amount < 0) return amount;
   return Math.max(0, Math.min(amount, cap - gainedToday));
 }
+
+/**
+ * L'heure, sur l'appareil, où commence la journée des gains : la base compte
+ * en jours UTC (connexion du jour, plafond), minuit UTC d'aujourd'hui donc.
+ * `timeZone` ne sert qu'aux tests ; l'appareil décide sinon.
+ */
+export function dayStartLabel(locale: string, now: Date = new Date(), timeZone?: string): string {
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", timeZone }).format(midnight);
+}

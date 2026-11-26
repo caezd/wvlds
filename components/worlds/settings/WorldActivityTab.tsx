@@ -26,7 +26,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import DateDisplay from "@/components/date-display";
 import { cn } from "@/lib/utils";
-import { SettingsEmpty, SURFACE } from "./FeatureLayout";
+import { SettingsEmpty } from "./FeatureLayout";
+
+/** Colonne étroite : date, auteur et domaine passent sous la phrase, en petit, sur une ligne. */
+const STACKED_META = "@max-3xl:order-3 @max-3xl:p-0 @max-3xl:text-xs @max-3xl:text-muted-foreground";
+/** …séparés d'un point médian, décoratif. */
+const STACKED_SEPARATOR = "@max-3xl:before:mr-2 @max-3xl:before:content-['·']";
 
 const NO_FILTERS: Required<ActivityFilters> = { kinds: [], personaId: null, from: null, to: null };
 
@@ -140,11 +145,12 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
 
   return (
     <div className="space-y-4">
-      {/* Les filtres restent en vue pendant qu'on parcourt le journal. Collés
-          au bord même de la zone qui défile : le décalage annule son padding
-          (p-4, md:p-6 dans WorldSettingsView), qui sinon laisse voir les
-          lignes au-dessus. */}
-      <div className="sticky -top-4 z-10 flex flex-wrap items-end gap-3 bg-background py-2 md:-top-6">
+      {/* Sur grand écran, les filtres restent en vue pendant qu'on parcourt le
+          journal. Collés au bord même de la zone qui défile : le décalage
+          annule son padding (md:p-6 dans WorldSettingsView), qui sinon laisse
+          voir les lignes au-dessus. Sur téléphone, empilés, ils prendraient
+          la moitié de l'écran : ils défilent avec le reste. */}
+      <div className="z-10 flex flex-wrap items-end gap-3 py-2 md:sticky md:-top-6 md:bg-background">
         <div className="flex flex-col gap-1">
           <Label htmlFor="activity-kind">{t("filters.kind")}</Label>
           <KindsCombobox id="activity-kind" value={filters.kinds} onChange={(kinds) => set({ kinds })} />
@@ -177,31 +183,42 @@ export function WorldActivityTab({ worldId, units }: { worldId: string; units: r
         <SettingsEmpty>{failed ? t("failed") : t("empty")}</SettingsEmpty>
       ) : (
         <>
-          <div className={cn("rounded-lg", SURFACE)}>
-            <Table>
-              <TableHeader>
+          {/* À plat : le tableau sans cadre, aligné sur la page. Dans une
+              colonne de moins de 48rem (@max-3xl), où cinq colonnes ne tiennent pas, chaque entrée s'empile : l'action, la
+              phrase, puis date, auteur et domaine en petit. */}
+          <div className="@container">
+            <Table className="@max-3xl:block">
+              <TableHeader className="@max-3xl:hidden">
                 <TableRow className="hover:bg-transparent">
                   {(["date", "who", "action", "domain", "detail"] as const).map((c) => (
                     <TableHead
                       key={c}
                       scope="col"
-                      className="px-3 text-xs uppercase tracking-wide text-muted-foreground"
+                      className="px-3 text-xs uppercase first:pl-0 last:pr-0 tracking-wide text-muted-foreground"
                     >
                       {t(`columns.${c}`)}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="@max-3xl:block">
                 {entries.map((e) => (
-                  <TableRow key={e.id} data-testid="activity-item">
-                    <TableCell className="px-3 text-muted-foreground">
+                  <TableRow
+                    key={e.id}
+                    data-testid="activity-item"
+                    className="@max-3xl:flex @max-3xl:flex-wrap @max-3xl:items-baseline @max-3xl:gap-x-2 @max-3xl:gap-y-0.5 @max-3xl:py-3"
+                  >
+                    <TableCell className={cn("px-3 pl-0 text-muted-foreground", STACKED_META)}>
                       <DateDisplay value={e.created_at} />
                     </TableCell>
-                    <TableCell className="px-3">{e.actor?.username ?? t("system")}</TableCell>
-                    <TableCell className="px-3 font-medium">{t(`kinds.${e.kind}`)}</TableCell>
-                    <TableCell className="px-3 text-muted-foreground">{t(`domains.${e.domain}`)}</TableCell>
-                    <TableCell className="px-3 whitespace-normal text-muted-foreground">{summary(e)}</TableCell>
+                    <TableCell className={cn("px-3", STACKED_META, STACKED_SEPARATOR)}>{e.actor?.username ?? t("system")}</TableCell>
+                    <TableCell className="px-3 font-medium @max-3xl:order-1 @max-3xl:w-full @max-3xl:p-0">{t(`kinds.${e.kind}`)}</TableCell>
+                    <TableCell className={cn("px-3 text-muted-foreground", STACKED_META, STACKED_SEPARATOR)}>
+                      {t(`domains.${e.domain}`)}
+                    </TableCell>
+                    <TableCell className="px-3 pr-0 whitespace-normal text-muted-foreground @max-3xl:order-2 @max-3xl:w-full @max-3xl:p-0">
+                      {summary(e)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

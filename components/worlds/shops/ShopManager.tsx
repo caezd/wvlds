@@ -37,8 +37,9 @@ export function ShopManager({ worldId }: { worldId: string }) {
   // Coupées : l'en-tête de la page dit déjà pourquoi (devises, inventaire, interrupteur).
   if (shops.status === "off") return null;
 
+  // À plat, comme les sections des réglages : un trait entre deux boutiques.
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {shops.shops.length === 0 && (
         <SettingsEmpty
           action={
@@ -121,7 +122,7 @@ function ManagedShop({
   }
 
   return (
-    <section aria-labelledby={headingId} className="space-y-3 rounded-lg border border-border p-3">
+    <section aria-labelledby={headingId} className="space-y-3 border-t border-border pt-6 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1 space-y-1">
           <h3 id={headingId} className="text-sm font-medium">
@@ -153,23 +154,25 @@ function ManagedShop({
       {articles.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t("noItems")}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border">
           {articles.map((article) => {
             const entry = article.catalog!;
             const buyback = shops.buyback ? buybackPriceOf(shop, article) : null;
             return (
-              <li key={article.id} aria-label={entry.name} className="flex items-center gap-3 px-2 py-1.5">
+              // Le nom sur sa ligne, prix, stock et revente dessous : le nom
+              // garde la largeur, même sur un téléphone.
+              <li key={article.id} aria-label={entry.name} className="flex items-center gap-3 py-2">
                 <CatalogVisual icon={entry.icon} lucideIcon={entry.lucide_icon} imageUrl={entry.image_url} size={28} />
-                <span className="min-w-0 flex-1 truncate text-sm">{entry.name}</span>
-                <Money amount={article.price} units={shops.units} className="text-sm" />
-                <span className="w-24 text-right text-xs text-muted-foreground">
-                  {article.stock === null ? t("stockPlaceholder") : t("inStock", { count: article.stock })}
-                </span>
-                {buyback !== null && (
-                  <span className="hidden text-xs text-muted-foreground sm:inline">
-                    {t.rich("buybackAt", { price: () => <Money amount={buyback} units={shops.units} /> })}
-                  </span>
-                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{entry.name}</p>
+                  <p className="flex flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground">
+                    <Money amount={article.price} units={shops.units} className="text-sm font-medium text-foreground" />
+                    <span>{article.stock === null ? t("stockPlaceholder") : t("inStock", { count: article.stock })}</span>
+                    {buyback !== null && (
+                      <span>{t.rich("buybackAt", { price: () => <Money amount={buyback} units={shops.units} /> })}</span>
+                    )}
+                  </p>
+                </div>
                 <div className="flex shrink-0 gap-1">
                   <Button
                     type="button"

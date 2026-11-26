@@ -28,6 +28,7 @@ export function WorldShops({
   canManage: boolean;
 }) {
   const t = useTranslations("shops");
+  const tEconomy = useTranslations("economy");
   const { userId } = useCurrentUser();
   const shops = useWorldShops(worldId, userId, canManage);
   const [selected, setSelected] = useState<string | null>(null);
@@ -47,14 +48,17 @@ export function WorldShops({
 
       {shops.status === "on" && (
         <>
-          {/* Pour qui l'on achète : un de mes personas du monde, et sa bourse. */}
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2">
+          {/* Pour qui l'on achète : un de mes personas du monde, et son solde, lisible sans ouvrir la liste. */}
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2">
             {shops.personas.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noPersona")}</p>
             ) : (
+              <>
+              <span className="text-sm text-muted-foreground">{t("buyFor")}</span>
               <Select value={buyer?.id ?? ""} onValueChange={setBuyerId}>
-                <SelectTrigger aria-label={t("buyer")} className="h-8 w-auto min-w-48 text-sm">
-                  <SelectValue />
+                <SelectTrigger aria-label={t("buyer")} className="h-8 w-auto min-w-40 text-sm">
+                  {/* Le nom seul : le solde se lit à côté. */}
+                  <SelectValue>{buyer?.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {shops.personas.map((p) => (
@@ -67,6 +71,14 @@ export function WorldShops({
                   ))}
                 </SelectContent>
               </Select>
+              {buyer && (
+                <span className="text-sm text-muted-foreground">
+                  {tEconomy.rich("balance", {
+                    amount: () => <Money amount={buyer.balance} units={shops.units} className="font-medium text-foreground" />,
+                  })}
+                </span>
+              )}
+              </>
             )}
           </div>
 

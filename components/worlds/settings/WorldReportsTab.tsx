@@ -11,8 +11,7 @@ import { replyExcerpt } from "@/lib/replyExcerpt";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import DateDisplay from "@/components/date-display";
-import { cn } from "@/lib/utils";
-import { SettingsEmpty, SURFACE } from "./FeatureLayout";
+import { SettingsEmpty } from "./FeatureLayout";
 
 /**
  * File des signalements ouverts d'un monde. Visible de qui a « Gérer les
@@ -64,14 +63,15 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
 
   return (
     <div className="space-y-3">
-      <ul className="space-y-3">
+      {/* Des signalements sur plusieurs lignes : un trait entre deux. */}
+      <ul className="divide-y divide-border">
         {reports.map((r) => {
           const auteur = r.persona_name ?? r.message_author?.username ?? t("reportsUnknown");
           const salon = r.chat?.title ?? r.chat?.name ?? t("reportsUnknown");
           const extrait = r.content === null ? null : (replyExcerpt(r.content) ?? t("reportsBlock"));
           const occupe = busyId === r.id;
           return (
-            <li key={r.id} className={cn("rounded-lg p-3", SURFACE)} data-testid="report-item">
+            <li key={r.id} className="py-4 first:pt-0 last:pb-0" data-testid="report-item">
               <div className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
                 <span>{t("reportsBy", { name: r.reporter?.username ?? t("reportsUnknown") })}</span>
                 <span>·</span>
@@ -80,7 +80,7 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
                 <span>{t("reportsInRoom", { room: salon })}</span>
               </div>
               <p className="mt-1 text-sm">« {r.reason} »</p>
-              <div className="mt-2 rounded-md bg-muted/40 px-2 py-1.5 text-sm">
+              <div className="mt-2 border-l-2 border-border pl-3 text-sm">
                 {extrait === null ? (
                   <span className="italic text-muted-foreground">{t("reportsMessageGone")}</span>
                 ) : (
@@ -90,7 +90,7 @@ export function WorldReportsTab({ worldId }: { worldId: string }) {
                   </>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="-ml-2.5 mt-2 flex flex-wrap items-center gap-1">
                 {r.message_id !== null && (
                   <Button asChild variant="ghost" size="sm">
                     <Link href={`/c/${r.chat_id}?m=${r.message_id}`}>

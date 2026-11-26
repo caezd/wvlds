@@ -215,13 +215,10 @@ describe("TimelineSettings — sélecteurs shadcn", () => {
 });
 
 describe("TimelineSettings — couleurs", () => {
-  it("deux surfaces : les cartes sur le fond des cartes, les champs sur celui de la page ; des bordures douces", () => {
+  it("à plat : ni la date ni les listes ne sont des cartes ; les champs gardent le fond de la page", () => {
     render(<Harnais />);
-    const cartes = [
-      screen.getByTestId("timeline-preview").parentElement as HTMLElement,
-      screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }).closest(".divide-y") as HTMLElement,
-    ];
-    for (const c of cartes) expect(c.className.split(" ")).toEqual(expect.arrayContaining(["bg-card", "border-border"]));
+    expect((screen.getByTestId("timeline-preview").parentElement as HTMLElement).className.split(" ")).not.toContain("bg-card");
+    expect(document.querySelector(".bg-card")).toBeNull();
     const champs = [
       screen.getByLabelText("Libellé d'année"),
       screen.getByLabelText("Mois actuel"),
@@ -244,15 +241,11 @@ describe("TimelineSettings — responsive", () => {
     expect(date.className).not.toMatch(/(^|\s)(sm|md|lg):grid-cols-/);
     const section = screen.getByRole("region", { name: "Mois du calendrier" });
     expect(section.querySelector("ol")!.className).toMatch(/@lg:grid-cols-2/);
-    // Toutes les cartes en rounded-lg, comme les paramètres du compte : les
-    // sections, la date, les lignes (fond des cartes ou pointillés). Les
-    // champs, eux, restent en rounded-md ; rien n'arrondit davantage.
-    const cartes = [...document.querySelectorAll<HTMLElement>("[class*='border']")].filter((el) => {
-      const c = el.className.split(" ");
-      return !c.includes("border-0") && (c.includes("bg-card") || c.includes("border-dashed"));
-    });
-    expect(cartes.length).toBeGreaterThan(5);
-    for (const el of cartes) expect(el.className.split(" ")).toContain("rounded-lg");
+    // Les lignes d'ajout en pointillés en rounded-lg, comme les paramètres du
+    // compte ; les champs, eux, en rounded-md ; rien n'arrondit davantage.
+    const pointilles = [...document.querySelectorAll<HTMLElement>(".border-dashed")];
+    expect(pointilles.length).toBeGreaterThan(1);
+    for (const el of pointilles) expect(el.className.split(" ")).toContain("rounded-lg");
     for (const el of document.querySelectorAll<HTMLElement>("[class*='rounded-']")) {
       expect(el.className).not.toMatch(/(^|\s)rounded-(xl|2xl|3xl)(\s|$)/);
     }

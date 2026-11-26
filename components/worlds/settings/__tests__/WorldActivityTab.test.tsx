@@ -76,7 +76,7 @@ describe("WorldActivityTab", () => {
     const cellules = lignes.map((tr) => within(tr).getAllByRole("cell").slice(1).map((c) => c.textContent));
     expect(cellules[0]).toEqual(["cae", "Achat", "Économie", "Brom achète Épée ×2 à Forge pour 2 po 50 pc"]);
     expect(cellules[1]).toEqual(["cae", "Revente", "Économie", "Brom revend Potion à Herboriste pour 40 pc"]);
-    expect(cellules[2]).toEqual(["cae", "Échange", "Économie", "Brom donne 1 po 5 pc et Clé à Ysolde"]);
+    expect(cellules[2]).toEqual(["cae", "Transfert", "Économie", "Brom donne 1 po 5 pc et Clé à Ysolde"]);
     expect(cellules[3]).toEqual(["cae", "Ajustement d’argent", "Économie", "Brom perd 1 po · « Amende »"]);
     expect(cellules[4]).toEqual(["cae", "Don ou retrait d’objet", "Économie", "Inventaire de Brom : −1 Lanterne"]);
     expect(cellules[5]).toEqual(["cae", "Emplacements d’inventaire", "Économie", "Brom achète 2 emplacements pour 30 pc"]);
@@ -104,13 +104,13 @@ describe("WorldActivityTab", () => {
     const types = screen.getByRole("combobox", { name: "Type" });
     expect(types).toHaveTextContent("Tous les types");
     await userEvent.click(types);
-    await userEvent.click(await screen.findByRole("option", { name: "Échange" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Transfert" }));
     await userEvent.click(screen.getByRole("option", { name: "Achat" }));
     await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
       expect.anything(), "w1", expect.objectContaining({ kinds: ["purchase", "transfer"] }), null,
     ));
     // La liste reste ouverte pour cocher la suite ; le bouton dit combien.
-    expect(screen.getByRole("option", { name: "Échange" })).toHaveAttribute("data-checked", "true");
+    expect(screen.getByRole("option", { name: "Transfert" })).toHaveAttribute("data-checked", "true");
     expect(screen.getByRole("option", { name: "Revente" })).toHaveAttribute("data-checked", "false");
     expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("2 types");
     // Décocher.
@@ -118,7 +118,7 @@ describe("WorldActivityTab", () => {
     await waitFor(() => expect(fetchWorldActivity).toHaveBeenLastCalledWith(
       expect.anything(), "w1", expect.objectContaining({ kinds: ["transfer"] }), null,
     ));
-    expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("Échange");
+    expect(screen.getByRole("combobox", { name: "Type" })).toHaveTextContent("Transfert");
     await userEvent.keyboard("{Escape}");
 
     // Le persona se cherche par son nom, parmi ceux du monde.

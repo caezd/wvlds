@@ -222,4 +222,10 @@ describe("canOpenWorldSettings — signalements", () => {
     expect(canOpenWorldSettings(m)).toBe(true);
     expect(canOpenWorldSettings(member(["player"]))).toBe(false);
   });
+
+  it("« Gérer l'économie » aussi (page Journal)", () => {
+    const tresorier = role({ id: "tres", position: 15, permissions: ["economy.manage"] });
+    const m = buildMembership({ userId: "u1", ownerId: "owner", isMember: true, roles: [...ROLES, tresorier], myRoleIds: ["tres"] });
+    expect(canOpenWorldSettings(m)).toBe(true);
+  });
 });

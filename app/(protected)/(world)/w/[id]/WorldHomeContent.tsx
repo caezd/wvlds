@@ -6,7 +6,7 @@ import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { EMBEDDED_SECTIONS_COLUMNS, fetchSectionsByPersona, normalizeEmbeddedSections } from "@/lib/personaSections";
 import { getCachedFeatureFlags, getChatroomCategories, getChatroomsNav, type WorldWithMembership } from "@/lib/currentRequest";
-import { resolveWorldPanel, SETTINGS_PERMISSIONS } from "@/components/worlds/home/worldView";
+import { resolveWorldPanel } from "@/components/worlds/home/worldView";
 import { worldHasShops } from "@/lib/worldShops";
 import { getWorldMaps } from "@/app/actions/worldMap";
 import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
@@ -65,7 +65,7 @@ export default async function WorldHomeContent({
     worldMapFlag: flags.world_map,
     hasTimeline: flags.world_timeline && !!world.timeline_enabled && !!world.timeline_config,
     hasShops: flags.world_economy && worldHasShops(world),
-    canOpenSettings: SETTINGS_PERMISSIONS.some((perm) => membership.permissions.has(perm)),
+    permissions,
   });
 
   // Ces chargements (nav, préférences UI, personas…) sont indépendants les uns

@@ -25,11 +25,26 @@ import type { AdjustResult, WalletMovement } from "@/hooks/usePersonaWallet";
 
 const MAX_NOTE_LENGTH = 200;
 
+/** La date d'un mouvement, courte : « 4 mars, 10:00 », l'année seulement si ce n'est pas l'année en cours. */
+export function formatMovementDate(iso: string, locale: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  return date.toLocaleString(locale, {
+    day: "numeric",
+    month: "short",
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export type PersonaWallet = {
   status: "loading" | "off" | "on";
   units: CurrencyUnit[];
   balance: number;
   ledger: WalletMovement[];
+  /** Il reste des mouvements plus anciens ; `loadMore` les ajoute à la suite. */
+  hasMore?: boolean;
+  loadMore?: () => Promise<void>;
   adjust: (delta: number, note: string) => Promise<AdjustResult>;
   /** Relit la bourse quand elle a bougé ailleurs. */
   refresh?: () => Promise<void>;
@@ -38,7 +53,9 @@ export type PersonaWallet = {
 /**
  * La bourse d'un persona, onglet de sa fiche (migration 246) : le solde
  * décomposé en paliers, les derniers mouvements (rendus par la base au seul
- * joueur et à qui gère l'économie), et l'ajustement pour ces derniers.
+ * joueur et à qui gère l'économie) avec « Voir plus », et l'ajustement pour
+ * ces derniers. Un mouvement dit sa nature, puis son motif en détail : la
+ * base écrit le motif des achats (« Épée ×2 · Comptoir ») et des transferts.
  */
 export function PersonaWalletSection({
   personaName,
@@ -52,6 +69,17 @@ export function PersonaWalletSection({
   const t = useTranslations("personas.wallet");
   const locale = useLocale();
   const [adjusting, setAdjusting] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  async function more() {
+    if (!wallet.loadMore) return;
+    setLoadingMore(true);
+    try {
+      await wallet.loadMore();
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -82,22 +110,49 @@ export function PersonaWalletSection({
         ) : (
           <ul aria-labelledby="persona-wallet-history" className="divide-y divide-border rounded-md border border-border">
             {wallet.ledger.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <Money
-                  amount={m.delta}
-                  units={wallet.units}
-                  signed
-                  className={cn("shrink-0 font-medium", m.delta > 0 ? "text-success" : "text-destructive")}
-                />
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {m.note || t(`kinds.${m.kind}`)}
-                </span>
-                <time dateTime={m.created_at} className="shrink-0 text-xs text-muted-foreground">
-                  {new Date(m.created_at).toLocaleDateString(locale)}
-                </time>
+              // Deux lignes, comme un relevé : la nature et le montant, puis
+              // la date et le motif. Rien ne se dispute la largeur d'un téléphone.
+              <li key={m.id} className="space-y-0.5 px-3 py-2 text-sm">
+                <div className="flex items-baseline gap-3">
+                  <p className="min-w-0 flex-1 truncate">{t(`kinds.${m.kind}`)}</p>
+                  <Money
+                    amount={m.delta}
+                    units={wallet.units}
+                    signed
+                    className={cn("shrink-0 font-medium", m.delta > 0 ? "text-success" : "text-destructive")}
+                  />
+                </div>
+                <p className="flex min-w-0 gap-1.5 text-xs text-muted-foreground">
+                  <time
+                    dateTime={m.created_at}
+                    title={new Date(m.created_at).toLocaleString(locale, { dateStyle: "full", timeStyle: "short" })}
+                    className="shrink-0 tabular-nums"
+                  >
+                    {formatMovementDate(m.created_at, locale)}
+                  </time>
+                  {m.note && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span className="min-w-0 truncate" title={m.note}>
+                        {m.note}
+                      </span>
+                    </>
+                  )}
+                </p>
               </li>
             ))}
           </ul>
+        )}
+        {wallet.hasMore && wallet.loadMore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-muted-foreground"
+            disabled={loadingMore}
+            onClick={() => void more()}
+          >
+            {t("more")}
+          </Button>
         )}
       </div>
 

@@ -17,14 +17,13 @@ import { InteractiveCard } from "@/components/ui/interactive-card";
  * d'en-tête du panneau (WorldPanelHeader), comme sur Membres ou Personas :
  * voir SettingsHeaderProvider.
  *
- * Deux surfaces : les cartes (`SURFACE` : fond des cartes, bordure douce) et
- * les champs qu'elles contiennent (`FIELD` : fond de la page, plus sombre,
- * comme creusés dans la carte).
+ * Rien n'y est une carte : les listes (interrupteurs, salles, groupes,
+ * relations, catégories, saisons) sont des lignes sans cadre ni fond, ni
+ * trait entre elles ; seules les sections sont séparées par un trait. Seuls les champs (`FIELD`) gardent leur bordure, et les
+ * choix à conséquences (SettingsChoiceCards) leurs cartes cliquables.
  */
 
-/** Une carte : encadré de réglages, liste, tuile. */
-export const SURFACE = "border border-border bg-card";
-/** Un champ dans une carte ou sur la page : saisie, sélecteur, petite case. */
+/** Un champ sur la page : saisie, sélecteur, petite case. */
 export const FIELD = "border-border bg-background shadow-none hover:bg-background";
 /** La largeur de toutes les pages des paramètres d'un monde. */
 export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
@@ -34,8 +33,21 @@ export const SETTINGS_PAGE_WIDTH = "w-full max-w-4xl";
  * rétrécir sous son contenu pour que le défilement se fasse plus bas.
  */
 export const FILL = "flex min-h-0 flex-1 flex-col";
-/** Une ligne d'une liste d'éléments (salles, groupes, relations, catégories). */
-export const SETTINGS_ROW = cn("flex min-h-12 flex-wrap items-center gap-3 rounded-lg py-1.5 pl-3 pr-1.5", SURFACE);
+/**
+ * Une liste d'éléments (salles, groupes, relations, catégories) : à plat, les
+ * lignes l'une sous l'autre, sans trait entre elles — seules les sections en
+ * ont un.
+ */
+export const SETTINGS_LIST = "flex flex-col";
+/** Une ligne d'une liste (SETTINGS_LIST), sans cadre ni fond. */
+export const SETTINGS_ROW = "flex min-h-12 flex-wrap items-center gap-3 py-1.5";
+/**
+ * Un champ sans cadre dans une ligne (le nom d'une salle, d'un mois) : il se
+ * devine au survol et se marque à la saisie. Décalé de son retrait, pour que
+ * son texte s'aligne sur le reste de la colonne.
+ */
+export const INLINE_INPUT =
+  "-ml-1.5 h-8 rounded-md border-0 bg-transparent px-1.5 text-sm shadow-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-0";
 
 /**
  * Les deux emplacements de la barre d'en-tête où la page ouverte place son
@@ -109,9 +121,10 @@ export function FeaturePage({
   const inHeader = !!(slots?.title && slots.actions);
 
   const toggleId = React.useId();
-  // À plat, comme une section : un trait la sépare des réglages.
+  // À plat, comme une section : un trait la sépare des réglages (la section
+  // qui la suit n'en ajoute pas un second, voir SettingsSection).
   const toggleRow = toggle && (
-    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border pb-6 last:border-b-0 last:pb-0">
+    <div data-feature-toggle className="flex shrink-0 items-center justify-between gap-4 border-b border-border pb-6 last:border-b-0 last:pb-0">
       <span className="flex min-w-0 items-center gap-2">
         <label htmlFor={toggleId} className="text-sm font-semibold">{toggle.label}</label>
         {toggle.help && <HelpHint title={toggle.label}>{toggle.help}</HelpHint>}
@@ -207,21 +220,27 @@ export function SettingsSection({
       aria-label={title}
       data-layout={layout}
       className={cn(
-        "grid gap-4 border-t border-border pt-6 first:border-t-0 first:pt-0",
+        // Pas de trait au-dessus de la première, ni sous l'interrupteur d'une
+        // fonction, qui a déjà le sien.
+        "grid gap-4 border-t border-border pt-6 first:border-t-0 first:pt-0 [[data-feature-toggle]+&]:border-t-0 [[data-feature-toggle]+&]:pt-0",
         layout === "columns" && "@2xl:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] @2xl:gap-10",
         className,
       )}
     >
-      <div className="space-y-1">
-        <h4 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-          <TitleWithHelp title={title} help={help} />
-          {count !== undefined && (
-            <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
-          )}
-        </h4>
-        {description && <p className={DESCRIPTION}>{description}</p>}
-        {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
-        {aside}
+      {/* Sur une colonne, l'action secondaire se range à droite du titre
+          plutôt que dessous ; en deux colonnes, sous le texte. */}
+      <div className={cn("flex flex-wrap items-start justify-between gap-x-4 gap-y-2", layout === "columns" && "@2xl:block")}>
+        <div className="min-w-0 flex-1 space-y-1">
+          <h4 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+            <TitleWithHelp title={title} help={help} />
+            {count !== undefined && (
+              <span className="rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
+            )}
+          </h4>
+          {description && <p className={DESCRIPTION}>{description}</p>}
+          {meta && <p className="text-sm tabular-nums text-muted-foreground">{meta}</p>}
+        </div>
+        {aside && <div className={cn("shrink-0", layout === "columns" && "@2xl:pt-3")}>{aside}</div>}
       </div>
       <div className="min-w-0 space-y-3">{children}</div>
     </section>
@@ -389,10 +408,17 @@ export function SettingsSegmented<T extends string>({
   );
 }
 
-/** Une liste bordée de réglages, une ligne chacun. */
+/** Une liste de réglages, une ligne chacun, à plat, sans trait entre les lignes. */
 export function ToggleList({ children, className, label }: { children: React.ReactNode; className?: string; /** Nomme la liste (groupe) quand une page en a plusieurs. */ label?: string }) {
   return (
-    <div role={label ? "group" : undefined} aria-label={label} className={cn("divide-y divide-border rounded-lg", SURFACE, className)}>
+    // Sa première ligne s'aligne sur le titre de la section, sa dernière ne
+    // laisse pas de vide sous elle (les listes imbriquées, sous une option,
+    // gardent leurs marges).
+    <div
+      role={label ? "group" : undefined}
+      aria-label={label}
+      className={cn(SETTINGS_LIST, "[&>*:first-child]:pt-0 [&>*:last-child]:pb-0", className)}
+    >
       {children}
     </div>
   );
@@ -431,7 +457,7 @@ export function ToggleItem({
   indent?: boolean;
 }) {
   return (
-    <div className={cn("flex min-h-12 items-center justify-between gap-4 px-4 py-2.5", indent && "pl-8", dimmed && "opacity-60")}>
+    <div className={cn("flex items-center justify-between gap-4 py-3", indent && "pl-6", dimmed && "opacity-60")}>
       <div className="min-w-0">
         <p className={cn("flex min-w-0 items-center gap-2 text-sm", indent ? "text-muted-foreground" : "font-medium")}>
           {icon}
@@ -459,8 +485,8 @@ export function ToggleItem({
  * lus par les lecteurs d'écran, contrairement à `inert`).
  *
  * `feature` : la page d'une fonction entière. Plutôt qu'une page voilée,
- * une tuile « Cette fonction est désactivée » avec de quoi l'activer, et
- * l'aperçu des réglages replié dessous.
+ * une ligne « Cette fonction est désactivée » (l'interrupteur est juste
+ * au-dessus), et l'aperçu des réglages replié dessous.
  */
 export function InactiveOptions({
   inactive,
@@ -471,7 +497,7 @@ export function InactiveOptions({
   inactive: boolean;
   /** Pour le cadre grisé seulement (actives, les options sont rendues telles quelles). */
   className?: string;
-  /** Une fonction coupée : une tuile le dit, ses réglages repliés dessous. */
+  /** Une fonction coupée : une ligne le dit, ses réglages repliés dessous. */
   feature?: boolean;
   children: React.ReactNode;
 }) {
@@ -493,12 +519,10 @@ export function InactiveOptions({
   if (!feature) return greyed;
   return (
     <div className="space-y-3" data-testid="feature-off">
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-4 py-8 text-center">
-        <span className="grid size-9 place-items-center rounded-full bg-muted text-muted-foreground">
-          <PowerOff className="size-4" aria-hidden />
-        </span>
-        <p className="text-sm text-muted-foreground">{t("featureOff")}</p>
-      </div>
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <PowerOff className="size-4 shrink-0" aria-hidden />
+        {t("featureOff")}
+      </p>
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
           <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden />

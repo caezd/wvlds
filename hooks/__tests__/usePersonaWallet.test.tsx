@@ -4,7 +4,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
-import { usePersonaWallet } from "@/hooks/usePersonaWallet";
+import { WALLET_LEDGER_LIMIT, usePersonaWallet } from "@/hooks/usePersonaWallet";
 import { createClient } from "@/lib/supabase/client";
 
 const OR = [
@@ -113,5 +113,38 @@ describe("usePersonaWallet (migration 246)", () => {
     await act(async () => { await result.current.refresh(); });
     expect(result.current.balance).toBe(250);
     expect(result.current.ledger.map((m) => m.id)).toEqual(["m3"]);
+  });
+
+  it("dit s'il reste des mouvements plus anciens, et les ajoute à la suite", async () => {
+    const page = Array.from({ length: WALLET_LEDGER_LIMIT }, (_, i) => mouvement(`m${i}`, 1, i));
+    const mock = createSupabaseMock({
+      results: [
+        { data: { enable_economy: true, currency_units: OR } },
+        { data: { balance: 500 } },
+        { data: page },
+        // Le mouvement m19 revient : un nouveau mouvement a décalé la liste entre-temps.
+        { data: [page[WALLET_LEDGER_LIMIT - 1], mouvement("old", -3, 0)] },
+      ],
+    });
+    use(mock);
+    const { result } = renderHook(() => usePersonaWallet("p1", "w1"));
+    await waitFor(() => expect(result.current.status).toBe("on"));
+    expect(result.current.hasMore).toBe(true);
+
+    await act(async () => { await result.current.loadMore(); });
+    const suite = mock.buildersFor("world_economy_ledger").at(-1)!;
+    expect(suite.range).toHaveBeenCalledWith(WALLET_LEDGER_LIMIT, 2 * WALLET_LEDGER_LIMIT - 1);
+    expect(result.current.ledger).toHaveLength(WALLET_LEDGER_LIMIT + 1);
+    expect(result.current.ledger.at(-1)?.id).toBe("old");
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it("une première page incomplète : rien de plus à charger", async () => {
+    use(createSupabaseMock({
+      results: [{ data: { enable_economy: true, currency_units: OR } }, { data: null }, { data: [mouvement("m1", 1, 1)] }],
+    }));
+    const { result } = renderHook(() => usePersonaWallet("p1", "w1"));
+    await waitFor(() => expect(result.current.status).toBe("on"));
+    expect(result.current.hasMore).toBe(false);
   });
 });

@@ -147,16 +147,19 @@ describe("Sections à plat", () => {
     expect(screen.getByRole("region", { name: "Visibilité" }).className.split(" ")).toContain("first:border-t-0");
   });
 
-  it("ses listes d'interrupteurs restent bordées", () => {
+  it("ses listes d'interrupteurs aussi : sans cadre, ni fond, ni trait entre les lignes", () => {
     render(
       <SettingsSection title="Options">
         <ToggleList label="options">
           <ToggleItem title="Bulles" checked={false} onCheckedChange={() => {}} />
+          <ToggleItem title="Couleurs" checked={false} onCheckedChange={() => {}} />
         </ToggleList>
       </SettingsSection>,
     );
-    const liste = screen.getByRole("group", { name: "options" });
-    expect(liste.className.split(" ")).toEqual(expect.arrayContaining(["rounded-lg", "bg-card"]));
+    const classes = screen.getByRole("group", { name: "options" }).className.split(" ");
+    expect(classes).not.toContain("divide-y");
+    expect(classes).not.toContain("bg-card");
+    expect(classes).not.toContain("border");
   });
 });
 

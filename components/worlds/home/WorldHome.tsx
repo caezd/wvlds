@@ -1,7 +1,7 @@
 "use client";
 
 import type { HomeAnnouncement } from "@/lib/worldAnnouncements";
-import { resolveWorldPanel, SETTINGS_PERMISSIONS } from "./worldView";
+import { resolveWorldPanel } from "./worldView";
 import { useState } from "react";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useScrolledPast } from "@/hooks/useScrolledPast";
@@ -103,7 +103,6 @@ export function WorldHome({
 
   const can = (perm: WorldPermission) => permissionListHas(permissions, perm);
   const canPost = can("messages.post");
-  const canOpenSettings = SETTINGS_PERMISSIONS.some((perm) => can(perm));
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
 
@@ -172,7 +171,7 @@ export function WorldHome({
     worldMapFlag: world_map,
     hasTimeline,
     hasShops: world_economy && worldHasShops(world),
-    canOpenSettings,
+    permissions,
   });
   const showCanvas = panel === "canvas";
   const showWiki = panel === "wiki";

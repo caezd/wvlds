@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
 import { Money } from "@/components/economy/Money";
+import { cn } from "@/lib/utils";
 import { buybackPriceOf, maxPurchasable, type WorldShop } from "@/lib/worldShops";
 import type { ShopBuyer, useWorldShops } from "@/hooks/useWorldShops";
 import { TradeDialog, type TradeTarget } from "./ShopDialogs";
@@ -44,6 +45,8 @@ export function ShopFront({ shop, shops, buyer }: { shop: WorldShop; shops: Shop
           const held = buyer ? shops.held(buyer.id, article.catalog_item_id) : 0;
           const buyback = shops.buyback ? buybackPriceOf(shop, article) : null;
           const soldOut = article.stock === 0;
+          // Épuisé l'emporte : une seule raison de ne pas acheter par carte.
+          const tooExpensive = !!buyer && !soldOut && maxPurchasable(article, buyer.balance) === 0;
           return (
             <article
               key={article.id}
@@ -59,12 +62,17 @@ export function ShopFront({ shop, shops, buyer }: { shop: WorldShop; shops: Shop
               </div>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <Money amount={article.price} units={shops.units} className="text-sm font-medium text-foreground" />
+                <Money
+                  amount={article.price}
+                  units={shops.units}
+                  className={cn("text-sm font-medium", tooExpensive ? "text-destructive" : "text-foreground")}
+                />
                 {soldOut ? (
                   <Badge tone="outline">{t("soldOut")}</Badge>
                 ) : (
                   article.stock !== null && <span>{t("inStock", { count: article.stock })}</span>
                 )}
+                {tooExpensive && <span className="text-destructive">{t("tooExpensive", { name: buyer.name })}</span>}
                 {buyback !== null && (
                   <span>{t.rich("buybackAt", { price: () => <Money amount={buyback} units={shops.units} /> })}</span>
                 )}
@@ -75,7 +83,7 @@ export function ShopFront({ shop, shops, buyer }: { shop: WorldShop; shops: Shop
                 <Button
                   type="button"
                   size="sm"
-                  disabled={!buyer || soldOut}
+                  disabled={!buyer || soldOut || tooExpensive}
                   onClick={() =>
                     setTrade({
                       mode: "buy",

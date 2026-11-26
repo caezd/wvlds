@@ -461,7 +461,7 @@ export function WorldAnnouncementsTab({ worldId, worldName }: { worldId: string;
             {t("historyEmpty")}
           </div>
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border">
             {history.map((a) => (
               <HistoryRow key={a.id} announcement={a} roleById={roleById} reads={reads.get(a.id)} onOpen={() => setOpened(a)} />
             ))}

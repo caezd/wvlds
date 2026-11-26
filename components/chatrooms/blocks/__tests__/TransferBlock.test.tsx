@@ -73,6 +73,14 @@ describe("TransferDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("dit le solde qui restera après le transfert", async () => {
+    const user = userEvent.setup();
+    render(<TransferDialog open onOpenChange={() => {}} transfer={transferOf()} chatId={null} onSend={() => {}} />);
+    expect(screen.queryByText(/^Solde après :/)).toBeNull();
+    await user.type(screen.getByRole("spinbutton", { name: "Montant en Or" }), "1");
+    expect(screen.getByText(/^Solde après :/)).toHaveTextContent("Solde après : 3 po 50 pa");
+  });
+
   it("refuse un montant au-delà du solde", async () => {
     const user = userEvent.setup();
     render(<TransferDialog open onOpenChange={() => {}} transfer={transferOf()} chatId={null} onSend={() => {}} />);

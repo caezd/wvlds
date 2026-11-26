@@ -27,7 +27,7 @@ import {
   type CurrencyUnit,
 } from "@/lib/worldCurrency";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
-import { FIELD, SettingsSection, SURFACE } from "./FeatureLayout";
+import { FIELD, SettingsSection } from "./FeatureLayout";
 
 /** Le taux proposé pour un palier ajouté au-dessus des autres. */
 const NEW_UNIT_RATIO = 10;
@@ -38,9 +38,9 @@ const NEW_UNIT_RATIO = 10;
  * suivant (« 1 Or = 100 Argent »). La base ne garde que les valeurs absolues ;
  * l'éditeur passe par les taux, plus naturels à saisir.
  *
- * Un encadré en tête de la page Devises : l'aperçu (un montant d'exemple et
- * la chaîne de conversion), puis les paliers. Chaque modification valide
- * s'enregistre d'elle-même (useAutoSave).
+ * Deux sections à plat en tête de la page Devises : l'aperçu (un montant
+ * d'exemple et la chaîne de conversion), puis les paliers. Chaque
+ * modification valide s'enregistre d'elle-même (useAutoSave).
  */
 export function WorldCurrencySettings({
   world,
@@ -98,32 +98,32 @@ export function WorldCurrencySettings({
     .join(" · ");
 
   return (
-    <SettingsSection title={t("title")} layout="stacked">
-    <div className={cn("overflow-hidden rounded-lg", SURFACE)} onBlur={flush}>
-      {/* ── L'aperçu : un montant d'exemple, et la chaîne de conversion ── */}
-      <div className="border-b border-border p-5" data-testid="currency-preview">
-        <div className="flex items-center gap-2">
-          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <Coins className="size-3.5 shrink-0" aria-hidden />
-            {t("previewLabel")}
-          </p>
-          <AutoSaveIndicator status={status} className="ml-auto shrink-0" />
-        </div>
+    <>
+    {/* ── L'aperçu : un montant d'exemple, et la chaîne de conversion ── */}
+    <SettingsSection title={t("title")}>
+      <div data-testid="currency-preview">
+        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <Coins className="size-3.5 shrink-0" aria-hidden />
+          {t("previewLabel")}
+        </p>
         <p
-          className="mt-3 break-words text-3xl font-semibold tracking-tight tabular-nums"
+          className="mt-2 break-words text-3xl font-semibold tracking-tight tabular-nums"
           data-testid="currency-preview-amount"
         >
           {example === null ? "—" : <Money amount={example} units={shown} />}
         </p>
         {chain && <p className="mt-2 text-xs tabular-nums text-muted-foreground">{chain}</p>}
       </div>
+    </SettingsSection>
 
-      {/* ── Les paliers, du plus grand au plus petit ── */}
-      <section aria-label={t("tiers")} className="space-y-4 p-5">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold">{t("tiers")}</p>
-          <p className="text-sm text-muted-foreground text-pretty">{t("help")}</p>
-        </div>
+    {/* ── Les paliers, du plus grand au plus petit ── */}
+    <SettingsSection
+      title={t("tiers")}
+      description={t("help")}
+      aside={<AutoSaveIndicator status={status} />}
+    >
+      {/* Son propre conteneur : la disposition des rangées suit la largeur de la colonne, pas celle de la page. */}
+      <div className="@container space-y-3" onBlur={flush}>
         <div className="space-y-3 @xl:space-y-2">
           {rows.map((row, i) => {
             const next = rows[i + 1];
@@ -206,8 +206,8 @@ export function WorldCurrencySettings({
           {t("add")}
         </Button>
         {!valid && <p className="text-xs text-destructive">{t("invalid")}</p>}
-      </section>
-    </div>
+      </div>
     </SettingsSection>
+    </>
   );
 }

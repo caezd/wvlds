@@ -94,7 +94,7 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
           <ToggleItem title={t("enable")} checked={draft.tax_enabled} onCheckedChange={(v) => set({ tax_enabled: v })} />
           {/* Désactivée : ses options restent visibles, grisées et inertes. */}
           <InactiveOptions inactive={!draft.tax_enabled}>
-            <div className="divide-y divide-border">
+            <div>
               <ToggleItem
                 title={t("amount")}
                 control={
@@ -174,7 +174,7 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
                   </Popover>
                 }
               />
-              <div className="px-4 py-2.5">
+              <div className="py-3">
                 <p className="text-sm font-medium">
                   <TitleWithHelp title={t("mode")} help={t("modeHelp")} />
                 </p>
@@ -213,7 +213,7 @@ export function WorldTaxSettings({ world, onUpdated }: { world: World; onUpdated
                 onCheckedChange={(v) => set({ tax_badge_enabled: v })}
               />
               <InactiveOptions inactive={!draft.tax_badge_enabled}>
-                <div className="divide-y divide-border">
+                <div>
                   <ToggleItem
                     title={t("badge")}
                     control={

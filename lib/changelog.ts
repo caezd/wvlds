@@ -53,13 +53,19 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-25",
     category: "Interface",
     area: "Monde",
-    text: "Économie : saisies et mots harmonisés.\n- montants et quantités saisis partout avec les boutons −/+ : ajustement de la bourse, achat, revente, transfert, prix, stock\n- un seul mot par notion : **Transfert** (composeur, historique de la bourse, réglages), **Revente** (boutiques), **Solde** et **Montant**",
+    text: "Économie : saisies et mots harmonisés, soldes lisibles avant de valider.\n- montants et quantités saisis partout avec les boutons −/+ : ajustement de la bourse, achat, revente, transfert, prix, stock\n- un seul mot par notion : **Transfert** (composeur, historique de la bourse, réglages), **Revente** (boutiques), **Solde** et **Montant**\n- Boutiques : solde de l’acheteur à côté du sélecteur ; « Trop cher pour … » sur un article hors de portée, bouton grisé\n- solde après l’opération affiché avant de valider : achat, revente, transfert\n- historique de la bourse en relevé : nature et montant, puis date, heure et motif ; « Voir plus » pour les mouvements anciens\n- gestion des boutiques : prix, stock et revente sous le nom de l’article, lisible sur téléphone\n- journal d’activité lisible sur téléphone et tablette : chaque entrée s’empile (action, phrase, puis date, auteur et domaine) ; filtres collés en haut seulement sur grand écran\n- gains : l’heure où commence la journée (connexion du jour, plafond) est donnée à l’heure de votre appareil ; libellés au-dessus des montants quand la place manque",
+  },
+  {
+    date: "2026-11-25",
+    category: "Correctif",
+    area: "Monde",
+    text: "Paramètres du monde : « Fiche par défaut » affichée activée dans le menu dès l’ouverture, sans passer par sa page.\n- lien Paramètres du monde qui ouvre bien les réglages pour qui valide les fiches, envoie les annonces ou gère l’économie",
   },
   {
     date: "2026-11-25",
     category: "Interface",
     area: "Monde",
-    text: "Paramètres du monde : nouvelle présentation, alignée sur le reste de l’application.\n- titre de la page et boutons d’ajout dans la barre du haut ; pages sans sous-titre\n- interrupteur d’activation en haut de la page, avec son libellé\n- menu : une icône dit si chaque fonction est activée ou désactivée\n- choix présentés en cartes : visibilité, public visé, avatars, ajout d’objets\n- fonction désactivée : un encadré le signale, ses réglages repliés dessous\n- Général : aperçu de la carte de l’Explorateur ; icône et bannière en vignettes\n- Fiche par défaut : « Éditer la fiche » dans la barre du haut\n- une phrase sous chaque section et réglage qui en a besoin ; aides gardées pour les détails rares\n- suppression du monde confirmée dans une boîte",
+    text: "Paramètres du monde : nouvelle présentation, alignée sur le reste de l’application.\n- titre de la page et boutons d’ajout dans la barre du haut ; pages sans sous-titre\n- interrupteur d’activation en haut de la page, avec son libellé\n- tout à plat : sections, listes de réglages, salles, groupes, relations, catégories, saisons, tableaux et historiques sans cadre ; un trait entre les sections, pas entre les options\n- menu : une icône dit si chaque fonction est activée ou désactivée\n- choix présentés en cartes : visibilité, public visé, ajout d’objets ; avatars acceptés en interrupteurs\n- fonction désactivée : une ligne le signale, ses réglages repliés dessous\n- Rôles : permissions sur toute la largeur de la fiche, action « Tout activer » à droite du groupe\n- Catégories : image à côté du nom pendant l’édition\n- Général : aperçu de la carte de l’Explorateur ; icône et bannière en vignettes\n- Fiche par défaut : « Éditer la fiche » dans la barre du haut\n- une phrase sous chaque section et réglage qui en a besoin ; aides gardées pour les détails rares\n- suppression du monde confirmée dans une boîte",
   },
   {
     date: "2026-11-25",

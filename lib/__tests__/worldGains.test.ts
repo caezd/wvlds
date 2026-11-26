@@ -7,6 +7,7 @@ import {
   MAX_GAIN,
   MAX_GAIN_COOLDOWN_MINUTES,
   cappedGain,
+  dayStartLabel,
   gainSettingsOf,
   gainSettingsSchema,
   worldHasDailyGain,
@@ -166,5 +167,16 @@ describe("migration 253", () => {
     const triggers = sql.match(/CREATE OR REPLACE FUNCTION public\.tg_[a-z_]*gains?[a-z_]*\(\)[\s\S]*?\$\$;/g) ?? [];
     expect(triggers.length).toBe(2);
     for (const body of triggers) expect(body).toMatch(/EXCEPTION WHEN OTHERS THEN\s+RAISE WARNING/);
+  });
+});
+
+describe("dayStartLabel", () => {
+  it("dit à quelle heure locale commence la journée des gains (minuit UTC)", () => {
+    const hiver = new Date("2026-11-25T15:00:00Z");
+    const ete = new Date("2026-07-14T15:00:00Z");
+    expect(dayStartLabel("fr", hiver, "Europe/Paris")).toBe("01:00");
+    expect(dayStartLabel("fr", ete, "Europe/Paris")).toBe("02:00");
+    expect(dayStartLabel("fr", hiver, "UTC")).toBe("00:00");
+    expect(dayStartLabel("fr", hiver, "America/Montreal")).toBe("19:00");
   });
 });

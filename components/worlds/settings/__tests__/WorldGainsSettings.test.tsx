@@ -146,4 +146,13 @@ describe("WorldGainsSettings (migration 252)", () => {
     expect(setWorldGains).not.toHaveBeenCalled();
     expect(screen.getByText(/délai d’une journée au plus/)).toBeInTheDocument();
   });
+
+  it("la journée des gains se dit à l'heure de l'appareil, sans « UTC »", () => {
+    render(<WorldGainsSettings world={monde()} />);
+    const debut = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()))
+      .toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" });
+    expect(screen.getByText(`À la première visite de la journée, pour chaque persona. La journée commence à ${debut}, heure de votre appareil.`)).toBeInTheDocument();
+    expect(screen.getByText(`Par persona et par journée, à partir de ${debut}.`)).toBeInTheDocument();
+    expect(screen.queryByText(/UTC/)).toBeNull();
+  });
 });

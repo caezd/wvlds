@@ -156,7 +156,7 @@ export function TransferDialog({
               <div className="flex items-baseline justify-between gap-2">
                 <SectionLabel as="p">{t("amount")}</SectionLabel>
                 <span className="text-xs text-muted-foreground">
-                  {t.rich("balance", { amount: () => <Money amount={transfer.balance} units={transfer.units} /> })}
+                  {tEconomy.rich("balance", { amount: () => <Money amount={transfer.balance} units={transfer.units} /> })}
                 </span>
               </div>
               <AmountInput
@@ -167,7 +167,17 @@ export function TransferDialog({
                 idPrefix="transfer-amount"
                 labelOf={(unit) => t("amountIn", { unit: unit.name })}
               />
-              {overBalance && <p className="text-xs text-destructive">{tEconomy("insufficientFunds")}</p>}
+              {overBalance ? (
+                <p className="text-xs text-destructive">{tEconomy("insufficientFunds")}</p>
+              ) : (
+                (amount ?? 0) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {tEconomy.rich("balanceAfter", {
+                      amount: () => <Money amount={transfer.balance - (amount ?? 0)} units={transfer.units} />,
+                    })}
+                  </p>
+                )
+              )}
             </section>
           )}
 

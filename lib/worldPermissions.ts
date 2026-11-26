@@ -148,17 +148,31 @@ export function highestHoistedRole<T extends WorldRoleRow>(roles: readonly T[]):
   return sortRolesByPosition(roles.filter((r) => r.hoist))[0] ?? null;
 }
 
+/**
+ * Les permissions qui ouvrent au moins une page des réglages d'un monde. Une
+ * seule liste pour le lien de la barre latérale, la vue affichée par le
+ * client et ce que le serveur charge pour elle (resolveWorldPanel).
+ */
+export const WORLD_SETTINGS_PERMISSIONS = [
+  "world.settings",
+  "roles.manage",
+  "categories.manage",
+  "relations.manage",
+  "personas.review",
+  // Signalements (migration 209).
+  "chatrooms.manage",
+  // Annonces et message de bienvenue (migration 227).
+  "members.announce",
+  // Journal (migration 254).
+  "economy.manage",
+] as const satisfies readonly WorldPermission[];
+
 /** Une vue de réglages a-t-elle quelque chose à montrer à ce membre ? */
 export function canOpenWorldSettings(m: WorldMembership | null): boolean {
-  return (
-    hasWorldPermission(m, "world.settings") ||
-    hasWorldPermission(m, "roles.manage") ||
-    hasWorldPermission(m, "categories.manage") ||
-    hasWorldPermission(m, "relations.manage") ||
-    hasWorldPermission(m, "personas.review") ||
-    // Onglet Signalements (migration 209).
-    hasWorldPermission(m, "chatrooms.manage") ||
-    // Onglet Annonces (migration 227).
-    hasWorldPermission(m, "members.announce")
-  );
+  return WORLD_SETTINGS_PERMISSIONS.some((perm) => hasWorldPermission(m, perm));
+}
+
+/** Même règle, sur une liste sérialisée (`administrator` compris). */
+export function permissionListOpensSettings(perms: readonly string[]): boolean {
+  return WORLD_SETTINGS_PERMISSIONS.some((perm) => permissionListHas(perms, perm));
 }

@@ -165,7 +165,7 @@ export function WorldPersonaTemplateSection({
         )
       }
     >
-      {/* Sans fiche, ses options restent lisibles, repliées sous la tuile. */}
+      {/* Sans fiche, ses options restent lisibles, repliées sous la ligne qui le dit. */}
       <InactiveOptions
         inactive={loaded && !templateId}
         feature

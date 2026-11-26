@@ -173,9 +173,9 @@ export function ScheduledList({
   }
 
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+    <ul className="divide-y divide-border">
       {items.map((s) => (
-        <li key={s.id} className="flex items-start gap-3 px-3 py-3" data-testid="scheduled-row" data-status={s.status}>
+        <li key={s.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0" data-testid="scheduled-row" data-status={s.status}>
           <div className="min-w-0 flex-1 space-y-1">
             <span className="flex items-center gap-2 text-sm">
               <KindIcon kind={s.kind} />

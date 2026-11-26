@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_CURRENCY_UNITS, currencyUnitsOf, type CurrencyUnit } from "@/lib/worldCurrency";
@@ -28,13 +28,15 @@ export type WalletMovement = {
 
 export type AdjustResult = { ok: true } | { ok: false; error: "insufficient" | "failed" };
 
-/** Les derniers mouvements montrés sur la fiche. */
+/** Les mouvements montrés sur la fiche, puis à chaque « Voir plus ». */
 export const WALLET_LEDGER_LIMIT = 20;
+
+const LEDGER_SELECT = "id, delta, balance_after, kind, note, created_at";
 
 /**
  * La bourse d'un persona : la monnaie de son monde, son solde, ses derniers
  * mouvements (que la base ne rend qu'à son joueur et à qui gère l'économie),
- * et l'ajustement manuel.
+ * par pages (`loadMore`), et l'ajustement manuel.
  *
  * `off` tant que le monde n'a pas l'économie active, ou sans monde : rien
  * d'autre n'est lu.
@@ -45,17 +47,44 @@ export function usePersonaWallet(personaId: string | null, worldId: string | nul
   const [units, setUnits] = useState<CurrencyUnit[]>(DEFAULT_CURRENCY_UNITS);
   const [balance, setBalance] = useState(0);
   const [ledger, setLedger] = useState<WalletMovement[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  // Le nombre de mouvements affichés : une relecture garde ce qui a été déplié.
+  const shown = useRef(WALLET_LEDGER_LIMIT);
+
+  /** Les mouvements de `from` à `to` (inclus), du plus récent au plus ancien. */
+  const page = useCallback(
+    async (from: number, to: number) => {
+      const { data } = await supabase
+        .from("world_economy_ledger")
+        .select(LEDGER_SELECT)
+        .eq("persona_id", personaId!)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      return (data ?? []) as WalletMovement[];
+    },
+    [supabase, personaId],
+  );
 
   const loadLedger = useCallback(async () => {
     if (!personaId) return;
-    const { data } = await supabase
-      .from("world_economy_ledger")
-      .select("id, delta, balance_after, kind, note, created_at")
-      .eq("persona_id", personaId)
-      .order("created_at", { ascending: false })
-      .limit(WALLET_LEDGER_LIMIT);
-    setLedger((data ?? []) as WalletMovement[]);
-  }, [supabase, personaId]);
+    const rows = await page(0, shown.current - 1);
+    setLedger(rows);
+    setHasMore(rows.length === shown.current);
+  }, [personaId, page]);
+
+  /** La page suivante, à la suite ; un mouvement déjà là (liste décalée entre-temps) n'est pas doublé. */
+  const loadMore = useCallback(async () => {
+    if (!personaId) return;
+    const from = ledger.length;
+    const rows = await page(from, from + WALLET_LEDGER_LIMIT - 1);
+    setLedger((current) => {
+      const known = new Set(current.map((m) => m.id));
+      const next = [...current, ...rows.filter((m) => !known.has(m.id))];
+      shown.current = Math.max(WALLET_LEDGER_LIMIT, next.length);
+      return next;
+    });
+    setHasMore(rows.length === WALLET_LEDGER_LIMIT);
+  }, [personaId, page, ledger.length]);
 
   useEffect(() => {
     if (!worldId || !personaId) {
@@ -63,6 +92,7 @@ export function usePersonaWallet(personaId: string | null, worldId: string | nul
       return;
     }
     let cancelled = false;
+    shown.current = WALLET_LEDGER_LIMIT;
     setStatus("loading");
     (async () => {
       const { data: world } = await supabase
@@ -76,25 +106,21 @@ export function usePersonaWallet(personaId: string | null, worldId: string | nul
         setStatus("off");
         return;
       }
-      const [{ data: wallet }, { data: moves }] = await Promise.all([
+      const [{ data: wallet }, moves] = await Promise.all([
         supabase.from("persona_wallets").select("balance").eq("persona_id", personaId).maybeSingle(),
-        supabase
-          .from("world_economy_ledger")
-          .select("id, delta, balance_after, kind, note, created_at")
-          .eq("persona_id", personaId)
-          .order("created_at", { ascending: false })
-          .limit(WALLET_LEDGER_LIMIT),
+        page(0, WALLET_LEDGER_LIMIT - 1),
       ]);
       if (cancelled) return;
       setUnits(currencyUnitsOf(row.currency_units));
       setBalance(Number((wallet as { balance?: number | string } | null)?.balance ?? 0));
-      setLedger((moves ?? []) as WalletMovement[]);
+      setLedger(moves);
+      setHasMore(moves.length === WALLET_LEDGER_LIMIT);
       setStatus("on");
     })();
     return () => {
       cancelled = true;
     };
-  }, [supabase, personaId, worldId]);
+  }, [supabase, personaId, worldId, page]);
 
   const adjust = useCallback(
     async (delta: number, note: string): Promise<AdjustResult> => {
@@ -124,5 +150,5 @@ export function usePersonaWallet(personaId: string | null, worldId: string | nul
     setBalance(Number((wallet as { balance?: number | string } | null)?.balance ?? 0));
   }, [supabase, personaId, loadLedger]);
 
-  return { status, units, balance, ledger, adjust, refresh };
+  return { status, units, balance, ledger, hasMore, loadMore, adjust, refresh };
 }
