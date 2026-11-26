@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-26",
     category: "Fonctionnalité",
+    area: "Monde",
+    text: "Liens partagés : un lien de monde ou de salon présente le monde à qui n’est pas connecté.\n- page de connexion : bannière, nom, description et membres d’un monde public ; retour au lien une fois connecté\n- aperçu des liens (Discord, iMessage…) : titre, description et image du monde\n- image d’aperçu aux couleurs de WVLDS, en français, anglais ou espagnol\n- monde privé : rien n’en sort ; monde 18+ : son nom seulement",
+  },
+  {
+    date: "2026-11-26",
+    category: "Fonctionnalité",
     area: "Compte",
     text: "Inscription : pseudo et date de naissance demandés dès la création du compte.\n- pseudo vérifié pendant la saisie : format (ni espace, ni accent, ni ponctuation ; 3 à 32 caractères) et disponibilité\n- date de naissance privée, enregistrée dans le compte\n- mondes 18+ : rien à saisir pour un compte majeur, entrée refusée à un compte mineur ; sans date enregistrée, celle saisie à l’entrée est gardée\n- comptes invités : pseudo et date de naissance demandés avec le mot de passe\n- un œil pour afficher ou masquer le mot de passe (inscription, connexion, nouveau mot de passe)",
   },

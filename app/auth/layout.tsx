@@ -1,7 +1,12 @@
+import { headers } from "next/headers";
 import Logo from "@/components/logo";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { pickMessages } from "@/lib/clientMessages";
+import { WorldSharePanel } from "@/components/auth/WorldSharePanel";
+import { NEXT_PARAM, shareTargetFromNext } from "@/lib/sharePreview";
+import { getSharePreview } from "@/lib/sharePreviewServer";
+import { SEARCH_HEADER } from "@/lib/requestPath";
 
 export default async function AuthLayout({
   children,
@@ -16,10 +21,28 @@ export default async function AuthLayout({
   // que le namespace `auth` — vérifié par lib/__tests__/clientMessages.test.ts.
   // On ne sérialise donc plus les 37 Ko du catalogue complet sur la toute
   // première page qu'un visiteur charge.
-  const [locale, messages, t] = await Promise.all([getLocale(), getMessages(), getTranslations("auth")]);
+  //
+  // Arrivé par le lien d'un monde public (`?next=/w/…`, posé par le
+  // middleware), la colonne droite montre ce monde à la place du logo. Un
+  // layout ne reçoit pas searchParams : la requête vient de l'en-tête
+  // (cf. lib/requestPath).
+  const cible = shareTargetFromNext(
+    new URLSearchParams((await headers()).get(SEARCH_HEADER) ?? "").get(NEXT_PARAM),
+  );
+  const [locale, messages, t, preview] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getTranslations("auth"),
+    cible ? getSharePreview(cible) : null,
+  ]);
   return (
     <NextIntlClientProvider locale={locale} messages={pickMessages(messages, ["auth"])}>
     <div className="bg-background flex flex-col md:flex-row-reverse md:h-screen">
+      {preview ? (
+        <section className="flex w-full md:w-1/3">
+          <WorldSharePanel preview={preview} />
+        </section>
+      ) : (
       <section className="flex items-start w-full px-4 mx-auto md:px-0 md:items-center md:w-1/3">
         <div className="w-full max-w-sm mx-auto md:mx-0 my-auto min-w-min relative md:-left-6 text-primary">
           <div className="bg-background pt-8 py-8 flex items-center gap-1 text-4xl">
@@ -44,6 +67,7 @@ export default async function AuthLayout({
           </div>
         </div>
       </section>
+      )}
       <section className="justify-center px-4 md:px-0 md:flex md:w-2/3 md:border-r">
         <div className="w-full max-w-sm py-4 mx-auto my-auto min-w-min md:py-9 md:w-7/12">
           {children}

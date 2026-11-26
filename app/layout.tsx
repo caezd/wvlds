@@ -9,30 +9,56 @@ import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
 import { asMessageFont, asMessageTextSize, asMessageTextAlign } from "@/lib/messagePreferences";
 import { getCurrentProfile } from "@/lib/currentRequest";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import { ROOT_PROVIDER_NAMESPACES, pickMessages } from "@/lib/clientMessages";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+// Base des adresses absolues des métadonnées (images d'aperçu comprises).
+// En production, le domaine du projet : VERCEL_URL est celle du déploiement
+// (wvlds-<hash>.vercel.app), qui peut être protégée — un robot d'aperçu y
+// recevrait un 401 au lieu de l'image.
+const defaultUrl =
+  process.env.VERCEL_ENV === "production" && process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: {
-    // Chaque page hérite du gabarit : sans lui, tous les onglets s'appelaient
-    // « WVLDS », y compris quand on en ouvre plusieurs sur des salons
-    // différents. `default` couvre les pages qui ne posent pas de titre.
-    default: "WVLDS",
-    template: "%s · WVLDS",
-  },
-  description: "WVLDS — créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel.",
-  appleWebApp: {
-    capable: true,
-    title: "WVLDS",
-    statusBarStyle: "black-translucent",
-  },
-};
+/** Langue d'un aperçu de lien, au format OpenGraph. */
+const OG_LOCALES: Record<string, string> = { fr: "fr_FR", en: "en_US", es: "es_ES" };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [t, locale] = await Promise.all([getTranslations("meta"), getLocale()]);
+  // L'image d'aperçu (app/api/og) reçoit la langue dans son adresse : les
+  // robots qui la demandent n'envoient pas le cookie de langue.
+  const image = `/api/og?lang=${locale}`;
+  return {
+    metadataBase: new URL(defaultUrl),
+    applicationName: "WVLDS",
+    title: {
+      // Chaque page hérite du gabarit : sans lui, tous les onglets s'appelaient
+      // « WVLDS », y compris quand on en ouvre plusieurs sur des salons
+      // différents. `default` couvre les pages qui ne posent pas de titre.
+      default: "WVLDS",
+      template: "%s · WVLDS",
+    },
+    description: t("description"),
+    openGraph: {
+      type: "website",
+      siteName: "WVLDS",
+      title: "WVLDS",
+      description: t("description"),
+      locale: OG_LOCALES[locale] ?? OG_LOCALES.fr,
+      images: [{ url: image, width: 1200, height: 630 }],
+    },
+    twitter: { card: "summary_large_image", title: "WVLDS", description: t("description"), images: [image] },
+    appleWebApp: {
+      capable: true,
+      title: "WVLDS",
+      statusBarStyle: "black-translucent",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

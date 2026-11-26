@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
-import { PATHNAME_HEADER } from "../requestPath";
+import { PATHNAME_HEADER, SEARCH_HEADER } from "../requestPath";
+import { NEXT_PARAM } from "../sharePreview";
 
 export async function updateSession(request: NextRequest) {
     const url = request.nextUrl;
@@ -9,6 +10,7 @@ export async function updateSession(request: NextRequest) {
     // de leurs segments enfants (cf. lib/requestPath.ts). Posé sur la requête
     // AVANT tout `NextResponse.next({ request })`, qui la transmet telle quelle.
     request.headers.set(PATHNAME_HEADER, url.pathname);
+    request.headers.set(SEARCH_HEADER, url.search);
     let supabaseResponse = NextResponse.next({
         request,
     });
@@ -68,8 +70,13 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.pathname !== "/offline"
     ) {
         // no user, potentially respond by redirecting the user to the login page
+        // Le lien demandé suit dans `?next=` : la page de connexion montre le
+        // monde partagé (et les robots d'aperçu en tirent le leur), puis y
+        // renvoie une fois connecté. Ses propres paramètres n'y restent pas.
         const url = request.nextUrl.clone();
         url.pathname = "/auth/login";
+        url.search = "";
+        url.searchParams.set(NEXT_PARAM, request.nextUrl.pathname + request.nextUrl.search);
         const redirectResponse = NextResponse.redirect(url);
         // Efface le cookie pour qu'un prochain utilisateur ne soit pas redirigé
         // vers un monde qui appartient à la session précédente.

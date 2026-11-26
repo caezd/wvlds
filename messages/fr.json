@@ -1564,6 +1564,12 @@
       "setDescription": "Choisissez un mot de passe pour accéder à votre compte.",
       "save": "Enregistrer",
       "saving": "Enregistrement…"
+    },
+    "share": {
+      "publicWorld": "Monde public",
+      "ageRestricted": "18+",
+      "members": "{count, plural, one {# membre} other {# membres}}",
+      "joinPrompt": "Connectez-vous pour rejoindre <b>{name}</b>."
     }
   },
   "explore": {
@@ -3173,5 +3179,8 @@
     "empty": "Aucune activité pour l’instant.",
     "failed": "Impossible de lire le journal.",
     "more": "Voir plus"
+  },
+  "meta": {
+    "description": "Créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel."
   }
 }

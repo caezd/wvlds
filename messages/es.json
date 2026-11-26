@@ -1564,6 +1564,12 @@
       "setDescription": "Elija una contraseña para acceder a su cuenta.",
       "save": "Guardar",
       "saving": "Guardando…"
+    },
+    "share": {
+      "publicWorld": "Mundo público",
+      "ageRestricted": "18+",
+      "members": "{count, plural, one {# miembro} other {# miembros}}",
+      "joinPrompt": "Inicie sesión para unirse a <b>{name}</b>."
     }
   },
   "explore": {
@@ -3173,5 +3179,8 @@
     "empty": "Aún no hay actividad.",
     "failed": "No se pudo cargar el registro.",
     "more": "Ver más"
+  },
+  "meta": {
+    "description": "Cree mundos, encarne a sus personajes y escriba sus historias en tiempo real."
   }
 }

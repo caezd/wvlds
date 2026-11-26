@@ -1564,6 +1564,12 @@
       "setDescription": "Choose a password to access your account.",
       "save": "Save",
       "saving": "Saving…"
+    },
+    "share": {
+      "publicWorld": "Public world",
+      "ageRestricted": "18+",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "joinPrompt": "Sign in to join <b>{name}</b>."
     }
   },
   "explore": {
@@ -3173,5 +3179,8 @@
     "empty": "No activity yet.",
     "failed": "Could not load the log.",
     "more": "Show more"
+  },
+  "meta": {
+    "description": "Build worlds, play your characters and write your stories in real time."
   }
 }

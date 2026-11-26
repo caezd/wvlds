@@ -10,8 +10,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { messageErreurAuth } from "@/lib/authErrors";
+import { safeNextPath } from "@/lib/sharePreview";
 
-export function LoginForm() {
+/**
+ * `next` : où revenir une fois connecté (le lien partagé qui a mené ici) ;
+ * `worldName` : le monde public qu'il désigne, rappelé sous le titre.
+ */
+export function LoginForm({ next = null, worldName = null }: { next?: string | null; worldName?: string | null } = {}) {
     const t = useTranslations("auth");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -44,8 +49,7 @@ export function LoginForm() {
                 password: String(formData.get("password") || password),
             });
             if (error) throw error;
-            // Update this route to redirect to an authenticated route. The user already has an active session.
-            router.push("/");
+            router.push(safeNextPath(next) ?? "/");
         } catch (error: unknown) {
             setError(messageErreurAuth(error, t));
         } finally {
@@ -61,6 +65,14 @@ export function LoginForm() {
                     {t("newUser")}
                 </Link>
             </p>
+            {worldName && (
+                <p className="mt-4 text-sm text-muted-foreground">
+                    {t.rich("share.joinPrompt", {
+                        name: worldName,
+                        b: (chunks) => <b className="font-semibold text-foreground">{chunks}</b>,
+                    })}
+                </p>
+            )}
             <div className="my-4">
                 <form onSubmit={handleLogin}>
                     <div className="mb-6 flex gap-3 flex-col">

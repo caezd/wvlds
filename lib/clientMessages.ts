@@ -28,11 +28,12 @@ import type { AbstractIntlMessages } from "next-intl";
  * côté client.
  *
  * `quests`, `changelog` et `offline` ne sont lus que par des Server Components
- * (`getTranslations`). `auth` est bien lu côté client — mais uniquement par les
- * formulaires de `app/auth/**`, qui vivent hors du groupe `(protected)` et ont
- * leur propre provider (cf. app/auth/layout.tsx).
+ * (`getTranslations`), `meta` par les métadonnées et images d'aperçu. `auth`
+ * est bien lu côté client — mais uniquement par les formulaires de
+ * `app/auth/**`, qui vivent hors du groupe `(protected)` et ont leur propre
+ * provider (cf. app/auth/layout.tsx).
  */
-export const NOT_IN_SHELL_NAMESPACES = ["auth", "quests", "changelog", "offline"] as const;
+export const NOT_IN_SHELL_NAMESPACES = ["auth", "quests", "changelog", "offline", "meta"] as const;
 
 /**
  * Namespaces remontés par le provider de `app/layout.tsx`.

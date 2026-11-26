@@ -10,6 +10,12 @@
  */
 export const PATHNAME_HEADER = "x-wvlds-pathname";
 
+/**
+ * Requête de l'URL (`?…`), pour la même raison : le layout des écrans de
+ * connexion y lit le lien partagé d'origine (`?next=`, cf. lib/sharePreview).
+ */
+export const SEARCH_HEADER = "x-wvlds-search";
+
 /** Id du salon d'un chemin `/c/<id>[/…]`, sinon null. */
 export function chatIdFromPathname(pathname: string | null | undefined): string | null {
   const match = /^\/c\/([^/?#]+)/.exec(pathname ?? "");

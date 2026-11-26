@@ -126,3 +126,32 @@ describe("updateSession — chemin transmis aux Server Components", () => {
     expect(res.headers.get("x-middleware-request-x-wvlds-pathname")).toBe("/c/salon-42");
   });
 });
+
+describe("updateSession — lien partagé gardé jusqu'après la connexion", () => {
+  it("un visiteur sans session sur un monde est envoyé à la connexion avec ?next=", async () => {
+    claims = null;
+    const req = new NextRequest("http://localhost:3000/w/f1e4d2c9-e56f-454a-bde2-8f9eade06e65?view=wiki");
+    const res = await updateSession(req);
+
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/auth/login");
+    expect(location.searchParams.get("next")).toBe("/w/f1e4d2c9-e56f-454a-bde2-8f9eade06e65?view=wiki");
+    // Les paramètres de la page d'origine ne fuient pas dans ceux de la connexion.
+    expect(location.searchParams.get("view")).toBeNull();
+  });
+
+  it("la requête de la page est transmise aux layouts (ils ne reçoivent pas searchParams)", async () => {
+    claims = null;
+    const req = new NextRequest("http://localhost:3000/auth/login?next=%2Fc%2Fabc");
+    await updateSession(req);
+    expect(req.headers.get("x-wvlds-search")).toBe("?next=%2Fc%2Fabc");
+  });
+
+  it("une valeur envoyée par le client pour cet en-tête est écrasée", async () => {
+    claims = null;
+    const req = new NextRequest("http://localhost:3000/auth/login", { headers: { "x-wvlds-search": "?next=/w/forge" } });
+    await updateSession(req);
+    expect(req.headers.get("x-wvlds-search")).toBe("");
+  });
+});
