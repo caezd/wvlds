@@ -59,8 +59,30 @@ function Words({ text, size, style }: { text: string; size: number; style?: Reco
   );
 }
 
-/** Le contenu de l'image : trait rouge, titre, sous-titre ; WVLDS et le logo en pied. */
-export function OgCard({ surtitle, title, subtitle }: OgTexts) {
+/** Dimensions de la carte, et des images qu'on lui prépare (lib/ogImages). */
+export const OG_SIZE = { width: 1200, height: 630 } as const;
+export const OG_ICON_SIZE = 112;
+
+const FOND = "#1B1B1D";
+/** Voile sur la bannière : sombre à gauche et en bas, là où est le texte. */
+const VOILES = [
+  "linear-gradient(to right, rgba(27,27,29,0.92) 0%, rgba(27,27,29,0.7) 55%, rgba(27,27,29,0.35) 100%)",
+  "linear-gradient(to top, rgba(27,27,29,0.85) 0%, rgba(27,27,29,0) 45%)",
+];
+const PLEIN = { position: "absolute", top: 0, left: 0, ...OG_SIZE } as const;
+
+export type OgCardProps = OgTexts & {
+  /** Bannière du monde, déjà à 1200×630, en `data:`. */
+  banner?: string | null;
+  /** Icône du monde, déjà carrée, en `data:`. */
+  icon?: string | null;
+};
+
+/**
+ * Le contenu de l'image : trait rouge, titre, sous-titre ; WVLDS et le logo en
+ * pied. La bannière du monde, voilée, en fond ; son icône à côté du titre.
+ */
+export function OgCard({ surtitle, title, subtitle, banner, icon }: OgCardProps) {
   const long = title.length > 60;
   const sousTitre = subtitle && subtitle.length > 140 ? `${subtitle.slice(0, 137).trimEnd()}…` : subtitle;
   return (
@@ -69,31 +91,82 @@ export function OgCard({ surtitle, title, subtitle }: OgTexts) {
         width: "100%",
         height: "100%",
         display: "flex",
-        flexDirection: "column",
-        padding: "88px 96px 72px",
-        background: "#1B1B1D",
+        position: "relative",
+        background: FOND,
         color: "#FAFAFA",
         fontFamily: "Geist",
       }}
     >
-      <div style={{ width: 96, height: 8, borderRadius: 4, background: ACCENT, marginBottom: 40 }} />
-      {surtitle && (
-        <Words
-          text={surtitle.toUpperCase()}
-          size={26}
-          style={{ fontWeight: 700, letterSpacing: 2, color: "#A1A1AA", marginBottom: 16 }}
-        />
+      {banner && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- image de next/og, pas une page */}
+          <img src={banner} alt="" width={OG_SIZE.width} height={OG_SIZE.height} style={PLEIN} />
+          {VOILES.map((voile) => (
+            <div key={voile} style={{ ...PLEIN, backgroundImage: voile }} />
+          ))}
+        </>
       )}
-      <Words text={title} size={long ? 58 : 72} style={{ fontWeight: 700, lineHeight: 1.12, maxWidth: 1000 }} />
-      {sousTitre && (
-        <Words text={sousTitre} size={34} style={{ fontWeight: 400, marginTop: 24, lineHeight: 1.35, color: "#B4B4BB", maxWidth: 960 }} />
-      )}
-      <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 2.4 }}>WVLDS</div>
-        <svg width={91} height={64} viewBox="0 0 273 192" fill="none">
-          <path d={DOT_PATH} fill={ACCENT} />
-          <path d={W_PATH} fill="#FAFAFA" />
-        </svg>
+      {/* Le texte dans son propre bloc : le moteur place les calques absolus
+          à l'intérieur du rembourrage de leur parent. */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          height: "100%",
+          padding: banner ? "80px 96px 72px" : "88px 96px 72px",
+        }}
+      >
+        <div style={{ width: 96, height: 8, borderRadius: 4, background: ACCENT, marginBottom: banner ? 36 : 40 }} />
+        {surtitle && (
+          <Words
+            text={surtitle.toUpperCase()}
+            size={26}
+            style={{
+              fontWeight: 700,
+              letterSpacing: 2,
+              color: banner ? "#C4C4CC" : "#A1A1AA",
+              marginBottom: banner ? 18 : 16,
+            }}
+          />
+        )}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {icon && (
+            // eslint-disable-next-line @next/next/no-img-element -- image de next/og, pas une page
+            <img
+              src={icon}
+              alt=""
+              width={OG_ICON_SIZE}
+              height={OG_ICON_SIZE}
+              style={{ borderRadius: 26, marginRight: 28, flexShrink: 0, boxShadow: "0 8px 28px rgba(0,0,0,0.5)" }}
+            />
+          )}
+          <Words
+            text={title}
+            size={long ? 58 : icon ? 68 : 72}
+            style={{ fontWeight: 700, lineHeight: 1.1, maxWidth: icon ? 860 : 1000 }}
+          />
+        </div>
+        {sousTitre && (
+          <Words
+            text={sousTitre}
+            size={34}
+            style={{
+              fontWeight: 400,
+              marginTop: icon ? 28 : 24,
+              lineHeight: 1.35,
+              color: banner ? "#D4D4D8" : "#B4B4BB",
+              maxWidth: 960,
+            }}
+          />
+        )}
+        <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 2.4 }}>WVLDS</div>
+          <svg width={91} height={64} viewBox="0 0 273 192" fill="none">
+            <path d={DOT_PATH} fill={ACCENT} />
+            <path d={W_PATH} fill="#FAFAFA" />
+          </svg>
+        </div>
       </div>
     </div>
   );

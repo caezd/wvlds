@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ogLocale, ogTexts } from "@/lib/ogCard";
+import { renderToStaticMarkup } from "react-dom/server";
+import { OgCard, ogLocale, ogTexts } from "@/lib/ogCard";
 import { parseSharePreview } from "@/lib/sharePreview";
 
 const W = "f1e4d2c9-e56f-454a-bde2-8f9eade06e65";
@@ -33,5 +34,23 @@ describe("ogTexts : textes de la carte d'aperçu", () => {
   it("un monde : ses propres textes, le libellé traduit", () => {
     expect(ogTexts("en", monde)).toEqual({ surtitle: "Public world", title: "Hextech", subtitle: "Un monde" });
     expect(ogTexts("es", { ...monde, ageRestricted: true, description: null }).surtitle).toBe("Mundo público · 18+");
+  });
+});
+
+describe("OgCard : bannière en fond, icône à côté du titre", () => {
+  const BANNIERE = "data:image/jpeg;base64,AAAA";
+  const ICONE = "data:image/png;base64,BBBB";
+  const textes = { surtitle: "Monde public", title: "Hextech", subtitle: "Un monde" };
+
+  it("avec bannière et icône : les deux images, la bannière voilée pour la lecture", () => {
+    const html = renderToStaticMarkup(<OgCard {...textes} banner={BANNIERE} icon={ICONE} />);
+    expect(html).toContain(`src="${BANNIERE}"`);
+    expect(html).toContain(`src="${ICONE}"`);
+    expect(html).toContain("linear-gradient");
+  });
+
+  it("sans image : la carte texte, sans balise img", () => {
+    const html = renderToStaticMarkup(<OgCard {...textes} />);
+    expect(html).not.toContain("<img");
   });
 });

@@ -81,14 +81,11 @@ export function parseSharePreview(data: unknown): SharePreview | null {
   };
 }
 
-/** Textes de l'image d'aperçu (style carte) d'un monde ou d'un salon. */
+/** Textes de l'image d'aperçu d'un monde ; le lien d'un salon montre celle de son monde. */
 export function shareCardContent(
   p: SharePreview,
   labels: { publicWorld: string; ageRestricted: string },
 ): { surtitle: string; title: string; subtitle: string | null } {
-  if (p.chatroomName) {
-    return { surtitle: p.name, title: `# ${p.chatroomName}`, subtitle: p.description };
-  }
   return {
     surtitle: p.ageRestricted ? `${labels.publicWorld} · ${labels.ageRestricted}` : labels.publicWorld,
     title: p.name,

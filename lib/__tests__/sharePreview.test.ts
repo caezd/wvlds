@@ -86,12 +86,8 @@ describe("shareCardContent : textes de l'image d'aperçu", () => {
     expect(shareCardContent(base, labels)).toEqual({ surtitle: "Monde public", title: "Hextech", subtitle: "Un monde" });
   });
 
-  it("un salon : le salon en titre, le monde au-dessus", () => {
-    expect(shareCardContent({ ...base, chatroomName: "La taverne" }, labels)).toEqual({
-      surtitle: "Hextech",
-      title: "# La taverne",
-      subtitle: "Un monde",
-    });
+  it("un salon : la carte de son monde", () => {
+    expect(shareCardContent({ ...base, chatroomName: "La taverne" }, labels)).toEqual(shareCardContent(base, labels));
   });
 
   it("un monde 18+ : la mention, sans description", () => {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/login-form";
-import { NEXT_PARAM, safeNextPath, shareTargetFromNext, type ShareTarget } from "@/lib/sharePreview";
+import { NEXT_PARAM, safeNextPath, shareTargetFromNext } from "@/lib/sharePreview";
 import { getSharePreview } from "@/lib/sharePreviewServer";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -11,9 +11,9 @@ async function lireNext(searchParams: Props["searchParams"]): Promise<string | n
   return safeNextPath(typeof v === "string" ? v : null);
 }
 
-/** Adresse de l'image d'aperçu d'un monde ou d'un salon (app/api/og). */
-function ogImage(cible: ShareTarget, locale: string): string {
-  return `/api/og?${cible.kind === "world" ? "w" : "c"}=${cible.id}&lang=${locale}`;
+/** Adresse de l'image d'aperçu d'un monde (app/api/og) ; un salon montre celle de son monde. */
+function ogImage(worldId: string, locale: string): string {
+  return `/api/og?w=${worldId}&lang=${locale}`;
 }
 
 /**
@@ -31,7 +31,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   if (!cible || !preview) return { title: t("signin") };
 
   const locale = await getLocale();
-  const image = ogImage(cible, locale);
+  const image = ogImage(preview.id, locale);
   const title = preview.chatroomName ? `${preview.chatroomName} · ${preview.name}` : preview.name;
   const description = preview.description ?? undefined;
   return {
