@@ -85,7 +85,7 @@ function mockNotifications(overrides: Partial<ReturnType<typeof useNotifications
 }
 
 /** Les valeurs par défaut du fournisseur simulé. */
-function useNotificationsDefaults() {
+function notificationsDefaults() {
     mockNotifications();
     return vi.mocked(useNotifications)();
 }
@@ -299,7 +299,7 @@ describe("NotificationInlinePanelContent — annonce signée par le monde", () =
 describe("NotificationInlinePanelContent — ouvrir une annonce", () => {
     // Lire une notification la retire de la liste, comme le vrai fournisseur.
     function mockRemovingOnRead(notif: AppNotification) {
-        const first = useNotificationsDefaults();
+        const first = notificationsDefaults();
         vi.mocked(useNotifications).mockImplementation(() => {
             const [list, setList] = React.useState([notif]);
             return {
