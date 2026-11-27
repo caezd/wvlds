@@ -12,6 +12,7 @@ import {
   DAY_DEFAULT_POSITION,
   ELLIPSE_MAX_DAYS,
   addTimelineDays,
+  dayNow,
   type EllipseRequest,
 } from "@/lib/chatroomDay";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
@@ -35,18 +36,20 @@ export function EllipseDialog({
 }) {
   const t = useTranslations("chatrooms.dayStatus");
   const { config, startDate, currentDate, day } = useChatroomTime();
+  // Le temps en cours : celui de la dernière ellipse, sinon celui du départ.
+  const now = dayNow(day);
   const ids = useId();
-  const [icon, setIcon] = useState(day?.icon ?? DAY_DEFAULT_ICON);
-  const [position, setPosition] = useState(day?.position ?? DAY_DEFAULT_POSITION);
+  const [icon, setIcon] = useState(now?.icon ?? DAY_DEFAULT_ICON);
+  const [position, setPosition] = useState(now?.position ?? DAY_DEFAULT_POSITION);
   const [days, setDays] = useState<number | null>(0);
 
-  // Chaque ouverture repart du temps actuel du salon.
+  // Chaque ouverture repart du temps en cours du salon.
   useEffect(() => {
     if (!open) return;
-    setIcon(day?.icon ?? DAY_DEFAULT_ICON);
-    setPosition(day?.position ?? DAY_DEFAULT_POSITION);
+    setIcon(now?.icon ?? DAY_DEFAULT_ICON);
+    setPosition(now?.position ?? DAY_DEFAULT_POSITION);
     setDays(0);
-  }, [open, day?.icon, day?.position]);
+  }, [open, now?.icon, now?.position]);
 
   const skipped = days ?? 0;
   const from = currentDate ?? startDate;
@@ -65,8 +68,8 @@ export function EllipseDialog({
           day={{
             icon,
             position,
-            fromIcon: skipped > 0 ? day?.icon ?? null : null,
-            fromPosition: skipped > 0 ? day?.position ?? null : null,
+            fromIcon: skipped > 0 ? now?.icon ?? null : null,
+            fromPosition: skipped > 0 ? now?.position ?? null : null,
             skipped,
           }}
         />

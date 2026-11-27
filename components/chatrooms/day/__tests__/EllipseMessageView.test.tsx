@@ -39,6 +39,9 @@ describe("EllipseMessageView", () => {
     renderView(ELLIPSE);
     const bloc = screen.getByRole("article", { name: "Ellipse" });
     expect(bloc).toHaveAccessibleDescription("3 jours plus tard · 15 Dégel, an 4");
+    // La date atteinte s'affiche au-dessus de la ligne.
+    const date = within(bloc).getByText("15 Dégel, an 4", { selector: "p" });
+    expect(date.compareDocumentPosition(within(bloc).getByRole("group", { name: "Temps du salon" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const ligne = within(bloc).getByRole("group", { name: "Temps du salon" });
     expect(within(ligne).getByTestId("day-from")).toHaveAttribute("aria-label", "Nuit claire");
     expect(within(ligne).getAllByTestId("day-dash")).toHaveLength(3);

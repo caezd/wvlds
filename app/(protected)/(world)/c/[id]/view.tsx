@@ -80,7 +80,6 @@ import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
 import { ChatroomReadOnlyNotice, ChatroomSynopsis } from "@/components/chatrooms/access/ChatroomSynopsis";
 import { ChatroomTimeProvider } from "@/components/chatrooms/day/chatroomTime";
 import { chatroomDayFromRow, type ChatroomDay } from "@/lib/chatroomDay";
-import { formatTimelineLabel } from "@/lib/worldTimeline";
 import {
   OPEN_POST_ACCESS,
   fetchPostAccess,
@@ -1092,13 +1091,6 @@ export default function ChatRoomView({
     currentDate: chat?.timeline_current_date ?? null,
     day: chat?.day ?? null,
   };
-  const dateRange =
-    timelineConfig && chat?.timeline_date && chat.timeline_current_date
-      ? t("dayStatus.range", {
-          start: formatTimelineLabel(timelineConfig, chat.timeline_date),
-          current: formatTimelineLabel(timelineConfig, chat.timeline_current_date),
-        })
-      : null;
 
   return (
     <ChatroomDiceRulesProvider value={diceRules}>
@@ -1236,7 +1228,7 @@ export default function ChatRoomView({
                   category_id: chat.category_id ?? null,
                   visibility: chat.visibility,
                   synopsis: chat.synopsis ?? null,
-                  day: chat.day ? { icon: chat.day.icon, position: chat.day.position } : null,
+                  day: chat.day?.start ?? null,
                 }}
                 worldTimelineConfig={chat.worlds?.timeline_config ?? null}
                 worldId={chat.worlds?.id ?? null}
@@ -1279,7 +1271,7 @@ export default function ChatRoomView({
                   </div>
                 )}
                 {!hasMore && !loadingOlder && (
-                  <ChatroomSynopsis synopsis={chat.synopsis} visibility={chat.visibility} day={chat.day} dateRange={dateRange} />
+                  <ChatroomSynopsis synopsis={chat.synopsis} visibility={chat.visibility} day={chat.day?.start ?? null} />
                 )}
                 {renderGroups.map((g) =>
                   g.kind === "sms" ? (

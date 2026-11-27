@@ -2144,7 +2144,6 @@
       "moment": "Momento del día",
       "daysPassed": "Días transcurridos",
       "later": "{count, plural, =0 {el mismo día} one {al día siguiente} other {# días después}}",
-      "range": "{start} → {current}",
       "moments": {
         "dawn": "Alba",
         "morning": "Mañana",

@@ -4,8 +4,9 @@ import { test, expect, type Page } from "@playwright/test";
 // Le temps d'un salon (migration 275), de bout en bout : réglé dans « Nouveau
 // jeu », affiché au-dessus du synopsis, avancé par une ellipse que la base
 // pose (`post_chatroom_ellipse`), retrouvé au rechargement et dans les
-// réglages. Le salon est créé pour l'occasion ; le `finally` le supprime,
-// même quand une étape échoue.
+// réglages. Le salon est créé pour l'occasion ; le `finally` le supprime par
+// « Supprimer la salle » et vérifie qu'il a disparu, même quand une étape
+// échoue.
 // ──────────────────────────────────────────────────────────────────────────
 
 const MONDE = "Monde E2E";
@@ -76,18 +77,24 @@ test("Temps du salon : réglé à la création, avancé par une ellipse", async 
     await expect(ellipse.getByTestId("day-icon")).toHaveAttribute("aria-label", "Nuit claire");
     await expect(ellipse.getByTestId("day-dash")).toHaveCount(3);
 
-    // L'en-tête suit, sans rechargement, puis après.
-    await expect(tempsDuSalon(page).getByTestId("day-icon")).toHaveAttribute("aria-label", "Nuit claire", { timeout: 20_000 });
-    await expect(tempsDuSalon(page).getByTestId("day-dash")).toHaveCount(3);
+    // En tête du fil, le temps du départ reste : la pluie (migration 277).
     await page.reload();
-    await expect(tempsDuSalon(page).getByTestId("day-icon")).toHaveAttribute("aria-label", "Nuit claire", { timeout: 20_000 });
-    await expect(tempsDuSalon(page).getByTestId("day-from")).toHaveAttribute("aria-label", "Pluie");
-    await expect(page.getByRole("article", { name: "Ellipse" })).toHaveAccessibleDescription("3 jours plus tard");
+    await expect(page.getByRole("article", { name: "Ellipse" })).toHaveAccessibleDescription("3 jours plus tard", { timeout: 20_000 });
+    await expect(tempsDuSalon(page).getByTestId("day-icon")).toHaveAttribute("aria-label", "Pluie");
 
-    // Les réglages du salon le retrouvent.
+    // La prochaine ellipse part du temps en cours : la nuit claire.
+    await page.getByRole("button", { name: "Insérer un bloc" }).first().click();
+    await page.getByRole("button", { name: /^Ellipse/ }).first().click();
+    await expect(page.getByRole("dialog", { name: "Ellipse" }).getByRole("radio", { name: "Nuit claire" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+
+    // Les réglages du salon règlent le temps du départ.
     await page.getByRole("button", { name: "Paramètres" }).first().click();
     await expect(page.getByRole("switch", { name: "Régler le temps du salon" })).toBeChecked();
-    await expect(page.getByRole("radio", { name: "Nuit claire" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: "Pluie" })).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Escape");
   } finally {
     if (salon) {
@@ -95,7 +102,12 @@ test("Temps du salon : réglé à la création, avancé par une ellipse", async 
       await page.getByRole("button", { name: "Paramètres" }).first().click();
       await page.getByRole("button", { name: "Supprimer la salle" }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click();
-      await expect(page).not.toHaveURL(new RegExp(salon), { timeout: 20_000 });
+      // Supprimé au complet (migration 276) : retour à l'accueil du monde, et
+      // le salon n'existe plus. L'accueil du monde peut compiler longtemps sous `next dev`.
+      await expect(page).toHaveURL(/\/w\//, { timeout: 60_000 });
+      // La page arrive en flux : le statut part avant `notFound()`, on lit donc la page.
+      await page.goto(salon);
+      await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible({ timeout: 20_000 });
     }
   }
 });

@@ -2,37 +2,53 @@ import { RPC } from "@/lib/constants";
 import { daysInMonth } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
+/** Une icône de météo posée à un moment de la journée, de 0 (aube) à 100 (nuit). */
+export type DayPoint = { icon: string; position: number };
+
 /**
- * Le temps d'un salon (migration 275) : une icône de météo posée à un moment
- * de la journée, sur une ligne de 0 (aube) à 100 (nuit). Une ellipse déplace
- * l'icône et fait passer des jours ; le salon garde le saut de la dernière.
+ * Le temps d'un salon (migrations 275 et 277), comme ses deux dates : celui
+ * du départ (réglé à la création ou dans les réglages, affiché en tête du
+ * fil) et celui en cours, que les ellipses avancent.
  */
 export type ChatroomDay = {
-  icon: string;
-  position: number;
-  /** L'icône d'avant la dernière ellipse, quand des jours ont passé. */
+  start: DayPoint | null;
+  /** Nul tant qu'aucune ellipse n'a fait passer le temps. */
+  current: DayPoint | null;
+};
+
+/** Ce qu'une ligne du temps affiche : une icône, et le saut qui l'y a menée. */
+export type DayLine = DayPoint & {
+  /** L'icône d'avant le saut, quand des jours ont passé. */
   fromIcon: string | null;
   fromPosition: number | null;
-  /** Les jours passés par la dernière ellipse. */
+  /** Les jours passés. */
   skipped: number;
 };
 
-/** Les colonnes du salon (`chatrooms.day_*`) en un statut, ou `null` sans icône. */
+function dayPoint(icon: string | null | undefined, position: number | null | undefined): DayPoint | null {
+  return icon && position !== null && position !== undefined ? { icon, position } : null;
+}
+
+/** Les colonnes du salon (`chatrooms.day_*`) en un temps, ou `null` sans aucun. */
 export function chatroomDayFromRow(row: {
   day_icon?: string | null;
   day_position?: number | null;
-  day_from_icon?: string | null;
-  day_from_position?: number | null;
-  day_skipped?: number | null;
+  day_current_icon?: string | null;
+  day_current_position?: number | null;
 }): ChatroomDay | null {
-  if (!row.day_icon || row.day_position === null || row.day_position === undefined) return null;
-  return {
-    icon: row.day_icon,
-    position: row.day_position,
-    fromIcon: row.day_from_icon ?? null,
-    fromPosition: row.day_from_position ?? null,
-    skipped: row.day_skipped ?? 0,
-  };
+  const start = dayPoint(row.day_icon, row.day_position);
+  const current = dayPoint(row.day_current_icon, row.day_current_position);
+  return start || current ? { start, current } : null;
+}
+
+/** Le temps qu'il fait maintenant dans le salon : le dernier posé par une ellipse, sinon celui du départ. */
+export function dayNow(day: ChatroomDay | null | undefined): DayPoint | null {
+  return day?.current ?? day?.start ?? null;
+}
+
+/** Une ligne sans saut, l'icône à sa place. */
+export function dayLineAt(point: DayPoint): DayLine {
+  return { ...point, fromIcon: null, fromPosition: null, skipped: 0 };
 }
 
 /** Les icônes proposées (lucide), dans l'ordre d'une journée puis du temps qu'il fait. */

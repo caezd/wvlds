@@ -2144,7 +2144,6 @@
       "moment": "Time of day",
       "daysPassed": "Days passed",
       "later": "{count, plural, =0 {the same day} one {the next day} other {# days later}}",
-      "range": "{start} → {current}",
       "moments": {
         "dawn": "Dawn",
         "morning": "Morning",

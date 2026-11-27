@@ -2144,7 +2144,6 @@
       "moment": "Moment de la journée",
       "daysPassed": "Jours passés",
       "later": "{count, plural, =0 {le même jour} one {le lendemain} other {# jours plus tard}}",
-      "range": "{start} → {current}",
       "moments": {
         "dawn": "Aube",
         "morning": "Matin",

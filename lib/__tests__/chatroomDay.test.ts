@@ -7,8 +7,7 @@ import {
   dayDashes,
   dayMoment,
   ellipseErrorKey,
-  postEllipseForMessage,
-} from "@/lib/chatroomDay";
+  postEllipseForMessage, chatroomDayFromRow, dayNow } from "@/lib/chatroomDay";
 
 const CONFIG: WorldTimelineConfig = {
   year_label: "an",
@@ -20,6 +19,25 @@ const CONFIG: WorldTimelineConfig = {
 };
 
 // Mêmes cas que la vérification de `timeline_add_days` en base (migration 275).
+describe("chatroomDayFromRow", () => {
+  it("le temps du départ et le temps en cours, chacun avec sa place", () => {
+    expect(
+      chatroomDayFromRow({ day_icon: "sun", day_position: 40, day_current_icon: "moon-star", day_current_position: 95 }),
+    ).toEqual({ start: { icon: "sun", position: 40 }, current: { icon: "moon-star", position: 95 } });
+  });
+
+  it("avant toute ellipse, le temps en cours est celui du départ", () => {
+    const day = chatroomDayFromRow({ day_icon: "sun", day_position: 40 });
+    expect(day).toEqual({ start: { icon: "sun", position: 40 }, current: null });
+    expect(dayNow(day)).toEqual({ icon: "sun", position: 40 });
+  });
+
+  it("sans aucun temps, rien", () => {
+    expect(chatroomDayFromRow({ day_icon: null, day_position: null })).toBeNull();
+    expect(dayNow(null)).toBeNull();
+  });
+});
+
 describe("addTimelineDays", () => {
   it("avance dans le mois", () => {
     expect(addTimelineDays(CONFIG, { year: 4, month: 1, day: 12 }, 3)).toEqual({ year: 4, month: 1, day: 15 });

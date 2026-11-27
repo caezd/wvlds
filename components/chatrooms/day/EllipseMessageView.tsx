@@ -11,9 +11,10 @@ import { useChatroomTime } from "./chatroomTime";
 
 /**
  * Un message « Ellipse » (migration 275) : une ligne seule dans le fil, sans
- * auteur. Le saut se lit dans la ligne `chatroom_ellipses` jointe au
- * message, jamais dans son texte ; les jours passés et la date atteinte
- * décrivent la ligne (lecteur d'écran, infobulle).
+ * auteur, la date atteinte au-dessus quand le salon est daté. Le saut se lit
+ * dans la ligne `chatroom_ellipses` jointe au message, jamais dans son
+ * texte ; les jours passés et la date décrivent la ligne pour les lecteurs
+ * d'écran.
  */
 export function EllipseMessageView({
   ellipse,
@@ -34,10 +35,14 @@ export function EllipseMessageView({
     <article
       aria-label={t("ellipse")}
       aria-describedby={description ? descriptionId : undefined}
-      title={description ?? undefined}
       className="group/gblock relative w-full py-4"
     >
       {description && <span id={descriptionId} className="sr-only">{description}</span>}
+      {date && (
+        <p aria-hidden className="mb-1 text-xs text-muted-foreground">
+          {date}
+        </p>
+      )}
       {ellipse && (
         <ChatroomDayStrip
           day={{

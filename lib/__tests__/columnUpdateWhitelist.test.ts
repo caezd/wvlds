@@ -48,6 +48,8 @@ const NEVER_UPDATABLE: Record<string, string[]> = {
     // Le temps du salon (migration 275) : écrit par set_chatroom_day et
     // post_chatroom_ellipse seulement, qui vérifient les droits.
     "day_icon", "day_position", "day_from_icon", "day_from_position", "day_skipped", "timeline_current_date",
+    // Le temps en cours (migration 277) : avancé par post_chatroom_ellipse seulement.
+    "day_current_icon", "day_current_position",
   ],
   dm_messages: ["id", "conversation_id", "author_id", "created_at"],
   persona_relations: [

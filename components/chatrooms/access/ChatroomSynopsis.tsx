@@ -6,11 +6,11 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/section-label";
 import type { ChatroomVisibility } from "@/lib/chatroomAccess";
-import type { ChatroomDay } from "@/lib/chatroomDay";
+import type { DayPoint } from "@/lib/chatroomDay";
 import { ChatroomDayStrip } from "@/components/chatrooms/day/ChatroomDayStrip";
 
 /**
- * L'en-tête du fil : le temps du salon (migration 275), le synopsis, et la
+ * L'en-tête du fil : le temps du départ du salon (migration 275), le synopsis, et la
  * visibilité quand le salon n'est pas ouvert. Affiché au début de
  * l'historique, donc seul dans un salon neuf.
  */
@@ -18,14 +18,11 @@ export function ChatroomSynopsis({
   synopsis,
   visibility,
   day = null,
-  dateRange = null,
 }: {
   synopsis: string | null;
   visibility: ChatroomVisibility;
-  /** Météo et moment de la journée, au-dessus du synopsis. */
-  day?: ChatroomDay | null;
-  /** Début et avancée du salon sur la chronologie, quand des ellipses l'ont fait avancer. */
-  dateRange?: string | null;
+  /** Météo et moment de la journée au départ du salon, au-dessus du synopsis ; les ellipses n'y touchent pas. */
+  day?: DayPoint | null;
 }) {
   const t = useTranslations("chatrooms.access");
   const text = synopsis?.trim() ?? "";
@@ -38,12 +35,7 @@ export function ChatroomSynopsis({
 
   return (
     <section aria-label={t("synopsis")} className="space-y-3 py-6">
-      {day && (
-        <div>
-          {dateRange && <p className="text-xs text-muted-foreground">{dateRange}</p>}
-          <ChatroomDayStrip day={day} />
-        </div>
-      )}
+      {day && <ChatroomDayStrip day={day} />}
       {boxed && (
         <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
           <div className="flex items-center justify-between gap-2">

@@ -22,7 +22,7 @@ function renderDialog(onPost = vi.fn(), time?: Parameters<typeof ChatroomTimePro
         config: CONFIG,
         startDate: { year: 4, month: 1, day: 10 },
         currentDate: { year: 4, month: 1, day: 12 },
-        day: { icon: "moon-star", position: 95, fromIcon: null, fromPosition: null, skipped: 0 },
+        day: { start: { icon: "sun", position: 40 }, current: { icon: "moon-star", position: 95 } },
       }}
     >
       <EllipseDialog open onOpenChange={() => {}} onPost={onPost} />
@@ -32,7 +32,7 @@ function renderDialog(onPost = vi.fn(), time?: Parameters<typeof ChatroomTimePro
 }
 
 describe("EllipseDialog", () => {
-  it("part du temps actuel du salon", () => {
+  it("part du temps en cours du salon, pas de celui du départ", () => {
     const { dialog } = renderDialog();
     expect(within(dialog).getByRole("radio", { name: "Nuit claire" })).toHaveAttribute("aria-checked", "true");
     expect(within(dialog).getByRole("slider", { name: "Moment de la journée" })).toHaveValue("95");
@@ -57,6 +57,16 @@ describe("EllipseDialog", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Poster l’ellipse" }));
     expect(onPost).toHaveBeenCalledWith({ days: 3, icon: "cloud-rain", position: 48 });
+  });
+
+  it("avant toute ellipse, part du temps du départ", () => {
+    const { dialog } = renderDialog(vi.fn(), {
+      config: null,
+      startDate: null,
+      currentDate: null,
+      day: { start: { icon: "sun", position: 40 }, current: null },
+    });
+    expect(within(dialog).getByRole("radio", { name: "Soleil" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("sans date ni temps de départ : l'aube, et pas d'indication de date", () => {
