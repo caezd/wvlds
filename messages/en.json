@@ -1762,6 +1762,7 @@
     "noWorld": "No world",
     "pick": "Choose a persona",
     "pickerEmpty": "No personas yet. Create one first.",
+    "pickerSearch": "Search a persona…",
     "toggleFavorite": "Toggle favorite",
     "lockedHint": "This persona can no longer be used on the free plan — upgrade to use it again.",
     "quotaLocked": "Over the free plan limit",

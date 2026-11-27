@@ -1762,6 +1762,7 @@
     "noWorld": "Sin mundo",
     "pick": "Elegir un personaje",
     "pickerEmpty": "Sin personajes. Cree uno primero.",
+    "pickerSearch": "Buscar un persona…",
     "toggleFavorite": "Marcar/quitar de favoritos",
     "lockedHint": "Este personaje ya no se puede usar con el plan gratuito — mejore su plan para volver a usarlo.",
     "quotaLocked": "Fuera de la cuota del plan gratuito",

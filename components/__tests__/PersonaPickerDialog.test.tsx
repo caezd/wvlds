@@ -135,6 +135,58 @@ describe("PersonaPickerDialog — liste et favoris", () => {
   });
 });
 
+describe("PersonaPickerDialog — recherche", () => {
+  it("filtre la liste sur le nom, sans tenir compte des accents ni de la casse", async () => {
+    setup([...personas, { id: "p-elodie", user_id: "u1", name: "Élodie", avatar_url: null, created_at: "2026-01-04T00:00:00Z" }]);
+    const user = await openDialog();
+    await screen.findByText("Jett");
+
+    const champ = screen.getByRole("searchbox", { name: "Rechercher un persona…" });
+    await user.type(champ, "COR");
+    expect(screen.getByText("Corry")).toBeInTheDocument();
+    expect(screen.queryByText("Jett")).toBeNull();
+    expect(screen.queryByText("Caelan Voss")).toBeNull();
+
+    await user.clear(champ);
+    await user.type(champ, "elod");
+    expect(screen.getByText("Élodie")).toBeInTheDocument();
+    expect(screen.queryByText("Corry")).toBeNull();
+  });
+
+  it("dit qu'aucun persona ne correspond", async () => {
+    const user = await openDialog();
+    await screen.findByText("Jett");
+    await user.type(screen.getByRole("searchbox", { name: "Rechercher un persona…" }), "zzz");
+    expect(screen.getByText("Aucun persona ne correspond.")).toBeInTheDocument();
+  });
+
+  it("garde le titre des PNJ quand seul un PNJ suivant correspond", async () => {
+    membership.canPlayNpc = true;
+    setup([
+      ...personas,
+      { id: "npc-1", user_id: "u9", name: "Aubergiste", avatar_url: null, created_at: "2025-01-01T00:00:00Z", is_npc: true },
+      { id: "npc-2", user_id: "u9", name: "Garde", avatar_url: null, created_at: "2025-01-02T00:00:00Z", is_npc: true },
+    ]);
+    const user = await openDialog("w1");
+    await screen.findByText("Garde");
+    await user.type(screen.getByRole("searchbox", { name: "Rechercher un persona…" }), "gar");
+    expect(screen.getByText("PNJ du monde")).toBeInTheDocument();
+    expect(screen.queryByText("Aubergiste")).toBeNull();
+  });
+
+  it("repart d'une liste entière à chaque ouverture", async () => {
+    // Chaque ouverture recharge la liste : une réponse par chargement.
+    setup().enqueue({ data: personas, error: null });
+    const user = await openDialog();
+    await screen.findByText("Jett");
+    await user.type(screen.getByRole("searchbox", { name: "Rechercher un persona…" }), "cor");
+    await user.click(screen.getByRole("button", { name: "Annuler" }));
+    await user.click(screen.getByText("open"));
+    expect(await screen.findByText("Jett")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Rechercher un persona…" })).toHaveValue("");
+  });
+});
+
 describe("PersonaPickerDialog — éligibilité (plan gratuit)", () => {
   const sixPersonas: Persona[] = [
     { id: "p1", user_id: "u1", name: "Alpha", avatar_url: null, created_at: "2026-01-01T00:00:00Z" },

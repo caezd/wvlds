@@ -28,7 +28,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
 import { SectionLabel } from "@/components/ui/section-label";
-import { Star, UserPlus, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Star, UserPlus, Lock, Search } from "lucide-react";
+import { normalizeForSearch } from "@/lib/chatSearchDirectory";
 import { useTranslations } from "next-intl";
 import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
@@ -187,6 +189,9 @@ export function PersonaPickerDialog({
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   useEffect(() => setValue(selected?.id ?? ""), [selected?.id, open]);
+  // La recherche repart de zéro à chaque ouverture.
+  const [query, setQuery] = useState("");
+  useEffect(() => { if (open) setQuery(""); }, [open]);
 
   const favoritesKey = resolvedUserId ? `persona-favorites:${resolvedUserId}` : null;
 
@@ -251,7 +256,12 @@ export function PersonaPickerDialog({
       return a.name.localeCompare(b.name);
     });
   }, [personas, favorites]);
-  const firstNpcId = useMemo(() => sortedPersonas.find((p) => p.is_npc)?.id ?? null, [sortedPersonas]);
+  // Sur le nom, sans accents ni casse : « elodie » trouve « Élodie ».
+  const visiblePersonas = useMemo(() => {
+    const needle = normalizeForSearch(query);
+    return needle ? sortedPersonas.filter((p) => normalizeForSearch(p.name).includes(needle)) : sortedPersonas;
+  }, [sortedPersonas, query]);
+  const firstNpcId = useMemo(() => visiblePersonas.find((p) => p.is_npc)?.id ?? null, [visiblePersonas]);
 
   // Plan gratuit : seuls les 5 personas les plus anciens (par monde) restent
   // sélectionnables — les autres s'affichent verrouillés (voir migration 090).
@@ -328,7 +338,7 @@ export function PersonaPickerDialog({
     </span>
   );
 
-  const rows = sortedPersonas.map((p) => {
+  const rows = visiblePersonas.map((p) => {
     const reason = lockReasonById.get(p.id) ?? "quota";
     const uninvited = !!allowedIds && !allowedIds.has(p.id) && !!notAllowedHint;
     return (
@@ -360,6 +370,28 @@ export function PersonaPickerDialog({
     </p>
   ) : null;
 
+  const searchField = emptyOrLoading ? null : (
+    <div className="relative">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={t("pickerSearch")}
+        aria-label={t("pickerSearch")}
+        className="pl-9"
+      />
+    </div>
+  );
+
+  const list = emptyOrLoading ?? (
+    rows.length > 0 ? (
+      <div className="flex flex-col gap-1 pb-1">{rows}</div>
+    ) : (
+      <p className="py-6 text-center text-sm text-muted-foreground">{t("list.noMatch")}</p>
+    )
+  );
+
   if (variant === "drawer") {
     return (
       <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
@@ -380,9 +412,8 @@ export function PersonaPickerDialog({
           {/* Conteneur scrollable natif (flex item, pas de ScrollArea) —
               c'est le pattern recommandé par Base UI pour le contenu
               défilant d'un drawer. */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4">
-            {emptyOrLoading ?? <div className="flex flex-col gap-1 pb-1">{rows}</div>}
-          </div>
+          {searchField && <div className="px-4 pb-2">{searchField}</div>}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">{list}</div>
           <DrawerFooter className="flex-row gap-2">
             <DrawerClose render={<Button variant="secondary" className="flex-1" />}>
               {tCommon("cancel")}
@@ -412,9 +443,10 @@ export function PersonaPickerDialog({
           <DialogDescription className="sr-only">{t("pick")}</DialogDescription>
         </DialogHeader>
 
+        {searchField}
         {emptyOrLoading ?? (
           <ScrollArea className="max-h-[60vh]">
-            <div className="flex flex-col gap-1 pr-3 pb-1">{rows}</div>
+            <div className="pr-3">{list}</div>
           </ScrollArea>
         )}
 

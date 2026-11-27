@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Interface",
     area: "Personas",
-    text: "Sélecteur de persona : la raison du cadenas s’affiche sous le nom.\n- fiche incomplète\n- fiche non validée\n- hors quota du plan gratuit\n- persona non invité dans le salon",
+    text: "Sélecteur de persona : champ de recherche, raison du cadenas sous le nom.\n- recherche sur le nom, sans tenir compte des accents ni des majuscules\n- cadenas expliqué : fiche incomplète, fiche non validée, hors quota du plan gratuit ou persona non invité dans le salon",
   },
   {
     date: "2026-11-26",

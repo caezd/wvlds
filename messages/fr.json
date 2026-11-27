@@ -1762,6 +1762,7 @@
     "noWorld": "Sans monde",
     "pick": "Choisir un persona",
     "pickerEmpty": "Aucun persona. Créez-en un d'abord.",
+    "pickerSearch": "Rechercher un persona…",
     "toggleFavorite": "Marquer/retirer des favoris",
     "lockedHint": "Ce persona n'est plus jouable avec le plan gratuit — passez à un plan supérieur pour le réutiliser.",
     "quotaLocked": "Hors quota du plan gratuit",
