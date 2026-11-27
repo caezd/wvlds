@@ -51,6 +51,8 @@ import { HelpHint } from "@/components/ui/help-hint";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
 import { ChatroomVisibilityField } from "@/components/chatrooms/access/ChatroomVisibilityField";
 import { ChatroomInviteesField } from "@/components/chatrooms/access/ChatroomInviteesField";
+import { ChatroomDayPicker } from "@/components/chatrooms/day/ChatroomDayPicker";
+import { DAY_DEFAULT_ICON, DAY_DEFAULT_POSITION } from "@/lib/chatroomDay";
 import { addCreatedWorldRoom } from "@/lib/worldRoomsStore";
 
 type MapPinOption = { id: string; title: string; color: string };
@@ -122,6 +124,7 @@ export function NewChatroomDialog({
 }) {
   const t = useTranslations("worlds.composer");
   const tAccess = useTranslations("chatrooms.access");
+  const tDay = useTranslations("chatrooms.dayStatus");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -141,6 +144,8 @@ export function NewChatroomDialog({
   const [visibility, setVisibility] = useState<ChatroomVisibility>("open");
   const [invitees, setInvitees] = useState<ChatroomInvitee[]>([]);
   const [synopsis, setSynopsis] = useState("");
+  // Le temps du salon (migration 275), posé par sa RPC une fois le salon créé.
+  const [day, setDay] = useState<{ icon: string; position: number } | null>(null);
 
   const [mapPins, setMapPins] = useState<MapPinOption[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -195,6 +200,7 @@ export function NewChatroomDialog({
     setVisibility("open");
     setInvitees([]);
     setSynopsis("");
+    setDay(null);
     setTimelineDate(dateRequired && timelineConfig ? currentPeriod(timelineConfig) : null);
     if (timelineConfig) {
       void supabase
@@ -222,7 +228,8 @@ export function NewChatroomDialog({
   }, [initialMapPinId]);
 
   // Ce qui serait perdu en fermant : le titre tiré au hasard ne compte pas.
-  const dirty = synopsis.trim() !== "" || invitees.length > 0 || visibility !== "open" || previousId !== null;
+  const dirty =
+    synopsis.trim() !== "" || invitees.length > 0 || visibility !== "open" || previousId !== null || day !== null;
 
   function requestClose() {
     if (submitting) return;
@@ -267,11 +274,22 @@ export function NewChatroomDialog({
         return;
       }
 
-      // Les invités puis la suite, une fois le salon créé. Un échec ne retient
-      // pas le salon : l'un et l'autre se refont depuis ses réglages.
+      // Les invités, le temps puis la suite, une fois le salon créé. Un échec
+      // ne retient pas le salon : chacun se refait depuis ses réglages.
       if (visibilityHasInvitees(visibility) && invitees.length > 0) {
         const ok = await saveChatroomInvitees(supabase, room.id, [], invitees);
         if (!ok) toast.error(t("inviteesFailed"));
+      }
+      if (day) {
+        const { error: dayError } = await supabase.rpc(RPC.SET_CHATROOM_DAY, {
+          p_chat: room.id,
+          p_icon: day.icon,
+          p_position: day.position,
+        });
+        if (dayError) {
+          console.error("[NewChatroomDialog] temps du salon", dayError);
+          toast.error(tDay("settingsFailed"));
+        }
       }
       if (previousId) {
         const { data: link, error: linkError } = await supabase
@@ -439,6 +457,28 @@ export function NewChatroomDialog({
           label={visibility === "private" ? tAccess("inviteesMembers") : tAccess("inviteesWriters")}
         />
       )}
+
+      {/* Le temps du salon, affiché au-dessus du synopsis. */}
+      <Field
+        label={tDay("settingsTitle")}
+        hint={
+          <Switch
+            checked={day !== null}
+            onCheckedChange={(v) => setDay(v ? { icon: DAY_DEFAULT_ICON, position: DAY_DEFAULT_POSITION } : null)}
+            aria-label={tDay("settingsToggle")}
+          />
+        }
+      >
+        {day !== null && (
+          <section aria-label={tDay("label")} className="rounded-lg border border-border bg-muted/30 p-3">
+            <ChatroomDayPicker
+              icon={day.icon}
+              position={day.position}
+              onChange={(icon, position) => setDay({ icon, position })}
+            />
+          </section>
+        )}
+      </Field>
 
       <Field
         label={tAccess("synopsis")}

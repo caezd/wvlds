@@ -40,8 +40,15 @@ const NEVER_UPDATABLE: Record<string, string[]> = {
     "visible_to", "reply_to_id", "insert_before_id", "inserted_at",
     // Le lancer publié (migration 270) : posé à l'insertion, jamais changé.
     "dice_roll_id",
+    // L'ellipse publiée (migration 275) : posée à l'insertion, jamais changée.
+    "ellipse_id",
   ],
-  chatrooms: ["id", "world_id", "created_by", "created_at", "updated_at"],
+  chatrooms: [
+    "id", "world_id", "created_by", "created_at", "updated_at",
+    // Le temps du salon (migration 275) : écrit par set_chatroom_day et
+    // post_chatroom_ellipse seulement, qui vérifient les droits.
+    "day_icon", "day_position", "day_from_icon", "day_from_position", "day_skipped", "timeline_current_date",
+  ],
   dm_messages: ["id", "conversation_id", "author_id", "created_at"],
   persona_relations: [
     "id", "world_id", "from_persona_id", "to_persona_id", "created_by", "created_at",

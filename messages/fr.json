@@ -2138,6 +2138,54 @@
     "bugReportsCardDesc": "Les problèmes remontés par les utilisateurs"
   },
   "chatrooms": {
+    "dayStatus": {
+      "label": "Temps du salon",
+      "weather": "Météo",
+      "moment": "Moment de la journée",
+      "daysPassed": "Jours passés",
+      "later": "{count, plural, =0 {le même jour} one {le lendemain} other {# jours plus tard}}",
+      "range": "{start} → {current}",
+      "moments": {
+        "dawn": "Aube",
+        "morning": "Matin",
+        "noon": "Midi",
+        "afternoon": "Après-midi",
+        "dusk": "Crépuscule",
+        "night": "Nuit"
+      },
+      "icons": {
+        "sunrise": "Lever du soleil",
+        "sun": "Soleil",
+        "sunDim": "Soleil voilé",
+        "cloudSun": "Éclaircies",
+        "cloudy": "Nuageux",
+        "cloud": "Couvert",
+        "cloudDrizzle": "Bruine",
+        "cloudRain": "Pluie",
+        "cloudLightning": "Orage",
+        "cloudSnow": "Neige",
+        "snowflake": "Gel",
+        "cloudFog": "Brouillard",
+        "wind": "Vent",
+        "sunset": "Coucher du soleil",
+        "cloudMoon": "Nuit nuageuse",
+        "moonStar": "Nuit claire"
+      },
+      "ellipse": "Ellipse",
+      "ellipseHint": "Faites passer le temps : météo, moment de la journée, jours passés.",
+      "ellipseDescription": "L’icône se déplace sur la ligne du salon ; les jours passés s’affichent en pointillés.",
+      "post": "Poster l’ellipse",
+      "dateHint": "Le salon passe du {from} au {to}.",
+      "errors": {
+        "notAllowed": "Vous ne pouvez pas faire passer le temps dans ce salon.",
+        "invalid": "Cette ellipse n’est pas valide.",
+        "failed": "L’ellipse n’a pas pu être posée."
+      },
+      "settingsTitle": "Temps",
+      "settingsHelp": "Météo et moment de la journée, affichés au-dessus du synopsis. Les ellipses les font avancer.",
+      "settingsToggle": "Régler le temps du salon",
+      "settingsFailed": "Le temps du salon n’a pas pu être enregistré."
+    },
     "newRoom": "Nouvelle salle",
     "composerTitle": "Écrire un message",
     "insertBlock": "Insérer un bloc",

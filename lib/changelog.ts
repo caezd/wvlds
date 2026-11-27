@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Fonctionnalité",
+    area: "Salons",
+    text: "Temps du salon : météo et moment de la journée au-dessus du synopsis, ellipses pour faire passer le temps.\n- une icône de météo et sa place sur la ligne de la journée, réglées dans Nouveau jeu ou les réglages du salon\n- nouveau bloc « Ellipse » dans le composeur : tout participant fait avancer le temps, d’un même jour à plusieurs jours\n- un trait pointillé par jour passé, jusqu’à 7, puis « ··· »\n- salon daté dans la chronologie : date de début conservée, date atteinte avancée par les ellipses",
+  },
+  {
+    date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
     text: "Nouveau jeu : listes lisibles, tiroir mobile sur toute la hauteur.\n- Lieu, Catégorie et « Suite de… » : listes sur le fond sombre de l’application\n- sur mobile : tiroir sur toute la hauteur de l’écran, coins arrondis comme sur ordinateur",

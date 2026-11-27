@@ -21,7 +21,7 @@ describe("parseChatBlock", () => {
     expect(block).toMatchObject({ _type: "dice", total: 4 });
   });
 
-  it.each(["banner", "reveal", "npc", "hp", "callout", "choice"])(
+  it.each(["banner", "reveal", "npc", "hp", "callout", "choice", "ellipse"])(
     "reconnaît le type de bloc %s",
     (type) => {
       expect(parseChatBlock(`{"_type":"${type}"}`)).toMatchObject({ _type: type });

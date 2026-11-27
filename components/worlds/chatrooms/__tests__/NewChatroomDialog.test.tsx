@@ -478,3 +478,59 @@ describe("NewChatroomDialog — chronologie", () => {
     expect(mock.buildersFor("chatroom_sequels")).toHaveLength(0);
   });
 });
+
+describe("NewChatroomDialog — temps du salon (migration 275)", () => {
+  it("facultatif : réglé ici, il part par la base une fois le salon créé", async () => {
+    const mock = setup();
+    mock.rpc.mockResolvedValue({ data: null, error: null });
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+
+    const interrupteur = screen.getByRole("switch", { name: "Régler le temps du salon" });
+    expect(interrupteur).not.toBeChecked();
+    expect(screen.queryByRole("radio", { name: "Pluie" })).toBeNull();
+    await user.click(interrupteur);
+    await user.click(screen.getByRole("radio", { name: "Pluie" }));
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/c/c-neuf"));
+    expect(mock.rpc).toHaveBeenCalledWith("set_chatroom_day", { p_chat: "c-neuf", p_icon: "cloud-rain", p_position: 10 });
+  });
+
+  it("sans temps choisi, rien de plus", async () => {
+    const mock = setup();
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/c/c-neuf"));
+    expect(mock.rpc).not.toHaveBeenCalledWith("set_chatroom_day", expect.anything());
+  });
+
+  it("un temps refusé n'empêche pas le salon d'exister", async () => {
+    const mock = setup();
+    mock.rpc.mockResolvedValue({ data: null, error: { message: "not_allowed" } });
+    const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+    await user.click(screen.getByRole("switch", { name: "Régler le temps du salon" }));
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/c/c-neuf"));
+    expect(toastError).toHaveBeenCalledWith("Le temps du salon n’a pas pu être enregistré.");
+    erreur.mockRestore();
+  });
+
+  it("un temps choisi demande confirmation avant de fermer", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+    await user.click(screen.getByRole("switch", { name: "Régler le temps du salon" }));
+    await user.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(await screen.findByText("Abandonner ce salon ?")).toBeInTheDocument();
+  });
+});

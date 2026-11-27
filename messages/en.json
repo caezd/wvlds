@@ -2138,6 +2138,54 @@
     "bugReportsCardDesc": "Problems reported by users"
   },
   "chatrooms": {
+    "dayStatus": {
+      "label": "Room time",
+      "weather": "Weather",
+      "moment": "Time of day",
+      "daysPassed": "Days passed",
+      "later": "{count, plural, =0 {the same day} one {the next day} other {# days later}}",
+      "range": "{start} → {current}",
+      "moments": {
+        "dawn": "Dawn",
+        "morning": "Morning",
+        "noon": "Noon",
+        "afternoon": "Afternoon",
+        "dusk": "Dusk",
+        "night": "Night"
+      },
+      "icons": {
+        "sunrise": "Sunrise",
+        "sun": "Sun",
+        "sunDim": "Hazy sun",
+        "cloudSun": "Sunny spells",
+        "cloudy": "Cloudy",
+        "cloud": "Overcast",
+        "cloudDrizzle": "Drizzle",
+        "cloudRain": "Rain",
+        "cloudLightning": "Storm",
+        "cloudSnow": "Snow",
+        "snowflake": "Frost",
+        "cloudFog": "Fog",
+        "wind": "Wind",
+        "sunset": "Sunset",
+        "cloudMoon": "Cloudy night",
+        "moonStar": "Clear night"
+      },
+      "ellipse": "Ellipsis",
+      "ellipseHint": "Let time pass: weather, time of day, days passed.",
+      "ellipseDescription": "The icon moves along the room's line; days passed show as dashes.",
+      "post": "Post the ellipsis",
+      "dateHint": "The room moves from {from} to {to}.",
+      "errors": {
+        "notAllowed": "You cannot make time pass in this room.",
+        "invalid": "This ellipsis is not valid.",
+        "failed": "The ellipsis could not be posted."
+      },
+      "settingsTitle": "Time",
+      "settingsHelp": "Weather and time of day, shown above the synopsis. Ellipses move them forward.",
+      "settingsToggle": "Set the room's time",
+      "settingsFailed": "The room's time could not be saved."
+    },
     "newRoom": "New room",
     "composerTitle": "Write a message",
     "insertBlock": "Insert a block",

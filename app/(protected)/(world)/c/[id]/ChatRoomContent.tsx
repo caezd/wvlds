@@ -1,4 +1,5 @@
 import ChatRoomView from "./view";
+import { chatroomDayFromRow } from "@/lib/chatroomDay";
 import { createClient } from "@/lib/supabase/server";
 import type { ChatMessageWithPersona } from "@/types/db";
 import { canEditChatroom, hasWorldPermission } from "@/lib/worldPermissions";
@@ -130,6 +131,8 @@ export default async function ChatRoomContent({
         category_id: (chatroom.category_id as string | null) ?? null,
         visibility,
         synopsis: chatroom.synopsis ?? null,
+        day: chatroomDayFromRow(chatroom),
+        timeline_current_date: (chatroom.timeline_current_date as import("@/types/worlds").WorldTimelineDate | null) ?? null,
         worlds: (() => {
           const w = worldData;
           if (!w?.id) return null;

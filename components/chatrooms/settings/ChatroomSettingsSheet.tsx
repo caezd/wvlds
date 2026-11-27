@@ -65,8 +65,17 @@ import {
   type ChatroomInvitee,
   type ChatroomVisibility,
 } from "@/lib/chatroomAccess";
+import { ChatroomDayPicker } from "@/components/chatrooms/day/ChatroomDayPicker";
+import { DAY_DEFAULT_ICON, DAY_DEFAULT_POSITION } from "@/lib/chatroomDay";
+import { RPC } from "@/lib/constants";
 
 type MapPinOption = { id: string; title: string; color: string };
+/** Le temps réglable d'un salon (migration 275) : nul s'il n'en a pas. */
+type DaySetting = { icon: string; position: number } | null;
+
+function memeTemps(a: DaySetting, b: DaySetting): boolean {
+  return a?.icon === b?.icon && a?.position === b?.position;
+}
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
 
 const schema = z.object({
@@ -145,6 +154,7 @@ type Props = {
     category_id?: string | null;
     visibility?: ChatroomVisibility;
     synopsis?: string | null;
+    day?: DaySetting;
   };
   worldTimelineConfig?: WorldTimelineConfig | null;
   worldId?: string | null;
@@ -164,6 +174,7 @@ export default function ChatroomSettingsSheet({
 }: Props) {
   const t = useTranslations("chatrooms");
   const tAccess = useTranslations("chatrooms.access");
+  const tDay = useTranslations("chatrooms.dayStatus");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
@@ -188,6 +199,9 @@ export default function ChatroomSettingsSheet({
   // à part, enregistrés après le salon.
   const [invitees, setInvitees] = React.useState<ChatroomInvitee[]>([]);
   const [baseInvitees, setBaseInvitees] = React.useState<ChatroomInvitee[]>([]);
+  // Le temps du salon s'écrit par sa RPC (migration 275), pas dans la ligne.
+  const [day, setDay] = React.useState<DaySetting>(chatroom.day ?? null);
+  const [baseDay, setBaseDay] = React.useState<DaySetting>(chatroom.day ?? null);
   // Rien ne part en base avant « Enregistrer » : `base` est l'état enregistré,
   // l'écart avec les valeurs affichées dit quoi écrire — en UNE requête.
   const [base, setBase] = React.useState<Reglages>(() => reglagesDe(chatroom));
@@ -221,6 +235,8 @@ export default function ChatroomSettingsSheet({
       setSynopsis(chatroom.synopsis ?? "");
       setInvitees([]);
       setBaseInvitees([]);
+      setDay(chatroom.day ?? null);
+      setBaseDay(chatroom.day ?? null);
       void fetchChatroomInvitees(supabase, chatroom.id).then(
         (rows) => { setInvitees(rows); setBaseInvitees(rows); },
         (e: unknown) => console.error("[ChatroomSettingsSheet] invités", e),
@@ -266,7 +282,8 @@ export default function ChatroomSettingsSheet({
   // Les invités ne comptent que si le salon en a : revenu à « Ouvert », ceux
   // enregistrés restent en place pour un retour en public ou privé.
   const invitesModifies = visibilityHasInvitees(visibility) && !memesInvites(baseInvitees, invitees);
-  const dirty = Object.keys(patch).length > 0 || invitesModifies;
+  const tempsModifie = !memeTemps(baseDay, day);
+  const dirty = Object.keys(patch).length > 0 || invitesModifies || tempsModifie;
 
   // ---------- upload ----------
 
@@ -344,6 +361,20 @@ export default function ChatroomSettingsSheet({
       }
       setBaseInvitees(invitees);
     }
+    if (tempsModifie) {
+      const { error } = await supabase.rpc(RPC.SET_CHATROOM_DAY, {
+        p_chat: chatroom.id,
+        p_icon: day?.icon ?? null,
+        p_position: day?.position ?? null,
+      });
+      if (error) {
+        setSaving(false);
+        console.error("[ChatroomSettingsSheet] temps du salon", error);
+        toast.error(tDay("settingsFailed"));
+        return false;
+      }
+      setBaseDay(day);
+    }
     setSaving(false);
     // Les images remplacées ou retirées ne servent plus : on les efface, comme
     // les envois de la séance qui n'ont pas été retenus.
@@ -370,6 +401,7 @@ export default function ChatroomSettingsSheet({
     setVisibility(base.visibility);
     setSynopsis(base.synopsis ?? "");
     setInvitees(baseInvitees);
+    setDay(baseDay);
   }
 
   function requestOpenChange(next: boolean) {
@@ -500,6 +532,30 @@ export default function ChatroomSettingsSheet({
                   maxLength={SYNOPSIS_MAX_LENGTH}
                   className="max-h-60 min-h-20 text-sm"
                 />
+              </div>
+
+              {/* Temps : météo et moment, affichés au-dessus du synopsis */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">{tDay("settingsTitle")}</p>
+                    <p className="text-xs text-muted-foreground leading-snug">{tDay("settingsHelp")}</p>
+                  </div>
+                  <Switch
+                    aria-label={tDay("settingsToggle")}
+                    checked={day !== null}
+                    onCheckedChange={(v) =>
+                      setDay(v ? baseDay ?? { icon: DAY_DEFAULT_ICON, position: DAY_DEFAULT_POSITION } : null)
+                    }
+                  />
+                </div>
+                {day !== null && (
+                  <ChatroomDayPicker
+                    icon={day.icon}
+                    position={day.position}
+                    onChange={(icon, position) => setDay({ icon, position })}
+                  />
+                )}
               </div>
 
               {/* Accès : visibilité, puis les invités */}

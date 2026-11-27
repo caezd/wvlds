@@ -29,6 +29,14 @@ export type ChatroomPatch = {
   icon_url?: string | null;
   synopsis?: string | null;
   visibility?: string;
+  /** Le temps du salon (migration 275). */
+  day_icon?: string | null;
+  day_position?: number | null;
+  day_from_icon?: string | null;
+  day_from_position?: number | null;
+  day_skipped?: number | null;
+  timeline_date?: import("@/types/worlds").WorldTimelineDate | null;
+  timeline_current_date?: import("@/types/worlds").WorldTimelineDate | null;
   /** Les invités ont changé (migration 225) : l'accès en écriture est à relire. */
   participants?: true;
 };

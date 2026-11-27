@@ -147,6 +147,19 @@ describe("ChatroomSynopsis", () => {
     expect(section).toHaveTextContent("Tout le monde lit, seuls les invités écrivent.");
   });
 
+  it("le temps du salon au-dessus du synopsis, même sans synopsis", () => {
+    const day = { icon: "sunrise", position: 5, fromIcon: null, fromPosition: null, skipped: 0 };
+    const { rerender } = render(<ChatroomSynopsis synopsis={null} visibility="open" day={day} />);
+    expect(screen.getByRole("group", { name: "Temps du salon" })).toHaveTextContent("Aube");
+
+    rerender(<ChatroomSynopsis synopsis="Une nuit d'orage." visibility="open" day={day} dateRange="12 Dégel, an 4 → 15 Dégel, an 4" />);
+    const section = screen.getByRole("region", { name: "Synopsis" });
+    const ligne = within(section).getByRole("group", { name: "Temps du salon" });
+    const texte = within(section).getByText("Une nuit d'orage.");
+    expect(ligne.compareDocumentPosition(texte) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section).toHaveTextContent("12 Dégel, an 4 → 15 Dégel, an 4");
+  });
+
   it("l'avis de lecture seule", () => {
     render(<ChatroomReadOnlyNotice />);
     expect(screen.getByRole("status")).toHaveTextContent("seuls ses invités y écrivent");

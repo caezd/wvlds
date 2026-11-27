@@ -2138,6 +2138,54 @@
     "bugReportsCardDesc": "Problemas notificados por los usuarios"
   },
   "chatrooms": {
+    "dayStatus": {
+      "label": "Tiempo de la sala",
+      "weather": "Clima",
+      "moment": "Momento del día",
+      "daysPassed": "Días transcurridos",
+      "later": "{count, plural, =0 {el mismo día} one {al día siguiente} other {# días después}}",
+      "range": "{start} → {current}",
+      "moments": {
+        "dawn": "Alba",
+        "morning": "Mañana",
+        "noon": "Mediodía",
+        "afternoon": "Tarde",
+        "dusk": "Crepúsculo",
+        "night": "Noche"
+      },
+      "icons": {
+        "sunrise": "Amanecer",
+        "sun": "Sol",
+        "sunDim": "Sol velado",
+        "cloudSun": "Claros",
+        "cloudy": "Nuboso",
+        "cloud": "Cubierto",
+        "cloudDrizzle": "Llovizna",
+        "cloudRain": "Lluvia",
+        "cloudLightning": "Tormenta",
+        "cloudSnow": "Nieve",
+        "snowflake": "Helada",
+        "cloudFog": "Niebla",
+        "wind": "Viento",
+        "sunset": "Atardecer",
+        "cloudMoon": "Noche nublada",
+        "moonStar": "Noche despejada"
+      },
+      "ellipse": "Elipsis",
+      "ellipseHint": "Haga pasar el tiempo: clima, momento del día, días transcurridos.",
+      "ellipseDescription": "El icono se desplaza por la línea de la sala; los días transcurridos se muestran en punteado.",
+      "post": "Publicar la elipsis",
+      "dateHint": "La sala pasa del {from} al {to}.",
+      "errors": {
+        "notAllowed": "Usted no puede hacer pasar el tiempo en esta sala.",
+        "invalid": "Esta elipsis no es válida.",
+        "failed": "No se pudo publicar la elipsis."
+      },
+      "settingsTitle": "Tiempo",
+      "settingsHelp": "Clima y momento del día, mostrados encima de la sinopsis. Las elipsis los hacen avanzar.",
+      "settingsToggle": "Ajustar el tiempo de la sala",
+      "settingsFailed": "No se pudo guardar el tiempo de la sala."
+    },
     "newRoom": "Nueva sala",
     "composerTitle": "Escribir un mensaje",
     "insertBlock": "Insertar un bloque",

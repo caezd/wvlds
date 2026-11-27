@@ -129,6 +129,8 @@ export type ChatMessage = {
   insert_before_id?: number | null;
   /** Le lancer de dés que publie ce message (migration 270). */
   dice_roll_id?: string | null;
+  /** L'ellipse que publie ce message (migration 275). */
+  ellipse_id?: string | null;
 };
 
 export type ChatMessageReaction = {
@@ -235,6 +237,8 @@ export type ChatMessageWithPersona = ChatMessage & {
   reply_to?: ChatMessageReplyRef | null;
   /** Le lancer tiré par la base, joint par `dice_roll_id` (migration 270). */
   dice_roll?: import("@/lib/worldDice").DiceRoll | null;
+  /** L'ellipse posée par la base, jointe par `ellipse_id` (migration 275). */
+  ellipse?: import("@/lib/chatroomDay").ChatroomEllipse | null;
 };
 
 // --- RPC return types --------------------------------------------------------

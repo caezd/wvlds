@@ -86,9 +86,15 @@ export type TransferBlock = {
   id: string;
 };
 
-export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock | ChoiceBlock | TransferBlock;
+// Bloc « Ellipse » (migration 275) : le saut de temps se lit dans la ligne
+// `chatroom_ellipses` que désigne `chat_messages.ellipse_id`, jamais ici.
+export type EllipseBlock = {
+  _type: "ellipse";
+};
 
-const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor", "choice", "transfer"]);
+export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock | ChoiceBlock | TransferBlock | EllipseBlock;
+
+const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor", "choice", "transfer", "ellipse"]);
 
 export function parseChatBlock(content: string): ChatBlock | null {
   if (!content.startsWith("{")) return null;

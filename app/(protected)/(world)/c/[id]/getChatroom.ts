@@ -15,6 +15,13 @@ export type ChatroomWithWorld = {
   category_id: string | null;
   visibility: string;
   synopsis: string | null;
+  /** Le temps du salon (migration 275). */
+  day_icon?: string | null;
+  day_position?: number | null;
+  day_from_icon?: string | null;
+  day_from_position?: number | null;
+  day_skipped?: number | null;
+  timeline_current_date?: unknown;
   worlds: unknown;
 };
 
@@ -31,7 +38,7 @@ export const getChatroomWithWorld = cache(
     const { data, error } = await supabase
       .from("chatrooms")
       .select(
-        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, visibility, synopsis, worlds(id, name, owner_id, enable_live_chat, restrict_skills, dice_mode, dice_allow_edit, dice_critical, dice_fumble, timeline_enabled, timeline_config, world_members(user_id))",
+        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, visibility, synopsis, day_icon, day_position, day_from_icon, day_from_position, day_skipped, timeline_current_date, worlds(id, name, owner_id, enable_live_chat, restrict_skills, dice_mode, dice_allow_edit, dice_critical, dice_fumble, timeline_enabled, timeline_config, world_members(user_id))",
       )
       .eq("id", id)
       .single();

@@ -6,10 +6,11 @@ import { useTranslations } from "next-intl";
 import {
   Component, Dices, Pipette, ImagePlus, Eye, Lock, Sword, Heart,
   Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check,
-  AlertTriangle, Vote, ArrowRightLeft, type LucideIcon,
+  AlertTriangle, Vote, ArrowRightLeft, Ellipsis, type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ChatroomDayStrip } from "@/components/chatrooms/day/ChatroomDayStrip";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { Button, buttonVariants } from "../../ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,6 +44,7 @@ import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePic
 import { BUBBLE_MAX_ALPHA, bubbleBackground, bubbleStyle } from "@/lib/bubbleColors";
 import type { usePersonaTransfer } from "@/hooks/usePersonaTransfer";
 import type { DiceRollRequest } from "@/lib/worldDice";
+import type { EllipseRequest } from "@/lib/chatroomDay";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -56,6 +58,7 @@ const CalloutDialog = dynamic(() => import("../blocks/CalloutDialog").then((m) =
 const AnchorDialog = dynamic(() => import("../blocks/AnchorDialog").then((m) => m.AnchorDialog), { ssr: false });
 const ChoiceDialog = dynamic(() => import("../blocks/ChoiceBlock").then((m) => m.ChoiceDialog), { ssr: false });
 const TransferDialog = dynamic(() => import("../blocks/TransferBlock").then((m) => m.TransferDialog), { ssr: false });
+const EllipseDialog = dynamic(() => import("../day/EllipseDialog").then((m) => m.EllipseDialog), { ssr: false });
 
 /** Point d'intérêt d'une carte de monde, proposé à l'ancrage d'un message. */
 export type MapPinOption = { id: string; title: string; color: string };
@@ -192,6 +195,7 @@ export function BlocksDropdown({
     variant = "dropdown",
     onSend,
     onRoll,
+    onEllipse,
     bubbleMode,
     onBubbleModeChange,
     bubbleColor,
@@ -221,6 +225,8 @@ export function BlocksDropdown({
     onSend: (content: string) => void;
     /** Un lancer de dés à faire tirer par la base, puis à publier (migration 270). */
     onRoll: (request: DiceRollRequest) => void;
+    /** Une ellipse à faire poser par la base, puis à publier (migration 275) ; dans un salon seulement. */
+    onEllipse?: (request: EllipseRequest) => void;
     bubbleMode: boolean;
     onBubbleModeChange: (v: boolean) => void;
     bubbleColor: string | null;
@@ -247,11 +253,12 @@ export function BlocksDropdown({
     const t = useTranslations("chatrooms");
     const tChatrooms = useTranslations("chatrooms");
     const tCommon = useTranslations("common");
+    const tDay = useTranslations("chatrooms.dayStatus");
     const tTrades = useTranslations("trades");
     const { chatroom_blocks, block_npc, block_hp, block_choice } = useFeatureFlags();
     const [open, setOpen] = useState(false);
     const [colorPickerOpen, setColorPickerOpen] = useState(false);
-    const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "choice" | "transfer" | "timeline" | "location" | null>(null);
+    const [activeTool, setActiveTool] = useState<"dice" | "ellipse" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "choice" | "transfer" | "timeline" | "location" | null>(null);
     const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
     const [draftPinId, setDraftPinId] = useState<string | null>(null);
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -266,6 +273,7 @@ export function BlocksDropdown({
 
     const blockItems: ComposerMenuItem[] = [
         { id: "dice", icon: Dices, title: t("dice"), description: t("diceHint"), onActivate: () => { setOpen(false); setActiveTool("dice"); } },
+        ...(onEllipse ? [{ id: "ellipse", icon: Ellipsis, title: tDay("ellipse"), description: tDay("ellipseHint"), onActivate: () => { setOpen(false); setActiveTool("ellipse"); } }] : []),
         ...(onBannerSelect ? [{ id: "banner", icon: ImagePlus, title: t("banner"), description: t("bannerHint"), onActivate: () => { setOpen(false); onBannerSelect(); } }] : []),
         { id: "callout", icon: Square, title: t("calloutBtn"), description: t("calloutHint"), onActivate: () => { setOpen(false); setActiveTool("callout"); } },
         { id: "anchor", icon: Anchor, title: t("anchor"), description: t("anchorHint"), onActivate: () => { setOpen(false); setActiveTool("anchor"); } },
@@ -360,6 +368,13 @@ export function BlocksDropdown({
                             </div>
                         ))}
                     </div>
+                );
+            case "ellipse":
+                return (
+                    <ChatroomDayStrip
+                        className="w-full"
+                        day={{ icon: "cloud-rain", position: 48, fromIcon: "moon-star", fromPosition: 95, skipped: 3 }}
+                    />
                 );
             case "transfer":
                 return (
@@ -713,6 +728,13 @@ export function BlocksDropdown({
                 </Dialog>
             )}
 
+            {onEllipse && (
+                <EllipseDialog
+                    open={activeTool === "ellipse"}
+                    onOpenChange={(v) => !v && setActiveTool(null)}
+                    onPost={(request) => { onEllipse(request); setActiveTool(null); }}
+                />
+            )}
             <DiceDialog
                 open={activeTool === "dice"}
                 onOpenChange={(v) => !v && setActiveTool(null)}

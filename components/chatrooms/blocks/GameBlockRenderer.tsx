@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { applyOwnVote } from "@/lib/choiceVotes";
 import type { ChatBlock } from "@/lib/chat-blocks";
 import type { DiceRoll } from "@/lib/worldDice";
+import type { ChatroomEllipse } from "@/lib/chatroomDay";
 import type { ChatMessageMeta, ChoiceVoteSummary } from "@/types/db";
 
 import { DiceMessageView } from "./DiceMessageView";
@@ -22,6 +23,7 @@ import { CalloutBlockView } from "./CalloutBlock";
 import { AnchorBlockView } from "./AnchorBlockView";
 import { ChoiceBlockView } from "./ChoiceBlock";
 import { TransferBlockView } from "./TransferBlock";
+import { EllipseMessageView } from "@/components/chatrooms/day/EllipseMessageView";
 import { useTranslations } from "next-intl";
 
 /**
@@ -54,6 +56,8 @@ export function GameBlockRenderer({
     metadata?: ChatMessageMeta | null;
     /** Le lancer tiré par la base (migration 270). */
     dice_roll?: DiceRoll | null;
+    /** L'ellipse posée par la base (migration 275). */
+    ellipse?: ChatroomEllipse | null;
   };
   chatroomKey?: string | null;
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
@@ -185,6 +189,11 @@ export function GameBlockRenderer({
           }
           onDelete={deleteBlock("le lancé")}
         />
+      );
+
+    case "ellipse":
+      return (
+        <EllipseMessageView ellipse={message.ellipse} label={label} mine={mine} onDelete={deleteBlock("l’ellipse")} />
       );
 
     case "banner":

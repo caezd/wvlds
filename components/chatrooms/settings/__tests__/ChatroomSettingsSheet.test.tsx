@@ -251,3 +251,61 @@ describe("ChatroomSettingsSheet — synopsis et accès (migration 225)", () => {
     expect(screen.queryByTestId("invitees")).toBeNull();
   });
 });
+
+describe("ChatroomSettingsSheet — temps du salon (migration 275)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("activé puis réglé, le temps part par la base avec « Enregistrer », sans toucher au salon", async () => {
+    const mock = setup();
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
+
+    const interrupteur = screen.getByRole("switch", { name: "Régler le temps du salon" });
+    expect(interrupteur).not.toBeChecked();
+    expect(screen.queryByRole("radio", { name: "Pluie" })).toBeNull();
+
+    await user.click(interrupteur);
+    await user.click(screen.getByRole("radio", { name: "Pluie" }));
+    expect(mock.rpc).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() =>
+      expect(mock.rpc).toHaveBeenCalledWith("set_chatroom_day", { p_chat: "c1", p_icon: "cloud-rain", p_position: 10 }),
+    );
+    expect(mock.buildersFor("chatrooms")).toHaveLength(0);
+    expect(toast.success).toHaveBeenCalledWith("Modification enregistrée.");
+  });
+
+  it("désactivé, le temps est effacé", async () => {
+    const mock = setup();
+    const user = userEvent.setup();
+    render(
+      <ChatroomSettingsSheet canEdit chatroom={{ ...CHATROOM, day: { icon: "sun", position: 40 } }} open hideTrigger />,
+    );
+
+    const interrupteur = screen.getByRole("switch", { name: "Régler le temps du salon" });
+    expect(interrupteur).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Soleil" })).toHaveAttribute("aria-checked", "true");
+
+    await user.click(interrupteur);
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() =>
+      expect(mock.rpc).toHaveBeenCalledWith("set_chatroom_day", { p_chat: "c1", p_icon: null, p_position: null }),
+    );
+  });
+
+  it("un refus de la base ne confirme rien", async () => {
+    const mock = setup();
+    mock.rpc.mockResolvedValue({ data: null, error: { message: "not_allowed" } });
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
+
+    await user.click(screen.getByRole("switch", { name: "Régler le temps du salon" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Le temps du salon n’a pas pu être enregistré."));
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});

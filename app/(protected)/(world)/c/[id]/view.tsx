@@ -78,6 +78,9 @@ import { useMessagesEpingles } from "@/hooks/useMessagesEpingles";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
 import { ChatroomReadOnlyNotice, ChatroomSynopsis } from "@/components/chatrooms/access/ChatroomSynopsis";
+import { ChatroomTimeProvider } from "@/components/chatrooms/day/chatroomTime";
+import { chatroomDayFromRow, type ChatroomDay } from "@/lib/chatroomDay";
+import { formatTimelineLabel } from "@/lib/worldTimeline";
 import {
   OPEN_POST_ACCESS,
   fetchPostAccess,
@@ -217,6 +220,10 @@ export default function ChatRoomView({
     category_id: string | null;
     visibility: ChatroomVisibility;
     synopsis: string | null;
+    /** Le temps du salon (migration 275). */
+    day?: ChatroomDay | null;
+    /** Sa date d'avancée, posée par les ellipses. */
+    timeline_current_date?: import("@/types/worlds").WorldTimelineDate | null;
     worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean; dice_critical?: boolean; dice_fumble?: boolean } | null;
   };
   initialMessages: ChatMessageWithPersona[];
@@ -893,6 +900,9 @@ export default function ChatRoomView({
           banner_url: patch.banner_url ?? prev.banner_url,
           icon_url: patch.icon_url ?? prev.icon_url,
           ...("synopsis" in patch ? { synopsis: patch.synopsis ?? null } : {}),
+          ...("day_icon" in patch ? { day: chatroomDayFromRow(patch) } : {}),
+          ...("timeline_date" in patch ? { timeline_date: patch.timeline_date ?? null } : {}),
+          ...("timeline_current_date" in patch ? { timeline_current_date: patch.timeline_current_date ?? null } : {}),
           visibility: nextVisibility,
         };
       });
@@ -1073,8 +1083,26 @@ export default function ChatRoomView({
     fumble: !!chat?.worlds?.dice_fumble,
   } as const;
 
+  // Le temps du salon (migration 275), lu par la fenêtre « Ellipse » et
+  // l'affichage des ellipses.
+  const timelineConfig = chat?.worlds?.timeline_config ?? null;
+  const chatTime = {
+    config: timelineConfig,
+    startDate: chat?.timeline_date ?? null,
+    currentDate: chat?.timeline_current_date ?? null,
+    day: chat?.day ?? null,
+  };
+  const dateRange =
+    timelineConfig && chat?.timeline_date && chat.timeline_current_date
+      ? t("dayStatus.range", {
+          start: formatTimelineLabel(timelineConfig, chat.timeline_date),
+          current: formatTimelineLabel(timelineConfig, chat.timeline_current_date),
+        })
+      : null;
+
   return (
     <ChatroomDiceRulesProvider value={diceRules}>
+    <ChatroomTimeProvider value={chatTime}>
     <div className="composer-parent flex flex-row focus-visible:outline-0 h-full min-w-0 flex-1 gap-3">
       <WorldMembershipGuard
         worldId={chat?.worlds?.id ?? null}
@@ -1208,6 +1236,7 @@ export default function ChatRoomView({
                   category_id: chat.category_id ?? null,
                   visibility: chat.visibility,
                   synopsis: chat.synopsis ?? null,
+                  day: chat.day ? { icon: chat.day.icon, position: chat.day.position } : null,
                 }}
                 worldTimelineConfig={chat.worlds?.timeline_config ?? null}
                 worldId={chat.worlds?.id ?? null}
@@ -1248,7 +1277,7 @@ export default function ChatRoomView({
                   </div>
                 )}
                 {!hasMore && !loadingOlder && (
-                  <ChatroomSynopsis synopsis={chat.synopsis} visibility={chat.visibility} />
+                  <ChatroomSynopsis synopsis={chat.synopsis} visibility={chat.visibility} day={chat.day} dateRange={dateRange} />
                 )}
                 {renderGroups.map((g) =>
                   g.kind === "sms" ? (
@@ -1353,6 +1382,7 @@ export default function ChatRoomView({
         }}
       />
     </div>
+    </ChatroomTimeProvider>
     </ChatroomDiceRulesProvider>
   );
 }
