@@ -180,3 +180,20 @@ describe("WorldPickerHeader — marquer un monde comme lu", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("markReadError"));
   });
 });
+
+describe("WorldPickerHeader — déclencheur", () => {
+  it("ouvre la liste des mondes depuis l'icône du sélecteur", () => {
+    const { container } = render(
+      <WorldPickerHeader
+        worlds={WORLDS}
+        currentWorldId="world-1"
+        currentUserId={null}
+        plan="free"
+        ownedCount={0}
+        quotaLimit={1}
+      />,
+    );
+    fireEvent.click(container.querySelector(".lucide-chevrons-up-down")!);
+    expect(screen.getByText("Bravo")).toBeTruthy();
+  });
+});

@@ -102,6 +102,8 @@ vi.mock("@/hooks/useReconnectEpoch", () => ({ useReconnectEpoch: () => serveur.e
 import { __resetRealtimeHub } from "@/lib/realtimeHub";
 import {
   useWorldRooms,
+  useParticipatedRoomIds,
+  addCreatedWorldRoom,
   patchWorldRoom,
   __resetWorldRoomsStore,
   __openChannelCount,
@@ -185,11 +187,12 @@ describe("useWorldRooms", () => {
     const un = renderHook(() => useWorldRooms("w1", [A]));
     const deux = renderHook(() => useWorldRooms("w1", [A]));
 
-    emettre("chatroom", { op: "INSERT", id: "c", title: "Nouveau", name: null, icon_url: null, category_id: null });
+    emettre("chatroom", { op: "INSERT", id: "c", title: "Nouveau", name: null, icon_url: null, category_id: null,
+                          created_at: "2026-01-05T00:00:00Z" });
 
-    // Sans message, le nouveau salon se range après ceux qui en ont.
-    expect(un.result.current.map((r) => r.id)).toEqual(["a", "c"]);
-    expect(deux.result.current.map((r) => r.id)).toEqual(["a", "c"]);
+    // Sans message, le nouveau salon se range à sa date de création.
+    expect(un.result.current.map((r) => r.id)).toEqual(["c", "a"]);
+    expect(deux.result.current.map((r) => r.id)).toEqual(["c", "a"]);
   });
 
   it("ignore un salon déjà présent", () => {
@@ -360,5 +363,40 @@ describe("useWorldRooms — avis du canal du monde", () => {
 
     expect(result.current.map((r) => r.id)).toEqual(["b", "a"]);
     expect(serveur.rpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Salons sans message : rangés à leur date de création", () => {
+  it("un salon sans message passe devant les messages plus anciens que sa création", () => {
+    const vide = { ...room("v", null), created_at: "2026-01-01T12:00:00Z" };
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B, vide]));
+    // Un tri quelconque (ici un message dans B) range toute la liste.
+    emettre("summary", { op: "UPDATE", chat_id: "b", last_message_at: "2026-01-01T06:00:00Z" });
+    expect(result.current.map((r) => r.id)).toEqual(["a", "v", "b"]);
+  });
+});
+
+describe("addCreatedWorldRoom", () => {
+  it("liste le salon créé en tête, chez toutes les instances", () => {
+    const un = renderHook(() => useWorldRooms("w1", [A, B]));
+    const deux = renderHook(() => useWorldRooms("w1", [A, B]));
+    act(() => addCreatedWorldRoom("w1", { id: "n", title: "Neuf", category_id: "cat" }));
+    expect(un.result.current.map((r) => r.id)).toEqual(["n", "a", "b"]);
+    expect(deux.result.current[0]).toMatchObject({ id: "n", title: "Neuf", category_id: "cat", last_message_at: null });
+  });
+
+  it("compte le salon créé parmi ceux où l'on joue", () => {
+    renderHook(() => useWorldRooms("w1", [A]));
+    const ids = renderHook(() => useParticipatedRoomIds("w1"));
+    act(() => addCreatedWorldRoom("w1", { id: "n", title: "Neuf", category_id: null }));
+    expect([...ids.result.current]).toEqual(["n"]);
+  });
+
+  it("l'avis du canal qui suit ne duplique pas le salon", () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A]));
+    act(() => addCreatedWorldRoom("w1", { id: "n", title: "Neuf", category_id: null }));
+    emettre("chatroom", { op: "INSERT", id: "n", title: "Neuf", name: null, icon_url: null, category_id: null,
+                          created_at: "2026-01-05T00:00:00Z" });
+    expect(result.current.map((r) => r.id)).toEqual(["n", "a"]);
   });
 });

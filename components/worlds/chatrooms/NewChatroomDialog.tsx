@@ -50,6 +50,7 @@ import { HelpHint } from "@/components/ui/help-hint";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
 import { ChatroomVisibilityField } from "@/components/chatrooms/access/ChatroomVisibilityField";
 import { ChatroomInviteesField } from "@/components/chatrooms/access/ChatroomInviteesField";
+import { addCreatedWorldRoom } from "@/lib/worldRoomsStore";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string };
@@ -245,11 +246,12 @@ export function NewChatroomDialog({
     }
     setSubmitting(true);
     try {
+      const roomTitle = title.trim() || randomTitle();
       const { data: room, error } = await supabase
         .from(TABLE.CHATROOMS)
         .insert({
           world_id: worldId,
-          title: title.trim() || randomTitle(),
+          title: roomTitle,
           created_by: userId,
           visibility,
           synopsis: synopsis.trim() || null,
@@ -284,6 +286,9 @@ export function NewChatroomDialog({
         }
       }
 
+      // La barre latérale, dans un layout partagé, ne relit pas ses salons
+      // en naviguant : on lui apprend celui-ci, parmi les récents.
+      addCreatedWorldRoom(worldId, { id: room.id, title: roomTitle, category_id: categoryId });
       setOpen(false);
       router.push(`/c/${room.id}`);
     } finally {

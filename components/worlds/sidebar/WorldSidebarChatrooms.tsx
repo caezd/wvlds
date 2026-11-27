@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import { usePathname } from "next/navigation";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
-import { useWorldRooms, type WorldRoom } from "@/lib/worldRoomsStore";
+import { useParticipatedRoomIds, useWorldRooms, type WorldRoom } from "@/lib/worldRoomsStore";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -67,13 +67,17 @@ function RoomItem({
   const showOverlay = participantCount >= 2;
   const showCount = participantCount >= 3;
   const presence = !showOverlay && lastPosterId ? getUserPresence(lastPosterId) : null;
+  // Le liseré qui détache les avatars superposés prend la couleur du fond de
+  // la ligne : celui de la barre, ou celui du survol et du salon ouvert.
+  const ringBg = isActive ? "ring-muted" : "ring-background group-hover:ring-muted";
+  const borderBg = isActive ? "border-muted" : "border-background group-hover:border-muted";
 
   return (
     <ChatroomLink
       href={`/c/${room.id}`}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
+        "group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
         "hover:bg-muted min-w-0",
         isActive ? "bg-muted" : "",
       )}
@@ -81,11 +85,11 @@ function RoomItem({
       {showOverlay && !showCount ? (
         /* 2 avatars, même taille, superposition diagonale */
         <div className="relative shrink-0 size-9">
-          <Avatar className="absolute top-0 left-0 size-6 rounded-full ring-3 ring-background z-0">
+          <Avatar className={cn("absolute top-0 left-0 size-6 rounded-full ring-3 z-0 transition-colors", ringBg)}>
             {secondAvatar && <AvatarImage src={secondAvatar} className="rounded-full" />}
             <AvatarFallback className="rounded-full text-xs-plus bg-muted-foreground/20" />
           </Avatar>
-          <Avatar className="absolute bottom-0 right-0 size-6 rounded-full ring-3 ring-background z-10">
+          <Avatar className={cn("absolute bottom-0 right-0 size-6 rounded-full ring-3 z-10 transition-colors", ringBg)}>
             {posterAvatar && <AvatarImage src={posterAvatar} className="rounded-full" />}
             <AvatarFallback className="rounded-full text-xs-plus bg-muted-foreground/20">
               {label[0].toUpperCase()}
@@ -102,13 +106,17 @@ function RoomItem({
             </AvatarFallback>
           </Avatar>
           {showCount && (
-            <span className="absolute -bottom-0.5 -right-1.5 h-[18px] min-w-[18px] flex items-center justify-center rounded-full bg-muted border-2 border-background text-2xs font-bold text-muted-foreground px-0.5 z-10">
+            <span className={cn(
+              "absolute -bottom-0.5 -right-1.5 h-[18px] min-w-[18px] flex items-center justify-center rounded-full bg-muted border-2 text-2xs font-bold text-muted-foreground px-0.5 z-10 transition-colors",
+              borderBg,
+            )}>
               +{participantCount}
             </span>
           )}
           {presence && (
             <span className={cn(
-              "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background z-10",
+              "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 z-10 transition-colors",
+              borderBg,
               PRESENCE_BG[presence],
             )} />
           )}
@@ -153,6 +161,8 @@ export function WorldSidebarChatrooms({
   // tiroir mobile) lisent le même store, qui n'ouvre qu'un seul canal
   // Realtime pour les deux. Cf. lib/worldRoomsStore.
   const allRooms = useWorldRooms(worldId, initialAll);
+  // Salons créés depuis le chargement : la liste du serveur n'est pas relue.
+  const createdHere = useParticipatedRoomIds(worldId);
 
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
 
@@ -176,7 +186,7 @@ export function WorldSidebarChatrooms({
   const followedSet = new Set(initialFollowedIds);
 
   // ACTIF: top 5 rooms participées, triées par last_message_at (allRooms est déjà trié)
-  const actif = allRooms.filter((r) => participatedIds.has(r.id)).slice(0, 5);
+  const actif = allRooms.filter((r) => participatedIds.has(r.id) || createdHere.has(r.id)).slice(0, 5);
 
   // SUIVI: rooms suivies, triées par last_message_at
   const suivi = allRooms.filter((r) => followedSet.has(r.id));

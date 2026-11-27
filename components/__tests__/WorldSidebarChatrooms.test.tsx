@@ -52,7 +52,7 @@ vi.mock("@/components/ui/avatar", () => ({
 }));
 
 import { WorldSidebarChatrooms } from "@/components/worlds/sidebar/WorldSidebarChatrooms";
-import { __resetWorldRoomsStore } from "@/lib/worldRoomsStore";
+import { __resetWorldRoomsStore, addCreatedWorldRoom } from "@/lib/worldRoomsStore";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -300,5 +300,31 @@ describe("WorldSidebarChatrooms — canal temps réel partagé", () => {
 
     unmount();
     expect(mock.removeChannel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("WorldSidebarChatrooms — salons récents", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetWorldRoomsStore();
+  });
+
+  it("liste dans les récents le salon qu'on vient de créer, sans message", () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
+    render(
+      <WorldSidebarChatrooms
+        worldId="world-1"
+        initialAll={[makeRoom()]}
+        initialParticipated={[]}
+        initialFollowedIds={[]}
+        categories={[]}
+      />,
+    );
+
+    act(() => addCreatedWorldRoom("world-1", { id: "room-new", title: "Salon tout neuf", category_id: null }));
+
+    const section = screen.getByText("Actif").closest("section")!;
+    expect(section.textContent).toContain("Salon tout neuf");
   });
 });

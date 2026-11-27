@@ -15,6 +15,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ userId: "u1" }) }));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({ useFeatureFlags: () => ({ world_map: false }) }));
 vi.mock("sonner", () => ({ toast: { error: toastError, success: toastSuccess } }));
+const addCreatedWorldRoom = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/worldRoomsStore", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/worldRoomsStore")>()),
+  addCreatedWorldRoom,
+}));
 
 // Le champ des invités a ses propres tests : ici, un double qui invite un
 // persona d'un clic et montre son intitulé.
@@ -135,6 +140,21 @@ describe("NewChatroomDialog — création", () => {
     });
     expect(mock.buildersFor("chatroom_participants")).toHaveLength(0);
     expect(mock.buildersFor("chat_messages")).toHaveLength(0);
+  });
+
+  it("le salon créé rejoint aussitôt la barre latérale, parmi les récents", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+
+    const titre = screen.getByLabelText("Titre");
+    await user.clear(titre);
+    await user.type(titre, "La taverne");
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/c/c-neuf"));
+    expect(addCreatedWorldRoom).toHaveBeenCalledWith("w1", { id: "c-neuf", title: "La taverne", category_id: null });
   });
 
   it("privé : le synopsis et les invités partent avec le salon", async () => {

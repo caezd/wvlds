@@ -126,6 +126,17 @@ test("Dés du monde : créer, masquer, imposer, lancer par la base", async ({ pa
     await expect(lien, `« ${MONDE} » n'a aucun salon`).toBeAttached({ timeout: 20_000 });
     salon = await lien.getAttribute("href");
     await page.goto(salon!);
+    // Le premier salon de la barre peut être un salon tout juste créé, encore
+    // vide (« Récents ») : aucun persona n'y est présélectionné.
+    await page.getByRole("button", { name: "Insérer un bloc" }).first().waitFor();
+    const choisir = page.getByRole("button", { name: "Choisir un persona", exact: true });
+    if (await choisir.waitFor({ timeout: 5_000 }).then(() => true, () => false)) {
+      await choisir.click();
+      const picker = page.getByRole("dialog", { name: "Choisir un persona" });
+      await picker.locator("button[aria-pressed]:not([disabled])").first().click();
+      await picker.getByRole("button", { name: "Confirmer" }).click();
+      await expect(picker).toBeHidden();
+    }
     await page.getByRole("button", { name: "Insérer un bloc" }).first().click();
     await page.getByRole("button", { name: /^Lancer un dé/ }).first().click();
     const fenetre = page.getByRole("dialog", { name: "Lancer un dé" });

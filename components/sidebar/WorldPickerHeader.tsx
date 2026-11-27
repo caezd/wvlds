@@ -233,14 +233,15 @@ export function WorldPickerHeader({
                 ) : (
                   <span className="flex-1 truncate text-sm text-muted-foreground">Mes mondes</span>
                 )}
-              </button>
 
-              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground">
-                <ChevronsUpDown className="h-4 w-4" />
-                {hasOtherUnread && !open && (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent absolute top-1/2 -translate-y-1/2 right-0" />
-                )}
-              </span>
+                {/* Dans le bouton : toute la largeur ouvre la liste, icône comprise. */}
+                <span className="relative flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground">
+                  <ChevronsUpDown className="h-4 w-4" />
+                  {hasOtherUnread && !open && (
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent absolute top-1/2 -translate-y-1/2 right-0" />
+                  )}
+                </span>
+              </button>
             </div>
           );
 

@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-26",
+    category: "Interface",
+    area: "Salons",
+    text: "Barre latérale du monde : salons et sélecteur de monde corrigés.\n- un salon qu’on crée apparaît aussitôt dans « Récents », même sans message\n- salon sans message rangé à sa date de création\n- « Changer de monde » : bouton cliquable sur toute sa largeur, icône comprise\n- avatars superposés des salons : liseré à la couleur du fond, survolé ou sélectionné",
+  },
+  {
+    date: "2026-11-26",
     category: "Correctif",
     area: "Personas",
     text: "Personas bloqués après un changement de la fiche par défaut : ils peuvent de nouveau poster.\n- fiche par défaut désactivée, supprimée ou mise en corbeille : les fiches du monde sont recalculées\n- cadenas du sélecteur de persona retiré pour une fiche complète\n- faceclaim exigé par le monde : vérifié dès la création du persona ou son arrivée dans le monde",

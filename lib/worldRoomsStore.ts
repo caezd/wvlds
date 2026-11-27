@@ -43,10 +43,21 @@ export type WorldRoom = {
   last_poster_id: string | null;
   participant_count: number;
   second_poster_avatar_url: string | null;
+  /**
+   * Création du salon : sa place dans la liste tant qu'il n'a aucun message
+   * (migration 274). Absent des réponses d'avant la migration.
+   */
+  created_at?: string | null;
 };
 
 type Entree = {
   rooms: WorldRoom[];
+  /**
+   * Salons où l'on joue appris depuis le chargement (salon qu'on vient de
+   * créer), en plus de ceux que le serveur a rendus avec la page. Nouvel
+   * ensemble à chaque ajout : c'est l'instantané de `useParticipatedRoomIds`.
+   */
+  participated: ReadonlySet<string>;
   listeners: Set<() => void>;
   /** Nombre d'instances montées ; le canal vit tant qu'il est superieur a 0. */
   refs: number;
@@ -57,6 +68,7 @@ type Entree = {
 
 const mondes = new Map<string, Entree>();
 const VIDE: WorldRoom[] = [];
+const NO_IDS: ReadonlySet<string> = new Set();
 
 function entree(worldId: string): Entree | undefined {
   return mondes.get(worldId);
@@ -66,11 +78,18 @@ function notifier(e: Entree): void {
   for (const l of e.listeners) l();
 }
 
+/** Dernière activité : le dernier message, à défaut la création du salon. */
+function activityAt(r: WorldRoom): string {
+  return r.last_message_at ?? r.created_at ?? "";
+}
+
 /** Trie du plus récent au plus ancien, comme le serveur. */
 function trier(rooms: WorldRoom[]): WorldRoom[] {
-  return [...rooms].sort(
-    (a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-  );
+  return [...rooms].sort((a, b) => activityAt(b).localeCompare(activityAt(a)));
+}
+
+function newEntry(rooms: WorldRoom[]): Entree {
+  return { rooms, participated: NO_IDS, listeners: new Set(), refs: 0, fermer: null, joint: false };
 }
 
 /**
@@ -83,14 +102,14 @@ function semerSiAbsent(worldId: string, rooms: WorldRoom[]): void {
   // tous les utilisateurs : rien n'y est écrit, le rendu lit `initialRooms`.
   if (typeof window === "undefined") return;
   if (mondes.has(worldId)) return;
-  mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null, joint: false });
+  mondes.set(worldId, newEntry(rooms));
 }
 
 /** Remplace la liste (retour serveur, changement de monde). */
 export function setWorldRooms(worldId: string, rooms: WorldRoom[]): void {
   const e = entree(worldId);
   if (!e) {
-    mondes.set(worldId, { rooms, listeners: new Set(), refs: 0, fermer: null, joint: false });
+    mondes.set(worldId, newEntry(rooms));
     return;
   }
   // Données neuves : la prochaine jonction du canal est une première jonction.
@@ -171,7 +190,7 @@ function ouvrirCanal(worldId: string): () => void {
   });
 }
 
-type AvisSalon = Partial<Pick<WorldRoom, "id" | "title" | "name" | "icon_url" | "category_id">> & {
+type AvisSalon = Partial<Pick<WorldRoom, "id" | "title" | "name" | "icon_url" | "category_id" | "created_at">> & {
   op?: string;
   /** Salon privé (migration 225) : l'avis ne dit rien de lui, la liste se relit. */
   private?: boolean;
@@ -197,9 +216,19 @@ function surSalon(worldId: string, avis: Record<string, unknown>): void {
     icon_url: r.icon_url ?? null,
     category_id: r.category_id ?? null,
   };
+  if (r.op === "INSERT") insertRoom(worldId, id, champs, r.created_at ?? null);
+  patchWorldRoom(worldId, id, champs);
+}
+
+/** Ajoute un salon neuf, sans message, s'il n'est pas déjà listé. */
+function insertRoom(
+  worldId: string,
+  id: string,
+  champs: Pick<WorldRoom, "title" | "name" | "icon_url" | "category_id">,
+  createdAt: string | null,
+): void {
   majRooms(worldId, (prev) => {
-    if (prev.some((x) => x.id === id)) return prev; // corrigé ci-dessous
-    if (r.op !== "INSERT") return prev;
+    if (prev.some((x) => x.id === id)) return prev;
     return trier([
       ...prev,
       {
@@ -211,10 +240,29 @@ function surSalon(worldId: string, avis: Record<string, unknown>): void {
         last_poster_id: null,
         participant_count: 0,
         second_poster_avatar_url: null,
+        // Avis d'avant la migration 274 : le salon vient d'être créé.
+        created_at: createdAt ?? new Date().toISOString(),
       },
     ]);
   });
-  patchWorldRoom(worldId, id, champs);
+}
+
+/**
+ * Salon que l'on vient de créer : listé tout de suite, sans attendre l'avis
+ * du canal (qui ne le dupliquera pas), et compté parmi ceux où l'on joue —
+ * la barre latérale, dans un layout partagé, ne relit pas la liste du
+ * serveur en naviguant vers lui.
+ */
+export function addCreatedWorldRoom(
+  worldId: string,
+  room: { id: string; title: string | null; category_id: string | null },
+): void {
+  const e = entree(worldId);
+  if (!e) return;
+  insertRoom(worldId, room.id, { title: room.title, name: null, icon_url: null, category_id: room.category_id }, null);
+  if (e.participated.has(room.id)) return;
+  e.participated = new Set([...e.participated, room.id]);
+  notifier(e);
 }
 
 function surResume(worldId: string, avis: Record<string, unknown>): void {
@@ -289,6 +337,18 @@ export function __openChannelCount(): number {
   let n = 0;
   for (const e of mondes.values()) if (e.fermer) n += 1;
   return n;
+}
+
+/**
+ * Salons où l'on joue appris depuis le chargement de la page, à joindre à
+ * ceux que le serveur a rendus (`list_participated_chatrooms`).
+ */
+export function useParticipatedRoomIds(worldId: string): ReadonlySet<string> {
+  return useSyncExternalStore(
+    (l) => abonner(worldId, l),
+    () => entree(worldId)?.participated ?? NO_IDS,
+    () => NO_IDS,
+  );
 }
 
 /**
