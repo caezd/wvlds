@@ -83,9 +83,21 @@ export function useLongPress(onLongPress: () => void, delay = 500) {
   // pour un message qui n'était plus là.
   useEffect(() => cancel, [cancel]);
 
+  // Le doigt relevé après un appui long : le navigateur peut synthétiser un
+  // clic à cet endroit, où se tient désormais le fond du drawer qui vient de
+  // s'ouvrir — et le refermer aussitôt. Annuler ce `touchend` supprime le
+  // clic de compatibilité ; un simple tap garde le sien.
+  const end = useCallback(
+    (e?: React.TouchEvent) => {
+      cancel();
+      if (firedRef.current) e?.preventDefault();
+    },
+    [cancel],
+  );
+
   return {
     onTouchStart: start,
-    onTouchEnd: cancel,
+    onTouchEnd: end,
     onTouchMove: move,
     onContextMenu: (e: React.MouseEvent) => {
       // Empêche le menu contextuel natif si le long-press a déjà déclenché l'action

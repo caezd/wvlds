@@ -186,6 +186,8 @@ function ChatroomMessage({
   }, []);
 
   const hasActions = mine || !!emoji_reactions || !!onReply || !!onInsertBefore || !!onReport;
+  // Un bloc de jeu n'affiche pas de réactions : elles n'ouvrent pas son tiroir.
+  const blockHasActions = mine || !!onReply || !!onInsertBefore || !!onReport;
   const longPressHandlers = useLongPress(useCallback(() => {
     try { navigator.vibrate?.(50); } catch { /* noop */ }
     setDrawerOpen(true);
@@ -268,20 +270,46 @@ function ChatroomMessage({
   // un aiguilleur unique gère le rendu, l'édition et la suppression.
   if (block) {
     return (
-      // `data-ellipse` : le fil retire les séparateurs autour de l'ellipse.
-      <div data-message-id={message.id} data-ellipse={block._type === "ellipse" ? "" : undefined}>
-        <GameBlockRenderer
-          block={block}
-          mine={mine}
-          label={label}
-          message={message}
-          chatroomKey={chatroomKey}
-          onUpdated={onUpdated}
-          onAnchorEdited={onAnchorEdited}
-          votes={message.votes}
-          onVotesUpdated={onVotesUpdated}
-        />
-      </div>
+      <>
+        {/* `data-ellipse` : le fil retire les séparateurs autour de l'ellipse.
+            Sur mobile, l'appui long ouvre les options, comme pour un message. */}
+        <div
+          data-message-id={message.id}
+          data-ellipse={block._type === "ellipse" ? "" : undefined}
+          {...(isMobile && blockHasActions ? longPressHandlers : {})}
+        >
+          <GameBlockRenderer
+            block={block}
+            mine={mine}
+            label={label}
+            message={message}
+            chatroomKey={chatroomKey}
+            onUpdated={onUpdated}
+            onAnchorEdited={onAnchorEdited}
+            votes={message.votes}
+            onVotesUpdated={onVotesUpdated}
+          />
+        </div>
+        {isMobile && blockHasActions && (
+          <ChatroomMessageMobileDrawers
+            block
+            personaName={message.persona?.name}
+            mine={mine}
+            content={message.content}
+            // Un bloc n'affiche pas de réactions : on ne propose pas d'en ajouter.
+            emojiReactions={false}
+            drawerOpen={drawerOpen}
+            setDrawerOpen={setDrawerOpen}
+            emojiPickerOpen={emojiPickerOpen}
+            setEmojiPickerOpen={setEmojiPickerOpen}
+            onRequestDelete={demanderSuppression}
+            toggleReaction={toggleReaction}
+            onReply={onReply ? repondre : undefined}
+            onInsertBefore={onInsertBefore ? insererAvant : undefined}
+            onReport={onReport ? signaler : undefined}
+          />
+        )}
+      </>
     );
   }
 

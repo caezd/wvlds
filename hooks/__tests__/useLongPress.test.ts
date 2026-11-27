@@ -43,6 +43,25 @@ describe("useLongPress", () => {
     expect(onLongPress).not.toHaveBeenCalled();
   });
 
+  // Le doigt relevé après un appui long : le navigateur peut encore
+  // synthétiser un clic à cet endroit, où se tient désormais le fond du
+  // drawer qui vient de s'ouvrir, et le refermer aussitôt. Annuler ce
+  // `touchend` supprime le clic de compatibilité.
+  it("annule le touchend qui suit un appui long, pas celui d'un simple tap", () => {
+    const { result } = renderHook(() => useLongPress(vi.fn()));
+
+    result.current.onTouchStart();
+    const tap = { preventDefault: vi.fn() };
+    result.current.onTouchEnd(tap as unknown as React.TouchEvent);
+    expect(tap.preventDefault).not.toHaveBeenCalled();
+
+    result.current.onTouchStart();
+    vi.advanceTimersByTime(500);
+    const fin = { preventDefault: vi.fn() };
+    result.current.onTouchEnd(fin as unknown as React.TouchEvent);
+    expect(fin.preventDefault).toHaveBeenCalledTimes(1);
+  });
+
   // Régression : un enfant (ex. le déclencheur d'une sheet persona) peut
   // ouvrir un portail/overlay qui absorbe la suite du geste tactile, de
   // sorte que `touchend` n'atteint jamais ce niveau — seul le `click`

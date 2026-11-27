@@ -111,3 +111,80 @@ test("Temps du salon : réglé à la création, avancé par une ellipse", async 
     }
   }
 });
+
+test("Mobile : un appui long sur une ellipse ouvre ses options, et la supprime", async ({ page, browser }) => {
+  test.setTimeout(240_000);
+  const titre = `E2E temps mobile ${Date.now()}`;
+  await ouvrirMonde(page);
+  let salon: string | null = null;
+  try {
+    // Le salon et l'ellipse, sur ordinateur.
+    await page.getByText(/Nouveau jeu…/).first().click();
+    const formulaire = page.getByRole("dialog", { name: "Nouveau jeu" });
+    await formulaire.getByRole("textbox", { name: "Titre" }).fill(titre);
+    await formulaire.getByRole("button", { name: "Créer" }).click();
+    await expect(page).toHaveURL(/\/c\//, { timeout: 30_000 });
+    salon = new URL(page.url()).pathname;
+    await page.getByRole("button", { name: "Insérer un bloc" }).first().waitFor();
+    const choisir = page.getByRole("button", { name: "Choisir un persona", exact: true });
+    if (await choisir.waitFor({ timeout: 5_000 }).then(() => true, () => false)) {
+      await choisir.click();
+      const picker = page.getByRole("dialog", { name: "Choisir un persona" });
+      await picker.locator("button[aria-pressed]:not([disabled])").first().click();
+      await picker.getByRole("button", { name: "Confirmer" }).click();
+      await expect(picker).toBeHidden();
+    }
+    await page.getByRole("button", { name: "Insérer un bloc" }).first().click();
+    await page.getByRole("button", { name: /^Ellipse/ }).first().click();
+    await page.getByRole("dialog", { name: "Ellipse" }).getByRole("button", { name: "Poster l’ellipse" }).click();
+    await expect(page.getByRole("article", { name: "Ellipse" })).toBeVisible({ timeout: 20_000 });
+
+    // Le même compte sur un écran tactile.
+    const mobile = await browser.newContext({
+      storageState: test.info().project.use.storageState as string,
+      viewport: { width: 412, height: 915 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    await mobile.addCookies([{ name: "NEXT_LOCALE", value: "fr", url: test.info().project.use.baseURL! }]);
+    const tel = await mobile.newPage();
+    try {
+      await tel.goto(salon, { timeout: 60_000 });
+      // La copie visible : le rendu en flux en garde un instant une copie cachée.
+      const ellipse = tel.getByRole("article", { name: "Ellipse" }).filter({ visible: true }).first();
+      await expect(ellipse).toBeVisible({ timeout: 30_000 });
+      // Le fil se redessine après le chargement : on mesure une fois la ligne posée.
+      let box: { x: number; y: number; width: number; height: number } | null = null;
+      await expect(async () => {
+        await ellipse.scrollIntoViewIfNeeded({ timeout: 2_000 });
+        box = await ellipse.boundingBox({ timeout: 2_000 });
+        expect(box).not.toBeNull();
+      }).toPass({ timeout: 30_000 });
+      if (!box) throw new Error("ellipse sans boîte");
+      const { x, y, width, height } = box;
+
+      // Appui long au milieu de la ligne (le geste réel, par le protocole de Chrome).
+      const point = { x: x + width / 2, y: y + height / 2 };
+      const cdp = await mobile.newCDPSession(tel);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+      await tel.waitForTimeout(800);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+      const options = tel.getByRole("dialog").filter({ hasText: "Supprimer" });
+      await expect(options).toBeVisible({ timeout: 10_000 });
+      await options.getByRole("button", { name: "Supprimer" }).click({ timeout: 10_000 });
+      await tel.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click({ timeout: 10_000 });
+      await expect(tel.getByRole("article", { name: "Ellipse" })).toHaveCount(0, { timeout: 20_000 });
+    } finally {
+      await mobile.close();
+    }
+  } finally {
+    if (salon) {
+      if (!page.url().includes(salon)) await page.goto(salon);
+      await page.getByRole("button", { name: "Paramètres" }).first().click();
+      await page.getByRole("button", { name: "Supprimer la salle" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click();
+      await expect(page).toHaveURL(/\/w\//, { timeout: 60_000 });
+    }
+  }
+});

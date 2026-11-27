@@ -13,8 +13,14 @@ import {
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 import { markdownToPlainText } from "@/lib/markdownToPlainText";
 
-/** Drawers mobiles (long-press) : options du message, puis picker d'emoji. */
+/**
+ * Drawers mobiles (long-press) : options du message, puis picker d'emoji.
+ * Pour un bloc de jeu (`block`), ni copie du texte (du JSON), ni « Modifier »
+ * (chaque bloc a sa propre édition) : répondre, insérer avant, signaler,
+ * supprimer.
+ */
 export function ChatroomMessageMobileDrawers({
+  block = false,
   personaName,
   mine,
   content,
@@ -31,6 +37,7 @@ export function ChatroomMessageMobileDrawers({
   onInsertBefore,
   onReport,
 }: {
+  block?: boolean;
   personaName?: string | null;
   mine: boolean;
   content: string;
@@ -42,7 +49,8 @@ export function ChatroomMessageMobileDrawers({
   setDrawerOpen: (open: boolean) => void;
   emojiPickerOpen: boolean;
   setEmojiPickerOpen: (open: boolean) => void;
-  startEdit: () => void;
+  /** Absent pour un bloc de jeu. */
+  startEdit?: () => void;
   onRequestDelete?: () => void;
   toggleReaction: (emoteKey: string) => void | Promise<void>;
   onReply?: () => void;
@@ -79,29 +87,33 @@ export function ChatroomMessageMobileDrawers({
                 {t("react")}
               </button>
             )}
-            <button
-              type="button"
-              className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
-              onClick={() => {
-                setDrawerOpen(false);
-                void copyToClipboard(markdownToPlainText(content), tCommon("copyTextSuccess"), tCommon("copyError"));
-              }}
-            >
-              <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
-              {t("copyText")}
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
-              onClick={() => {
-                setDrawerOpen(false);
-                void copyToClipboard(content, tCommon("copyMarkdownSuccess"), tCommon("copyError"));
-              }}
-            >
-              <Code className="h-5 w-5 shrink-0 text-muted-foreground" />
-              {t("copyMarkdown")}
-            </button>
-            {dialogueColor && (
+            {!block && (
+              <>
+                <button
+                  type="button"
+                  className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    void copyToClipboard(markdownToPlainText(content), tCommon("copyTextSuccess"), tCommon("copyError"));
+                  }}
+                >
+                  <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  {t("copyText")}
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    void copyToClipboard(content, tCommon("copyMarkdownSuccess"), tCommon("copyError"));
+                  }}
+                >
+                  <Code className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  {t("copyMarkdown")}
+                </button>
+              </>
+            )}
+            {!block && dialogueColor && (
               <button
                 type="button"
                 className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
@@ -155,17 +167,19 @@ export function ChatroomMessageMobileDrawers({
             )}
             {mine && (
               <>
-                <button
-                  type="button"
-                  className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
-                  onClick={() => {
-                    setDrawerOpen(false);
-                    startEdit();
-                  }}
-                >
-                  <Pencil className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  {tCommon("edit")}
-                </button>
+                {startEdit && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      startEdit();
+                    }}
+                  >
+                    <Pencil className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    {tCommon("edit")}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="flex items-center gap-4 px-6 py-4 text-left text-base text-destructive hover:bg-muted/50 transition-colors"

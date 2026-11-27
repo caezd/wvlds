@@ -91,7 +91,10 @@ export function GameBlockToolbar({
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 opacity-0 transition-opacity group-hover/gblock:opacity-100 focus-within:opacity-100",
+        // Masquée, elle ne capte rien : sur mobile, un tap sur un bouton
+        // transparent supprimait sans qu'on l'ait vu. Le premier tap révèle
+        // la barre (survol), le suivant agit.
+        "pointer-events-none flex items-center gap-0.5 opacity-0 transition-opacity group-hover/gblock:pointer-events-auto group-hover/gblock:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
         className,
       )}
     >

@@ -68,7 +68,7 @@ export function AnchorBlockView({
       )}
 
       {mine && !editing && (onEdit || onDelete) && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/anchor:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/anchor:pointer-events-auto group-hover/anchor:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 transition-opacity">
           {onEdit && (
             <Button
               type="button"

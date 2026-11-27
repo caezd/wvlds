@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
+    text: "Blocs de jeu sur mobile : un appui long ouvre leurs options, comme pour un message.\n- répondre, insérer avant, supprimer ou signaler\n- les boutons cachés des blocs, visibles au survol sur ordinateur, ne captent plus les appuis\n- le menu d’un message ne se referme plus de lui-même au relâchement du doigt",
+  },
+  {
+    date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
     text: "Supprimer la salle : le salon est supprimé au complet.\n- messages, lancers, ellipses, épingles et notifications du salon\n- fichiers : icône, bannière, images et médias des messages\n- retour à l’accueil du monde",
   },
   {
