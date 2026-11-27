@@ -5,6 +5,12 @@
 -- la suite, seul le premier garde son en-tête. Pour les suivants, le lecteur
 -- choisit dans ses réglages : « subtle » (un petit avatar dans la marge) ou
 -- « hidden » (rien). Préférence de lecture, comme l'alignement du texte.
+--
+-- Remplacée le jour même par un choix propre à chaque message
+-- (`chat_messages.metadata.header`) : la colonne n'est plus lue. Elle reste
+-- le temps que la version déployée cesse de la lire.
+-- DROP après déploiement :
+--   ALTER TABLE public.profiles DROP COLUMN message_header_mode;
 -- ──────────────────────────────────────────────────────────────────────────
 
 ALTER TABLE public.profiles

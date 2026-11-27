@@ -248,6 +248,17 @@ describe("computeThreadFlow — messages consécutifs d'un même persona", () =>
     for (const id of [1, 3, 5]) expect(f.get(id)?.joinsNext, `message ${id}`).toBe(false);
   });
 
+  it("une réponse à l'en-tête complet n'est pas une suite : elle ouvre la sienne", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: aria, metadata: { header: "full" } }),
+      makeMessage({ id: 3, persona: aria }),
+    ]);
+    expect(f.get(1)?.joinsNext).toBe(false);
+    expect(f.get(2)).toEqual({ continued: false, joinsNext: true });
+    expect(f.get(3)?.continued).toBe(true);
+  });
+
   it("sans persona, les messages d'un même joueur se suivent aussi", () => {
     const f = flow([makeMessage({ id: 1 }), makeMessage({ id: 2 })]);
     expect(f.get(2)?.continued).toBe(true);

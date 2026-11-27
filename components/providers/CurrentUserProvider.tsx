@@ -14,14 +14,12 @@ import {
   asMessageFont,
   asMessageTextSize,
   asMessageTextAlign,
-  asMessageHeaderMode,
   type MessageFont,
   type MessageTextSize,
   type MessageTextAlign,
-  type MessageHeaderMode,
 } from "@/lib/messagePreferences";
 
-export type { MessageFont, MessageTextSize, MessageTextAlign, MessageHeaderMode };
+export type { MessageFont, MessageTextSize, MessageTextAlign };
 
 export type CurrentUser = {
   user: User | null;
@@ -33,7 +31,6 @@ export type CurrentUser = {
   messageFont: MessageFont;
   messageTextSize: MessageTextSize;
   messageTextAlign: MessageTextAlign;
-  messageHeaderMode: MessageHeaderMode;
   loading: boolean;
 };
 
@@ -47,7 +44,6 @@ export type InitialUser = {
   messageFont?: MessageFont;
   messageTextSize?: MessageTextSize;
   messageTextAlign?: MessageTextAlign;
-  messageHeaderMode?: MessageHeaderMode;
 } | null;
 
 const NEUTRAL: CurrentUser = {
@@ -60,7 +56,6 @@ const NEUTRAL: CurrentUser = {
   messageFont: "sans",
   messageTextSize: "base",
   messageTextAlign: "left",
-  messageHeaderMode: "subtle",
   loading: false,
 };
 
@@ -102,9 +97,6 @@ export function CurrentUserProvider({
   const [messageTextAlign, setMessageTextAlign] = useState<MessageTextAlign>(
     initialUser?.messageTextAlign ?? "left",
   );
-  const [messageHeaderMode, setMessageHeaderMode] = useState<MessageHeaderMode>(
-    initialUser?.messageHeaderMode ?? "subtle",
-  );
   // Le serveur a déjà validé la session (layout protégé). Si initialUser est
   // fourni, on démarre prêt — aucun getUser() réseau au boot.
   const [loading, setLoading] = useState(initialUser === null);
@@ -131,10 +123,6 @@ export function CurrentUserProvider({
   }, [initialUser?.messageTextAlign]);
 
   useEffect(() => {
-    if (initialUser?.messageHeaderMode) setMessageHeaderMode(initialUser.messageHeaderMode);
-  }, [initialUser?.messageHeaderMode]);
-
-  useEffect(() => {
     // `onAuthStateChange` émet INITIAL_SESSION (lecture du storage local, sans
     // requête réseau) puis les transitions (refresh, login, logout). On évite
     // ainsi le `getUser()` réseau au démarrage : une requête /auth/v1/user
@@ -156,7 +144,6 @@ export function CurrentUserProvider({
         setMessageFont("sans");
         setMessageTextSize("base");
         setMessageTextAlign("left");
-        setMessageHeaderMode("subtle");
         return;
       }
 
@@ -165,7 +152,7 @@ export function CurrentUserProvider({
       if (!hasProfileRef.current) {
         supabase
           .from("profiles")
-          .select("username, avatar_url, appear_offline, plan, message_font, message_text_size, message_text_align, message_header_mode")
+          .select("username, avatar_url, appear_offline, plan, message_font, message_text_size, message_text_align")
           .eq("id", u.id)
           .single()
           .then(
@@ -180,7 +167,6 @@ export function CurrentUserProvider({
                 message_font: string | null;
                 message_text_size: string | null;
                 message_text_align: string | null;
-                message_header_mode: string | null;
               } | null;
             }) => {
               hasProfileRef.current = true;
@@ -191,7 +177,6 @@ export function CurrentUserProvider({
               setMessageFont(asMessageFont(data?.message_font));
               setMessageTextSize(asMessageTextSize(data?.message_text_size));
               setMessageTextAlign(asMessageTextAlign(data?.message_text_align));
-              setMessageHeaderMode(asMessageHeaderMode(data?.message_header_mode));
             },
           );
       }
@@ -212,7 +197,6 @@ export function CurrentUserProvider({
       messageFont,
       messageTextSize,
       messageTextAlign,
-      messageHeaderMode,
       loading,
     }),
     [
@@ -224,7 +208,6 @@ export function CurrentUserProvider({
       messageFont,
       messageTextSize,
       messageTextAlign,
-      messageHeaderMode,
       loading,
       resolved,
       initialUser?.id,

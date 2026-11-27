@@ -45,9 +45,15 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
+    text: "Bouton « Insérer un bloc » : nom lu par les lecteurs d’écran même quand une option est active.",
+  },
+  {
+    date: "2026-11-27",
     category: "Interface",
     area: "Salons",
-    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- plus d’en-tête ni de séparateur entre les réponses d’un même persona, joué par le même joueur\n- jet de dé rattaché à la réponse au-dessus, centré dessous\n- réglage du compte « Messages qui se suivent » : petit avatar dans la marge, ou aucun en-tête\n- actions de la suite au survol, réactions sous le message",
+    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- en-tête masqué et pas de séparateur quand on poste à la suite de son persona\n- en-tête au choix, message par message : masqué, petit avatar dans la marge ou complet ; dans les options du composeur et à la modification\n- jet de dé rattaché à la réponse au-dessus, centré dessous\n- actions de la suite au survol, réactions sous le message",
   },
   {
     date: "2026-11-27",

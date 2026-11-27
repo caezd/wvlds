@@ -90,7 +90,8 @@ function flowKind(m: ChatMessageWithPersona): "text" | "dice" | null {
  * la réponse ouvre une série, les réponses suivantes en sont la suite, sans
  * en-tête ni séparateur. Un jet de dé du même persona s'y rattache, sous la
  * réponse ; seul, il ne démarre pas de série. Un SMS, une note privée ou un
- * autre bloc la coupe.
+ * autre bloc la coupe ; une réponse à l'en-tête complet (`metadata.header`)
+ * en ouvre une nouvelle.
  */
 export function computeThreadFlow(groups: RenderGroup[]): Map<number, ThreadFlow> {
   const flows = new Map<number, ThreadFlow>();
@@ -102,8 +103,10 @@ export function computeThreadFlow(groups: RenderGroup[]): Map<number, ThreadFlow
     }
     const m = g.message;
     const kind = flowKind(m);
+    // L'en-tête complet, choisi par l'auteur : un message à part, qui ouvre sa propre série.
+    const standalone = m.metadata?.header === "full";
     const key = `${m.author_id ?? ""}:${m.persona?.id ?? ""}`;
-    const continued = kind !== null && run !== null && run.key === key;
+    const continued = kind !== null && !standalone && run !== null && run.key === key;
     flows.set(m.id, { continued, joinsNext: false });
     if (continued && run) {
       flows.get(run.last)!.joinsNext = true;

@@ -100,6 +100,12 @@ describe("buildMessageMetadata", () => {
     expect(buildMessageMetadata({ ...base, smsMode: true })).toEqual({ sms: true });
   });
 
+  it("en-tête de la suite : masqué par défaut, seule l'exception est notée", () => {
+    expect(buildMessageMetadata({ ...base, headerMode: "subtle" })).toEqual({ header: "subtle" });
+    expect(buildMessageMetadata({ ...base, headerMode: "full" })).toEqual({ header: "full" });
+    expect(buildMessageMetadata({ ...base, headerMode: "hidden" })).toBeNull();
+  });
+
   it("combine bubbles et sms quand les deux sont actifs", () => {
     expect(
       buildMessageMetadata({ ...base, bubbleMode: true, bubbleColor: "#fff", smsMode: true }),

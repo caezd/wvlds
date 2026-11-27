@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 // Les messages qui se suivent (même persona, même joueur) : la suite perd son
-// en-tête, ou n'en garde qu'un petit avatar selon la préférence du lecteur ;
+// en-tête — par défaut tout entier ; son auteur peut lui laisser un petit
+// avatar, ou l'en-tête complet ;
 // ses actions et ses réactions restent. Set-up repris de
 // ChatroomMessage.header.test.tsx.
 
@@ -108,11 +109,6 @@ vi.mock("@/components/ui/textarea", () => ({
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }));
 
-let headerMode: "subtle" | "hidden" = "subtle";
-vi.mock("@/components/providers/CurrentUserProvider", () => ({
-  useCurrentUser: () => ({ messageHeaderMode: headerMode, messageFont: "sans", messageTextSize: "base", messageTextAlign: "left" }),
-}));
-
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 
 function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessageWithPersona {
@@ -129,7 +125,9 @@ function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessa
   };
 }
 
-const renderMessage = (props: { continued?: boolean; joinsNext?: boolean; message?: ChatMessageWithPersona } = {}) =>
+const renderMessage = (
+  props: { continued?: boolean; joinsNext?: boolean; message?: ChatMessageWithPersona; onUpdated?: () => void } = {},
+) =>
   render(
     <ChatroomMessage
       message={props.message ?? makeMessage()}
@@ -137,13 +135,13 @@ const renderMessage = (props: { continued?: boolean; joinsNext?: boolean; messag
       selfId="user-me"
       continued={props.continued}
       joinsNext={props.joinsNext}
+      onUpdated={props.onUpdated}
     />,
   );
 
 describe("ChatroomMessage — messages qui se suivent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    headerMode = "subtle";
     vi.mocked(createClient).mockReturnValue(createSupabaseMock({ user: { id: "user-me" } }).client as never);
   });
 
@@ -153,8 +151,7 @@ describe("ChatroomMessage — messages qui se suivent", () => {
     expect(screen.getByTestId("avatar")).toBeInTheDocument();
   });
 
-  it("en-tête masqué : la suite n'a ni nom, ni avatar, mais garde ses actions", () => {
-    headerMode = "hidden";
+  it("par défaut, la suite n'a ni nom, ni avatar, mais garde ses actions", () => {
     const { container } = renderMessage({ continued: true });
     // Le message lui-même : le tiroir mobile, rendu à côté, porte aussi le nom.
     expect(within(container.querySelector("article")!).queryAllByText("Aria")).toHaveLength(0);
@@ -163,8 +160,13 @@ describe("ChatroomMessage — messages qui se suivent", () => {
     expect(screen.getByRole("button", { name: "actions" })).toBeInTheDocument();
   });
 
-  it("en-tête subtil : la suite garde un petit avatar, nommé, sans le grand en-tête", () => {
-    renderMessage({ continued: true });
+  it("le premier message d'une série garde son en-tête", () => {
+    renderMessage({ message: makeMessage({ metadata: { header: "subtle" } }) });
+    expect(screen.getByTestId("avatar")).toBeInTheDocument();
+  });
+
+  it("« Petit avatar » : la suite garde un petit avatar, nommé, sans le grand en-tête", () => {
+    renderMessage({ continued: true, message: makeMessage({ metadata: { header: "subtle" } }) });
     expect(screen.queryByTestId("avatar")).toBeNull();
     const pastille = screen.getByTestId("message-subtle-avatar");
     expect(pastille).toHaveAccessibleName("Aria");
@@ -179,5 +181,19 @@ describe("ChatroomMessage — messages qui se suivent", () => {
   it("un message suivi de sa suite le signale, pour retirer le séparateur", () => {
     const { container } = renderMessage({ joinsNext: true });
     expect(container.querySelector("article")).toHaveAttribute("data-joins-next");
+  });
+
+  it("la modification choisit l'en-tête de la suite : masqué, petit avatar ou complet", async () => {
+    const onUpdated = vi.fn();
+    const { container } = renderMessage({ continued: true, onUpdated });
+    // Le menu du message (le tiroir mobile, rendu à côté, a aussi le sien).
+    fireEvent.click(within(container.querySelector("article")!).getByRole("button", { name: "edit" }));
+    const choix = screen.getByRole("radiogroup", { name: "headerMode" });
+    expect(within(choix).getByRole("radio", { name: "headerModes.hidden" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(choix).getByRole("radio", { name: "headerModes.full" }));
+    expect(within(choix).getByRole("radio", { name: "headerModes.full" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.keyDown(document.querySelector("[contenteditable]")!, { key: "Enter" });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
+    expect(onUpdated.mock.calls[0][2]).toEqual(expect.objectContaining({ header: "full" }));
   });
 });

@@ -97,3 +97,40 @@ describe("ChatroomComposer — création d'un salon depuis le monde", () => {
     await waitFor(() => expect(stockage["bubbleMode:c-neuf"]).toBeUndefined());
   });
 });
+
+describe("ChatroomComposer — en-tête de la suite", () => {
+  it("l'en-tête choisi dans le salon (petit avatar) part avec le message", async () => {
+    stockage["headerMode:c1"] = "subtle";
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        ...Array.from({ length: 4 }, () => ({
+          data: [{ id: "p1", user_id: "u1", name: "Alpha", created_at: "2026-01-01T00:00:00Z", is_template: false }],
+          error: null,
+        })),
+        { data: { id: 9, chat_id: "c1", content: "Bonjour" }, error: null },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<ChatroomComposer chatId="c1" worldId="w1" presetPersona={persona} />);
+
+    await user.type(screen.getByTestId("editor"), "Bonjour");
+    await waitFor(() => expect(screen.getByTitle("Envoyer")).not.toBeDisabled());
+    await user.click(screen.getByTitle("Envoyer"));
+
+    await waitFor(() => expect(mock.buildersFor("chat_messages")[0]?.insert).toHaveBeenCalled());
+    expect(mock.buildersFor("chat_messages")[0].insert).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ header: "subtle" }) }),
+    );
+  });
+});
+
+describe("ChatroomComposer — bouton « Insérer un bloc »", () => {
+  // Une option active ajoute un compteur au bouton : son nom devenait « 1 ».
+  it("garde son nom quand une option est active", async () => {
+    stockage["smsMode:c1"] = "1";
+    render(<ChatroomComposer chatId="c1" worldId="w1" presetPersona={persona} />);
+    expect(await screen.findByRole("button", { name: "Insérer un bloc" })).toBeInTheDocument();
+  });
+});

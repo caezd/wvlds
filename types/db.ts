@@ -97,6 +97,12 @@ export type ChatMessageMeta = {
   bubbles?: boolean;
   bubbleColor?: string;
   sms?: boolean;
+  /**
+   * En-tête de la suite d'une réponse du même persona (cf. computeThreadFlow) :
+   * masqué par défaut (absent), un petit avatar dans la marge (« subtle »),
+   * ou complet, comme un message à part (« full »).
+   */
+  header?: "subtle" | "full";
   media?: ChatMediaItem[];
   word_count?: number;
   visible_to_labels?: string[];

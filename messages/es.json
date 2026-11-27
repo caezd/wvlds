@@ -165,13 +165,6 @@
       "left": "Alineado a la izquierda",
       "justify": "Justificado"
     },
-    "headerMode": "Mensajes consecutivos",
-    "headerModeDescription": "Cuando un mismo persona publica varios mensajes seguidos, solo el primero conserva su encabezado. Para los siguientes:",
-    "headerModeSaved": "Visualización de los mensajes actualizada",
-    "headerModeOptions": {
-      "subtle": "Avatar pequeño en el margen",
-      "hidden": "Sin encabezado"
-    },
     "subscription": {
       "title": "Suscripción",
       "description": "Conecte su cuenta de Patreon para activar automáticamente sus ventajas de suscriptor",
@@ -2230,6 +2223,13 @@
     "bubblesHint": "Los párrafos que comiencen con \"…\" o comillas francesas se mostrarán como burbujas de diálogo.",
     "smsMode": "SMS",
     "smsHint": "Los mensajes enviados se muestran en burbujas estilo SMS, agrupados mientras la opción permanezca activa.",
+    "headerMode": "Encabezado de la continuación",
+    "headerModes": {
+      "hidden": "Oculto",
+      "subtle": "Avatar pequeño",
+      "full": "Completo"
+    },
+    "headerModeHint": "Cuando publica justo después de su persona: encabezado oculto, avatar pequeño en el margen o encabezado completo.",
     "colorLabel": "Color",
     "colorChoose": "Elegir un color",
     "dialogColorTitle": "Color de diálogos",

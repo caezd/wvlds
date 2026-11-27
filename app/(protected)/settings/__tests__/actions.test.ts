@@ -22,7 +22,7 @@ vi.mock("next/headers", () => ({ cookies: async () => ({ set: cookieSet }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
-import { updateLocale, syncLocale, updateProfileBioAndPronouns, updateMessageHeaderMode } from "@/app/(protected)/settings/actions";
+import { updateLocale, syncLocale, updateProfileBioAndPronouns } from "@/app/(protected)/settings/actions";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -119,24 +119,5 @@ describe("updateProfileBioAndPronouns", () => {
     expect(mock.buildersFor("profiles")[0].update).toHaveBeenCalledWith(
       expect.objectContaining({ bio: "x".repeat(500) }),
     );
-  });
-});
-
-describe("updateMessageHeaderMode", () => {
-  it("enregistre l'en-tête des messages qui se suivent", async () => {
-    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
-    use(mock);
-    expect(await updateMessageHeaderMode("hidden")).toEqual({ success: true });
-    const b = mock.buildersFor("profiles")[0];
-    expect(b.update).toHaveBeenCalledWith({ message_header_mode: "hidden" });
-    expect(b.eq).toHaveBeenCalledWith("id", "u1");
-    expect(revalidatePath).toHaveBeenCalled();
-  });
-
-  it("refuse une valeur inconnue sans appeler Supabase", async () => {
-    const mock = createSupabaseMock({ user: { id: "u1" } });
-    use(mock);
-    expect(await updateMessageHeaderMode("full")).toEqual({ error: "unsupportedValue" });
-    expect(mock.from).not.toHaveBeenCalled();
   });
 });

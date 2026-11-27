@@ -43,11 +43,21 @@ export function buildVisibleToLabels(
     .filter((l): l is string => l !== null);
 }
 
+/** L'en-tête de la suite d'une réponse du même persona. */
+export type MessageHeaderMode = "hidden" | "subtle" | "full";
+export const MESSAGE_HEADER_MODES: readonly MessageHeaderMode[] = ["hidden", "subtle", "full"];
+
+/** Le mode noté dans les métadonnées d'un message (absent : masqué). */
+export function messageHeaderMode(metadata: { header?: string } | null | undefined): MessageHeaderMode {
+  return metadata?.header === "subtle" || metadata?.header === "full" ? metadata.header : "hidden";
+}
+
 export type MessageMetadata = {
   word_count?: number;
   bubbles?: true;
   bubbleColor?: string;
   sms?: true;
+  header?: "subtle" | "full";
   media?: MediaRef[];
   visible_to_labels?: string[];
   content_warnings?: string[];
@@ -62,15 +72,18 @@ export function buildMessageMetadata(opts: {
   bubbleMode: boolean;
   bubbleColor: string | null;
   smsMode: boolean;
+  /** En-tête de la suite : masqué par défaut, seule l'exception est notée. */
+  headerMode?: MessageHeaderMode;
   media: MediaRef[];
   visibleToLabels: string[] | null;
   contentWarnings?: string[] | null;
 }): MessageMetadata | null {
-  const { wordCount, bubbleMode, bubbleColor, smsMode, media, visibleToLabels, contentWarnings } = opts;
+  const { wordCount, bubbleMode, bubbleColor, smsMode, headerMode, media, visibleToLabels, contentWarnings } = opts;
   const metadata: MessageMetadata = {
     ...(wordCount > 0 ? { word_count: wordCount } : {}),
     ...(bubbleMode ? { bubbles: true as const, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
     ...(smsMode ? { sms: true as const } : {}),
+    ...(headerMode && headerMode !== "hidden" ? { header: headerMode } : {}),
     ...(media.length > 0 ? { media } : {}),
     ...(visibleToLabels?.length ? { visible_to_labels: visibleToLabels } : {}),
     ...(contentWarnings?.length ? { content_warnings: contentWarnings } : {}),

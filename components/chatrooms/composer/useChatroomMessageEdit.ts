@@ -7,6 +7,7 @@ import { encryptMessage } from "@/lib/crypto";
 import { notifyMentions } from "@/lib/notifyMentions";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { parseChatBlock } from "@/lib/chat-blocks";
+import { messageHeaderMode, type MessageHeaderMode } from "@/lib/composerMessage";
 import { useTagChips } from "@/hooks/useTagChips";
 import type { ChatMessageMeta, ChatMessageWithPersona } from "@/types/db";
 
@@ -44,6 +45,7 @@ export function useChatroomMessageEdit({
   const [editBubbles, setEditBubbles] = useState(false);
   const [editBubbleColor, setEditBubbleColor] = useState<string | null>(null);
   const [editSms, setEditSms] = useState(false);
+  const [editHeaderMode, setEditHeaderMode] = useState<MessageHeaderMode>("hidden");
   const contentWarningsChips = useTagChips(null);
 
   // Si un UPDATE arrive via realtime pendant qu'on n'édite pas, on resync le draft
@@ -57,6 +59,7 @@ export function useChatroomMessageEdit({
       setEditBubbles(message.metadata?.bubbles ?? false);
       setEditBubbleColor(message.metadata?.bubbleColor ?? null);
       setEditSms(message.metadata?.sms ?? false);
+      setEditHeaderMode(messageHeaderMode(message.metadata));
       contentWarningsChips.reset(message.metadata?.content_warnings?.length ? message.metadata.content_warnings : null);
     }
   }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,12 +97,13 @@ export function useChatroomMessageEdit({
       editBubbles === (message.metadata?.bubbles ?? false) &&
       editBubbleColor === (message.metadata?.bubbleColor ?? null);
     const smsUnchanged = editSms === (message.metadata?.sms ?? false);
+    const headerUnchanged = editHeaderMode === messageHeaderMode(message.metadata);
     const priorContentWarnings = message.metadata?.content_warnings ?? [];
     const nextContentWarnings = contentWarningsChips.tags ?? [];
     const contentWarningsUnchanged =
       priorContentWarnings.length === nextContentWarnings.length &&
       priorContentWarnings.every((tag, i) => tag === nextContentWarnings[i]);
-    if (contentUnchanged && bubblesUnchanged && smsUnchanged && contentWarningsUnchanged) {
+    if (contentUnchanged && bubblesUnchanged && smsUnchanged && headerUnchanged && contentWarningsUnchanged) {
       setEditing(false);
       return;
     }
@@ -113,7 +117,7 @@ export function useChatroomMessageEdit({
       ? 0
       : next.trim().split(/\s+/).filter(Boolean).length;
 
-    const { bubbles: _b, bubbleColor: _bc, sms: _sms, content_warnings: _cw, ...restMeta } = message.metadata ?? {};
+    const { bubbles: _b, bubbleColor: _bc, sms: _sms, header: _hd, content_warnings: _cw, ...restMeta } = message.metadata ?? {};
     const updatedMetadata = {
       ...restMeta,
       word_count: wordCount,
@@ -121,6 +125,7 @@ export function useChatroomMessageEdit({
         ? { bubbles: true as const, ...(editBubbleColor ? { bubbleColor: editBubbleColor } : {}) }
         : {}),
       ...(editSms ? { sms: true as const } : {}),
+      ...(editHeaderMode !== "hidden" ? { header: editHeaderMode } : {}),
       ...(contentWarningsChips.tags?.length ? { content_warnings: contentWarningsChips.tags } : {}),
       // Indique « modifié » aux lecteurs (cf. ChatMessageMeta.edited_at).
       edited_at: new Date().toISOString(),
@@ -153,7 +158,7 @@ export function useChatroomMessageEdit({
     // Mise à jour optimiste avec le texte en clair (déjà déchiffré dans l'état)
     onUpdated?.(message.id, next, updatedMetadata);
     setEditing(false);
-  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editSms, contentWarningsChips.tags, onUpdated, supabase, chatroomKey, worldRoles]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editSms, editHeaderMode, contentWarningsChips.tags, onUpdated, supabase, chatroomKey, worldRoles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function onKeyDownEdit(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === "Escape") {
@@ -179,6 +184,8 @@ export function useChatroomMessageEdit({
     setEditBubbleColor,
     editSms,
     setEditSms,
+    editHeaderMode,
+    setEditHeaderMode,
     contentWarningsChips,
     startEdit,
     cancelEdit,

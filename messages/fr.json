@@ -165,13 +165,6 @@
       "left": "Ferré à gauche",
       "justify": "Justifié"
     },
-    "headerMode": "Messages qui se suivent",
-    "headerModeDescription": "Quand un même persona poste plusieurs messages à la suite, seul le premier garde son en-tête. Pour les suivants :",
-    "headerModeSaved": "Affichage des messages mis à jour",
-    "headerModeOptions": {
-      "subtle": "Petit avatar dans la marge",
-      "hidden": "Aucun en-tête"
-    },
     "subscription": {
       "title": "Abonnement",
       "description": "Connectez votre compte Patreon pour activer automatiquement vos avantages d'abonné",
@@ -2230,6 +2223,13 @@
     "bubblesHint": "Les paragraphes commençant par \"…\" ou des guillemets français seront affichés en bulle de dialogue.",
     "smsMode": "SMS",
     "smsHint": "Les messages envoyés s'affichent en bulles façon SMS, regroupés dans un même bloc tant que l'option reste active.",
+    "headerMode": "En-tête de la suite",
+    "headerModes": {
+      "hidden": "Masqué",
+      "subtle": "Petit avatar",
+      "full": "Complet"
+    },
+    "headerModeHint": "Quand vous postez à la suite de votre persona : en-tête masqué, petit avatar dans la marge, ou en-tête complet.",
     "colorLabel": "Couleur",
     "colorChoose": "Choisir une couleur",
     "dialogColorTitle": "Couleur des dialogues",

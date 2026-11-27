@@ -12,6 +12,7 @@ import { useChatroomMessageEdit } from "../composer/useChatroomMessageEdit";
 import { ContentWarningChipInput } from "../composer/ContentWarningChipInput";
 import { ContentWarningBanner } from "../composer/ContentWarningBanner";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
+import { MESSAGE_HEADER_MODES, messageHeaderMode } from "@/lib/composerMessage";
 import { GameBlockRenderer } from "../blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
 import { ParagraphBlockEditor } from "../composer/ParagraphBlockEditor";
@@ -29,7 +30,7 @@ import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 
-import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle, Check, X, Loader2 } from "lucide-react";
+import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle, Check, X, Loader2, EyeOff } from "lucide-react";
 import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
@@ -37,7 +38,6 @@ import { toast } from "sonner";
 import { useUserPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLongPress } from "@/hooks/useLongPress";
-import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
 
 /**
  * IMPORTANT:
@@ -187,7 +187,6 @@ function ChatroomMessage({
   const [editColorPickerOpen, setEditColorPickerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
-  const { messageHeaderMode } = useCurrentUser();
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -213,6 +212,8 @@ function ChatroomMessage({
     setEditBubbleColor,
     editSms,
     setEditSms,
+    editHeaderMode,
+    setEditHeaderMode,
     contentWarningsChips,
     startEdit,
     cancelEdit,
@@ -379,7 +380,7 @@ function ChatroomMessage({
         <ContentWarningBanner tags={message.metadata?.content_warnings ?? []} className="mb-3" />
         <div className="relative flex w-full flex-col justify-between gap-8 ">
           <ChatroomMessageHeader
-            variant={continued ? messageHeaderMode : "full"}
+            variant={continued ? messageHeaderMode(message.metadata) : "full"}
             message={message}
             mine={mine}
             editing={editing}
@@ -509,6 +510,29 @@ function ChatroomMessage({
                           <MessageSquareText className="h-3 w-3" />
                           {t("smsMode")}
                         </Button>
+                        {/* L'en-tête quand ce message suit une réponse du même persona. */}
+                        <div
+                          role="radiogroup"
+                          aria-label={t("headerMode")}
+                          className="inline-flex h-7 items-center rounded-md border border-border p-0.5 text-xs"
+                        >
+                          <EyeOff aria-hidden className="mx-1.5 h-3 w-3 text-muted-foreground" />
+                          {MESSAGE_HEADER_MODES.map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              role="radio"
+                              aria-checked={editHeaderMode === mode}
+                              onClick={() => setEditHeaderMode(mode)}
+                              className={cn(
+                                "h-full rounded-sm px-2 transition-colors",
+                                editHeaderMode === mode ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {t(`headerModes.${mode}`)}
+                            </button>
+                          ))}
+                        </div>
                         {/* Activé, il garde la teinte d'avertissement plutôt que le fond neutre des autres bascules. */}
                         <Button
                           type="button"
