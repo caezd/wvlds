@@ -576,7 +576,7 @@ export function BlocksDropdown({
                             {triggerContent}
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="top" className="w-[calc(100vw-2rem)] max-w-[520px] p-0 overflow-hidden sm:w-[520px]">
+                    <DropdownMenuContent align="start" side="top" className="w-[calc(100vw-2rem)] max-w-[640px] p-0 overflow-hidden sm:w-[640px]">
                         <div className="flex max-h-[24rem]">
                             <div className="min-w-0 flex-1 overflow-y-auto p-2 sm:border-r sm:border-border">
                                 <SectionLabel as="div" className="px-2 pb-1.5 pt-1">
@@ -593,7 +593,7 @@ export function BlocksDropdown({
                                 ))}
                             </div>
 
-                            <div className="hidden w-52 shrink-0 flex-col p-4 sm:flex">
+                            <div className="hidden w-72 shrink-0 flex-col p-5 sm:flex">
                                 {activeItem && (
                                     <>
                                         <div className="mb-3 flex items-center gap-2 text-sm font-medium">

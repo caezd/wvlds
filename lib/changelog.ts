@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Interface",
+    area: "Salons",
+    text: "Menu « Insérer un bloc » plus large : l’aperçu respire, titres et exemples tiennent sur une ligne.",
+  },
+  {
+    date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
     text: "Blocs de jeu sur mobile : un appui long ouvre leurs options, comme pour un message.\n- répondre, insérer avant, supprimer ou signaler\n- les boutons cachés des blocs, visibles au survol sur ordinateur, ne captent plus les appuis\n- le menu d’un message ne se referme plus de lui-même au relâchement du doigt",
