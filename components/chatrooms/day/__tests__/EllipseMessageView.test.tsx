@@ -29,18 +29,16 @@ const ELLIPSE: ChatroomEllipse = {
 function renderView(ellipse: ChatroomEllipse | null, config: WorldTimelineConfig | null = CONFIG) {
   render(
     <ChatroomTimeProvider value={{ config, startDate: null, currentDate: null, day: null }}>
-      <EllipseMessageView ellipse={ellipse} label="Aria" mine onDelete={vi.fn()} />
+      <EllipseMessageView ellipse={ellipse} mine onDelete={vi.fn()} />
     </ChatroomTimeProvider>,
   );
 }
 
 describe("EllipseMessageView", () => {
-  it("le saut lu en base : qui, combien de jours plus tard, la date atteinte, et la ligne", () => {
+  it("une ligne seule, lue en base : les jours passés et la date atteinte la décrivent", () => {
     renderView(ELLIPSE);
     const bloc = screen.getByRole("article", { name: "Ellipse" });
-    expect(bloc).toHaveTextContent("Aria");
-    expect(bloc).toHaveTextContent("3 jours plus tard");
-    expect(bloc).toHaveTextContent("15 Dégel, an 4");
+    expect(bloc).toHaveAccessibleDescription("3 jours plus tard · 15 Dégel, an 4");
     const ligne = within(bloc).getByRole("group", { name: "Temps du salon" });
     expect(within(ligne).getByTestId("day-from")).toHaveAttribute("aria-label", "Nuit claire");
     expect(within(ligne).getAllByTestId("day-dash")).toHaveLength(3);
@@ -49,13 +47,13 @@ describe("EllipseMessageView", () => {
 
   it("sans chronologie, pas de date", () => {
     renderView(ELLIPSE, null);
-    expect(screen.getByRole("article", { name: "Ellipse" })).not.toHaveTextContent("Dégel");
+    expect(screen.getByRole("article", { name: "Ellipse" })).toHaveAccessibleDescription("3 jours plus tard");
   });
 
   it("une ellipse le même jour : pas de pointillé", () => {
     renderView({ ...ELLIPSE, days: 0, from_icon: "sun", from_position: 40, from_date: null, to_date: null });
     const bloc = screen.getByRole("article", { name: "Ellipse" });
-    expect(bloc).toHaveTextContent("le même jour");
+    expect(bloc).toHaveAccessibleDescription("le même jour");
     expect(within(bloc).queryAllByTestId("day-dash")).toHaveLength(0);
   });
 

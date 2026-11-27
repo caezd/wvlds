@@ -268,7 +268,8 @@ function ChatroomMessage({
   // un aiguilleur unique gère le rendu, l'édition et la suppression.
   if (block) {
     return (
-      <div data-message-id={message.id}>
+      // `data-ellipse` : le fil retire les séparateurs autour de l'ellipse.
+      <div data-message-id={message.id} data-ellipse={block._type === "ellipse" ? "" : undefined}>
         <GameBlockRenderer
           block={block}
           mine={mine}

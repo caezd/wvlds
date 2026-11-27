@@ -193,7 +193,7 @@ export function GameBlockRenderer({
 
     case "ellipse":
       return (
-        <EllipseMessageView ellipse={message.ellipse} label={label} mine={mine} onDelete={deleteBlock("l’ellipse")} />
+        <EllipseMessageView ellipse={message.ellipse} mine={mine} onDelete={deleteBlock("l’ellipse")} />
       );
 
     case "banner":

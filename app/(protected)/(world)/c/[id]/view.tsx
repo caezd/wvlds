@@ -1270,7 +1270,9 @@ export default function ChatRoomView({
               ref={scrollRef}
               className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
             >
-              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
+              {/* Une ellipse n'est pas encadrée par les séparateurs entre messages :
+                  ni le sien, ni celui du message qui la précède. */}
+              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border [&>[data-ellipse]]:border-b-0 [&>*:has(+[data-ellipse])]:border-b-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
                 {loadingOlder && (
                   <div className="py-3 text-center text-xs text-muted-foreground">
                     Chargement de l’historique…

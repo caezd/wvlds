@@ -69,9 +69,9 @@ test("Temps du salon : réglé à la création, avancé par une ellipse", async 
     await fenetre.getByRole("spinbutton", { name: "Jours passés" }).fill("3");
     await fenetre.getByRole("button", { name: "Poster l’ellipse" }).click();
 
-    // Le message lit le saut posé par la base.
+    // Une ligne seule, sans auteur, décrite par le saut posé par la base.
     const ellipse = page.getByRole("article", { name: "Ellipse" });
-    await expect(ellipse).toContainText("3 jours plus tard", { timeout: 20_000 });
+    await expect(ellipse).toHaveAccessibleDescription("3 jours plus tard", { timeout: 20_000 });
     await expect(ellipse.getByTestId("day-from")).toHaveAttribute("aria-label", "Pluie");
     await expect(ellipse.getByTestId("day-icon")).toHaveAttribute("aria-label", "Nuit claire");
     await expect(ellipse.getByTestId("day-dash")).toHaveCount(3);
@@ -82,7 +82,7 @@ test("Temps du salon : réglé à la création, avancé par une ellipse", async 
     await page.reload();
     await expect(tempsDuSalon(page).getByTestId("day-icon")).toHaveAttribute("aria-label", "Nuit claire", { timeout: 20_000 });
     await expect(tempsDuSalon(page).getByTestId("day-from")).toHaveAttribute("aria-label", "Pluie");
-    await expect(page.getByRole("article", { name: "Ellipse" })).toContainText("3 jours plus tard");
+    await expect(page.getByRole("article", { name: "Ellipse" })).toHaveAccessibleDescription("3 jours plus tard");
 
     // Les réglages du salon le retrouvent.
     await page.getByRole("button", { name: "Paramètres" }).first().click();
