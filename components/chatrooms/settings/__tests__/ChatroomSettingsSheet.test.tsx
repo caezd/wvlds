@@ -8,7 +8,7 @@ import { toast } from "sonner";
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn(), replace: routerReplace }),
 }));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ world_map: false }),
@@ -27,6 +27,20 @@ vi.mock("@/components/chatrooms/access/ChatroomInviteesField", () => ({
         inviter (double)
       </button>
     </div>
+  ),
+}));
+// La suppression passe par l'action serveur (fichiers compris).
+const deleteChatroom = vi.hoisted(() => vi.fn());
+vi.mock("@/app/actions/chatrooms", () => ({ deleteChatroom }));
+const routerReplace = vi.hoisted(() => vi.fn());
+// Un dialogue de confirmation dans un tiroir ouvert boucle sous jsdom : un
+// double qui confirme d'un clic.
+vi.mock("@/components/ui/delete-confirm-dialog", () => ({
+  DeleteConfirmDialog: (props: { trigger: React.ReactNode; onConfirm: () => void }) => (
+    <>
+      {props.trigger}
+      <button type="button" onClick={props.onConfirm}>confirmer (double)</button>
+    </>
   ),
 }));
 vi.mock("@/lib/imageUtils", () => ({
@@ -307,5 +321,37 @@ describe("ChatroomSettingsSheet — temps du salon (migration 275)", () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Le temps du salon n’a pas pu être enregistré."));
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("ChatroomSettingsSheet — supprimer la salle au complet", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("supprime par l'action serveur, confirme, puis ramène à l'accueil du monde", async () => {
+    setup();
+    deleteChatroom.mockResolvedValue({});
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} worldId="w1" open hideTrigger />);
+
+    await user.click(screen.getByRole("button", { name: "confirmer (double)" }));
+
+    await waitFor(() => expect(deleteChatroom).toHaveBeenCalledWith("c1"));
+    expect(toast.success).toHaveBeenCalledWith("Salon supprimé.");
+    expect(routerReplace).toHaveBeenCalledWith("/w/w1");
+  });
+
+  it("un refus ne confirme rien et reste dans le salon", async () => {
+    setup();
+    deleteChatroom.mockResolvedValue({ error: "forbidden" });
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} worldId="w1" open hideTrigger />);
+
+    await user.click(screen.getByRole("button", { name: "confirmer (double)" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Suppression du salon impossible."));
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 });

@@ -68,6 +68,7 @@ import {
 import { ChatroomDayPicker } from "@/components/chatrooms/day/ChatroomDayPicker";
 import { DAY_DEFAULT_ICON, DAY_DEFAULT_POSITION } from "@/lib/chatroomDay";
 import { RPC } from "@/lib/constants";
+import { deleteChatroom } from "@/app/actions/chatrooms";
 
 type MapPinOption = { id: string; title: string; color: string };
 /** Le temps réglable d'un salon (migration 275) : nul s'il n'en a pas. */
@@ -411,22 +412,27 @@ export default function ChatroomSettingsSheet({
 
   // ---------- delete ----------
 
+  /**
+   * Supprime la salle au complet : l'action serveur supprime la ligne sous
+   * notre identité (la base en décide), puis tous ses fichiers, médias des
+   * messages compris.
+   */
   async function handleDelete() {
     setDeleting(true);
     try {
-      // Tout le dossier de la salle : les images portent un nom par envoi.
-      const dossier = `chatroom-${chatroom.id}`;
-      const { data: fichiers } = await supabase.storage.from("chatrooms").list(dossier, { limit: 1000 });
-      const chemins = (fichiers ?? []).map((f: { name: string }) => `${dossier}/${f.name}`);
-      if (chemins.length > 0) await supabase.storage.from("chatrooms").remove(chemins);
-      const { error } = await supabase.from("chatrooms").delete().eq("id", chatroom.id);
-      if (error) throw error;
+      const { error } = await deleteChatroom(chatroom.id);
+      if (error) {
+        toast.error(t("deleteRoomFailed"));
+        return;
+      }
       toast.success(t("roomDeleted"));
       setOpen(false);
-      router.back();
-      router.refresh();
+      // Le salon n'existe plus : on ne revient pas en arrière vers lui. Pas
+      // de `router.refresh()` ici : il relancerait le rendu du salon supprimé
+      // en pleine navigation, et la page restait figée.
+      if (worldId) router.replace(`/w/${worldId}`);
+      else router.back();
     } catch (e: unknown) {
-      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
       console.error("[ChatroomSettingsSheet] suppression", e);
       toast.error(t("deleteRoomFailed"));
     } finally {
