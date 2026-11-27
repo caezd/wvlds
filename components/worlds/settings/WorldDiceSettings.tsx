@@ -60,6 +60,8 @@ export function WorldDiceSettings({
   const [rules, setRules] = React.useState<DiceRules>(() => ({
     dice_mode: world.dice_mode === "predefined" ? "predefined" : "free",
     dice_allow_edit: !!world.dice_allow_edit,
+    dice_critical: !!world.dice_critical,
+    dice_fumble: !!world.dice_fumble,
   }));
   const { status } = useAutoSave({
     value: rules,
@@ -148,6 +150,18 @@ export function WorldDiceSettings({
             description={t("allowEditHint")}
             checked={rules.dice_allow_edit}
             onCheckedChange={(v) => setRules((r) => ({ ...r, dice_allow_edit: v }))}
+          />
+          <ToggleItem
+            title={t("critical")}
+            description={t("criticalHint")}
+            checked={rules.dice_critical}
+            onCheckedChange={(v) => setRules((r) => ({ ...r, dice_critical: v }))}
+          />
+          <ToggleItem
+            title={t("fumble")}
+            description={t("fumbleHint")}
+            checked={rules.dice_fumble}
+            onCheckedChange={(v) => setRules((r) => ({ ...r, dice_fumble: v }))}
           />
         </ToggleList>
       </SettingsSection>

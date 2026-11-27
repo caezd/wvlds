@@ -75,6 +75,8 @@ export const worldDieInputSchema = z
 export const diceRulesSchema = z.strictObject({
   dice_mode: z.enum(DICE_MODES),
   dice_allow_edit: z.boolean(),
+  dice_critical: z.boolean(),
+  dice_fumble: z.boolean(),
 });
 export type DiceRules = z.infer<typeof diceRulesSchema>;
 
@@ -158,13 +160,22 @@ export function rollFormula(roll: Pick<DiceRoll, "die_name" | "max_value" | "cou
   return `${base} ${roll.modifier > 0 ? "+" : "−"} ${Math.abs(roll.modifier)}`;
 }
 
-/** Un seul dé, au plus haut de sa plage : critique ; au plus bas : échec. */
+/** Les options du monde qui donnent un sens au maximum et au minimum (migration 273). */
+export type DiceOutcomeOptions = { critical: boolean; fumble: boolean };
+
+/**
+ * Un seul dé, au plus haut de sa plage : critique ; au plus bas : échec
+ * critique — chacun seulement si le monde l'a coché. Une face en image n'a
+ * ni l'un ni l'autre : elle dit elle-même son résultat.
+ */
 export function diceRollOutcome(
-  roll: Pick<DiceRoll, "min_value" | "max_value" | "count" | "results">,
+  roll: Pick<DiceRoll, "min_value" | "max_value" | "count" | "results"> & Partial<Pick<DiceRoll, "die_name" | "faces">>,
+  options: DiceOutcomeOptions,
 ): "critical" | "fumble" | null {
   if (roll.count !== 1 || roll.results.length !== 1) return null;
-  if (roll.results[0] === roll.max_value) return "critical";
-  if (roll.results[0] === roll.min_value) return "fumble";
+  if (faceOf(roll.faces, roll.results[0])) return null;
+  if (options.critical && roll.results[0] === roll.max_value) return "critical";
+  if (options.fumble && roll.results[0] === roll.min_value) return "fumble";
   return null;
 }
 

@@ -10,21 +10,26 @@ import type { DiceMode } from "@/lib/worldDice";
  * lisent sans qu'elles traversent le fil et le composeur.
  *
  * Hors d'un salon (aperçus), les règles par défaut : formules libres, lancers
- * figés.
+ * figés, ni critique ni échec critique (migration 273).
  */
 export type ChatroomDiceRules = {
   worldId: string | null;
   mode: DiceMode;
   allowEdit: boolean;
+  critical: boolean;
+  fumble: boolean;
 };
 
-const DEFAULT_RULES: ChatroomDiceRules = { worldId: null, mode: "free", allowEdit: false };
+const DEFAULT_RULES: ChatroomDiceRules = { worldId: null, mode: "free", allowEdit: false, critical: false, fumble: false };
 
 const ChatroomDiceRulesContext = React.createContext<ChatroomDiceRules>(DEFAULT_RULES);
 
 export function ChatroomDiceRulesProvider({ value, children }: { value: ChatroomDiceRules; children: React.ReactNode }) {
-  const { worldId, mode, allowEdit } = value;
-  const memo = React.useMemo(() => ({ worldId, mode, allowEdit }), [worldId, mode, allowEdit]);
+  const { worldId, mode, allowEdit, critical, fumble } = value;
+  const memo = React.useMemo(
+    () => ({ worldId, mode, allowEdit, critical, fumble }),
+    [worldId, mode, allowEdit, critical, fumble],
+  );
   return <ChatroomDiceRulesContext.Provider value={memo}>{children}</ChatroomDiceRulesContext.Provider>;
 }
 

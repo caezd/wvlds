@@ -102,7 +102,7 @@ function ChatroomHeader({
   rooms,
   rightSlot,
 }: {
-  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean } | null } | null;
+  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean; dice_critical?: boolean; dice_fumble?: boolean } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
   rightSlot?: React.ReactNode;
@@ -217,7 +217,7 @@ export default function ChatRoomView({
     category_id: string | null;
     visibility: ChatroomVisibility;
     synopsis: string | null;
-    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean } | null;
+    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean; dice_critical?: boolean; dice_fumble?: boolean } | null;
   };
   initialMessages: ChatMessageWithPersona[];
   initialHasMore: boolean;
@@ -1069,6 +1069,8 @@ export default function ChatRoomView({
     worldId: chat?.worlds?.id ?? null,
     mode: chat?.worlds?.dice_mode ?? "free",
     allowEdit: !!chat?.worlds?.dice_allow_edit,
+    critical: !!chat?.worlds?.dice_critical,
+    fumble: !!chat?.worlds?.dice_fumble,
   } as const;
 
   return (

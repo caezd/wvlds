@@ -156,8 +156,8 @@ export function WorldSettingsNav({
   function entry(id: SettingsSectionId) {
     const Icon = ICONS[id];
     const isSelected = id === selected;
-    // Chaque fonction porte son état : une icône allumée ou coupée ; une
-    // fonction désactivée est en plus grisée.
+    // Chaque fonction porte son état : une icône allumée ou coupée. Le
+    // libellé garde la même couleur, active ou non.
     const isOff = isFeatureSection(id) && featureStatus[id] === false;
     // Le Catalogue est réservé : « Bientôt » à la place de l'état.
     const soon = id === "catalog";
@@ -182,8 +182,8 @@ export function WorldSettingsNav({
             isSelected && selectedOnDesktopOnly && "md:bg-muted md:font-medium md:text-foreground",
           )}
         >
-          <Icon className={cn("size-4 shrink-0", isOff && !isSelected && "opacity-50")} aria-hidden />
-          <span className={cn("min-w-0 flex-1 truncate", isOff && !isSelected && "opacity-60")}>{label(id)}</span>
+          <Icon className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1 truncate">{label(id)}</span>
           {(isOff || isOn) && <FeatureStatusMark on={isOn} id={`settings-status-${id}`} label={isOn ? on : off} />}
           {soon && (
             <Badge id={`settings-status-${id}`} tone="neutral" className="text-muted-foreground">

@@ -17,10 +17,12 @@ function afficher({
   roll = ROLL as DiceRoll | null,
   mode = "free" as DiceMode,
   allowEdit = false,
+  critical = true,
+  fumble = true,
   mine = true,
 } = {}) {
   render(
-    <ChatroomDiceRulesProvider value={{ worldId: "w1", mode, allowEdit }}>
+    <ChatroomDiceRulesProvider value={{ worldId: "w1", mode, allowEdit, critical, fumble }}>
       <DiceMessageView block={block} roll={roll} label="Hyun" mine={mine} onEditLabel={vi.fn()} onDelete={vi.fn()} />
     </ChatroomDiceRulesProvider>,
   );
@@ -37,7 +39,14 @@ describe("DiceMessageView", () => {
 
   it("le critique suit la plage du dé", () => {
     afficher({ roll: { ...ROLL, results: [5], total: 5 } });
-    expect(screen.getByText(/Critique/)).toBeInTheDocument();
+    expect(screen.getByText("Critique !")).toBeInTheDocument();
+  });
+
+  it("sans les options du monde, ni critique ni échec critique", () => {
+    afficher({ roll: { ...ROLL, results: [5], total: 5 }, critical: false, fumble: false });
+    expect(screen.queryByText("Critique !")).toBeNull();
+    afficher({ roll: { ...ROLL, results: [0], total: 0 }, critical: false, fumble: false });
+    expect(screen.queryByText("Échec critique")).toBeNull();
   });
 
   it("un ancien lancer, sans lancer de la base, s'affiche comme avant dans un monde libre", () => {
@@ -61,6 +70,43 @@ describe("DiceMessageView", () => {
   it("le monde permet la modification : l'auteur change la description", () => {
     afficher({ allowEdit: true });
     expect(screen.getByRole("button", { name: "Modifier la description" })).toBeInTheDocument();
+  });
+
+  describe("la carte du lancer", () => {
+    it("un seul dé sans modificateur : le résultat une fois, sans total répété", () => {
+      afficher();
+      expect(screen.getAllByText("3")).toHaveLength(1);
+      expect(screen.queryByText(/=/)).toBeNull();
+    });
+
+    it("plusieurs dés et un modificateur : chaque dé, le modificateur, puis le total", () => {
+      afficher({ roll: { ...ROLL, count: 2, results: [2, 5], modifier: 1, total: 8 } });
+      const resultat = screen.getByTestId("dice-roll-result");
+      expect(resultat).toHaveTextContent(/2\s*5\s*\+1\s*8/);
+    });
+
+    it("la description devient le titre ; qui a lancé et le dé, en dessous", () => {
+      afficher();
+      expect(screen.getByTestId("dice-roll-title")).toHaveTextContent("Courage");
+      const sous = screen.getByTestId("dice-roll-meta");
+      expect(sous).toHaveTextContent("Hyun");
+      expect(sous).toHaveTextContent("Dé de peur");
+    });
+
+    it("sans description, le titre est le dé lancé", () => {
+      afficher({ block: { ...BLOCK, label: undefined } });
+      expect(screen.getByTestId("dice-roll-title")).toHaveTextContent("Dé de peur");
+      expect(screen.getByTestId("dice-roll-meta")).toHaveTextContent("Hyun");
+      expect(screen.getByTestId("dice-roll-meta")).not.toHaveTextContent("Dé de peur");
+    });
+
+    it("un critique se signale par un badge ; un échec critique aussi", () => {
+      const D6 = { ...ROLL, die_name: "d6", min_value: 1, max_value: 6 };
+      afficher({ roll: { ...D6, results: [6], total: 6 } });
+      expect(screen.getByText("Critique !")).toHaveAttribute("data-tone", "success");
+      afficher({ roll: { ...D6, results: [1], total: 1 } });
+      expect(screen.getByText("Échec critique")).toHaveAttribute("data-tone", "danger");
+    });
   });
 
   describe("faces en image (migration 272)", () => {

@@ -12,8 +12,9 @@ import { useChatroomDiceRules } from "./chatroomDiceRules";
 import { useTranslations } from "next-intl";
 
 /**
- * Rendu d'un message « lancé de dé » : une ligne de tour (nom de l'auteur +
- * résultat) avec édition inline de la description et suppression au survol.
+ * Rendu d'un message « lancé de dé » : la ligne et la carte du lancer
+ * (DiceBlockView), avec édition inline de la description et suppression au
+ * survol.
  * Structurellement différent des autres blocs (pas de carte, pas d'avatar),
  * d'où son propre composant.
  *
@@ -49,12 +50,14 @@ export function DiceMessageView({
   }
 
   return (
-    <div className="group/gblock w-full py-8 flex items-center justify-between gap-4">
-      <span className="text-sm text-muted-foreground italic">
-        <strong className="font-medium not-italic text-foreground">{label}</strong>{" "}
-        <DiceBlockView block={block} roll={roll} />
+    <div className="group/gblock w-full py-3 flex items-center justify-between gap-4">
+      <DiceBlockView
+        block={block}
+        roll={roll}
+        author={<strong className="font-medium text-foreground">{label}</strong>}
+      >
         {unverified && (
-          <Badge tone="warning" className="ml-2 not-italic align-middle" title={t("diceUnverifiedHint")}>
+          <Badge tone="warning" className="ml-2 align-middle" title={t("diceUnverifiedHint")}>
             {t("diceUnverified")}
           </Badge>
         )}
@@ -68,10 +71,10 @@ export function DiceMessageView({
               if (e.key === "Escape") setEditing(false);
             }}
             placeholder="Description…"
-            className="ml-2 not-italic bg-transparent border-b border-border focus:border-primary outline-none text-sm text-foreground w-36"
+            className="ml-2 bg-transparent border-b border-border focus:border-primary outline-none text-sm text-foreground w-36"
           />
         )}
-      </span>
+      </DiceBlockView>
       <GameBlockToolbar
         mine={mine}
         className="shrink-0"

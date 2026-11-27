@@ -17,7 +17,7 @@ const PEUR: WorldDie = { id: "peur", world_id: "w1", name: "Dé de peur", min_va
 function ouvrir(mode: DiceMode = "free") {
   const onRoll = vi.fn();
   render(
-    <ChatroomDiceRulesProvider value={{ worldId: "w1", mode, allowEdit: false }}>
+    <ChatroomDiceRulesProvider value={{ worldId: "w1", mode, allowEdit: false, critical: false, fumble: false }}>
       <DiceDialog open onOpenChange={() => {}} onRoll={onRoll} />
     </ChatroomDiceRulesProvider>,
   );

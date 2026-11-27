@@ -43,7 +43,7 @@ import type { WorldDie } from "@/lib/worldDice";
 const D6: WorldDie = { id: "d6", world_id: "w1", name: "d6", min_value: 1, max_value: 6, hidden: false, position: 0, faces: [] };
 const PEUR: WorldDie = { id: "peur", world_id: "w1", name: "Dé de peur", min_value: 0, max_value: 5, hidden: true, position: 1, faces: [] };
 const IMG = "https://x.supabase.co/storage/v1/object/public/worlds/world-w1/dice/a.webp";
-const monde = (patch: Partial<World> = {}) => ({ id: "w1", name: "Monde", dice_mode: "free", dice_allow_edit: false, ...patch }) as World;
+const monde = (patch: Partial<World> = {}) => ({ id: "w1", name: "Monde", dice_mode: "free", dice_allow_edit: false, dice_critical: false, dice_fumble: false, ...patch }) as World;
 const attendre = (ms = 800) => act(() => vi.advanceTimersByTimeAsync(ms));
 const utilisateur = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
@@ -213,6 +213,25 @@ describe("WorldDiceSettings — les faces en image (migration 272)", () => {
 });
 
 describe("WorldDiceSettings — les règles des lancers", () => {
+  it("critique et échec critique : deux options, décochées par défaut", async () => {
+    const user = utilisateur();
+    render(<WorldDiceSettings world={monde()} />);
+    const critique = screen.getByRole("switch", { name: "Critique" });
+    const echec = screen.getByRole("switch", { name: "Échec critique" });
+    expect(critique).toHaveAttribute("aria-checked", "false");
+    expect(echec).toHaveAttribute("aria-checked", "false");
+    await user.click(critique);
+    await attendre();
+    expect(setWorldDiceRules).toHaveBeenLastCalledWith("w1", {
+      dice_mode: "free", dice_allow_edit: false, dice_critical: true, dice_fumble: false,
+    });
+    await user.click(echec);
+    await attendre();
+    expect(setWorldDiceRules).toHaveBeenLastCalledWith("w1", {
+      dice_mode: "free", dice_allow_edit: false, dice_critical: true, dice_fumble: true,
+    });
+  });
+
   it("montre le mode du monde, et enregistre le passage aux dés du monde seulement", async () => {
     const user = utilisateur();
     const onUpdated = vi.fn();
@@ -220,8 +239,8 @@ describe("WorldDiceSettings — les règles des lancers", () => {
     expect(screen.getByRole("radio", { name: /Formules libres/ })).toHaveAttribute("aria-checked", "true");
     await user.click(screen.getByRole("radio", { name: /Dés du monde seulement/ }));
     await attendre();
-    expect(setWorldDiceRules).toHaveBeenCalledWith("w1", { dice_mode: "predefined", dice_allow_edit: false });
-    expect(onUpdated).toHaveBeenCalledWith({ dice_mode: "predefined", dice_allow_edit: false });
+    expect(setWorldDiceRules).toHaveBeenCalledWith("w1", { dice_mode: "predefined", dice_allow_edit: false, dice_critical: false, dice_fumble: false });
+    expect(onUpdated).toHaveBeenCalledWith({ dice_mode: "predefined", dice_allow_edit: false, dice_critical: false, dice_fumble: false });
   });
 
   it("la modification des lancers est coupée par défaut, et s'active", async () => {
@@ -231,6 +250,6 @@ describe("WorldDiceSettings — les règles des lancers", () => {
     expect(option).toHaveAttribute("aria-checked", "false");
     await user.click(option);
     await attendre();
-    expect(setWorldDiceRules).toHaveBeenCalledWith("w1", { dice_mode: "predefined", dice_allow_edit: true });
+    expect(setWorldDiceRules).toHaveBeenCalledWith("w1", { dice_mode: "predefined", dice_allow_edit: true, dice_critical: false, dice_fumble: false });
   });
 });

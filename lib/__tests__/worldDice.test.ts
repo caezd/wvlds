@@ -20,6 +20,7 @@ import {
   diceBlockFromRoll,
   diceRollErrorKey,
   diceRollOutcome,
+  diceRulesSchema,
   dieRangeLabel,
   parseFreeFormula,
   rollFormula,
@@ -117,20 +118,38 @@ describe("rollFormula", () => {
 });
 
 describe("diceRollOutcome", () => {
-  const roll = { min_value: 1, max_value: 20, count: 1, results: [20] };
+  const roll = { die_name: null, min_value: 1, max_value: 20, count: 1, results: [20] };
+  const both = { critical: true, fumble: true };
 
-  it("un seul dé au maximum : critique ; au minimum : échec", () => {
-    expect(diceRollOutcome(roll)).toBe("critical");
-    expect(diceRollOutcome({ ...roll, results: [1] })).toBe("fumble");
-    expect(diceRollOutcome({ ...roll, results: [12] })).toBeNull();
+  it("sans option cochée dans le monde : ni critique ni échec", () => {
+    expect(diceRollOutcome(roll, { critical: false, fumble: false })).toBeNull();
+    expect(diceRollOutcome({ ...roll, results: [1] }, { critical: false, fumble: false })).toBeNull();
+  });
+
+  it("un seul dé au maximum : critique ; au minimum : échec critique", () => {
+    expect(diceRollOutcome(roll, both)).toBe("critical");
+    expect(diceRollOutcome({ ...roll, results: [1] }, both)).toBe("fumble");
+    expect(diceRollOutcome({ ...roll, results: [12] }, both)).toBeNull();
+  });
+
+  it("chaque option se coche à part", () => {
+    expect(diceRollOutcome(roll, { critical: true, fumble: false })).toBe("critical");
+    expect(diceRollOutcome({ ...roll, results: [1] }, { critical: true, fumble: false })).toBeNull();
+    expect(diceRollOutcome(roll, { critical: false, fumble: true })).toBeNull();
+    expect(diceRollOutcome({ ...roll, results: [1] }, { critical: false, fumble: true })).toBe("fumble");
   });
 
   it("plusieurs dés : rien", () => {
-    expect(diceRollOutcome({ ...roll, count: 2, results: [20, 20] })).toBeNull();
+    expect(diceRollOutcome({ ...roll, count: 2, results: [20, 20] }, both)).toBeNull();
   });
 
-  it("suit la plage du dé, pas 1", () => {
-    expect(diceRollOutcome({ min_value: 0, max_value: 5, count: 1, results: [0] })).toBe("fumble");
+  it("suit la plage du dé, dé du monde compris", () => {
+    expect(diceRollOutcome({ die_name: "Dé de peur", min_value: 0, max_value: 5, count: 1, results: [0] }, both)).toBe("fumble");
+  });
+
+  it("une face en image n'a ni critique ni échec : l'image dit le résultat", () => {
+    const faces = [{ value: 20, image: "https://x.supabase.co/a.webp" }];
+    expect(diceRollOutcome({ ...roll, die_name: "d20", faces }, both)).toBeNull();
   });
 });
 
@@ -195,6 +214,22 @@ describe("migration 270", () => {
     expect(sql).not.toMatch(/GRANT (INSERT|UPDATE|DELETE)[^;]*ON public\.dice_rolls/);
     expect(sql).toMatch(/RAISE EXCEPTION 'dice_predefined_only'/);
     expect(sql).toMatch(/RAISE EXCEPTION 'dice_roll_locked'/);
+  });
+});
+
+describe("critique et échec critique (migration 273)", () => {
+  const sql = readFileSync(path.join(process.cwd(), "migrations/273_world_dice_outcomes.sql"), "utf8");
+
+  it("deux options du monde, décochées par défaut, écrites avec world.settings", () => {
+    expect(sql).toMatch(/dice_critical boolean NOT NULL DEFAULT false/);
+    expect(sql).toMatch(/dice_fumble boolean NOT NULL DEFAULT false/);
+    expect(sql).toMatch(/GRANT UPDATE \(dice_critical, dice_fumble\) ON public\.worlds TO authenticated;/);
+  });
+
+  it("diceRulesSchema les attend", () => {
+    const rules = { dice_mode: "free", dice_allow_edit: false, dice_critical: true, dice_fumble: false };
+    expect(diceRulesSchema.safeParse(rules).success).toBe(true);
+    expect(diceRulesSchema.safeParse({ dice_mode: "free", dice_allow_edit: false }).success).toBe(false);
   });
 });
 

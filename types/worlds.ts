@@ -211,6 +211,9 @@ export type World = {
   dice_mode?: "free" | "predefined" | null;
   /** Un lancer publié peut-il être modifié (sa description) ? */
   dice_allow_edit?: boolean | null;
+  /** Critique et échec critique (migration 273). */
+  dice_critical?: boolean | null;
+  dice_fumble?: boolean | null;
   timeline_enabled?: boolean | null;
   /** Validation des fiches (migration 184) — active seulement avec une fiche par défaut. */
   persona_review_enabled?: boolean | null;
