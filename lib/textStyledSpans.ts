@@ -111,6 +111,80 @@ function transformLine(line: string): string {
   return parts.join("");
 }
 
+// ── Emphase sur plusieurs paragraphes ──────────────────────────────────────
+//
+// Markdown ne fait pas traverser une emphase d'un paragraphe à l'autre :
+// `*Un\n\nDeux*` reste littéral. Une emphase ouverte dans un paragraphe et
+// fermée dans un suivant est refermée en fin de chaque paragraphe qu'elle
+// couvre et rouverte au début du suivant.
+
+const SPREAD_MARKERS = ["**", "__", "~~", "*", "_"] as const;
+const PARAGRAPH_SPLIT_RE = /(\n[ \t]*\n+)/;
+// Ce qui précède le texte d'une ligne : puce, numéro, titre, citation.
+const BLOCK_PREFIX_RE = /^[ \t]*(?:(?:[-*+]|\d+[.)])[ \t]+|#{1,6}[ \t]+|>[ \t]?)*/;
+
+type Run = { opens: boolean; closes: boolean };
+
+/** Les marqueurs `marker` isolés du paragraphe, hors code inline. */
+function markerRuns(paragraph: string, marker: string): Run[] {
+  // Le code inline ne compte pas ; masqué par un caractère neutre (ni espace ni lettre).
+  const masked = paragraph.replace(INLINE_CODE_RE, (m) => "¤".repeat(m.length));
+  const c = marker[0] === "*" ? "\\*" : marker[0];
+  const re = new RegExp(`(?<!${c})${c}{${marker.length}}(?!${c})`, "g");
+  const runs: Run[] = [];
+  for (const m of masked.matchAll(re)) {
+    const before = masked[m.index - 1] ?? "";
+    const after = masked[m.index + marker.length] ?? "";
+    // `snake_case` : un `_` entre deux lettres n'est pas un marqueur.
+    if (marker[0] === "_" && /\w/.test(before) && /\w/.test(after)) continue;
+    runs.push({ opens: /\S/.test(after), closes: /\S/.test(before) });
+  }
+  return runs;
+}
+
+/** Plusieurs puces / titres / citations : une emphase ne couvre pas le paragraphe d'un bloc. */
+function isMultiBlock(paragraph: string): boolean {
+  return paragraph.split("\n").slice(1).some((line) => BLOCK_PREFIX_RE.exec(line)![0].length > 0);
+}
+
+/** `marker` juste après la puce / le titre éventuel de la première ligne. */
+function openAtStart(paragraph: string, marker: string): string {
+  const prefix = BLOCK_PREFIX_RE.exec(paragraph)![0];
+  return prefix + marker + paragraph.slice(prefix.length);
+}
+
+function closeAtEnd(paragraph: string, marker: string): string {
+  return paragraph.replace(/[ \t]*$/, marker);
+}
+
+function spreadEmphasisAcrossParagraphs(input: string): string {
+  const parts = input.split(PARAGRAPH_SPLIT_RE);
+  // Index pairs : paragraphes ; impairs : séparateurs.
+  const fences = createFenceTracker();
+  const inCode = parts.map((part, i) => i % 2 === 0 && part.split("\n").map((l) => fences.consume(l)).some(Boolean));
+
+  for (const marker of SPREAD_MARKERS) {
+    for (let i = 0; i < parts.length; i += 2) {
+      if (inCode[i] || isMultiBlock(parts[i])) continue;
+      const first = markerRuns(parts[i], marker);
+      if (first.length % 2 === 0 || !first.at(-1)!.opens) continue;
+      // Le premier paragraphe suivant où le marqueur reste seul le ferme.
+      let j = i + 2;
+      let blocked = false;
+      for (; j < parts.length; j += 2) {
+        if (inCode[j] || isMultiBlock(parts[j])) { blocked = true; break; }
+        if (markerRuns(parts[j], marker).length % 2 === 1) break;
+      }
+      if (blocked || j >= parts.length || !markerRuns(parts[j], marker)[0].closes) continue;
+      parts[i] = closeAtEnd(parts[i], marker);
+      for (let k = i + 2; k < j; k += 2) parts[k] = closeAtEnd(openAtStart(parts[k], marker), marker);
+      parts[j] = openAtStart(parts[j], marker);
+      i = j - 2;
+    }
+  }
+  return parts.join("");
+}
+
 /**
  * Applique la transformation ligne par ligne, en ignorant le contenu des
  * blocs de code délimités (```/~~~) — un span stylé ne doit jamais être
@@ -120,7 +194,7 @@ function transformLine(line: string): string {
  * forme courte plutôt que de longs paragraphes stylés).
  */
 export function transformStyledSpans(input: string): string {
-  const lines = (input ?? "").replace(/\r\n/g, "\n").split("\n");
+  const lines = spreadEmphasisAcrossParagraphs((input ?? "").replace(/\r\n/g, "\n")).split("\n");
 
   const fenceTracker = createFenceTracker();
   const out: string[] = [];

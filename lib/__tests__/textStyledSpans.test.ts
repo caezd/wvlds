@@ -122,4 +122,31 @@ describe("transformStyledSpans", () => {
       expect(transformStyledSpans("```\n**bold **\n```")).toBe("```\n**bold **\n```");
     });
   });
+
+  // Markdown ne fait pas traverser une emphase d'un paragraphe à l'autre :
+  // elle se referme et se rouvre à chaque paragraphe qu'elle couvre.
+  describe("emphase sur plusieurs paragraphes", () => {
+    it("ouverte dans un paragraphe, fermée à la fin d'un suivant", () => {
+      expect(transformStyledSpans("*Premier paragraphe.\n\nDeuxième.*")).toBe("*Premier paragraphe.*\n\n*Deuxième.*");
+      expect(transformStyledSpans("**Un\n\nDeux\n\nTrois**")).toBe("**Un**\n\n**Deux**\n\n**Trois**");
+      expect(transformStyledSpans("Il dit _bonjour\n\npuis s'en va_ vite.")).toBe("Il dit _bonjour_\n\n_puis s'en va_ vite.");
+      expect(transformStyledSpans("~~a\n\nb~~")).toBe("~~a~~\n\n~~b~~");
+    });
+
+    it("un paragraphe sur plusieurs lignes reste entier", () => {
+      expect(transformStyledSpans("*Un\nsuite\n\nDeux*")).toBe("*Un\nsuite*\n\n*Deux*");
+    });
+
+    it("une emphase fermée dans son paragraphe, ou jamais fermée, ne change pas", () => {
+      for (const texte of ["*a* b\n\nc *d*", "*a\n\nb", "a\n\nb*", "5 * 3\n\n2 * 4", "*a\n\n- b\n- c*"]) {
+        expect(transformStyledSpans(texte)).toBe(texte);
+      }
+    });
+
+    it("pas à travers un bloc de code", () => {
+      const texte = "*a\n\n```\nx\n```\n\nb*";
+      expect(transformStyledSpans(texte)).toBe(texte);
+      expect(transformStyledSpans("`*a`\n\n`b*`")).toBe("`*a`\n\n`b*`");
+    });
+  });
 });
