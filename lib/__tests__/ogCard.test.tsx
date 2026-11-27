@@ -34,7 +34,7 @@ describe("ogTitle : l'accroche de l'image générique", () => {
 
 describe("ogWorldTexts : la carte d'un monde, traduite", () => {
   it("les membres accordés dans la langue demandée", () => {
-    expect(ogWorldTexts("fr", monde)).toEqual({ name: "Hextech", meta: "7 membres", locked: false });
+    expect(ogWorldTexts("fr", monde)).toEqual({ name: "Hextech", meta: "7 membres", excerpt: "Un monde", locked: false });
     expect(ogWorldTexts("en", { ...monde, memberCount: 1 }).meta).toBe("1 member");
     expect(ogWorldTexts("es", monde).meta).toBe("7 miembros");
   });
@@ -50,13 +50,20 @@ describe("ogWorldTexts : la carte d'un monde, traduite", () => {
 describe("OgWorldCard : bannière en fond, carte du monde en bas à gauche", () => {
   const BANNIERE = "data:image/jpeg;base64,AAAA";
   const ICONE = "data:image/png;base64,BBBB";
-  const textes = { name: "Hextech", meta: "7 membres", locked: false };
+  const textes = { name: "Hextech", meta: "7 membres", excerpt: "Un monde", locked: false };
 
-  it("avec bannière et icône : les deux images, WVLDS et le logo", () => {
+  it("avec bannière et icône : les deux images et le logo, sans le mot WVLDS", () => {
     const html = renderToStaticMarkup(<OgWorldCard {...textes} banner={BANNIERE} icon={ICONE} />);
     expect(html).toContain(`src="${BANNIERE}"`);
     expect(html).toContain(`src="${ICONE}"`);
-    expect(html).toContain(">W</span><span>V</span>");
+    expect(html).toContain('data-og="logo"');
+    expect(html).not.toContain(">W</span><span>V</span>");
+  });
+
+  it("l'extrait de la description sous le nom ; aucun sans description", () => {
+    expect(renderToStaticMarkup(<OgWorldCard {...textes} />)).toContain('data-og="extrait"');
+    expect(renderToStaticMarkup(<OgWorldCard {...textes} />)).toContain(">U</span><span>n</span>");
+    expect(renderToStaticMarkup(<OgWorldCard {...textes} excerpt={null} />)).not.toContain('data-og="extrait"');
   });
 
   it("verrouillé : le cadenas à la place de l'icône, sans image", () => {

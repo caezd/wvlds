@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shareTargetFromNext, safeNextPath, parseSharePreview, worldCardContent } from "@/lib/sharePreview";
+import { shareTargetFromNext, safeNextPath, parseSharePreview, worldCardContent, descriptionExcerpt } from "@/lib/sharePreview";
 
 const W = "f1e4d2c9-e56f-454a-bde2-8f9eade06e65";
 const C = "0df5be1c-e6e1-4806-b0fc-211a9d14ac24";
@@ -110,12 +110,12 @@ describe("worldCardContent : la carte d'un monde dans l'image d'aperçu", () => 
   const labels = { privateWorld: "Monde privé · sur invitation", members: (n: number) => `${n} membres` };
 
   it("un monde public : son nom et ses membres, son icône", () => {
-    expect(worldCardContent(base, labels)).toEqual({ name: "Hextech", meta: "7 membres", locked: false });
+    expect(worldCardContent(base, labels)).toEqual({ name: "Hextech", meta: "7 membres", excerpt: "Un monde", locked: false });
   });
 
   it("un monde 18+ : comme un monde public, son icône et ses membres, sans mention 18+", () => {
     const adulte = { ...base, ageRestricted: true, description: null };
-    expect(worldCardContent(adulte, labels)).toEqual({ name: "Hextech", meta: "7 membres", locked: false });
+    expect(worldCardContent(adulte, labels)).toEqual({ name: "Hextech", meta: "7 membres", excerpt: null, locked: false });
   });
 
   it("un monde privé : un cadenas, son nom, « sur invitation »", () => {
@@ -123,11 +123,37 @@ describe("worldCardContent : la carte d'un monde dans l'image d'aperçu", () => 
     expect(worldCardContent(prive, labels)).toEqual({
       name: "FINAL COCKTASY",
       meta: "Monde privé · sur invitation",
+      excerpt: null,
       locked: true,
     });
   });
 
   it("un salon : la carte de son monde", () => {
     expect(worldCardContent({ ...base, chatroomName: "La taverne" }, labels)).toEqual(worldCardContent(base, labels));
+  });
+});
+
+describe("descriptionExcerpt : l'extrait de la description sous le nom", () => {
+  it("une description courte, entière, sur une ligne", () => {
+    expect(descriptionExcerpt("Un monde\n\nde   cendres.")).toBe("Un monde de cendres.");
+  });
+
+  it("une description longue, coupée entre deux mots, avec des points de suspension", () => {
+    const longue = "Les royaumes du Nord se déchirent depuis que la dernière reine a disparu et ".repeat(4);
+    const extrait = descriptionExcerpt(longue)!;
+    expect(extrait.length).toBeLessThanOrEqual(151);
+    expect(extrait.endsWith("…")).toBe(true);
+    expect(longue.startsWith(extrait.slice(0, -1))).toBe(true);
+    expect(longue[extrait.length - 1]).toBe(" ");
+  });
+
+  it("pas de ponctuation ni d'espace avant les points de suspension", () => {
+    const extrait = descriptionExcerpt(`${"a".repeat(130)}, ${"b".repeat(40)}`)!;
+    expect(extrait).toBe(`${"a".repeat(130)}…`);
+  });
+
+  it("rien sans description", () => {
+    expect(descriptionExcerpt(null)).toBeNull();
+    expect(descriptionExcerpt("   ")).toBeNull();
   });
 });

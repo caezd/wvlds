@@ -98,11 +98,29 @@ export function parseSharePreview(data: unknown): SharePreview | null {
   };
 }
 
-export type WorldCardContent = { name: string; meta: string; locked: boolean };
+export type WorldCardContent = { name: string; meta: string; excerpt: string | null; locked: boolean };
+
+/** Longueur maximale de l'extrait : deux lignes sous le nom et l'icône, dans l'image. */
+const EXTRAIT_MAX = 150;
 
 /**
- * La carte d'un monde dans l'image d'aperçu : son nom, et au-dessus ses
- * membres — ou « Monde privé · sur invitation ». Un monde privé a un cadenas
+ * L'extrait de la description montré sous le nom : sur une ligne, coupé entre
+ * deux mots, sans ponctuation avant les points de suspension.
+ */
+export function descriptionExcerpt(description: string | null | undefined): string | null {
+  const plat = (description ?? "").replace(/\s+/g, " ").trim();
+  if (!plat) return null;
+  if (plat.length <= EXTRAIT_MAX) return plat;
+  const coupe = plat.slice(0, EXTRAIT_MAX);
+  const espace = coupe.lastIndexOf(" ");
+  const debut = espace > EXTRAIT_MAX / 2 ? coupe.slice(0, espace) : coupe;
+  return `${debut.replace(/[\s.,;:!?…·—–-]+$/u, "")}…`;
+}
+
+/**
+ * La carte d'un monde dans l'image d'aperçu : son nom, au-dessus ses membres
+ * — ou « Monde privé · sur invitation » —, en dessous un extrait de sa
+ * description (jamais pour un 18+ : la base ne l'envoie pas). Un monde privé a un cadenas
  * à la place de l'icône : la base n'en donne que le nom. Un monde 18+ est un
  * monde public comme un autre. Le lien d'un salon montre la carte de son monde.
  */
@@ -110,6 +128,6 @@ export function worldCardContent(
   p: SharePreview,
   labels: { privateWorld: string; members: (count: number) => string },
 ): WorldCardContent {
-  if (p.isPrivate) return { name: p.name, meta: labels.privateWorld, locked: true };
-  return { name: p.name, meta: labels.members(p.memberCount), locked: false };
+  if (p.isPrivate) return { name: p.name, meta: labels.privateWorld, excerpt: null, locked: true };
+  return { name: p.name, meta: labels.members(p.memberCount), excerpt: descriptionExcerpt(p.description), locked: false };
 }

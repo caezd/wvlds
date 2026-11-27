@@ -84,6 +84,8 @@ export const OG_ICON_SIZE = 128;
 const FOND = "#18181B";
 const PASTILLE = "#27272A";
 const SECONDAIRE = "#9F9FA9";
+/** L'extrait de la description : plus clair que les membres, moins que le nom. */
+const EXTRAIT = "#D4D4D8";
 
 /** Image générique : trait rouge, l'accroche ; WVLDS et le logo en pied. */
 export function OgCard({ title }: { title: string }) {
@@ -155,12 +157,12 @@ export type OgWorldCardProps = WorldCardContent & {
 };
 
 /**
- * Image d'un monde : la bannière en fond (sans elle, deux lueurs), WVLDS en
- * haut à gauche, le logo en haut à droite, et en bas à gauche, sur un dégradé
- * sombre, l'icône ou le cadenas, les membres ou « Monde privé · sur
- * invitation », le nom.
+ * Image d'un monde : la bannière en fond (sans elle, deux lueurs), le logo en
+ * haut à gauche, et en bas, sur un dégradé sombre : l'icône ou le cadenas à
+ * côté des membres (ou « Monde privé · sur invitation ») et du nom, puis en
+ * dessous un extrait de la description.
  */
-export function OgWorldCard({ name, meta, locked, banner, icon }: OgWorldCardProps) {
+export function OgWorldCard({ name, meta, excerpt, locked, banner, icon }: OgWorldCardProps) {
   const image = locked ? null : icon;
   const avecVignette = locked || !!image;
   return (
@@ -188,39 +190,43 @@ export function OgWorldCard({ name, meta, locked, banner, icon }: OgWorldCardPro
       {/* Le contenu dans son propre bloc : le moteur place les calques absolus
           à l'intérieur du rembourrage de leur parent. */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", padding: "44px 60px 64px 60px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <Words text="WVLDS" size={30} style={{ fontWeight: 700, letterSpacing: 2.4, marginTop: 8 }} />
+        <div data-og="logo" style={{ display: "flex" }}>
           <Logo height={56} />
         </div>
-        <div
-          style={{ marginTop: "auto", display: "flex", alignItems: "center", maxWidth: 1080 }}
-        >
-          {locked ? (
-            <Cadenas />
-          ) : (
-            image && (
-              // eslint-disable-next-line @next/next/no-img-element -- image de next/og, pas une page
-              <img
-                src={image}
-                alt=""
-                width={OG_ICON_SIZE}
-                height={OG_ICON_SIZE}
-                style={{ borderRadius: 20, marginRight: 28, flexShrink: 0 }}
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", maxWidth: 1080 }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {locked ? (
+              <Cadenas />
+            ) : (
+              image && (
+                // eslint-disable-next-line @next/next/no-img-element -- image de next/og, pas une page
+                <img
+                  src={image}
+                  alt=""
+                  width={OG_ICON_SIZE}
+                  height={OG_ICON_SIZE}
+                  style={{ borderRadius: 20, marginRight: 28, flexShrink: 0 }}
+                />
+              )
+            )}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <Words
+                text={meta.toUpperCase()}
+                size={24}
+                style={{ fontWeight: 700, letterSpacing: 2, color: SECONDAIRE, marginBottom: 10 }}
               />
-            )
-          )}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <Words
-              text={meta.toUpperCase()}
-              size={24}
-              style={{ fontWeight: 700, letterSpacing: 2, color: SECONDAIRE, marginBottom: 10 }}
-            />
-            <Words
-              text={name}
-              size={name.length > 28 ? 50 : 62}
-              style={{ fontWeight: 700, lineHeight: 1.05, maxWidth: avecVignette ? 860 : 1000 }}
-            />
+              <Words
+                text={name}
+                size={name.length > 28 ? 50 : 62}
+                style={{ fontWeight: 700, lineHeight: 1.05, maxWidth: avecVignette ? 860 : 1000 }}
+              />
+            </div>
           </div>
+          {excerpt && (
+            <div data-og="extrait" style={{ display: "flex", marginTop: 24 }}>
+              <Words text={excerpt} size={28} style={{ lineHeight: 1.35, color: EXTRAIT, maxWidth: 1080 }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
