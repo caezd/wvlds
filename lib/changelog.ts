@@ -52,6 +52,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
+    text: "Ellipse en dernier message : plus de seconde barre de défilement ni de grand vide sous le fil.",
+  },
+  {
+    date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
     text: "Encadré : la fenêtre repart vide à chaque nouvel encadré, au lieu de reprendre le précédent.",
   },
   {

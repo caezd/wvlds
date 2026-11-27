@@ -35,7 +35,10 @@ export function EllipseMessageView({
     <article
       aria-label={t("ellipse")}
       aria-describedby={description ? descriptionId : undefined}
-      className="group/gblock w-full py-4"
+      // `relative` : la description `sr-only` (en absolu) se place dans
+      // l'ellipse. Sans lui, elle se calait sur un conteneur hors du fil,
+      // au-delà de sa zone de défilement : seconde barre et grand vide dessous.
+      className="group/gblock relative w-full py-4"
     >
       {description && <span id={descriptionId} className="sr-only">{description}</span>}
       {date && (
