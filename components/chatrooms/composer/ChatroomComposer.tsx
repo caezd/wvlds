@@ -1093,8 +1093,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             />
                         }
                     >
-                        {/* Carré arrondi, comme le sélecteur de persona du composeur ouvert. */}
-                        <span className="relative size-8 shrink-0 overflow-hidden rounded-md border bg-muted">
+                        {/* Avatar du persona en carré légèrement arrondi. */}
+                        <span className="relative size-8 shrink-0 overflow-hidden rounded-sm border bg-muted">
                             {selectedPersona ? (
                                 selectedPersona.avatar_url ? (
                                     <Image
