@@ -35,7 +35,7 @@ export function EllipseMessageView({
     <article
       aria-label={t("ellipse")}
       aria-describedby={description ? descriptionId : undefined}
-      className="group/gblock relative w-full py-4"
+      className="group/gblock w-full py-4"
     >
       {description && <span id={descriptionId} className="sr-only">{description}</span>}
       {date && (
@@ -43,18 +43,28 @@ export function EllipseMessageView({
           {date}
         </p>
       )}
-      {ellipse && (
-        <ChatroomDayStrip
-          day={{
-            icon: ellipse.to_icon,
-            position: ellipse.to_position,
-            fromIcon: ellipse.days > 0 ? ellipse.from_icon : null,
-            fromPosition: ellipse.days > 0 ? ellipse.from_position : null,
-            skipped: ellipse.days,
-          }}
-        />
+      {ellipse ? (
+        <div className="relative">
+          <ChatroomDayStrip
+            day={{
+              icon: ellipse.to_icon,
+              position: ellipse.to_position,
+              fromIcon: ellipse.days > 0 ? ellipse.from_icon : null,
+              fromPosition: ellipse.days > 0 ? ellipse.from_position : null,
+              skipped: ellipse.days,
+            }}
+          />
+          {/* Posé sur la barre, au bout : `top-5` est le milieu de la ligne
+              (hauteur utile de la bande : 40 px). */}
+          <GameBlockToolbar
+            mine={mine}
+            onDelete={onDelete}
+            className="absolute top-5 right-0 -translate-y-1/2 rounded-md bg-background"
+          />
+        </div>
+      ) : (
+        <GameBlockToolbar mine={mine} onDelete={onDelete} />
       )}
-      <GameBlockToolbar mine={mine} onDelete={onDelete} className="absolute top-1 right-0" />
     </article>
   );
 }

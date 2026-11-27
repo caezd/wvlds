@@ -53,7 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Temps du salon : météo et moment de la journée au-dessus du synopsis, ellipses pour faire passer le temps.\n- temps du départ choisi dans Nouveau jeu ou les réglages du salon, toujours affiché en tête du fil\n- nouveau bloc « Ellipse » dans le composeur : tout participant fait avancer le temps en cours, d’un même jour à plusieurs jours\n- l’ellipse : une ligne seule dans le fil, sans auteur ni séparateur, la date atteinte au-dessus\n- un petit tiret par jour passé, jusqu’à 7, puis « ··· » ; nombre de jours au survol\n- salon daté dans la chronologie : date de début conservée, date atteinte avancée par les ellipses",
+    text: "Temps du salon : météo et moment de la journée au-dessus du synopsis, ellipses pour faire passer le temps.\n- temps du départ choisi dans Nouveau jeu ou les réglages du salon, toujours affiché en tête du fil\n- nouveau bloc « Ellipse » dans le composeur : tout participant fait avancer le temps en cours, d’un même jour à plusieurs jours\n- l’ellipse : une ligne seule dans le fil, sans auteur ni séparateur, la date atteinte au-dessus ; bouton Supprimer sur la ligne, au survol\n- un petit tiret par jour passé, jusqu’à 7, puis « ··· » ; nombre de jours au survol\n- salon daté dans la chronologie : date de début conservée, date atteinte avancée par les ellipses",
   },
   {
     date: "2026-11-27",
