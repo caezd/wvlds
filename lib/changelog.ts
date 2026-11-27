@@ -52,13 +52,25 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
+    text: "Encadré : la fenêtre repart vide à chaque nouvel encadré, au lieu de reprendre le précédent.",
+  },
+  {
+    date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
+    text: "Suite d’un message : la fin de sa première ligne n’est plus masquée par la zone des actions.",
+  },
+  {
+    date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
     text: "Bouton « Insérer un bloc » : nom lu par les lecteurs d’écran même quand une option est active.",
   },
   {
     date: "2026-11-27",
     category: "Interface",
     area: "Salons",
-    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- en-tête masqué et pas de séparateur quand on poste à la suite de son persona\n- option « Afficher l’en-tête », message par message : dans les options du composeur et à la modification\n- tous les blocs du même persona (dé, bannière, encadré, ellipse…) rattachés à la série, sans ligne de séparation ; dé centré sous la réponse\n- encadré en séparateur (Ellipse, Scène…) : plus d’espace en double autour\n- actions de la suite au survol, réactions sous le message\n- plus d’avatar du joueur au survol de celui du persona : son profil s’ouvre depuis son @pseudo",
+    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- en-tête masqué et pas de séparateur quand on poste à la suite de son persona\n- option « Afficher l’en-tête », message par message : dans les options du composeur et à la modification\n- tous les blocs du même persona (dé, bannière, encadré, ellipse…) rattachés à la série, sans ligne de séparation ; dé centré sous la réponse\n- blocs plus resserrés, même espacement pour tous (encadré en séparateur compris)\n- actions de la suite au survol, réactions sous le message\n- plus d’avatar du joueur au survol de celui du persona : son profil s’ouvre depuis son @pseudo",
   },
   {
     date: "2026-11-27",

@@ -173,7 +173,7 @@ export function CalloutBlockView({
   );
 
   /* Style séparateur : titre centré entre deux filets, corps en dessous.
-     Pas de marge à lui : GameBlockRenderer l'entoure déjà de son py-8. */
+     Pas de marge à lui : GameBlockRenderer l'entoure déjà de son py-4. */
   if (border === "separator") {
     return (
       <div className="group/gblock relative w-full">

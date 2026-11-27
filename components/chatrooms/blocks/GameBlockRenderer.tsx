@@ -202,7 +202,7 @@ export function GameBlockRenderer({
 
     case "banner":
       return (
-        <div className="py-8">
+        <div className="py-4">
           <BannerBlockView
             block={block}
             mine={mine}
@@ -218,7 +218,7 @@ export function GameBlockRenderer({
 
     case "reveal":
       return (
-        <div className="py-8">
+        <div className="py-4">
           <RevealBlockView
             block={block}
             mine={mine}
@@ -230,7 +230,7 @@ export function GameBlockRenderer({
 
     case "npc":
       return (
-        <div className="py-8">
+        <div className="py-4">
           <NpcBlockView
             block={block}
             mine={mine}
@@ -242,7 +242,7 @@ export function GameBlockRenderer({
 
     case "hp":
       return (
-        <div className="py-8">
+        <div className="py-4">
           <HpBlockView
             block={block}
             mine={mine}
@@ -254,7 +254,7 @@ export function GameBlockRenderer({
 
     case "callout":
       return (
-        <div className="py-8">
+        <div className="py-4">
           <CalloutBlockView
             block={block}
             mine={mine}
@@ -267,7 +267,7 @@ export function GameBlockRenderer({
 
     case "choice":
       return (
-        <div className="py-8">
+        <div className="py-4">
           <ChoiceBlockView
             block={block}
             mine={mine}
@@ -282,7 +282,11 @@ export function GameBlockRenderer({
     // Transfert (migration 251) : rien d'éditable, il a déjà eu lieu ; le
     // message se supprime comme un autre, le transfert reste.
     case "transfer":
-      return <TransferBlockView id={block.id} authorPersonaId={message.persona?.id ?? message.persona_id} />;
+      return (
+        <div className="py-4">
+          <TransferBlockView id={block.id} authorPersonaId={message.persona?.id ?? message.persona_id} />
+        </div>
+      );
 
     case "anchor":
       return (

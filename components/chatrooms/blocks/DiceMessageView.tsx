@@ -56,7 +56,7 @@ export function DiceMessageView({
   return (
     <div
       className={cn(
-        "group/gblock w-full py-3 flex items-center justify-between gap-4",
+        "group/gblock w-full py-4 flex items-center justify-between gap-4",
         attached && "relative justify-center",
       )}
     >

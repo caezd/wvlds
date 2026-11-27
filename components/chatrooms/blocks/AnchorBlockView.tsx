@@ -47,7 +47,7 @@ export function AnchorBlockView({
   }
 
   return (
-    <div className="group/anchor relative flex items-center justify-center py-8">
+    <div className="group/anchor relative flex items-center justify-center py-4">
       {editing ? (
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/40 bg-background text-xs font-medium">
           <Anchor className="h-3 w-3 shrink-0 text-muted-foreground" />

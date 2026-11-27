@@ -207,7 +207,17 @@ export function ChatroomMessageHeader({
   );
 
   if (variant !== "full") {
-    return <div className="absolute -top-3 right-0 z-10 rounded-md bg-background">{actions}</div>;
+    // Hors survol, ni fond ni clic : la première ligne du message reste lisible dessous.
+    return (
+      <div
+        className={cn(
+          "absolute -top-3 right-0 z-10 rounded-md bg-background",
+          !editing && "pointer-events-none opacity-0 transition-opacity group-hover/turn-messages:pointer-events-auto group-hover/turn-messages:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
+        )}
+      >
+        {actions}
+      </div>
+    );
   }
 
   return (

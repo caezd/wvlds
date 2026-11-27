@@ -125,8 +125,16 @@ export function CalloutDialog({
     setGauges(initialBlock?.gauges ?? []);
   }
 
+  // Chaque ouverture repart de `initialBlock` (vide pour un nouvel encadré),
+  // y compris quand le parent ouvre la fenêtre lui-même (`open` contrôlé) :
+  // sans quoi le menu « Insérer un bloc » rouvrait le contenu du précédent.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) reset();
+  }
+
   function handleOpen(v: boolean) {
-    if (v) reset();
     setOpen(v);
   }
 
