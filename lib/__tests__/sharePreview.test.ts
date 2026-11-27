@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { shareTargetFromNext, safeNextPath, parseSharePreview, worldCardContent, descriptionExcerpt } from "@/lib/sharePreview";
+import {
+  shareTargetFromNext,
+  safeNextPath,
+  parseSharePreview,
+  worldCardContent,
+  descriptionExcerpt,
+  ogImageVersion,
+} from "@/lib/sharePreview";
 
 const W = "f1e4d2c9-e56f-454a-bde2-8f9eade06e65";
 const C = "0df5be1c-e6e1-4806-b0fc-211a9d14ac24";
@@ -155,5 +162,38 @@ describe("descriptionExcerpt : l'extrait de la description sous le nom", () => {
   it("rien sans description", () => {
     expect(descriptionExcerpt(null)).toBeNull();
     expect(descriptionExcerpt("   ")).toBeNull();
+  });
+});
+
+describe("ogImageVersion : l'adresse de l'image change avec ce qu'elle montre", () => {
+  // Discord et les autres gardent une image en cache selon son adresse, très
+  // longtemps : sans version, une nouvelle bannière ou mise en page ne se
+  // verrait jamais.
+  const monde = parseSharePreview({
+    id: W,
+    name: "Hextech",
+    description: "Un monde",
+    icon_url: "https://x/icon-1.webp",
+    banner_url: "https://x/banner-1.webp",
+    member_count: 7,
+  })!;
+
+  it("la même pour le même monde, courte et sûre dans une adresse", () => {
+    expect(ogImageVersion(monde)).toBe(ogImageVersion({ ...monde }));
+    expect(ogImageVersion(monde)).toMatch(/^[0-9a-z]{1,12}$/);
+  });
+
+  it("change avec le nom, la description, l'icône, la bannière, les membres ou la visibilité", () => {
+    const v = ogImageVersion(monde);
+    expect(ogImageVersion({ ...monde, name: "Hextech 2" })).not.toBe(v);
+    expect(ogImageVersion({ ...monde, description: "Autre" })).not.toBe(v);
+    expect(ogImageVersion({ ...monde, iconUrl: "https://x/icon-2.webp" })).not.toBe(v);
+    expect(ogImageVersion({ ...monde, bannerUrl: "https://x/banner-2.webp" })).not.toBe(v);
+    expect(ogImageVersion({ ...monde, memberCount: 8 })).not.toBe(v);
+    expect(ogImageVersion({ ...monde, isPrivate: true })).not.toBe(v);
+  });
+
+  it("ne dépend pas du salon visé : un lien de salon montre l'image de son monde", () => {
+    expect(ogImageVersion({ ...monde, chatroomName: "La taverne" })).toBe(ogImageVersion(monde));
   });
 });

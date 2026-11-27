@@ -131,3 +131,36 @@ export function worldCardContent(
   if (p.isPrivate) return { name: p.name, meta: labels.privateWorld, excerpt: null, locked: true };
   return { name: p.name, meta: labels.members(p.memberCount), excerpt: descriptionExcerpt(p.description), locked: false };
 }
+
+/**
+ * Version de la mise en page des images d'aperçu (lib/ogCard). À augmenter à
+ * chaque changement visible : Discord et les autres gardent une image en
+ * cache selon son adresse, très longtemps, sans la redemander.
+ */
+export const OG_LAYOUT_VERSION = 4;
+
+/**
+ * La version de l'image d'un monde, posée dans son adresse (`&v=`) : elle
+ * change avec la mise en page et avec ce que l'image montre — nom,
+ * description, icône, bannière (leurs adresses changent à chaque envoi),
+ * membres, visibilité. Pas avec le salon : un lien de salon montre l'image
+ * de son monde. Empreinte FNV-1a, en base 36.
+ */
+export function ogImageVersion(p: SharePreview): string {
+  const source = JSON.stringify([
+    OG_LAYOUT_VERSION,
+    p.name,
+    p.description,
+    p.iconUrl,
+    p.bannerUrl,
+    p.memberCount,
+    p.isPrivate,
+    p.ageRestricted,
+  ]);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < source.length; i++) {
+    h ^= source.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}

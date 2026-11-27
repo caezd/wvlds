@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/login-form";
-import { NEXT_PARAM, safeNextPath, shareTargetFromNext } from "@/lib/sharePreview";
+import { NEXT_PARAM, ogImageVersion, safeNextPath, shareTargetFromNext } from "@/lib/sharePreview";
 import { getSharePreview } from "@/lib/sharePreviewServer";
 import { ogImage, ogLocaleTag } from "@/lib/siteMetadata";
 
@@ -29,8 +29,12 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
   const locale = await getLocale();
   // Un salon montre l'image de son monde (app/api/og) ; l'adresse canonique
-  // reste le lien partagé, sans ses paramètres.
-  const image = ogImage(`/api/og?w=${preview.id}&lang=${locale}`, `${preview.name} · WVLDS`);
+  // reste le lien partagé, sans ses paramètres. La version (`&v=`) change
+  // l'adresse de l'image quand elle change : sinon Discord garde l'ancienne.
+  const image = ogImage(
+    `/api/og?w=${preview.id}&lang=${locale}&v=${ogImageVersion(preview)}`,
+    `${preview.name} · WVLDS`,
+  );
   const url = `/${cible.kind === "world" ? "w" : "c"}/${cible.id}`;
   const title = preview.chatroomName ? `${preview.chatroomName} · ${preview.name}` : preview.name;
   const description = preview.description ?? undefined;

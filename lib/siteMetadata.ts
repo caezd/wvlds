@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_LAYOUT_VERSION } from "@/lib/sharePreview";
 
 /**
  * Aperçu des liens (OpenGraph, X) : celui de l'application, posé par
@@ -22,11 +23,11 @@ export function ogImage(url: string, alt: string) {
 /**
  * Aperçu générique. L'adresse canonique est l'accueil : sans session, tout
  * lien mène à la connexion, et ses variantes comptent pour une seule page.
- * L'image reçoit la langue dans son adresse : les robots qui la demandent
- * n'envoient pas le cookie de langue.
+ * L'image reçoit dans son adresse la langue (les robots qui la demandent
+ * n'envoient pas le cookie de langue) et la version de sa mise en page.
  */
 export function siteMetadata(description: string, locale: string): Pick<Metadata, "openGraph" | "twitter"> {
-  const image = ogImage(`/api/og?lang=${locale}`, `WVLDS · ${description}`);
+  const image = ogImage(`/api/og?lang=${locale}&v=${OG_LAYOUT_VERSION}`, `WVLDS · ${description}`);
   return {
     openGraph: {
       type: "website",

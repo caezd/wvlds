@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { SharePreview } from "@/lib/sharePreview";
+import { ogImageVersion, type SharePreview } from "@/lib/sharePreview";
 
 vi.mock("next-intl/server", async () => {
   const { useTranslations: translator } = await import("next-intl");
@@ -55,7 +55,8 @@ describe("page de connexion arrivée depuis un lien partagé", () => {
   it("lien de monde : adresse canonique du monde, image décrite, langue de l'aperçu", async () => {
     getSharePreview.mockResolvedValue(MONDE);
     const meta = await generateMetadata(sp({ next: `/w/${W}?onglet=wiki` }));
-    const image = { url: `/api/og?w=${W}&lang=fr`, width: 1200, height: 630, alt: "Hextech · WVLDS" };
+    // La version dans l'adresse : sans elle, Discord garde l'ancienne image.
+    const image = { url: `/api/og?w=${W}&lang=fr&v=${ogImageVersion(MONDE)}`, width: 1200, height: 630, alt: "Hextech · WVLDS" };
     expect(meta.openGraph).toMatchObject({ url: `/w/${W}`, locale: "fr_FR", images: [image] });
     expect(meta.twitter).toMatchObject({ images: [image] });
   });

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ogImage, ogLocaleTag, siteMetadata } from "@/lib/siteMetadata";
+import { OG_LAYOUT_VERSION } from "@/lib/sharePreview";
 
 describe("ogImage : image d'aperçu avec son texte de remplacement", () => {
   it("dimensions de la carte et texte alternatif", () => {
@@ -24,7 +25,7 @@ describe("siteMetadata : aperçu générique de l'application", () => {
   });
 
   it("image traduite, décrite pour les lecteurs d'écran, reprise par X", () => {
-    const image = { url: "/api/og?lang=en", width: 1200, height: 630, alt: "WVLDS · Créez des mondes." };
+    const image = { url: `/api/og?lang=en&v=${OG_LAYOUT_VERSION}`, width: 1200, height: 630, alt: "WVLDS · Créez des mondes." };
     expect(meta.openGraph).toMatchObject({ siteName: "WVLDS", locale: "en_US", images: [image] });
     expect(meta.twitter).toMatchObject({ card: "summary_large_image", images: [image] });
   });

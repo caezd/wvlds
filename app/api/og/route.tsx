@@ -11,6 +11,7 @@ import { getSharePreview } from "@/lib/sharePreviewServer";
  *
  *   /api/og?lang=fr          générique : l'accroche de l'application
  *   /api/og?w=<id>&lang=en   un monde : sa bannière en fond, sa carte
+ *   &v=…                     ignoré ici : une version, pour que l'adresse change avec l'image
  *
  * Le lien d'un salon montre l'image de son monde (app/auth/login/page.tsx).
  * Joignable sans session (le middleware laisse passer /api) : ce sont les
