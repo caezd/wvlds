@@ -71,34 +71,35 @@ export function computeSmsRunFlags(messages: ChatMessageWithPersona[]): SmsRunFl
 
 /** Place d'un message dans le fil, vis-à-vis de ses voisins du même persona. */
 export type ThreadFlow = {
-  /** Suite d'une réponse du même persona, par le même joueur : sans en-tête (ou un en-tête discret). */
+  /** Suite d’une réponse du même persona, par le même joueur : sans en-tête. */
   continued: boolean;
   /** Le message suivant en est la suite : pas de séparateur entre eux. */
   joinsNext: boolean;
 };
 
 /**
- * Un message texte ; un jet de dé ou une bannière, qui se rattachent à la
- * réponse au-dessus ; ou autre chose (autre bloc, note privée), qui coupe la série.
+ * Un message texte ; un bloc (dé, bannière, encadré, ellipse…), qui se
+ * rattache aux réponses voisines du même persona ; ou une note privée, qui
+ * coupe la série.
  */
-function flowKind(m: ChatMessageWithPersona): "text" | "attached" | null {
+function flowKind(m: ChatMessageWithPersona): "text" | "block" | null {
   if (m.visible_to) return null;
-  const block = parseChatBlock(m.content ?? "");
-  if (block === null) return "text";
-  return block._type === "dice" || block._type === "banner" ? "attached" : null;
+  return parseChatBlock(m.content ?? "") === null ? "text" : "block";
 }
 
 /**
- * Les messages consécutifs d'un même persona (joué par le même joueur) :
- * la réponse ouvre une série, les réponses suivantes en sont la suite, sans
- * en-tête ni séparateur. Un jet de dé ou une bannière du même persona s'y
- * rattache, sous la réponse ; seul, il ne démarre pas de série. Un SMS, une note privée ou un
- * autre bloc la coupe ; une réponse à l'en-tête complet (`metadata.header`)
- * en ouvre une nouvelle.
+ * Les messages consécutifs d'un même persona (joué par le même joueur) se
+ * suivent sans séparateur. La première réponse garde son en-tête, les
+ * suivantes en sont la suite, sans en-tête. Un bloc du même persona fait
+ * partie de la série, où qu'il soit ; posté avant toute réponse, il laisse
+ * son en-tête à la réponse qui le suit. Un SMS ou une note privée coupe la
+ * série ; une réponse à l'en-tête complet (`metadata.header`) en ouvre une
+ * nouvelle.
  */
 export function computeThreadFlow(groups: RenderGroup[]): Map<number, ThreadFlow> {
   const flows = new Map<number, ThreadFlow>();
-  let run: { key: string; last: number } | null = null;
+  // `spoken` : une réponse de la série a déjà montré qui parle.
+  let run: { key: string; last: number; spoken: boolean } | null = null;
   for (const g of groups) {
     if (g.kind === "sms") {
       run = null;
@@ -109,13 +110,14 @@ export function computeThreadFlow(groups: RenderGroup[]): Map<number, ThreadFlow
     // L'en-tête complet, choisi par l'auteur : un message à part, qui ouvre sa propre série.
     const standalone = m.metadata?.header === "full";
     const key = `${m.author_id ?? ""}:${m.persona?.id ?? ""}`;
-    const continued = kind !== null && !standalone && run !== null && run.key === key;
-    flows.set(m.id, { continued, joinsNext: false });
-    if (continued && run) {
+    if (kind !== null && !standalone && run !== null && run.key === key) {
+      flows.set(m.id, { continued: run.spoken, joinsNext: false });
       flows.get(run.last)!.joinsNext = true;
       run.last = m.id;
+      run.spoken ||= kind === "text";
     } else {
-      run = kind === "text" ? { key, last: m.id } : null;
+      flows.set(m.id, { continued: false, joinsNext: false });
+      run = kind === null ? null : { key, last: m.id, spoken: kind === "text" };
     }
   }
   return flows;

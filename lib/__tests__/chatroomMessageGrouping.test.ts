@@ -234,30 +234,55 @@ describe("computeThreadFlow — messages consécutifs d'un même persona", () =>
     expect(f.get(3)).toEqual({ continued: true, joinsNext: false });
   });
 
-  it("un jet de dé sans réponse du même persona au-dessus reste seul, et ne démarre pas de série", () => {
+  it("tous les blocs du même persona se rattachent à la réponse, sans séparateur", () => {
+    // Chaque type de bloc connu (le dé et la bannière sont vus plus haut).
+    const blocs = ["reveal", "npc", "hp", "callout", "anchor", "choice", "transfer", "ellipse"]
+      .map((type) => JSON.stringify({ _type: type }));
+    for (const bloc of blocs) {
+      const f = flow([
+        makeMessage({ id: 1, persona: aria }),
+        makeMessage({ id: 2, persona: aria, content: bloc }),
+        makeMessage({ id: 3, persona: aria }),
+      ]);
+      expect(f.get(1), bloc).toEqual({ continued: false, joinsNext: true });
+      expect(f.get(2), bloc).toEqual({ continued: true, joinsNext: true });
+      expect(f.get(3), bloc).toEqual({ continued: true, joinsNext: false });
+    }
+  });
+
+  it("un bloc posté avant la réponse s'y lie aussi, mais la réponse garde son en-tête", () => {
     const f = flow([
       makeMessage({ id: 1, persona: brom }),
       makeMessage({ id: 2, persona: aria, content: DE }),
       makeMessage({ id: 3, persona: aria }),
+      makeMessage({ id: 4, persona: aria }),
     ]);
-    expect(f.get(2)?.continued).toBe(false);
-    expect(f.get(3)?.continued).toBe(false);
     expect(f.get(1)?.joinsNext).toBe(false);
-    expect(f.get(2)?.joinsNext).toBe(false);
+    expect(f.get(2)).toEqual({ continued: false, joinsNext: true });
+    // Rien n'a encore dit qui parle : l'en-tête reste.
+    expect(f.get(3)).toEqual({ continued: false, joinsNext: true });
+    expect(f.get(4)).toEqual({ continued: true, joinsNext: false });
   });
 
-  it("une note privée, un SMS ou un autre bloc coupe la série", () => {
+  it("le bloc d'un autre persona ne se lie pas", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: brom, content: DE }),
+    ]);
+    expect(f.get(1)?.joinsNext).toBe(false);
+    expect(f.get(2)?.continued).toBe(false);
+  });
+
+  it("une note privée ou un SMS coupe la série", () => {
     const f = flow([
       makeMessage({ id: 1, persona: aria }),
       makeMessage({ id: 2, persona: aria, visible_to: ["user-2"] }),
       makeMessage({ id: 3, persona: aria }),
       makeMessage({ id: 4, persona: aria, metadata: { sms: true } }),
       makeMessage({ id: 5, persona: aria }),
-      makeMessage({ id: 6, persona: aria, content: '{"_type":"callout","title":"Titre","text":"…"}' }),
-      makeMessage({ id: 7, persona: aria }),
     ]);
-    for (const id of [2, 3, 5, 7]) expect(f.get(id)?.continued, `message ${id}`).toBe(false);
-    for (const id of [1, 3, 5]) expect(f.get(id)?.joinsNext, `message ${id}`).toBe(false);
+    for (const id of [2, 3, 5]) expect(f.get(id)?.continued, `message ${id}`).toBe(false);
+    for (const id of [1, 3]) expect(f.get(id)?.joinsNext, `message ${id}`).toBe(false);
   });
 
   it("une réponse à l'en-tête complet n'est pas une suite : elle ouvre la sienne", () => {

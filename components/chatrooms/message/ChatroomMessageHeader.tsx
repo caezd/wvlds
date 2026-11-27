@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import type { ReactionSummary, ChallengeBadge, ChatMessageWithPersona } from "@/types/db";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -214,23 +213,8 @@ export function ChatroomMessageHeader({
   return (
     <div className="flex flex-1 gap-4">
       {message.persona?.name && (
-        <div className="group/avatar shrink-0 flex items-start">
-          {/* Avatar joueur — lg uniquement.
-              w-0 = pas de place réservée dans le flex ; l'avatar
-              déborde vers la droite via translate sans sortir du scroll area. */}
-          <div className="hidden lg:block w-0 shrink-0 self-start relative">
-            <UserProfileSheetTrigger userId={userId} label={playerUsername}>
-              <div className="flex absolute right-0 top-0 opacity-0 transition-all duration-200 ease-out group-hover/avatar:opacity-100 group-hover/avatar:translate-x-3 focus-within:opacity-100 focus-within:translate-x-3">
-                <Avatar className="size-14 ring-2 ring-background rounded-full">
-                  {avatarSrc && <AvatarImage src={avatarSrc} className="rounded-full" />}
-                  <AvatarFallback className="text-base rounded-full">
-                    {(playerUsername ?? "?")[0]?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            </UserProfileSheetTrigger>
-          </div>
-
+        <div className="shrink-0 flex items-start">
+          {/* Le profil du joueur s'ouvre depuis son @pseudo, à côté du nom. */}
           <PersonaProfileSheetTrigger
             personaId={message.persona?.id ?? null}
             userId={userId}
