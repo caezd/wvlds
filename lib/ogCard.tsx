@@ -122,7 +122,7 @@ const LUEURS = [
 /** Dans les deux cas : un dégradé sombre en bas, sous le texte. */
 const VOILE_BAS = "linear-gradient(to top, rgba(24,24,27,0.95) 0%, rgba(24,24,27,0.7) 30%, rgba(24,24,27,0) 62%)";
 
-/** Le cadenas de lucide, à la place de l'icône d'un monde privé ou 18+. */
+/** Le cadenas de lucide, à la place de l'icône d'un monde privé. */
 function Cadenas() {
   return (
     <div

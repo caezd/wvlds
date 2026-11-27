@@ -38,13 +38,12 @@ describe("WorldSharePanel : le monde d'un lien partagé, colonne droite de la co
     expect(screen.getByText("La taverne du Pont-Rouge")).toBeInTheDocument();
   });
 
-  it("un monde 18+ porte la mention ; la base n'a envoyé ni description ni image", () => {
-    const { container } = render(
-      <WorldSharePanel preview={{ ...MONDE, ageRestricted: true, description: null, iconUrl: null, bannerUrl: null }} />,
-    );
+  it("un monde 18+ porte la mention, avec sa bannière et son icône ; la base n'en envoie pas la description", () => {
+    const { container } = render(<WorldSharePanel preview={{ ...MONDE, ageRestricted: true, description: null }} />);
     expect(screen.getByText("18+")).toBeInTheDocument();
-    expect(container.querySelector("img")).toBeNull();
-    expect(container.innerHTML).not.toContain("banner.webp");
+    expect(container.querySelector("img")).not.toBeNull();
+    expect(container.innerHTML).toContain("banner.webp");
+    expect(screen.queryByText("Brève description du monde")).toBeNull();
   });
 
   it("un monde privé : un cadenas et son nom, rien d'autre", () => {

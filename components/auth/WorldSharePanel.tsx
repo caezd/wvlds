@@ -14,8 +14,8 @@ import type { SharePreview } from "@/lib/sharePreview";
  * membres, et le salon visé s'il est ouvert ou public.
  *
  * Sans bannière, la couleur du monde ; sans couleur, le fond de l'application.
- * Un monde 18+ n'a ni description ni image : la base ne les envoie pas. Un
- * monde privé, son nom seul : un cadenas, « Monde privé · sur invitation ».
+ * Un monde 18+ n'a pas de description : la base ne l'envoie pas. Un monde
+ * privé, son nom seul : un cadenas, « Monde privé · sur invitation ».
  */
 export function WorldSharePanel({ preview }: { preview: SharePreview }) {
   const t = useTranslations("auth.share");

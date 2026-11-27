@@ -102,14 +102,14 @@ export type WorldCardContent = { name: string; meta: string; locked: boolean };
 
 /**
  * La carte d'un monde dans l'image d'aperçu : son nom, et au-dessus ses
- * membres — ou « Monde privé · sur invitation ». Un cadenas tient la place de
- * l'icône quand la base n'en donne pas : monde privé ou 18+. Le lien d'un
- * salon montre la carte de son monde.
+ * membres — ou « Monde privé · sur invitation ». Un monde privé a un cadenas
+ * à la place de l'icône : la base n'en donne que le nom. Un monde 18+ est un
+ * monde public comme un autre. Le lien d'un salon montre la carte de son monde.
  */
 export function worldCardContent(
   p: SharePreview,
   labels: { privateWorld: string; members: (count: number) => string },
 ): WorldCardContent {
   if (p.isPrivate) return { name: p.name, meta: labels.privateWorld, locked: true };
-  return { name: p.name, meta: labels.members(p.memberCount), locked: p.ageRestricted };
+  return { name: p.name, meta: labels.members(p.memberCount), locked: false };
 }

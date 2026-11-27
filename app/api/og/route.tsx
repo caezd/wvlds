@@ -15,8 +15,8 @@ import { getSharePreview } from "@/lib/sharePreviewServer";
  * Le lien d'un salon montre l'image de son monde (app/auth/login/page.tsx).
  * Joignable sans session (le middleware laisse passer /api) : ce sont les
  * robots d'aperçu qui la demandent. Un monde supprimé, ou un id invalide,
- * donne l'image générique — jamais une erreur. Un monde privé ou 18+ n'a ni
- * bannière ni icône (la base ne les envoie pas) : un cadenas à la place.
+ * donne l'image générique — jamais une erreur. Un monde privé n'a ni
+ * bannière ni icône (la base n'en envoie que le nom) : un cadenas à la place.
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;

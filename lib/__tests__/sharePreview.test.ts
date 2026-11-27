@@ -113,9 +113,9 @@ describe("worldCardContent : la carte d'un monde dans l'image d'aperçu", () => 
     expect(worldCardContent(base, labels)).toEqual({ name: "Hextech", meta: "7 membres", locked: false });
   });
 
-  it("un monde 18+ : un cadenas à la place de l'icône, sans mention 18+", () => {
-    const adulte = { ...base, ageRestricted: true, description: null, iconUrl: null };
-    expect(worldCardContent(adulte, labels)).toEqual({ name: "Hextech", meta: "7 membres", locked: true });
+  it("un monde 18+ : comme un monde public, son icône et ses membres, sans mention 18+", () => {
+    const adulte = { ...base, ageRestricted: true, description: null };
+    expect(worldCardContent(adulte, labels)).toEqual({ name: "Hextech", meta: "7 membres", locked: false });
   });
 
   it("un monde privé : un cadenas, son nom, « sur invitation »", () => {
