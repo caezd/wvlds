@@ -50,9 +50,10 @@ describe("transformStyledSpans", () => {
     expect(result).toContain("[transformé](color:ff0000)");
   });
 
-  it("ne traverse pas les sauts de ligne", () => {
-    const input = "[#ff0000]ligne un\nligne deux[/]";
-    expect(transformStyledSpans(input)).toBe(input);
+  it("sur plusieurs lignes, chaque ligne est colorée", () => {
+    expect(transformStyledSpans("[#ff0000]ligne un\nligne deux[/]")).toBe(
+      "[ligne un](color:ff0000)\n[ligne deux](color:ff0000)",
+    );
   });
 
   it("ne transforme pas à l'intérieur d'un bloc de code fenced (souligné)", () => {
@@ -60,9 +61,8 @@ describe("transformStyledSpans", () => {
     expect(transformStyledSpans(input)).toBe(input);
   });
 
-  it("ne traverse pas les sauts de ligne (souligné)", () => {
-    const input = "++ligne un\nligne deux++";
-    expect(transformStyledSpans(input)).toBe(input);
+  it("sur plusieurs lignes, chaque ligne est soulignée", () => {
+    expect(transformStyledSpans("++ligne un\nligne deux++")).toBe("[ligne un](underline:)\n[ligne deux](underline:)");
   });
 
   it("ne confond pas un vrai lien markdown [texte](url) avec la syntaxe couleur", () => {
@@ -131,6 +131,19 @@ describe("transformStyledSpans", () => {
       expect(transformStyledSpans("**Un\n\nDeux\n\nTrois**")).toBe("**Un**\n\n**Deux**\n\n**Trois**");
       expect(transformStyledSpans("Il dit _bonjour\n\npuis s'en va_ vite.")).toBe("Il dit _bonjour_\n\n_puis s'en va_ vite.");
       expect(transformStyledSpans("~~a\n\nb~~")).toBe("~~a~~\n\n~~b~~");
+    });
+
+    it("gras italique, souligné et couleur aussi", () => {
+      expect(transformStyledSpans("***Un\n\nDeux***")).toBe("***Un***\n\n***Deux***");
+      expect(transformStyledSpans("++Un\n\nDeux++")).toBe("[Un](underline:)\n\n[Deux](underline:)");
+      expect(transformStyledSpans("[#ff0000]Un\n\nDeux\n\nTrois[/] fin")).toBe(
+        "[Un](color:ff0000)\n\n[Deux](color:ff0000)\n\n[Trois](color:ff0000) fin",
+      );
+    });
+
+    it("une couleur fermée dans son paragraphe, ou jamais fermée, ne change pas", () => {
+      expect(transformStyledSpans("[#f00]a[/]\n\nb[/]")).toBe("[a](color:f00)\n\nb[/]");
+      expect(transformStyledSpans("[#f00]a\n\nb")).toBe("[#f00]a\n\nb");
     });
 
     it("un paragraphe sur plusieurs lignes reste entier", () => {
