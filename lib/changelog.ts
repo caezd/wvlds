@@ -46,6 +46,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-27",
     category: "Correctif",
+    area: "Salons",
+    text: "Gras, italique et barré suivis d’une espace (après un double-clic sur un mot) : de nouveau mis en forme, messages déjà envoyés compris.",
+  },
+  {
+    date: "2026-11-27",
+    category: "Correctif",
     text: "Plus de page qui clignote au noir à la première ouverture d’une fiche ou d’un dialogue.\n- profil d’un joueur, fiche de persona\n- réglages et statistiques du salon, recherche\n- invitation, dialogues de la chronologie",
   },
   {

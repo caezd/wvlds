@@ -26,6 +26,15 @@ describe("wrapSelection", () => {
     const result = wrapSelection("gras", 0, 4, "**", "**");
     expect(result.text).toBe("**gras**");
   });
+
+  // Un double-clic sélectionne aussi l'espace qui suit le mot : `**gras **`
+  // ne s'afficherait pas en gras.
+  it("laisse les espaces de la sélection hors des marqueurs", () => {
+    const result = wrapSelection("en gras ici", 3, 8, "**", "**");
+    expect(result.text).toBe("en **gras** ici");
+    expect(result.cursorStart).toBe(12);
+    expect(wrapSelection("en  gras", 2, 8, "*", "*").text).toBe("en  *gras*");
+  });
 });
 
 describe("applyListPrefix", () => {

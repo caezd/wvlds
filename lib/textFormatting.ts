@@ -24,7 +24,11 @@ export function wrapSelection(
   after: string,
 ): WrapResult {
   const selected = text.slice(selStart, selEnd);
-  const wrapped = before + selected + after;
+  // Les espaces aux bords de la sélection (un double-clic prend celle qui
+  // suit le mot) restent hors des marqueurs : Markdown ne ferme pas un `**`
+  // précédé d'une espace.
+  const [, lead = "", core = "", trail = ""] = selected.match(/^(\s*)([\s\S]*?)(\s*)$/) ?? [];
+  const wrapped = core ? lead + before + core + after + trail : before + selected + after;
   const newText = text.slice(0, selStart) + wrapped + text.slice(selEnd);
 
   if (selStart === selEnd) {

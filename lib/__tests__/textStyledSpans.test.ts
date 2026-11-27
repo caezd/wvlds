@@ -98,4 +98,28 @@ describe("transformStyledSpans", () => {
       "`[#hex]` est le marqueur, ex: [rouge](color:ff0000)",
     );
   });
+
+  // Markdown ne ferme pas un `**` précédé d'une espace : les messages déjà
+  // écrits ainsi s'affichent quand même en gras.
+  describe("espace avant le marqueur fermant", () => {
+    it("gras, italique et barré : l'espace sort du marqueur", () => {
+      expect(transformStyledSpans("en **bold **blabla")).toBe("en **bold** blabla");
+      expect(transformStyledSpans("le **bold ** marche")).toBe("le **bold**  marche");
+      expect(transformStyledSpans("en __gras __ici")).toBe("en __gras__ ici");
+      expect(transformStyledSpans("en *talic *ici")).toBe("en *talic* ici");
+      expect(transformStyledSpans("en _talic _ici")).toBe("en _talic_ ici");
+      expect(transformStyledSpans("en ~~barré ~~ici")).toBe("en ~~barré~~ ici");
+    });
+
+    it("le reste ne change pas", () => {
+      for (const texte of ["**gras** et *italique*", "5 * 3 * 2", "* une puce *", "snake_case et foo _bar", "**a** b **c**"]) {
+        expect(transformStyledSpans(texte)).toBe(texte);
+      }
+    });
+
+    it("pas dans le code", () => {
+      expect(transformStyledSpans("`**bold **`")).toBe("`**bold **`");
+      expect(transformStyledSpans("```\n**bold **\n```")).toBe("```\n**bold **\n```");
+    });
+  });
 });
