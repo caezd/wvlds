@@ -32,30 +32,36 @@ export function ChatroomSynopsis({
   if (!text && visibility === "open" && !day) return null;
   const Icon = visibility === "private" ? Lock : Eye;
 
+  // L'encadré ne porte que le synopsis et la visibilité ; le temps se tient
+  // au-dessus, hors de l'encadré.
+  const boxed = !!text || visibility !== "open";
+
   return (
-    <section aria-label={t("synopsis")} className="py-6">
-      <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-        {day && (
-          <div>
-            {dateRange && <p className="text-xs text-muted-foreground">{dateRange}</p>}
-            <ChatroomDayStrip day={day} />
-          </div>
-        )}
-        <div className="flex items-center justify-between gap-2">
-          {text ? <SectionLabel as="h2">{t("synopsis")}</SectionLabel> : <span />}
-          {visibility !== "open" && (
-            <Badge title={t(`${visibility}.description`)}>
-              <Icon aria-hidden />
-              {t(`${visibility}.title`)}
-            </Badge>
-          )}
+    <section aria-label={t("synopsis")} className="space-y-3 py-6">
+      {day && (
+        <div>
+          {dateRange && <p className="text-xs text-muted-foreground">{dateRange}</p>}
+          <ChatroomDayStrip day={day} />
         </div>
-        {text ? (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{text}</p>
-        ) : visibility !== "open" ? (
-          <p className="text-sm text-muted-foreground">{t(`${visibility}.description`)}</p>
-        ) : null}
-      </div>
+      )}
+      {boxed && (
+        <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            {text ? <SectionLabel as="h2">{t("synopsis")}</SectionLabel> : <span />}
+            {visibility !== "open" && (
+              <Badge title={t(`${visibility}.description`)}>
+                <Icon aria-hidden />
+                {t(`${visibility}.title`)}
+              </Badge>
+            )}
+          </div>
+          {text ? (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{text}</p>
+          ) : visibility !== "open" ? (
+            <p className="text-sm text-muted-foreground">{t(`${visibility}.description`)}</p>
+          ) : null}
+        </div>
+      )}
     </section>
   );
 }
