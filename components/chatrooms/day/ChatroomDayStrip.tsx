@@ -71,26 +71,31 @@ export function ChatroomDayStrip({ day: value, className }: { day: DayLine | Day
         </Tooltip>
       )}
 
-      <div className="relative mx-4 h-0.5 min-w-24 flex-1 rounded-full bg-border">
-        {TICKS.map((tick) => (
-          <span key={tick} aria-hidden className="absolute -top-0.75 h-2 w-px bg-border" style={{ left: `${tick}%` }} />
-        ))}
-        <span
-          data-testid="day-icon"
-          role="img"
-          aria-label={iconLabel(day.icon)}
-          title={iconLabel(day.icon)}
-          className="absolute top-1/2 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-border bg-background text-foreground"
-          style={{ left: `${position}%` }}
-        >
-          <LazyLucideIcon name={day.icon} className="size-3.5" aria-hidden />
-        </span>
-        <span
-          className="absolute top-4 -translate-x-1/2 whitespace-nowrap text-xs italic text-foreground"
-          style={{ left: `${position}%` }}
-        >
-          {t(`moments.${dayMoment(position)}`)}
-        </span>
+      {/* La ligne court sur toute la largeur, comme les autres blocs ; les
+          repères et l'icône se placent dans une piste rentrée d'un rayon
+          d'icône (14 px), pour qu'elle ne déborde pas aux extrémités. */}
+      <div className="relative h-0.5 min-w-24 flex-1 rounded-full bg-border">
+        <div className="absolute inset-y-0 left-3.5 right-3.5">
+          {TICKS.map((tick) => (
+            <span key={tick} aria-hidden className="absolute -top-0.75 h-2 w-px bg-border" style={{ left: `${tick}%` }} />
+          ))}
+          <span
+            data-testid="day-icon"
+            role="img"
+            aria-label={iconLabel(day.icon)}
+            title={iconLabel(day.icon)}
+            className="absolute top-1/2 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-border bg-background text-foreground"
+            style={{ left: `${position}%` }}
+          >
+            <LazyLucideIcon name={day.icon} className="size-3.5" aria-hidden />
+          </span>
+          <span
+            className="absolute top-4 -translate-x-1/2 whitespace-nowrap text-xs italic text-foreground"
+            style={{ left: `${position}%` }}
+          >
+            {t(`moments.${dayMoment(position)}`)}
+          </span>
+        </div>
       </div>
     </div>
   );
