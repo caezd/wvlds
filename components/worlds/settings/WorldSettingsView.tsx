@@ -41,6 +41,7 @@ import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGri
 // Les onglets « Fonctions » et « Communauté » portent leur propre état et
 // leurs propres appels serveur — voir l'en-tête de chacun.
 import { WorldFeaturesTab } from "./WorldFeaturesTab";
+import { WorldDiceSettings } from "./WorldDiceSettings";
 import { WorldCommunityTab } from "./WorldCommunityTab";
 import type { ChatroomCategory, World } from "@/types/worlds";
 
@@ -153,6 +154,8 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
             case "faceclaims":
             // Le Catalogue : fonction réservée, rien à régler pour l'instant.
             case "catalog":
+            // Jeu › Dés (migration 270) : `world_dice` s'écrit sous `world.settings`.
+            case "dice":
                 return settings;
             case "timeline":
                 return settings && world_timeline;
@@ -676,6 +679,11 @@ export function WorldSettingsView({ world, onUpdated, initialCategories, hasPers
                         {/* ── Catalogue (réservé) ──────────────────────── */}
                         {shown === "catalog" && page("catalog", (
                             <p className="text-sm text-muted-foreground">{tSettings("catalogFeature.body")}</p>
+                        ))}
+
+                        {/* ── Dés ──────────────────────────────────────── */}
+                        {shown === "dice" && page("dice", (
+                            <WorldDiceSettings key={`dice-${world.id}`} world={world} onUpdated={(patch) => onUpdated?.({ ...world, ...patch })} />
                         ))}
 
                         {/* ── Catégories ───────────────────────────────── */}

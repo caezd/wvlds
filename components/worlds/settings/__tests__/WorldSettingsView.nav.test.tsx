@@ -42,6 +42,7 @@ vi.mock("@/components/worlds/settings/WorldCategoryManager", () => ({ WorldCateg
 vi.mock("@/components/worlds/settings/WorldHomeGridSettings", () => ({ WorldHomeGridSettings: () => <div data-testid="home-tab" /> }));
 vi.mock("@/components/worlds/settings/WorldRelationsSettings", () => ({ WorldRelationsSettings: () => <div data-testid="relations-tab" /> }));
 vi.mock("@/components/worlds/settings/WorldGroupsSettings", () => ({ WorldGroupsSettings: () => <div data-testid="groups-tab" /> }));
+vi.mock("@/components/worlds/settings/WorldDiceSettings", () => ({ WorldDiceSettings: () => <div data-testid="dice-tab" /> }));
 vi.mock("@/app/actions/worldCatalog", () => ({
   setWorldFeature: vi.fn().mockResolvedValue({ ok: true }),
   setWorldRestriction: vi.fn().mockResolvedValue({ ok: true }),
@@ -78,18 +79,27 @@ beforeEach(() => {
 afterEach(() => pushState.mockRestore());
 
 describe("WorldSettingsView — menu de gauche", () => {
-  it("Général et Communauté en tête, hors groupe ; puis quatre groupes, dans l'ordre", () => {
+  it("Général et Communauté en tête, hors groupe ; puis les groupes, dans l'ordre", () => {
     monter();
     expect(enTete()).toEqual(["Général", "Communauté"]);
     expect(groupes()).toEqual([
-      "settings-group-world", "settings-group-features", "settings-group-personas", "settings-group-members",
-      "settings-group-communications",
+      "settings-group-world", "settings-group-features", "settings-group-game", "settings-group-personas",
+      "settings-group-members", "settings-group-communications",
     ]);
+    expect(entrees("Jeu")).toEqual(["Dés"]);
     expect(entrees("Monde")).toEqual(["Page d'accueil", "Catégories"]);
     expect(entrees("Fonctions")).toEqual(["Carte", "Wiki", "Chronologie", "Catalogue", "Inventaire"]);
     expect(entrees("Personas")).toEqual(["Fiche par défaut", "Compétences", "Faceclaims", "Groupes", "Relations"]);
     expect(entrees("Membres")).toEqual(["Rôles"]);
     expect(entrees("Communications")).toEqual(["Annonces", "Message de bienvenue", "Signalements"]);
+  });
+
+  it("Jeu › Dés : la page des dés du monde, sous world.settings (migration 270)", async () => {
+    monter();
+    await userEvent.click(within(nav()).getByRole("button", { name: "Dés" }));
+    expect(screen.getByTestId("dice-tab")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Dés" })).toBeInTheDocument();
+    expect(pushState).toHaveBeenCalledWith(null, "", "/w/w1?view=settings&section=dice");
   });
 
   it("le message de bienvenue a sa propre page, sous la même permission que les annonces", async () => {

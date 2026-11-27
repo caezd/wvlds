@@ -1089,6 +1089,7 @@
         "groups": {
           "world": "Mundo",
           "features": "Funciones",
+          "game": "Juego",
           "personas": "Personas",
           "members": "Miembros",
           "communications": "Comunicaciones"
@@ -1323,7 +1324,39 @@
       "addIcon": "Añadir un icono",
       "addBanner": "Añadir un banner",
       "enableDefaultSheet": "Activar la ficha predeterminada",
-      "statusOn": "Activado"
+      "statusOn": "Activado",
+      "dice": {
+        "title": "Dados",
+        "rules": "Tiradas",
+        "rulesHelp": "Lo que los miembros pueden tirar en las salas del mundo.",
+        "modeLabel": "Dados permitidos",
+        "modeFree": "Fórmulas libres",
+        "modeFreeHint": "Los dados del mundo, y cualquier fórmula como 2d6+3.",
+        "modePredefined": "Solo los dados del mundo",
+        "modePredefinedHint": "Solo se tiran los dados definidos aquí; la base rechaza el resto.",
+        "allowEdit": "Permitir modificar una tirada",
+        "allowEditHint": "El autor puede cambiar la descripción de una tirada publicada. El resultado, sacado por la base, nunca cambia.",
+        "list": "Dados del mundo",
+        "listHelp": "Se ofrecen en la ventana «Lanzar un dado». Un dado oculto solo aparece para el equipo del mundo, el único que puede tirarlo.",
+        "empty": "Todavía no hay dados.",
+        "add": "Nuevo dado",
+        "pickHint": "Elija un dado estándar, o cree uno a medida.",
+        "custom": "Personalizado",
+        "customName": "Nuevo dado",
+        "name": "Nombre del dado {n}",
+        "min": "Mínimo del dado {n}",
+        "max": "Máximo del dado {n}",
+        "namePlaceholder": "Nombre",
+        "minPlaceholder": "Mín",
+        "maxPlaceholder": "Máx",
+        "hide": "Ocultar {name}",
+        "hiddenBadge": "Oculto",
+        "remove": "Eliminar {name}",
+        "removeConfirm": "El dado «{name}» se eliminará. Las tiradas ya publicadas se conservan.",
+        "invalidName": "Dé un nombre al dado.",
+        "invalidRange": "El mínimo debe ser inferior al máximo.",
+        "limit": "Como máximo {max} dados por mundo."
+      }
     },
     "timelinePicker": {
       "year": "Año",
@@ -2426,6 +2459,24 @@
       "readOnly": "Puede leer esta sala, pero solo sus invitados escriben en ella.",
       "uninvited": "Este persona no está invitado a esta sala.",
       "settingsSection": "Acceso"
+    },
+    "diceDie": "Dado",
+    "diceFreeFormula": "Fórmula libre",
+    "diceHiddenName": "{name} (oculto)",
+    "diceCount": "Número de dados",
+    "diceModifier": "Modificador",
+    "diceCountRange": "De 1 a {max} dados.",
+    "diceModifierRange": "Modificador fuera de límites.",
+    "diceNoWorldDice": "Todavía no hay dados definidos en este mundo.",
+    "diceUnverified": "No verificado",
+    "diceUnverifiedHint": "Esta tirada no la sacó la base: su resultado no está garantizado.",
+    "diceErrors": {
+      "predefinedOnly": "Este mundo solo admite sus propios dados.",
+      "hidden": "Este dado está reservado al equipo del mundo.",
+      "notFound": "Este dado ya no existe.",
+      "invalid": "Tirada no válida.",
+      "locked": "Una tirada no puede modificarse en este mundo.",
+      "failed": "La tirada falló."
     }
   },
   "changelog": {

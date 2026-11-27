@@ -1089,6 +1089,7 @@
         "groups": {
           "world": "Monde",
           "features": "Fonctions",
+          "game": "Jeu",
           "personas": "Personas",
           "members": "Membres",
           "communications": "Communications"
@@ -1323,7 +1324,39 @@
       "addIcon": "Ajouter une icône",
       "addBanner": "Ajouter une bannière",
       "enableDefaultSheet": "Activer la fiche par défaut",
-      "statusOn": "Activé"
+      "statusOn": "Activé",
+      "dice": {
+        "title": "Dés",
+        "rules": "Lancers",
+        "rulesHelp": "Ce que les membres peuvent lancer dans les salons du monde.",
+        "modeLabel": "Dés permis",
+        "modeFree": "Formules libres",
+        "modeFreeHint": "Les dés du monde, et toute formule comme 2d6+3.",
+        "modePredefined": "Dés du monde seulement",
+        "modePredefinedHint": "Seuls les dés définis ici se lancent ; la base refuse le reste.",
+        "allowEdit": "Permettre de modifier un lancer",
+        "allowEditHint": "L'auteur peut changer la description d'un lancer publié. Le résultat, tiré par la base, ne change jamais.",
+        "list": "Dés du monde",
+        "listHelp": "Proposés dans la fenêtre « Lancer un dé ». Un dé masqué n'y paraît que pour l'équipe du monde, qui seule peut le lancer.",
+        "empty": "Aucun dé pour l'instant.",
+        "add": "Nouveau dé",
+        "pickHint": "Choisissez un dé standard, ou créez-en un sur mesure.",
+        "custom": "Personnalisé",
+        "customName": "Nouveau dé",
+        "name": "Nom du dé {n}",
+        "min": "Minimum du dé {n}",
+        "max": "Maximum du dé {n}",
+        "namePlaceholder": "Nom",
+        "minPlaceholder": "Min",
+        "maxPlaceholder": "Max",
+        "hide": "Masquer {name}",
+        "hiddenBadge": "Masqué",
+        "remove": "Supprimer {name}",
+        "removeConfirm": "Le dé « {name} » sera supprimé. Les lancers déjà publiés restent.",
+        "invalidName": "Donnez un nom au dé.",
+        "invalidRange": "Le minimum doit être inférieur au maximum.",
+        "limit": "{max} dés au plus par monde."
+      }
     },
     "timelinePicker": {
       "year": "Année",
@@ -2426,6 +2459,24 @@
       "readOnly": "Vous pouvez lire ce salon, mais seuls ses invités y écrivent.",
       "uninvited": "Ce persona n'est pas invité dans ce salon.",
       "settingsSection": "Accès"
+    },
+    "diceDie": "Dé",
+    "diceFreeFormula": "Formule libre",
+    "diceHiddenName": "{name} (masqué)",
+    "diceCount": "Nombre de dés",
+    "diceModifier": "Modificateur",
+    "diceCountRange": "De 1 à {max} dés.",
+    "diceModifierRange": "Modificateur hors limites.",
+    "diceNoWorldDice": "Aucun dé n'est encore défini dans ce monde.",
+    "diceUnverified": "Non vérifié",
+    "diceUnverifiedHint": "Ce lancer n'a pas été tiré par la base : son résultat n'est pas garanti.",
+    "diceErrors": {
+      "predefinedOnly": "Ce monde n'admet que ses propres dés.",
+      "hidden": "Ce dé est réservé à l'équipe du monde.",
+      "notFound": "Ce dé n'existe plus.",
+      "invalid": "Lancer invalide.",
+      "locked": "Un lancer ne peut pas être modifié dans ce monde.",
+      "failed": "Le lancer a échoué."
     }
   },
   "changelog": {

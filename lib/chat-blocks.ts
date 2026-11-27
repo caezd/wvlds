@@ -3,6 +3,8 @@
 
 export type DiceBlock = {
   _type: "dice";
+  /** Le lancer tiré par la base (`dice_rolls`, migration 270) ; absent des anciens lancers. */
+  roll_id?: string;
   formula: string;      // ex. "2d6+3"
   results: number[];    // résultats individuels de chaque dé
   modifier: number;     // modificateur fixe
@@ -97,17 +99,4 @@ export function parseChatBlock(content: string): ChatBlock | null {
   } catch {
     return null;
   }
-}
-
-// Helpers dé
-export function rollDice(formula: string): Omit<DiceBlock, "_type" | "label"> {
-  // Supporte nDm+k ou nDm-k (insensible à la casse)
-  const match = formula.trim().match(/^(\d+)[dD](\d+)([+-]\d+)?$/);
-  if (!match) throw new Error(`Formule invalide : ${formula}`);
-  const count = Math.min(parseInt(match[1], 10), 100);
-  const faces = Math.min(parseInt(match[2], 10), 1000);
-  const modifier = match[3] ? parseInt(match[3], 10) : 0;
-  const results = Array.from({ length: count }, () => Math.floor(Math.random() * faces) + 1);
-  const total = results.reduce((a, b) => a + b, 0) + modifier;
-  return { formula, results, modifier, total };
 }

@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-26",
     category: "Fonctionnalité",
     area: "Monde",
+    text: "Dés du monde : Paramètres › Jeu › Dés.\n- dés standard (d4 à d100) d’un geste, ou sur mesure : nom, minimum, maximum\n- dé masqué : absent de la liste des joueurs, lancé par l’équipe du monde seulement\n- option « Dés du monde seulement » : plus de formule libre dans les salons\n- fenêtre « Lancer un dé » : dés du monde à choisir, avec nombre de dés et modificateur\n- tirage fait par le serveur ; un lancer ne se modifie plus, sauf option « Permettre de modifier un lancer »\n- monde aux dés du monde seulement : un lancer non tiré par le serveur est marqué « Non vérifié »",
+  },
+  {
+    date: "2026-11-26",
+    category: "Fonctionnalité",
+    area: "Monde",
     text: "Liens partagés : un lien de monde ou de salon présente le monde à qui n’est pas connecté.\n- page de connexion : bannière, nom, description et membres d’un monde public ; retour au lien une fois connecté\n- aperçu des liens (Discord, iMessage…) : titre, description et image du monde ; un lien de salon reprend l’image de son monde\n- image d’aperçu en français, anglais ou espagnol : bannière du monde en fond, icône, membres, nom et début de la description sur un dégradé sombre ; décrite pour les lecteurs d’écran\n- monde privé : son nom seul, avec un cadenas, « sur invitation » ; monde 18+ : bannière, icône, nom et membres, sans sa description",
   },
   {

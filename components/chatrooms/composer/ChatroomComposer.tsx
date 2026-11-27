@@ -12,6 +12,8 @@ import { MESSAGE_COLUMNS } from "@/lib/chatMessagePage";
 import { useCoalescedPersonaWrite } from "./useCoalescedPersonaWrite";
 import { TABLE, RPC } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
+import { rollDiceForMessage } from "@/lib/diceRollMessage";
+import type { DiceRollRequest } from "@/lib/worldDice";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
@@ -534,7 +536,12 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         return data.publicUrl;
     }
 
-    async function sendRaw(text: string): Promise<boolean> {
+    /**
+     * Publie un message. `diceRoll` : un lancer à faire tirer par la base une
+     * fois le salon connu (migration 270) ; `text` n'est alors qu'un bloc dé
+     * vide, remplacé par le lancer tiré.
+     */
+    async function sendRaw(text: string, diceRoll?: DiceRollRequest): Promise<boolean> {
         if (!text && pendingMedia.length === 0) return false;
         if (!userId) return false;
         if (!selectedPersona) {
@@ -570,6 +577,14 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             }
             if (!targetChatId) return false;
 
+            let diceRollId: string | null = null;
+            if (diceRoll) {
+                const rolled = await rollDiceForMessage(supabase, targetChatId, diceRoll);
+                if (!rolled.ok) { toast.error(tChatrooms(`diceErrors.${rolled.error}`)); return false; }
+                text = rolled.text;
+                diceRollId = rolled.diceRollId;
+            }
+
             const content = targetKey ? await encryptMessage(text, targetKey) : text;
             const uploadedMedia = pendingMedia.length > 0 ? await uploadMedia(pendingMedia, targetChatId) : [];
             const blockMedia = pendingBlockMediaRef.current;
@@ -599,6 +614,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     ...(replyTo ? { reply_to_id: replyTo.id } : {}),
                     // La base le date juste avant sa cible (trigger, migration 216).
                     ...(insertBefore ? { insert_before_id: insertBefore.id } : {}),
+                    ...(diceRollId ? { dice_roll_id: diceRollId } : {}),
                 })
                 .select(`world_id, ${MESSAGE_COLUMNS}`)
                 .single();
@@ -973,6 +989,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                     <BlocksDropdown
                         variant={useMobileDrawer ? "drawer" : "dropdown"}
                         onSend={(content) => void sendRaw(content)}
+                        onRoll={(request) => void sendRaw(JSON.stringify({ _type: "dice" }), request)}
                         bubbleMode={bubbleMode}
                         onBubbleModeChange={setBubbleMode}
                         bubbleColor={bubbleColor}

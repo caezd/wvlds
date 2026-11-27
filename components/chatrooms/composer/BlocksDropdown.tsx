@@ -42,6 +42,7 @@ import { clampTimelineDate, formatTimelineLabel } from "@/lib/worldTimeline";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
 import { BUBBLE_MAX_ALPHA, bubbleBackground, bubbleStyle } from "@/lib/bubbleColors";
 import type { usePersonaTransfer } from "@/hooks/usePersonaTransfer";
+import type { DiceRollRequest } from "@/lib/worldDice";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -190,6 +191,7 @@ function ComposerMenuAccordionRow({
 export function BlocksDropdown({
     variant = "dropdown",
     onSend,
+    onRoll,
     bubbleMode,
     onBubbleModeChange,
     bubbleColor,
@@ -217,6 +219,8 @@ export function BlocksDropdown({
      *  lieu du survol desktop. */
     variant?: "dropdown" | "drawer";
     onSend: (content: string) => void;
+    /** Un lancer de dés à faire tirer par la base, puis à publier (migration 270). */
+    onRoll: (request: DiceRollRequest) => void;
     bubbleMode: boolean;
     onBubbleModeChange: (v: boolean) => void;
     bubbleColor: string | null;
@@ -712,7 +716,7 @@ export function BlocksDropdown({
             <DiceDialog
                 open={activeTool === "dice"}
                 onOpenChange={(v) => !v && setActiveTool(null)}
-                onSend={(content) => { onSend(content); setActiveTool(null); }}
+                onRoll={(request) => { onRoll(request); setActiveTool(null); }}
             />
             <CalloutDialog
                 open={activeTool === "callout"}

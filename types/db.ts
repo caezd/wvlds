@@ -127,6 +127,8 @@ export type ChatMessage = {
    */
   inserted_at?: string | null;
   insert_before_id?: number | null;
+  /** Le lancer de dés que publie ce message (migration 270). */
+  dice_roll_id?: string | null;
 };
 
 export type ChatMessageReaction = {
@@ -231,6 +233,8 @@ export type ChatMessageWithPersona = ChatMessage & {
   author?: { avatar_url: string | null; username: string | null } | null;
   /** Message auquel celui-ci répond ; null s'il a été supprimé ou n'est pas lisible. */
   reply_to?: ChatMessageReplyRef | null;
+  /** Le lancer tiré par la base, joint par `dice_roll_id` (migration 270). */
+  dice_roll?: import("@/lib/worldDice").DiceRoll | null;
 };
 
 // --- RPC return types --------------------------------------------------------

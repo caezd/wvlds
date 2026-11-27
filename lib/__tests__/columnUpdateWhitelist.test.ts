@@ -38,6 +38,8 @@ const NEVER_UPDATABLE: Record<string, string[]> = {
   chat_messages: [
     "id", "chat_id", "author_id", "created_at", "persona_id", "world_id",
     "visible_to", "reply_to_id", "insert_before_id", "inserted_at",
+    // Le lancer publié (migration 270) : posé à l'insertion, jamais changé.
+    "dice_roll_id",
   ],
   chatrooms: ["id", "world_id", "created_by", "created_at", "updated_at"],
   dm_messages: ["id", "conversation_id", "author_id", "created_at"],

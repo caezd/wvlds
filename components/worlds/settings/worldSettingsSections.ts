@@ -53,6 +53,8 @@ export const SETTINGS_GROUPS = [
       "currency", "items", "shops", "trades",
     ],
   },
+  // Jeu (migration 270) : les dés du monde et les règles des lancers.
+  { id: "game", sections: ["dice"] },
   // Personas : la fiche par défaut (section `personas`), les compétences et
   // les faceclaims restent des pages « Fonctions » (interrupteur, état) ;
   // groupes et relations gardent leur permission, `relations.manage`.

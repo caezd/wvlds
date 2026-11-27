@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DiceBlock } from "@/lib/chat-blocks";
+import type { DiceRoll } from "@/lib/worldDice";
 import { DiceBlockView } from "./DiceBlock";
 import { GameBlockToolbar } from "./GameBlockShell";
+import { useChatroomDiceRules } from "./chatroomDiceRules";
 import { useTranslations } from "next-intl";
 
 /**
@@ -13,21 +16,30 @@ import { useTranslations } from "next-intl";
  * résultat) avec édition inline de la description et suppression au survol.
  * Structurellement différent des autres blocs (pas de carte, pas d'avatar),
  * d'où son propre composant.
+ *
+ * Migration 270 : le résultat vient du lancer tiré par la base (`roll`). Un
+ * lancer se modifie seulement si le monde le permet ; dans un monde aux dés
+ * prédéfinis, un lancer sans ligne en base est marqué « Non vérifié ».
  */
 export function DiceMessageView({
   block,
+  roll,
   label,
   mine,
   onEditLabel,
   onDelete,
 }: {
   block: DiceBlock;
+  /** Le lancer joint au message (`dice_roll`), s'il en a un. */
+  roll?: DiceRoll | null;
   label: string;
   mine: boolean;
   onEditLabel: (label: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
   const t = useTranslations("chatrooms");
+  const { mode, allowEdit } = useChatroomDiceRules();
+  const unverified = !roll && mode === "predefined";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -40,7 +52,12 @@ export function DiceMessageView({
     <div className="group/gblock w-full py-8 flex items-center justify-between gap-4">
       <span className="text-sm text-muted-foreground italic">
         <strong className="font-medium not-italic text-foreground">{label}</strong>{" "}
-        <DiceBlockView block={block} mine={mine} />
+        <DiceBlockView block={block} roll={roll} />
+        {unverified && (
+          <Badge tone="warning" className="ml-2 not-italic align-middle" title={t("diceUnverifiedHint")}>
+            {t("diceUnverified")}
+          </Badge>
+        )}
         {editing && (
           <input
             autoFocus
@@ -58,7 +75,7 @@ export function DiceMessageView({
       <GameBlockToolbar
         mine={mine}
         className="shrink-0"
-        editDialog={
+        editDialog={allowEdit ? (
           <Button
             type="button"
             variant="ghost"
@@ -72,7 +89,7 @@ export function DiceMessageView({
           >
             <Pencil className="h-4 w-4" />
           </Button>
-        }
+        ) : undefined}
         onDelete={onDelete}
         deleteDescription="Le lancé de dé sera supprimé définitivement."
       />

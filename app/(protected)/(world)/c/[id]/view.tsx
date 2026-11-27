@@ -42,6 +42,7 @@ import { applyRemoteVoteChange } from "@/lib/choiceVotes";
 import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWarningBanner";
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/settings/ChatroomsNavDropdown";
+import { ChatroomDiceRulesProvider } from "@/components/chatrooms/blocks/chatroomDiceRules";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
 
 /** Salon tel qu'affiché dans les listes de navigation (dropdown, aside). */
@@ -101,7 +102,7 @@ function ChatroomHeader({
   rooms,
   rightSlot,
 }: {
-  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null } | null;
+  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
   rightSlot?: React.ReactNode;
@@ -216,7 +217,7 @@ export default function ChatRoomView({
     category_id: string | null;
     visibility: ChatroomVisibility;
     synopsis: string | null;
-    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null;
+    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null; dice_mode?: import("@/lib/worldDice").DiceMode; dice_allow_edit?: boolean } | null;
   };
   initialMessages: ChatMessageWithPersona[];
   initialHasMore: boolean;
@@ -1062,7 +1063,16 @@ export default function ChatRoomView({
     />
   );
 
+  // Les règles des dés du monde (migration 270), lues par la fenêtre de
+  // lancer et l'affichage des lancers.
+  const diceRules = {
+    worldId: chat?.worlds?.id ?? null,
+    mode: chat?.worlds?.dice_mode ?? "free",
+    allowEdit: !!chat?.worlds?.dice_allow_edit,
+  } as const;
+
   return (
+    <ChatroomDiceRulesProvider value={diceRules}>
     <div className="composer-parent flex flex-row focus-visible:outline-0 h-full min-w-0 flex-1 gap-3">
       <WorldMembershipGuard
         worldId={chat?.worlds?.id ?? null}
@@ -1341,5 +1351,6 @@ export default function ChatRoomView({
         }}
       />
     </div>
+    </ChatroomDiceRulesProvider>
   );
 }

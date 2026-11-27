@@ -1089,6 +1089,7 @@
         "groups": {
           "world": "World",
           "features": "Features",
+          "game": "Game",
           "personas": "Personas",
           "members": "Members",
           "communications": "Communications"
@@ -1323,7 +1324,39 @@
       "addIcon": "Add an icon",
       "addBanner": "Add a banner",
       "enableDefaultSheet": "Enable the default sheet",
-      "statusOn": "Enabled"
+      "statusOn": "Enabled",
+      "dice": {
+        "title": "Dice",
+        "rules": "Rolls",
+        "rulesHelp": "What members can roll in the world's rooms.",
+        "modeLabel": "Allowed dice",
+        "modeFree": "Free formulas",
+        "modeFreeHint": "The world's dice, and any formula such as 2d6+3.",
+        "modePredefined": "World dice only",
+        "modePredefinedHint": "Only the dice defined here can be rolled; the database refuses the rest.",
+        "allowEdit": "Allow editing a roll",
+        "allowEditHint": "The author can change the description of a posted roll. The result, drawn by the database, never changes.",
+        "list": "World dice",
+        "listHelp": "Offered in the “Roll a die” window. A hidden die only appears for the world's team, who alone can roll it.",
+        "empty": "No dice yet.",
+        "add": "New die",
+        "pickHint": "Pick a standard die, or make a custom one.",
+        "custom": "Custom",
+        "customName": "New die",
+        "name": "Name of die {n}",
+        "min": "Minimum of die {n}",
+        "max": "Maximum of die {n}",
+        "namePlaceholder": "Name",
+        "minPlaceholder": "Min",
+        "maxPlaceholder": "Max",
+        "hide": "Hide {name}",
+        "hiddenBadge": "Hidden",
+        "remove": "Delete {name}",
+        "removeConfirm": "The die “{name}” will be deleted. Rolls already posted remain.",
+        "invalidName": "Give the die a name.",
+        "invalidRange": "The minimum must be lower than the maximum.",
+        "limit": "At most {max} dice per world."
+      }
     },
     "timelinePicker": {
       "year": "Year",
@@ -2426,6 +2459,24 @@
       "readOnly": "You can read this room, but only its invitees write here.",
       "uninvited": "This persona is not invited to this room.",
       "settingsSection": "Access"
+    },
+    "diceDie": "Die",
+    "diceFreeFormula": "Free formula",
+    "diceHiddenName": "{name} (hidden)",
+    "diceCount": "Number of dice",
+    "diceModifier": "Modifier",
+    "diceCountRange": "From 1 to {max} dice.",
+    "diceModifierRange": "Modifier out of range.",
+    "diceNoWorldDice": "No dice are defined in this world yet.",
+    "diceUnverified": "Unverified",
+    "diceUnverifiedHint": "This roll was not drawn by the database: its result is not guaranteed.",
+    "diceErrors": {
+      "predefinedOnly": "This world only allows its own dice.",
+      "hidden": "This die is reserved for the world's team.",
+      "notFound": "This die no longer exists.",
+      "invalid": "Invalid roll.",
+      "locked": "A roll cannot be edited in this world.",
+      "failed": "The roll failed."
     }
   },
   "changelog": {

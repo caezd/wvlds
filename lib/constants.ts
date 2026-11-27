@@ -67,6 +67,7 @@ export const RPC = {
   SEARCH_DM_USERS: "search_dm_users",
   SEARCH_DM_MESSAGES: "search_dm_messages",
   SEARCH_CHAT_MESSAGES: "search_chat_messages",
+  ROLL_DICE: "roll_dice",
   BLOCK_USER: "block_user",
   UNBLOCK_USER: "unblock_user",
   GET_ACTIVE_DAILY_CHALLENGES: "get_active_daily_challenges",

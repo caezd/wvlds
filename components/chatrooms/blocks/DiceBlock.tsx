@@ -2,28 +2,47 @@
 
 import { useTranslations } from "next-intl";
 import type { DiceBlock } from "@/lib/chat-blocks";
+import { diceRollOutcome, rollFormula, type DiceRoll } from "@/lib/worldDice";
 import { cn } from "@/lib/utils";
 
-export function DiceBlockView({ block, mine: _mine }: { block: DiceBlock; mine: boolean }) {
+/**
+ * Le résultat d'un lancer. Il se lit dans la ligne `dice_rolls` tirée par la
+ * base (`roll`, migration 270) ; un ancien lancer, sans ligne, se lit dans le
+ * texte du message, comme avant.
+ */
+export function DiceBlockView({ block, roll }: { block: DiceBlock; roll?: DiceRoll | null }) {
   const t = useTranslations("chatrooms");
-  const isCrit = block.results.length === 1 && block.results[0] === parseInt(block.formula.split(/[dD]/)[1], 10);
-  const isFumble = block.results.length === 1 && block.results[0] === 1;
 
-  const detail = block.results.length > 1
-    ? ` (${block.results.join(" + ")}${block.modifier !== 0 ? ` ${block.modifier > 0 ? "+" : ""}${block.modifier}` : ""})`
+  const formula = roll ? rollFormula(roll) : block.formula;
+  const results = roll ? roll.results : block.results;
+  const modifier = roll ? roll.modifier : block.modifier;
+  const total = roll ? roll.total : block.total;
+  const outcome = roll
+    ? diceRollOutcome(roll)
+    : diceRollOutcome({
+        min_value: 1,
+        max_value: parseInt(block.formula.split(/[dD]/)[1], 10),
+        count: block.results.length,
+        results: block.results,
+      });
+  const isCrit = outcome === "critical";
+  const isFumble = outcome === "fumble";
+
+  const detail = results.length > 1
+    ? ` (${results.join(" + ")}${modifier !== 0 ? ` ${modifier > 0 ? "+" : ""}${modifier}` : ""})`
     : "";
 
   return (
     <span className="text-sm text-muted-foreground">
       {t("diceRolled")}{" "}
-      <span className="font-mono text-muted-foreground">{block.formula}</span>
+      <span className="font-mono text-muted-foreground">{formula}</span>
       {" "}{t("diceGot")}{" "}
       <span className={cn(
         "font-semibold text-foreground",
         isCrit && "text-success",
         isFumble && "text-destructive",
       )}>
-        {block.total}
+        {total}
       </span>
       {detail && <span className="text-xs text-muted-foreground">{detail}</span>}
       {isCrit && <span className="text-success"> — {t("diceCritical")}</span>}

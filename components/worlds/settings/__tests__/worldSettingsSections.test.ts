@@ -50,9 +50,9 @@ describe("worldSettingsSections", () => {
     expect(isFeatureSection("catalog")).toBe(false);
   });
 
-  it("Personas : une catégorie à part, entre Fonctions et Membres", () => {
+  it("Personas : une catégorie à part, entre Jeu et Membres", () => {
     const groups = visibleSettingsGroups(() => true);
-    expect(groups.map((g) => g.id)).toEqual(["top", "world", "features", "personas", "members", "communications"]);
+    expect(groups.map((g) => g.id)).toEqual(["top", "world", "features", "game", "personas", "members", "communications"]);
     expect(groups.find((g) => g.id === "personas")?.sections).toEqual(
       ["personas", "skills", "faceclaims", "groups", "relations"],
     );

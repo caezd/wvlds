@@ -31,7 +31,7 @@ export const getChatroomWithWorld = cache(
     const { data, error } = await supabase
       .from("chatrooms")
       .select(
-        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, visibility, synopsis, worlds(id, name, owner_id, enable_live_chat, restrict_skills, timeline_enabled, timeline_config, world_members(user_id))",
+        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, visibility, synopsis, worlds(id, name, owner_id, enable_live_chat, restrict_skills, dice_mode, dice_allow_edit, timeline_enabled, timeline_config, world_members(user_id))",
       )
       .eq("id", id)
       .single();

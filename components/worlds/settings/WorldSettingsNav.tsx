@@ -7,6 +7,7 @@ import {
   BookOpen,
   ChevronRight,
   Clock,
+  Dices,
   Coins,
   Flag,
   HandHeart,
@@ -56,6 +57,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   timeline: Clock,
   chatbox: MessagesSquare,
   catalog: Library,
+  dice: Dices,
   currency: Coins,
   items: Package,
   shops: Store,
@@ -91,6 +93,7 @@ export function useSettingsSectionLabel() {
         case "timeline": return t("nav.timeline");
         case "chatbox": return tSettings("chatbox");
         case "catalog": return tSettings("catalogFeature.title");
+        case "dice": return tSettings("dice.title");
         case "currency": return tSettings("economy.currencies");
         case "items": return tSettings("inventoryPage");
         case "shops": return tShops("title");

@@ -10,6 +10,7 @@ import { nomDeFichierUnique, STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { applyOwnVote } from "@/lib/choiceVotes";
 import type { ChatBlock } from "@/lib/chat-blocks";
+import type { DiceRoll } from "@/lib/worldDice";
 import type { ChatMessageMeta, ChoiceVoteSummary } from "@/types/db";
 
 import { DiceMessageView } from "./DiceMessageView";
@@ -51,6 +52,8 @@ export function GameBlockRenderer({
     persona_id?: string | null;
     persona?: { id: string } | null;
     metadata?: ChatMessageMeta | null;
+    /** Le lancer tiré par la base (migration 270). */
+    dice_roll?: DiceRoll | null;
   };
   chatroomKey?: string | null;
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
@@ -174,6 +177,7 @@ export function GameBlockRenderer({
       return (
         <DiceMessageView
           block={block}
+          roll={message.dice_roll}
           label={label}
           mine={mine}
           onEditLabel={(newLabel) =>

@@ -207,6 +207,10 @@ export type World = {
   inventory_slot_cost?: number | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
+  /** Les dés permis dans les salons (migration 270), voir lib/worldDice. */
+  dice_mode?: "free" | "predefined" | null;
+  /** Un lancer publié peut-il être modifié (sa description) ? */
+  dice_allow_edit?: boolean | null;
   timeline_enabled?: boolean | null;
   /** Validation des fiches (migration 184) — active seulement avec une fiche par défaut. */
   persona_review_enabled?: boolean | null;

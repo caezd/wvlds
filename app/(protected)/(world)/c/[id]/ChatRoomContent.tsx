@@ -32,7 +32,7 @@ export default async function ChatRoomContent({
   // il n'y a plus de seconde vague attendant les ids des messages.
   // Données du monde associé (extracted pour usage multiple)
   const rawWorld = chatroom.worlds as unknown;
-  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_skills?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
+  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_skills?: boolean | null; dice_mode?: string | null; dice_allow_edit?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
 
   const visibility = isChatroomVisibility(chatroom.visibility) ? chatroom.visibility : "open";
 
@@ -138,6 +138,8 @@ export default async function ChatRoomContent({
             id: w.id, name: w.name, isShared,
             owner_id: w.owner_id ?? null,
             restrict_skills: !!w.restrict_skills,
+            dice_mode: w.dice_mode === "predefined" ? "predefined" as const : "free" as const,
+            dice_allow_edit: !!w.dice_allow_edit,
             timeline_config: w.timeline_enabled ? (w.timeline_config as import("@/types/worlds").WorldTimelineConfig ?? null) : null,
           };
         })(),
