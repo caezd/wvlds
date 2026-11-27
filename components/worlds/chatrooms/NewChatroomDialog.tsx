@@ -45,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionLabel } from "@/components/ui/section-label";
 import { HelpHint } from "@/components/ui/help-hint";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
@@ -67,8 +68,8 @@ function randomTitle() {
   catch { return "Conversation"; }
 }
 
-const SELECT_CLASS =
-  "h-9 w-full min-w-0 rounded-md border bg-transparent px-3 text-base shadow-2xs outline-hidden focus-visible:ring-[3px] focus-visible:ring-border/50 md:text-sm";
+/** « Aucun » dans une liste : le Select de l'application refuse la valeur vide. */
+const NONE = "__none__";
 
 /** Un champ du formulaire : son intitulé, éventuellement son aide, puis le contrôle. */
 function Field({
@@ -297,7 +298,6 @@ export function NewChatroomDialog({
   }
 
   const showLocation = world_map && mapPins.length > 0;
-  const selectedPin = mapPins.find((p) => p.id === mapPinId) ?? null;
 
   const body = (
     <div className="space-y-5">
@@ -346,41 +346,35 @@ export function NewChatroomDialog({
         <div className="grid gap-5 sm:grid-cols-2">
           {showLocation && (
             <Field label={t("locationLabel")} htmlFor={`${ids}-pin`}>
-              <div className="relative">
-                {selectedPin && (
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute left-3 top-1/2 size-2.5 -translate-y-1/2 rounded-full"
-                    style={{ backgroundColor: selectedPin.color }}
-                  />
-                )}
-                <select
-                  id={`${ids}-pin`}
-                  value={mapPinId ?? ""}
-                  onChange={(e) => setMapPinId(e.target.value || null)}
-                  className={cn(SELECT_CLASS, selectedPin && "pl-8")}
-                >
-                  <option value="">{t("locationNone")}</option>
+              <Select value={mapPinId ?? NONE} onValueChange={(v) => setMapPinId(v === NONE ? null : v)}>
+                <SelectTrigger id={`${ids}-pin`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{t("locationNone")}</SelectItem>
                   {mapPins.map((pin) => (
-                    <option key={pin.id} value={pin.id}>{pin.title}</option>
+                    <SelectItem key={pin.id} value={pin.id}>
+                      <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
+                      {pin.title}
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
             </Field>
           )}
           {categories.length > 0 && (
             <Field label={t("categoryPlaceholder")} htmlFor={`${ids}-category`}>
-              <select
-                id={`${ids}-category`}
-                value={categoryId ?? ""}
-                onChange={(e) => setCategoryId(e.target.value || null)}
-                className={SELECT_CLASS}
-              >
-                <option value="">{t("categoryNone")}</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.title}</option>
-                ))}
-              </select>
+              <Select value={categoryId ?? NONE} onValueChange={(v) => setCategoryId(v === NONE ? null : v)}>
+                <SelectTrigger id={`${ids}-category`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{t("categoryNone")}</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           )}
         </div>
@@ -406,28 +400,31 @@ export function NewChatroomDialog({
             </section>
           )}
           {sequelChoices.length > 0 && (
-            <select
-              value={previousId ?? ""}
-              onChange={(e) => setPreviousId(e.target.value || null)}
-              aria-label={t("sequelOf")}
-              className={SELECT_CLASS}
-            >
-              <option value="">{t("sequelNone")}</option>
-              {sequelChoices.some((r) => r.mine) && (
-                <optgroup label={t("sequelMine")}>
-                  {sequelChoices.filter((r) => r.mine).map((r) => (
-                    <option key={r.id} value={r.id}>{r.title ?? ""}</option>
-                  ))}
-                </optgroup>
-              )}
-              {sequelChoices.some((r) => !r.mine) && (
-                <optgroup label={t("sequelOthers")}>
-                  {sequelChoices.filter((r) => !r.mine).map((r) => (
-                    <option key={r.id} value={r.id}>{r.title ?? ""}</option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
+            // Sans suite, la valeur reste vide : l'intitulé « (facultatif) » s'affiche.
+            <Select value={previousId ?? ""} onValueChange={(v) => setPreviousId(v === NONE ? null : v)}>
+              <SelectTrigger aria-label={t("sequelOf")} className="w-full">
+                <SelectValue placeholder={t("sequelNone")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>{t("categoryNone")}</SelectItem>
+                {sequelChoices.some((r) => r.mine) && (
+                  <SelectGroup>
+                    <SelectLabel>{t("sequelMine")}</SelectLabel>
+                    {sequelChoices.filter((r) => r.mine).map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.title ?? ""}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {sequelChoices.some((r) => !r.mine) && (
+                  <SelectGroup>
+                    <SelectLabel>{t("sequelOthers")}</SelectLabel>
+                    {sequelChoices.filter((r) => !r.mine).map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.title ?? ""}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+              </SelectContent>
+            </Select>
           )}
         </Field>
       )}

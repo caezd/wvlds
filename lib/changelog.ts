@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
+    text: "Nouveau jeu : listes Lieu, Catégorie et « Suite de… » lisibles, sur le fond sombre de l’application.",
+  },
+  {
+    date: "2026-11-27",
     category: "Interface",
     area: "Personas",
     text: "Sélecteur de persona : champ de recherche, raison du cadenas sous le nom.\n- recherche sur le nom, sans tenir compte des accents ni des majuscules\n- cadenas expliqué : fiche incomplète, fiche non validée, hors quota du plan gratuit ou persona non invité dans le salon\n- PNJ signalés par un badge « PNJ » écrit en toutes lettres",

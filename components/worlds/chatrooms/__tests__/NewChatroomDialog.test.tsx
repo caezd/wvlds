@@ -13,7 +13,8 @@ const toastSuccess = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ userId: "u1" }) }));
-vi.mock("@/components/providers/FeatureFlagsProvider", () => ({ useFeatureFlags: () => ({ world_map: false }) }));
+const flags = vi.hoisted(() => ({ world_map: false }));
+vi.mock("@/components/providers/FeatureFlagsProvider", () => ({ useFeatureFlags: () => flags }));
 vi.mock("sonner", () => ({ toast: { error: toastError, success: toastSuccess } }));
 const addCreatedWorldRoom = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/worldRoomsStore", async (importOriginal) => ({
@@ -75,6 +76,20 @@ function mockCoarsePointer(matches: boolean) {
   })) as unknown as typeof window.matchMedia;
 }
 
+/** Ouvre une liste du formulaire (le Select de l'application) et la rend. */
+async function openSelect(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(await screen.findByRole("combobox", { name: label }));
+  return screen.findByRole("listbox");
+}
+
+async function choose(user: ReturnType<typeof userEvent.setup>, label: string, name: string) {
+  const liste = await openSelect(user, label);
+  await user.click(within(liste).getByRole("option", { name }));
+}
+
+const openSequel = (user: ReturnType<typeof userEvent.setup>) => openSelect(user, "Suite de…");
+const chooseSequel = (user: ReturnType<typeof userEvent.setup>, name: string) => choose(user, "Suite de…", name);
+
 async function openForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByText(/Nouveau jeu…/));
   return screen.findByRole("heading", { name: "Nouveau jeu" });
@@ -83,6 +98,7 @@ async function openForm(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockCoarsePointer(false);
+  flags.world_map = false;
 });
 
 describe("NewChatroomDialog — conteneur", () => {
@@ -273,6 +289,52 @@ describe("NewChatroomDialog — fermeture", () => {
   });
 });
 
+describe("NewChatroomDialog — lieu et catégorie", () => {
+  it("le salon naît dans la catégorie choisie", async () => {
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [{ data: [{ id: "cat-1", title: "Intrigues" }, { id: "cat-2", title: "Voyages" }] }, { data: { id: "c-neuf" } }],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+
+    expect(await screen.findByRole("combobox", { name: "Catégorie" })).toHaveTextContent("Aucune");
+    await choose(user, "Catégorie", "Voyages");
+    expect(screen.getByRole("combobox", { name: "Catégorie" })).toHaveTextContent("Voyages");
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(mock.buildersFor("chatrooms")).toHaveLength(1));
+    expect(mock.buildersFor("chatrooms")[0].insert).toHaveBeenCalledWith(expect.objectContaining({ category_id: "cat-2" }));
+  });
+
+  it("le salon naît sur le lieu choisi ; « Aucun lieu » le défait", async () => {
+    flags.world_map = true;
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        { data: [{ id: "pin1", title: "Le port", color: "#ff0000" }, { id: "pin2", title: "La tour", color: "#00ff00" }] },
+        { data: [] },
+        { data: { id: "c-neuf" } },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" />);
+    await openForm(user);
+
+    await choose(user, "Lieu", "Le port");
+    await choose(user, "Lieu", "Aucun lieu");
+    expect(screen.getByRole("combobox", { name: "Lieu" })).toHaveTextContent("Aucun lieu");
+    await choose(user, "Lieu", "La tour");
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(mock.buildersFor("chatrooms")).toHaveLength(1));
+    expect(mock.buildersFor("chatrooms")[0].insert).toHaveBeenCalledWith(expect.objectContaining({ map_pin_id: "pin2" }));
+  });
+});
+
 describe("NewChatroomDialog — « Jouer ici » depuis la carte", () => {
   it("s'ouvre de lui-même, situé sur le lieu demandé", async () => {
     const mock = setup();
@@ -348,12 +410,14 @@ describe("NewChatroomDialog — chronologie", () => {
     await openForm(user);
 
     const suite = await screen.findByRole("combobox", { name: "Suite de…" });
-    const groupes = suite.querySelectorAll("optgroup");
-    expect([...groupes].map((g) => g.getAttribute("label"))).toEqual(["Où vous jouez", "Autres salons"]);
-    expect(within(groupes[0] as HTMLElement).getAllByRole("option").map((o) => o.textContent)).toEqual([
+    expect(suite).toHaveTextContent("Suite de… (facultatif)");
+    const liste = await openSequel(user);
+    const groupes = within(liste).getAllByRole("group");
+    expect(groupes.map((g) => g.getAttribute("aria-labelledby") && document.getElementById(g.getAttribute("aria-labelledby")!)?.textContent))
+      .toEqual(["Où vous jouez", "Autres salons"]);
+    expect(within(groupes[0]).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "Un salon à venir", "Mon salon récent",
     ]);
-    expect(suite).toHaveValue("");
   });
 
   it("une fois le salon daté, pas de suite d'un salon situé après lui", async () => {
@@ -361,9 +425,9 @@ describe("NewChatroomDialog — chronologie", () => {
     const user = userEvent.setup();
     render(<NewChatroomDialog worldId="w1" timelineConfig={{ ...CONFIG, require_date: true }} />);
     await openForm(user);
-    const suite = await screen.findByRole("combobox", { name: "Suite de…" });
-    expect(within(suite).queryByRole("option", { name: "Un salon à venir" })).toBeNull();
-    expect(within(suite).getByRole("option", { name: "Mon salon récent" })).toBeInTheDocument();
+    const liste = await openSequel(user);
+    expect(within(liste).queryByRole("option", { name: "Un salon à venir" })).toBeNull();
+    expect(within(liste).getByRole("option", { name: "Mon salon récent" })).toBeInTheDocument();
   });
 
   it("le salon naît relié à celui qu'il suit ; proposé, on est prévenu", async () => {
@@ -371,7 +435,7 @@ describe("NewChatroomDialog — chronologie", () => {
     const user = userEvent.setup();
     render(<NewChatroomDialog worldId="w1" timelineConfig={CONFIG} />);
     await openForm(user);
-    await user.selectOptions(await screen.findByRole("combobox", { name: "Suite de…" }), "Un vieux salon");
+    await chooseSequel(user, "Un vieux salon");
     await user.click(screen.getByRole("button", { name: "Créer" }));
 
     await waitFor(() => expect(mock.buildersFor("chatroom_sequels")).toHaveLength(1));
@@ -389,7 +453,7 @@ describe("NewChatroomDialog — chronologie", () => {
     const user = userEvent.setup();
     render(<NewChatroomDialog worldId="w1" timelineConfig={CONFIG} />);
     await openForm(user);
-    await user.selectOptions(await screen.findByRole("combobox", { name: "Suite de…" }), "Mon salon récent");
+    await chooseSequel(user, "Mon salon récent");
     await user.click(screen.getByRole("button", { name: "Créer" }));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(
       "Le salon est créé, mais pas le lien de suite : refaites-le depuis ses réglages.",
@@ -397,5 +461,20 @@ describe("NewChatroomDialog — chronologie", () => {
     expect(mock.buildersFor("chatrooms")).toHaveLength(1);
     expect(push).toHaveBeenCalledWith("/c/c-neuf");
     erreur.mockRestore();
+  });
+
+  it("« Aucune » défait le choix : le salon naît sans suite", async () => {
+    const mock = setup();
+    const user = userEvent.setup();
+    render(<NewChatroomDialog worldId="w1" timelineConfig={CONFIG} />);
+    await openForm(user);
+    await chooseSequel(user, "Un vieux salon");
+    expect(screen.getByRole("combobox", { name: "Suite de…" })).toHaveTextContent("Un vieux salon");
+    await chooseSequel(user, "Aucune");
+    expect(screen.getByRole("combobox", { name: "Suite de…" })).toHaveTextContent("Suite de… (facultatif)");
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/c/c-neuf"));
+    expect(mock.buildersFor("chatroom_sequels")).toHaveLength(0);
   });
 });
