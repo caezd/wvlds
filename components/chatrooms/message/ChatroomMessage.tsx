@@ -297,7 +297,6 @@ function ChatroomMessage({
             onAnchorEdited={onAnchorEdited}
             votes={message.votes}
             onVotesUpdated={onVotesUpdated}
-            attached={continued}
           />
         </div>
         {isMobile && blockHasActions && (

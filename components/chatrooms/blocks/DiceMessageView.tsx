@@ -9,7 +9,6 @@ import type { DiceRoll } from "@/lib/worldDice";
 import { DiceBlockView } from "./DiceBlock";
 import { GameBlockToolbar } from "./GameBlockShell";
 import { useChatroomDiceRules } from "./chatroomDiceRules";
-import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 /**
@@ -28,7 +27,6 @@ export function DiceMessageView({
   roll,
   label,
   mine,
-  attached,
   onEditLabel,
   onDelete,
 }: {
@@ -37,8 +35,6 @@ export function DiceMessageView({
   roll?: DiceRoll | null;
   label: string;
   mine: boolean;
-  /** Rattaché à la réponse du même persona : centré sous elle, les actions à droite. */
-  attached?: boolean;
   onEditLabel: (label: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
@@ -54,12 +50,8 @@ export function DiceMessageView({
   }
 
   return (
-    <div
-      className={cn(
-        "group/gblock w-full py-4 flex items-center justify-between gap-4",
-        attached && "relative justify-center",
-      )}
-    >
+    // Toujours centré, qu'il suive une réponse ou non ; les actions à droite.
+    <div className="group/gblock relative flex w-full items-center justify-center py-4">
       <DiceBlockView
         block={block}
         roll={roll}
@@ -86,7 +78,7 @@ export function DiceMessageView({
       </DiceBlockView>
       <GameBlockToolbar
         mine={mine}
-        className={cn("shrink-0", attached && "absolute right-0 rounded-md bg-background")}
+        className="absolute right-0 shrink-0 rounded-md bg-background"
         editDialog={allowEdit ? (
           <Button
             type="button"
