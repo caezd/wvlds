@@ -1093,7 +1093,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             />
                         }
                     >
-                        <span className="relative size-8 shrink-0 overflow-hidden rounded-full border bg-muted">
+                        {/* Carré arrondi, comme le sélecteur de persona du composeur ouvert. */}
+                        <span className="relative size-8 shrink-0 overflow-hidden rounded-md border bg-muted">
                             {selectedPersona ? (
                                 selectedPersona.avatar_url ? (
                                     <Image
@@ -1117,7 +1118,12 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                             {previewText || placeholder}
                         </span>
-                        {previewText && <SendHorizontal className="size-4 shrink-0 text-primary" />}
+                        {/* Même carré que l'avatar en face : l'icône n'est pas collée au bord. */}
+                        {previewText && (
+                            <span className="grid size-8 shrink-0 place-items-center text-primary">
+                                <SendHorizontal className="size-4" />
+                            </span>
+                        )}
                     </DrawerTrigger>
                     <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 rounded-lg">
                         <DrawerTitle className="sr-only">{tChatrooms("composerTitle")}</DrawerTitle>
