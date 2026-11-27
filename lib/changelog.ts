@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
-    text: "Nouveau jeu : listes Lieu, Catégorie et « Suite de… » lisibles, sur le fond sombre de l’application.",
+    text: "Nouveau jeu : listes lisibles, tiroir mobile sur toute la hauteur.\n- Lieu, Catégorie et « Suite de… » : listes sur le fond sombre de l’application\n- sur mobile : tiroir sur toute la hauteur de l’écran, coins arrondis comme sur ordinateur",
   },
   {
     date: "2026-11-27",

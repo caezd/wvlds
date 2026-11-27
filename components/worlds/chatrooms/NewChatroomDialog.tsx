@@ -476,7 +476,8 @@ export function NewChatroomDialog({
 
       {isMobile ? (
         <Drawer open={open} onOpenChange={(next) => { if (!next) requestClose(); }} showSwipeHandle>
-          <DrawerContent className="max-h-[calc(100dvh-1rem)]">
+          {/* Toute la hauteur, moins la marge du tiroir ; l'arrondi du dialogue sur ordinateur. */}
+          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] rounded-lg">
             <DrawerHeader>
               <DrawerTitle>{t("dialogTitle")}</DrawerTitle>
               <DrawerDescription className="sr-only">{t("dialogDescription")}</DrawerDescription>
