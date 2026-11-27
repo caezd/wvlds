@@ -1362,9 +1362,8 @@
         "limit": "At most {max} dice per world.",
         "faces": "Faces of {name}",
         "facesTitle": "Faces of “{name}”",
-        "facesHelp": "One image per face. The rolled number stays the die's own; you can hide it under the image.",
+        "facesHelp": "One image per face, shown on its own, without its number; a roll that lands on one has no total.",
         "faceImage": "Image for face {value}",
-        "faceHideValue": "Hide the number of face {value}",
         "faceRemove": "Remove the image of face {value}",
         "facesTooMany": "Face images are limited to dice with at most {max} faces."
       }

@@ -1362,9 +1362,8 @@
         "limit": "{max} dés au plus par monde.",
         "faces": "Faces de {name}",
         "facesTitle": "Faces de « {name} »",
-        "facesHelp": "Une image par face. Le nombre tiré reste celui du dé ; vous pouvez le masquer sous l'image.",
+        "facesHelp": "Une image par face, montrée seule, sans son nombre ; un lancer qui en tire une n'a pas de total.",
         "faceImage": "Image de la face {value}",
-        "faceHideValue": "Masquer le nombre de la face {value}",
         "faceRemove": "Retirer l'image de la face {value}",
         "facesTooMany": "Les images de faces sont réservées aux dés de {max} faces au plus."
       }

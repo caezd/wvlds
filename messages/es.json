@@ -1362,9 +1362,8 @@
         "limit": "Como máximo {max} dados por mundo.",
         "faces": "Caras de {name}",
         "facesTitle": "Caras de «{name}»",
-        "facesHelp": "Una imagen por cara. El número obtenido sigue siendo el del dado; puede ocultarlo bajo la imagen.",
+        "facesHelp": "Una imagen por cara, mostrada sola, sin su número; una tirada que saca una no tiene total.",
         "faceImage": "Imagen de la cara {value}",
-        "faceHideValue": "Ocultar el número de la cara {value}",
         "faceRemove": "Quitar la imagen de la cara {value}",
         "facesTooMany": "Las imágenes de caras se reservan a los dados de {max} caras como máximo."
       }

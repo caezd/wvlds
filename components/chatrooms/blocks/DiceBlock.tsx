@@ -16,9 +16,9 @@ import { useChatroomDiceRules } from "./chatroomDiceRules";
  * Le résultat se lit dans la ligne `dice_rolls` tirée par la base (`roll`,
  * migration 270) ; un ancien lancer, sans ligne, se lit dans le texte du
  * message. Le total ne s'écrit que s'il apprend quelque chose (plusieurs dés,
- * ou un modificateur), et se tait quand une face tirée cache son nombre
- * (migration 272) : il la trahirait. Critique et échec critique suivent les
- * options du monde (migration 273).
+ * ou un modificateur). Une face en image (migration 272) se montre seule, sans
+ * son nombre : le lancer n'a alors ni total ni modificateur. Critique et échec
+ * critique suivent les options du monde (migration 273).
  */
 export function DiceBlockView({
   block,
@@ -83,19 +83,15 @@ export function DiceBlockView({
           const face = faceOf(faces, value);
           if (face) {
             return (
-              <span key={i} className="flex flex-col items-center gap-0.5">
-                {/* eslint-disable-next-line @next/next/no-img-element -- image de face, déjà réduite au téléversement */}
-                <img
-                  src={face.image}
-                  alt={t("diceFace", { value })}
-                  className="size-9 rounded-md object-contain"
-                  loading="lazy"
-                  decoding="async"
-                />
-                {!face.hide_value && (
-                  <span className={cn("text-xs font-semibold leading-none tabular-nums", outcomeTone)}>{value}</span>
-                )}
-              </span>
+              // eslint-disable-next-line @next/next/no-img-element -- image de face, déjà réduite au téléversement
+              <img
+                key={i}
+                src={face.image}
+                alt={t("diceFace", { value })}
+                className="size-9 rounded-md object-contain"
+                loading="lazy"
+                decoding="async"
+              />
             );
           }
           return (
@@ -111,7 +107,7 @@ export function DiceBlockView({
             </span>
           );
         })}
-        {modifier !== 0 && (
+        {modifier !== 0 && !hideNumbers && (
           <span className="text-sm font-medium tabular-nums text-muted-foreground">
             {modifier > 0 ? `+${modifier}` : `−${Math.abs(modifier)}`}
           </span>

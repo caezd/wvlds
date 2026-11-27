@@ -29,6 +29,7 @@ import {
   STANDARD_DICE_FACES,
   standardDie,
   standardFacesOf,
+  storedDieFaces,
   worldDieInputSchema,
   type DiceMode,
   type DiceRules,
@@ -248,7 +249,7 @@ function WorldDieRow({
   });
 
   // Les faces en image (migration 272), enregistrées à part du reste du dé.
-  const [faces, setFaces] = React.useState<DieFace[]>(die.faces ?? []);
+  const [faces, setFaces] = React.useState<DieFace[]>(() => storedDieFaces(die.faces));
   const [editingFaces, setEditingFaces] = React.useState(false);
   useAutoSave({
     value: faces,

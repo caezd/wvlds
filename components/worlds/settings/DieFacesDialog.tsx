@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Eye, EyeOff, ImagePlus, Loader2, X } from "lucide-react";
+import { ImagePlus, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -75,22 +75,13 @@ export function DieFacesDialog({
       const { error } = await storage.upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, contentType: converted.type });
       if (error) throw error;
       const previous = faceOf(faces, value);
-      onChange(setFace(faces, {
-        value,
-        image: storage.getPublicUrl(path).data.publicUrl,
-        ...(previous?.hide_value ? { hide_value: true } : {}),
-      }));
+      onChange(setFace(faces, { value, image: storage.getPublicUrl(path).data.publicUrl }));
       await removeDieFaceImages(worldId, [previous?.image]);
     } catch {
       toast.error(tCommon("uploadError"));
     } finally {
       setUploading(null);
     }
-  }
-
-  function toggleHidden(face: DieFace) {
-    const { hide_value, ...rest } = face;
-    onChange(setFace(faces, hide_value ? rest : { ...rest, hide_value: true }));
   }
 
   function clear(face: DieFace) {
@@ -145,40 +136,19 @@ export function DieFacesDialog({
                       }}
                     />
                   </label>
-                  <span
-                    className={cn(
-                      "text-sm font-semibold tabular-nums",
-                      face?.hide_value ? "text-muted-foreground line-through" : "text-foreground",
-                    )}
-                  >
-                    {value}
-                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-foreground">{value}</span>
                   {face && (
-                    <div className="flex items-center gap-0.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-muted-foreground"
-                        aria-pressed={!!face.hide_value}
-                        aria-label={t("faceHideValue", { value })}
-                        title={t("faceHideValue", { value })}
-                        onClick={() => toggleHidden(face)}
-                      >
-                        {face.hide_value ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-muted-foreground"
-                        aria-label={t("faceRemove", { value })}
-                        title={t("faceRemove", { value })}
-                        onClick={() => clear(face)}
-                      >
-                        <X className="size-3.5" />
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground"
+                      aria-label={t("faceRemove", { value })}
+                      title={t("faceRemove", { value })}
+                      onClick={() => clear(face)}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
                   )}
                 </li>
               );

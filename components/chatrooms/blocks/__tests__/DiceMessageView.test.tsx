@@ -112,23 +112,20 @@ describe("DiceMessageView", () => {
   describe("faces en image (migration 272)", () => {
     const IMG = "https://x.supabase.co/storage/v1/object/public/worlds/world-1/dice/a.webp";
 
-    it("une face tirée qui a une image la montre, avec son nombre", () => {
+    it("une face tirée qui a une image la montre seule, sans son nombre", () => {
       afficher({ roll: { ...ROLL, results: [3], total: 3, faces: [{ value: 3, image: IMG }] } });
       const image = screen.getByRole("img", { name: "Face 3" });
       expect(image).toHaveAttribute("src", IMG);
-      expect(screen.getAllByText("3").length).toBeGreaterThan(0);
+      expect(screen.getByTestId("dice-roll-result")).toHaveTextContent(/^$/);
     });
 
-    it("une face qui cache son nombre : ni nombre ni total, l'image seule", () => {
+    it("un lancer qui tire une face en image : ni total ni modificateur", () => {
       afficher({
-        roll: { ...ROLL, count: 2, results: [1, 3], total: 4, faces: [{ value: 3, image: IMG, hide_value: true }] },
+        roll: { ...ROLL, count: 2, modifier: 1, results: [1, 3], total: 5, faces: [{ value: 3, image: IMG }] },
       });
       expect(screen.getByRole("img", { name: "Face 3" })).toBeInTheDocument();
-      // La face sans image garde son nombre ; le total, lui, trahirait la face cachée.
-      expect(screen.getByText("1")).toBeInTheDocument();
-      expect(screen.queryByText("4")).toBeNull();
-      expect(screen.queryByText("3")).toBeNull();
-      expect(screen.queryByText(/et obtenu/)).toBeNull();
+      // La face sans image garde son nombre ; rien d'autre ne s'additionne.
+      expect(screen.getByTestId("dice-roll-result")).toHaveTextContent(/^1$/);
     });
 
     it("sans image, rien ne change", () => {

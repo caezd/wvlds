@@ -183,21 +183,19 @@ describe("WorldDiceSettings — les faces en image (migration 272)", () => {
     ]);
   });
 
-  it("masquer le nombre d'une face, puis retirer son image", async () => {
-    listWorldDice.mockResolvedValue({ ok: true, dice: [{ ...D6, faces: [{ value: 2, image: IMG }] }] });
+  it("retirer l'image d'une face ; les autres repartent en valeur et image seules", async () => {
+    // `hide_value` : une option des faces retirée depuis, encore présente sur d'anciens dés.
+    const IMG5 = IMG.replace("a.webp", "e.webp");
+    const anciennes = [{ value: 2, image: IMG, hide_value: true }, { value: 5, image: IMG5, hide_value: true }];
+    listWorldDice.mockResolvedValue({ ok: true, dice: [{ ...D6, faces: anciennes }] });
     const user = utilisateur();
     render(<WorldDiceSettings world={monde()} />);
     await user.click(await screen.findByRole("button", { name: "Faces de d6" }));
     const fenetre = await screen.findByRole("dialog");
-    const masquer = within(fenetre).getByRole("button", { name: "Masquer le nombre de la face 2" });
-    expect(masquer).toHaveAttribute("aria-pressed", "false");
-    await user.click(masquer);
-    await attendre();
-    expect(setWorldDieFaces).toHaveBeenLastCalledWith("d6", [{ value: 2, image: IMG, hide_value: true }]);
 
     await user.click(within(fenetre).getByRole("button", { name: "Retirer l'image de la face 2" }));
     await attendre();
-    expect(setWorldDieFaces).toHaveBeenLastCalledWith("d6", []);
+    expect(setWorldDieFaces).toHaveBeenLastCalledWith("d6", [{ value: 5, image: IMG5 }]);
     expect(effacer).toHaveBeenCalledWith(["world-w1/dice/a.webp"]);
   });
 

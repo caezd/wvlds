@@ -25,8 +25,8 @@ export const MAX_FREE_FACES = 1000;
 /** Les faces en image : un dé de 100 valeurs au plus (migration 272). */
 export const MAX_DIE_FACES = 100;
 
-/** Une valeur du dé habillée d'une image ; `hide_value` : l'image seule. */
-export type DieFace = { value: number; image: string; hide_value?: boolean };
+/** Une valeur du dé habillée d'une image, montrée seule, sans son nombre. */
+export type DieFace = { value: number; image: string };
 
 export type WorldDie = {
   id: string;
@@ -85,7 +85,6 @@ export const dieFacesSchema = z
     z.strictObject({
       value: z.number().int(),
       image: httpUrlSchema,
-      hide_value: z.boolean().optional(),
     }),
   )
   .max(MAX_DIE_FACES)
@@ -111,9 +110,17 @@ export function removeFace(faces: readonly DieFace[], value: number): DieFace[] 
   return faces.filter((f) => f.value !== value);
 }
 
-/** Une face tirée cache son nombre : le total la trahirait, il se tait aussi. */
+/**
+ * Une face en image ne dit pas son nombre — certaines n'en ont pas besoin. Un
+ * lancer qui en tire une n'a donc ni total ni modificateur.
+ */
 export function rollHidesNumbers(roll: Pick<DiceRoll, "results" | "faces">): boolean {
-  return roll.results.some((v) => faceOf(roll.faces, v)?.hide_value === true);
+  return roll.results.some((v) => faceOf(roll.faces, v) !== undefined);
+}
+
+/** Les faces d'un dé enregistré, en valeur et image seules (d'anciennes portent `hide_value`). */
+export function storedDieFaces(faces: readonly DieFace[] | null | undefined): DieFace[] {
+  return (faces ?? []).map(({ value, image }) => ({ value, image }));
 }
 
 export function standardDie(faces: StandardDiceFaces): WorldDieInput {

@@ -244,7 +244,7 @@ describe("faces d'un dé (migration 272)", () => {
   });
 
   it("dieFacesSchema : une image http(s) par valeur, sans doublon", () => {
-    expect(dieFacesSchema.safeParse([{ value: 1, image: IMG }, { value: 2, image: IMG, hide_value: true }]).success).toBe(true);
+    expect(dieFacesSchema.safeParse([{ value: 1, image: IMG }, { value: 2, image: IMG }]).success).toBe(true);
     expect(dieFacesSchema.safeParse([{ value: 1, image: IMG }, { value: 1, image: IMG }]).success).toBe(false);
     expect(dieFacesSchema.safeParse([{ value: 1, image: "javascript:alert(1)" }]).success).toBe(false);
     expect(dieFacesSchema.safeParse([{ value: 1.5, image: IMG }]).success).toBe(false);
@@ -256,9 +256,10 @@ describe("faces d'un dé (migration 272)", () => {
   it("setFace remplace ou ajoute, dans l'ordre des valeurs ; removeFace retire", () => {
     const faces = setFace(setFace([], { value: 3, image: IMG }), { value: 1, image: IMG });
     expect(faces.map((f) => f.value)).toEqual([1, 3]);
-    expect(setFace(faces, { value: 3, image: IMG, hide_value: true })).toEqual([
+    const AUTRE = IMG.replace("a.webp", "b.webp");
+    expect(setFace(faces, { value: 3, image: AUTRE })).toEqual([
       { value: 1, image: IMG },
-      { value: 3, image: IMG, hide_value: true },
+      { value: 3, image: AUTRE },
     ]);
     expect(removeFace(faces, 1)).toEqual([{ value: 3, image: IMG }]);
     expect(faceOf(faces, 3)?.image).toBe(IMG);
@@ -266,10 +267,10 @@ describe("faces d'un dé (migration 272)", () => {
     expect(faceOf(undefined, 2)).toBeUndefined();
   });
 
-  it("un lancer cache ses nombres dès qu'une face tirée cache le sien", () => {
-    const roll = { results: [1, 3], faces: [{ value: 1, image: IMG }, { value: 3, image: IMG, hide_value: true }] };
-    expect(rollHidesNumbers(roll)).toBe(true);
-    expect(rollHidesNumbers({ results: [1], faces: roll.faces })).toBe(false);
+  it("un lancer cache ses nombres dès qu'une face tirée est en image", () => {
+    const faces = [{ value: 3, image: IMG }];
+    expect(rollHidesNumbers({ results: [1, 3], faces })).toBe(true);
+    expect(rollHidesNumbers({ results: [1, 2], faces })).toBe(false);
     expect(rollHidesNumbers({ results: [1], faces: undefined })).toBe(false);
   });
 });
