@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-26",
+    category: "Correctif",
+    area: "Personas",
+    text: "Personas bloqués après un changement de la fiche par défaut : ils peuvent de nouveau poster.\n- fiche par défaut désactivée, supprimée ou mise en corbeille : les fiches du monde sont recalculées\n- cadenas du sélecteur de persona retiré pour une fiche complète\n- faceclaim exigé par le monde : vérifié dès la création du persona ou son arrivée dans le monde",
+  },
+  {
+    date: "2026-11-26",
     category: "Fonctionnalité",
     area: "Monde",
     text: "Dés du monde : Paramètres › Jeu › Dés.\n- dés standard (d4 à d100) d’un geste, ou sur mesure : nom, minimum, maximum\n- dé masqué : absent de la liste des joueurs, lancé par l’équipe du monde seulement\n- option « Dés du monde seulement » : plus de formule libre dans les salons\n- fenêtre « Lancer un dé » : dés du monde à choisir, avec nombre de dés et modificateur\n- tirage fait par le serveur ; un lancer ne se modifie plus, sauf option « Permettre de modifier un lancer »\n- monde aux dés du monde seulement : un lancer non tiré par le serveur est marqué « Non vérifié »",
