@@ -40,7 +40,7 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { indexCatalog } from "@/lib/worldCatalog";
 // Inventaire et compétences (fiches d'objets du catalogue) : chargés à
 // l'ouverture d'une fiche qui en a, plutôt qu'avec chaque salon.
-const SkillsFieldView = dynamic(() => import("@/components/personas/fields/CatalogFieldViews").then((m) => m.SkillsFieldView));
+const SkillsFieldView = dynamic(() => import("@/components/personas/fields/CatalogFieldViews").then((m) => m.SkillsFieldView), { loading: () => null });
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
 import type { WorldCatalogItem } from "@/types/worlds";
 import { useTranslations } from "next-intl";

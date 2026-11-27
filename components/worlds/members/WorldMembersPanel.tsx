@@ -45,7 +45,7 @@ import { MemberManageMenu } from "./MemberManageMenu";
 import { displayNameOf, type WorldMemberCardData } from "./WorldMemberCard";
 import { WorldMemberCardDialog } from "./WorldMemberCardDialog";
 
-const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
+const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog), { loading: () => null });
 
 const EMPTY_FILTERS: CommunityFilters = { ...EMPTY_PERSONA_FILTERS, online: false };
 

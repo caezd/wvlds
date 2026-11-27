@@ -12,6 +12,7 @@ import { SectionLabel } from "@/components/ui/section-label";
 
 const PersonaProfileSheetTrigger = dynamic(() =>
   import("@/components/personas/PersonaProfileSheetTrigger").then((m) => m.PersonaProfileSheetTrigger),
+  { loading: () => null },
 );
 
 const DEFAULT_PERSONA_LIMIT = 10;

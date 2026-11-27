@@ -30,14 +30,15 @@ import {
   type WorldHomeGridItem,
 } from "./worldHomeGrid";
 
-const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
-const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
-const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
+const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget), { loading: () => null });
+const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget), { loading: () => null });
+const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget), { loading: () => null });
 // Import paresseux : ce composant embarque l'analyseur HTML et l'assainisseur
 // du bloc libre (cf. blocks/homeHtmlBlock.ts). Une page d'accueil sans bloc
 // HTML — le cas courant — ne les télécharge donc jamais.
 const WorldHomeHtmlBlockView = dynamic(() =>
   import("./blocks/WorldHomeHtmlBlockView").then((m) => m.WorldHomeHtmlBlockView),
+  { loading: () => null },
 );
 
 

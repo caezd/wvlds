@@ -31,8 +31,8 @@ import {
 // la demande. En `dynamic()` (comme ChatroomStatsSheet juste en dessous), leur
 // code sort du bundle initial du salon et n'est téléchargé qu'après hydratation
 // — ChatroomSettingsSheet fait à lui seul 630 lignes.
-const ChatroomSettingsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomSettingsSheet"));
-const ChatroomStatsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomStatsSheet"));
+const ChatroomSettingsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomSettingsSheet"), { loading: () => null });
+const ChatroomStatsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomStatsSheet"), { loading: () => null });
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
 import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
@@ -89,6 +89,7 @@ import {
 } from "@/lib/chatroomAccess";
 const SearchCenter = dynamic(() =>
   import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
+  { loading: () => null },
 );
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";

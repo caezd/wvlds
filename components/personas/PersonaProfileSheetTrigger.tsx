@@ -32,7 +32,7 @@ import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { PersonaTaxBadge } from "./PersonaTaxBadge";
 // La relecture n'apparaît que fiche ouverte, et seulement aux relecteurs :
 // chargée à ce moment-là plutôt qu'avec chaque salon.
-const PersonaReviewSection = dynamic(() => import("./PersonaReviewPanel").then((m) => m.PersonaReviewSection));
+const PersonaReviewSection = dynamic(() => import("./PersonaReviewPanel").then((m) => m.PersonaReviewSection), { loading: () => null });
 import { PersonaJournalSection } from "./PersonaJournalSection";
 import { PersonaInventoryTab } from "./PersonaInventorySection";
 import { usePersonaWallet } from "@/hooks/usePersonaWallet";

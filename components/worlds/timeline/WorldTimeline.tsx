@@ -61,8 +61,8 @@ import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 // Les dialogues de gestion ne servent qu'à qui gère la chronologie, et
 // seulement une fois ouverts : leur code (sélecteur de date, formulaires)
 // n'est chargé qu'à la première ouverture.
-const TimelineArcsDialog = dynamic(() => import("@/components/worlds/timeline/TimelineArcsDialog").then((m) => m.TimelineArcsDialog));
-const TimelineEventDialog = dynamic(() => import("@/components/worlds/timeline/TimelineEventDialog").then((m) => m.TimelineEventDialog));
+const TimelineArcsDialog = dynamic(() => import("@/components/worlds/timeline/TimelineArcsDialog").then((m) => m.TimelineArcsDialog), { loading: () => null });
+const TimelineEventDialog = dynamic(() => import("@/components/worlds/timeline/TimelineEventDialog").then((m) => m.TimelineEventDialog), { loading: () => null });
 import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
 import { TimelineSequelRequests, type SequelRequest } from "@/components/worlds/timeline/TimelineSequelRequests";
 import {

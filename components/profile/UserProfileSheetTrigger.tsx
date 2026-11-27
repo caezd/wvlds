@@ -22,10 +22,13 @@ import { levelInfo } from "@/lib/xp";
 // Le rendu Markdown (micromark, remark…) ne sert ici qu'à la bio et à la fiche
 // de membre, affichées une fois la fiche ouverte et le profil chargé : ils sont
 // chargés avec elles plutôt qu'avec la page. Ce déclencheur est présent sur
-// toutes les pages (chat en direct du monde).
-const MarkdownRenderer = dynamic(() => import("@/components/MarkdownRenderer"));
+// toutes les pages (chat en direct du monde). `loading` leur donne leur propre
+// frontière Suspense : sans elle, la première ouverture suspendait jusqu'au
+// loading.tsx de la route, et toute l'application clignotait.
+const MarkdownRenderer = dynamic(() => import("@/components/MarkdownRenderer"), { loading: () => null });
 const MemberWorldCardSection = dynamic(() =>
   import("@/components/worlds/members/MemberWorldCardSection").then((m) => m.MemberWorldCardSection),
+  { loading: () => null },
 );
 
 function formatMemberSince(value: string) {

@@ -28,6 +28,7 @@ import { worldHasShops } from "@/lib/worldShops";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.
 const SearchCenter = dynamic(() =>
   import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
+  { loading: () => null },
 );
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande

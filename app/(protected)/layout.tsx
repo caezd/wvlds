@@ -14,6 +14,7 @@ import { LocaleSync } from "@/components/i18n/LocaleSync";
 // dédié pour la quasi-totalité des chargements de pages protégées.
 const UsernameRequiredDialog = dynamic(() =>
   import("@/components/UsernameRequiredDialog").then((m) => m.UsernameRequiredDialog),
+  { loading: () => null },
 );
 
 export default async function PageLayout({
