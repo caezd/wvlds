@@ -11,8 +11,8 @@ import { DiceDialog } from "@/components/chatrooms/blocks/DiceDialog";
 import { ChatroomDiceRulesProvider } from "@/components/chatrooms/blocks/chatroomDiceRules";
 import type { DiceMode, WorldDie } from "@/lib/worldDice";
 
-const D6: WorldDie = { id: "d6", world_id: "w1", name: "d6", min_value: 1, max_value: 6, hidden: false, position: 0 };
-const PEUR: WorldDie = { id: "peur", world_id: "w1", name: "Dé de peur", min_value: 0, max_value: 5, hidden: true, position: 1 };
+const D6: WorldDie = { id: "d6", world_id: "w1", name: "d6", min_value: 1, max_value: 6, hidden: false, position: 0, faces: [] };
+const PEUR: WorldDie = { id: "peur", world_id: "w1", name: "Dé de peur", min_value: 0, max_value: 5, hidden: true, position: 1, faces: [] };
 
 function ouvrir(mode: DiceMode = "free") {
   const onRoll = vi.fn();

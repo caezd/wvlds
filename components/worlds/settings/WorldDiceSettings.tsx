@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Dices, Eye, EyeOff, ListChecks, Settings2, Trash2 } from "lucide-react";
+import { Dices, Eye, EyeOff, ImageIcon, ListChecks, Settings2, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   deleteWorldDie,
   listWorldDice,
   setWorldDiceRules,
+  setWorldDieFaces,
   updateWorldDie,
 } from "@/app/actions/worldDice";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -31,11 +32,13 @@ import {
   worldDieInputSchema,
   type DiceMode,
   type DiceRules,
+  type DieFace,
   type WorldDie,
   type WorldDieInput,
 } from "@/lib/worldDice";
 import type { World } from "@/types/worlds";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
+import { DieFacesDialog, removeDieFaceImages } from "./DieFacesDialog";
 import { FIELD, SettingsAddRow, SettingsChoiceCards, SettingsEmpty, SettingsSection, ToggleItem, ToggleList } from "./FeatureLayout";
 
 /**
@@ -108,14 +111,18 @@ export function WorldDiceSettings({
     setPicking(false);
   }
 
-  // Retiré tout de suite ; remis à sa place si la base refuse.
-  async function remove(die: WorldDie) {
+  // Retiré tout de suite ; remis à sa place si la base refuse. Ses images de
+  // faces partent avec lui (les lancers passés gardent les leurs en copie,
+  // mais pas le fichier : ils retombent alors sur le nombre).
+  async function remove(die: WorldDie, faces: DieFace[]) {
     setDice((current) => (current ?? []).filter((d) => d.id !== die.id));
     const res = await deleteWorldDie(die.id);
     if (!res.ok) {
       toast.error(messageErreurAction(res.error, tCommon));
       setDice((current) => [...(current ?? []), die].sort((x, y) => x.position - y.position));
+      return;
     }
+    await removeDieFaceImages(world.id, faces.map((f) => f.image));
   }
 
   const full = (dice?.length ?? 0) >= MAX_WORLD_DICE;
@@ -166,7 +173,13 @@ export function WorldDiceSettings({
           <>
             <ul className="space-y-2">
               {dice.map((die, i) => (
-                <WorldDieRow key={die.id} die={die} index={i} onDelete={() => void remove(die)} />
+                <WorldDieRow
+                  key={die.id}
+                  worldId={world.id}
+                  die={die}
+                  index={i}
+                  onDelete={(faces) => void remove(die, faces)}
+                />
               ))}
             </ul>
             {full ? (
@@ -184,8 +197,18 @@ export function WorldDiceSettings({
   );
 }
 
-/** Une ligne de la liste : nom, plage, masqué, supprimer. Enregistrée d'elle-même. */
-function WorldDieRow({ die, index, onDelete }: { die: WorldDie; index: number; onDelete: () => void }) {
+/** Une ligne de la liste : nom, plage, faces, masqué, supprimer. Enregistrée d'elle-même. */
+function WorldDieRow({
+  worldId,
+  die,
+  index,
+  onDelete,
+}: {
+  worldId: string;
+  die: WorldDie;
+  index: number;
+  onDelete: (faces: DieFace[]) => void;
+}) {
   const t = useTranslations("worlds.settings.dice");
   const tCommon = useTranslations("common");
   const [draft, setDraft] = React.useState<WorldDieInput>({
@@ -209,6 +232,25 @@ function WorldDieRow({ die, index, onDelete }: { die: WorldDie; index: number; o
       return true;
     },
   });
+
+  // Les faces en image (migration 272), enregistrées à part du reste du dé.
+  const [faces, setFaces] = React.useState<DieFace[]>(die.faces ?? []);
+  const [editingFaces, setEditingFaces] = React.useState(false);
+  useAutoSave({
+    value: faces,
+    valid: true,
+    save: async (next) => {
+      const res = await setWorldDieFaces(die.id, next);
+      if (!res.ok) {
+        toast.error(messageErreurAction(res.error, tCommon));
+        return false;
+      }
+      return true;
+    },
+  });
+
+  // Une plage en cours de saisie, invalide, n'a pas de faces : celle du dé enregistré.
+  const facesRange = parsed.success ? parsed.data : die;
 
   const n = index + 1;
   const label = draft.name.trim() || t("name", { n });
@@ -261,6 +303,17 @@ function WorldDieRow({ die, index, onDelete }: { die: WorldDie; index: number; o
             type="button"
             variant="ghost"
             size="icon"
+            className={cn("size-9 text-muted-foreground", faces.length > 0 && "text-foreground")}
+            aria-label={t("faces", { name: label })}
+            title={t("faces", { name: label })}
+            onClick={() => setEditingFaces(true)}
+          >
+            <ImageIcon className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             className="size-9 text-muted-foreground"
             aria-pressed={draft.hidden}
             aria-label={t("hide", { name: label })}
@@ -271,7 +324,7 @@ function WorldDieRow({ die, index, onDelete }: { die: WorldDie; index: number; o
           </Button>
           <DeleteConfirmDialog
             description={t("removeConfirm", { name: label })}
-            onConfirm={onDelete}
+            onConfirm={() => onDelete(faces)}
             trigger={
               <Button
                 type="button"
@@ -288,6 +341,15 @@ function WorldDieRow({ die, index, onDelete }: { die: WorldDie; index: number; o
       </div>
       {nameMissing && <p className="text-xs text-destructive">{t("invalidName")}</p>}
       {rangeInvalid && <p className="text-xs text-destructive">{t("invalidRange")}</p>}
+      <DieFacesDialog
+        open={editingFaces}
+        onOpenChange={setEditingFaces}
+        worldId={worldId}
+        die={facesRange}
+        // Une plage resserrée laisse tomber les faces qui en sortent (la base fait de même).
+        faces={faces.filter((f) => f.value >= facesRange.min_value && f.value <= facesRange.max_value)}
+        onChange={setFaces}
+      />
     </li>
   );
 }

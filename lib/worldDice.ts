@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { DiceBlock } from "@/lib/chat-blocks";
+import { httpUrlSchema } from "@/lib/inputSchemas";
 
 // Les dés d'un monde (migration 270). Miroir des bornes de la base : un
 // changement ici en appelle un dans migrations/270_world_dice.sql (contrôlé
@@ -21,6 +22,11 @@ export const DIE_VALUE_LIMIT = 1_000_000;
 export const MAX_ROLL_COUNT = 100;
 /** Le plus grand dé d'une formule libre. */
 export const MAX_FREE_FACES = 1000;
+/** Les faces en image : un dé de 100 valeurs au plus (migration 272). */
+export const MAX_DIE_FACES = 100;
+
+/** Une valeur du dé habillée d'une image ; `hide_value` : l'image seule. */
+export type DieFace = { value: number; image: string; hide_value?: boolean };
 
 export type WorldDie = {
   id: string;
@@ -30,6 +36,7 @@ export type WorldDie = {
   max_value: number;
   hidden: boolean;
   position: number;
+  faces: DieFace[];
 };
 
 /** Ce qu'on règle d'un dé. */
@@ -45,6 +52,8 @@ export type DiceRoll = {
   modifier: number;
   results: number[];
   total: number;
+  /** Les faces tirées, copiées par la base au lancer (migration 272). */
+  faces?: DieFace[] | null;
 };
 
 /** Ce que la fenêtre « Lancer un dé » demande à la base. */
@@ -68,6 +77,42 @@ export const diceRulesSchema = z.strictObject({
   dice_allow_edit: z.boolean(),
 });
 export type DiceRules = z.infer<typeof diceRulesSchema>;
+
+export const dieFacesSchema = z
+  .array(
+    z.strictObject({
+      value: z.number().int(),
+      image: httpUrlSchema,
+      hide_value: z.boolean().optional(),
+    }),
+  )
+  .max(MAX_DIE_FACES)
+  .refine((faces) => new Set(faces.map((f) => f.value)).size === faces.length);
+
+/** Les valeurs d'un dé, une par face ; `null` au-delà de MAX_DIE_FACES. */
+export function dieFaceValues(die: Pick<WorldDie, "min_value" | "max_value">): number[] | null {
+  const size = die.max_value - die.min_value + 1;
+  if (!Number.isInteger(size) || size < 1 || size > MAX_DIE_FACES) return null;
+  return Array.from({ length: size }, (_, i) => die.min_value + i);
+}
+
+export function faceOf(faces: readonly DieFace[] | null | undefined, value: number): DieFace | undefined {
+  return faces?.find((f) => f.value === value);
+}
+
+/** Pose une face (la remplace si sa valeur en a déjà une), dans l'ordre des valeurs. */
+export function setFace(faces: readonly DieFace[], face: DieFace): DieFace[] {
+  return [...faces.filter((f) => f.value !== face.value), face].sort((a, b) => a.value - b.value);
+}
+
+export function removeFace(faces: readonly DieFace[], value: number): DieFace[] {
+  return faces.filter((f) => f.value !== value);
+}
+
+/** Une face tirée cache son nombre : le total la trahirait, il se tait aussi. */
+export function rollHidesNumbers(roll: Pick<DiceRoll, "results" | "faces">): boolean {
+  return roll.results.some((v) => faceOf(roll.faces, v)?.hide_value === true);
+}
 
 export function standardDie(faces: StandardDiceFaces): WorldDieInput {
   return { name: `d${faces}`, min_value: 1, max_value: faces, hidden: false };

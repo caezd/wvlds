@@ -1355,7 +1355,14 @@
         "removeConfirm": "The die “{name}” will be deleted. Rolls already posted remain.",
         "invalidName": "Give the die a name.",
         "invalidRange": "The minimum must be lower than the maximum.",
-        "limit": "At most {max} dice per world."
+        "limit": "At most {max} dice per world.",
+        "faces": "Faces of {name}",
+        "facesTitle": "Faces of “{name}”",
+        "facesHelp": "One image per face. The rolled number stays the die's own; you can hide it under the image.",
+        "faceImage": "Image for face {value}",
+        "faceHideValue": "Hide the number of face {value}",
+        "faceRemove": "Remove the image of face {value}",
+        "facesTooMany": "Face images are limited to dice with at most {max} faces."
       }
     },
     "timelinePicker": {
@@ -2470,6 +2477,7 @@
     "diceNoWorldDice": "No dice are defined in this world yet.",
     "diceUnverified": "Unverified",
     "diceUnverifiedHint": "This roll was not drawn by the database: its result is not guaranteed.",
+    "diceFace": "Face {value}",
     "diceErrors": {
       "predefinedOnly": "This world only allows its own dice.",
       "hidden": "This die is reserved for the world's team.",

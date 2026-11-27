@@ -160,6 +160,11 @@ export function currencyImagePath(worldId: string, type?: string): string {
   return `world-${worldId}/currency/${nomDeFichierPourType(type)}`;
 }
 
+/** L'image d'une face d'un dé du monde. Voir la migration 272. */
+export function dieFaceImagePath(worldId: string, type?: string): string {
+  return `world-${worldId}/dice/${nomDeFichierPourType(type)}`;
+}
+
 /** Dossier de la bannière d'une catégorie du catalogue. Voir la migration 185. */
 export function catalogCategoryBannerPrefix(worldId: string, categoryId: string): string {
   return `world-${worldId}/category-${categoryId}`;

@@ -53,7 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-26",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Dés du monde : Paramètres › Jeu › Dés.\n- dés standard (d4 à d100) d’un geste, ou sur mesure : nom, minimum, maximum\n- dé masqué : absent de la liste des joueurs, lancé par l’équipe du monde seulement\n- option « Dés du monde seulement » : plus de formule libre dans les salons\n- fenêtre « Lancer un dé » : dés du monde à choisir, avec nombre de dés et modificateur\n- tirage fait par le serveur ; un lancer ne se modifie plus, sauf option « Permettre de modifier un lancer »\n- monde aux dés du monde seulement : un lancer non tiré par le serveur est marqué « Non vérifié »",
+    text: "Dés du monde : Paramètres › Jeu › Dés.\n- dés standard (d4 à d100) d’un geste, ou sur mesure : nom, minimum, maximum\n- dé masqué : absent de la liste des joueurs, lancé par l’équipe du monde seulement\n- faces en image : une image par valeur, nombre affiché ou masqué sous l’image\n- option « Dés du monde seulement » : plus de formule libre dans les salons\n- fenêtre « Lancer un dé » : dés du monde à choisir, avec nombre de dés et modificateur\n- tirage fait par le serveur ; un lancer ne se modifie plus, sauf option « Permettre de modifier un lancer »\n- monde aux dés du monde seulement : un lancer non tiré par le serveur est marqué « Non vérifié »",
   },
   {
     date: "2026-11-26",

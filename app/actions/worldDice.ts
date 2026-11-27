@@ -6,9 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { echecEnregistrement, ERR_INTROUVABLE } from "@/lib/actionErrors";
 import { idSchema, parseInput } from "@/lib/inputSchemas";
 import {
+  dieFacesSchema,
   diceRulesSchema,
   worldDieInputSchema,
   type DiceRules,
+  type DieFace,
   type WorldDie,
   type WorldDieInput,
 } from "@/lib/worldDice";
@@ -17,7 +19,7 @@ import {
 // l'écriture à `world.settings` et cachent les dés masqués aux joueurs ; ces
 // actions valident la saisie, la base tranche le reste.
 
-const DIE_COLUMNS = "id, world_id, name, min_value, max_value, hidden, position";
+const DIE_COLUMNS = "id, world_id, name, min_value, max_value, hidden, position, faces";
 
 /** Les dés du monde que l'on peut voir, dans leur ordre. */
 export async function listWorldDice(worldId: string) {
@@ -75,6 +77,24 @@ export async function deleteWorldDie(dieId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.from("world_dice").delete().eq("id", input.data).select("id");
   if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldDie", error) };
+  if (!data?.length) return { ok: false as const, error: ERR_INTROUVABLE };
+  return { ok: true as const };
+}
+
+/**
+ * Les faces en image d'un dé (migration 272). La base vérifie qu'elles sont
+ * dans la plage du dé, et laisse tomber celles qu'une plage resserrée exclut.
+ */
+export async function setWorldDieFaces(dieId: string, faces: DieFace[]) {
+  const input = parseInput(z.strictObject({ dieId: idSchema, faces: dieFacesSchema }), { dieId, faces });
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_dice")
+    .update({ faces: input.data.faces })
+    .eq("id", input.data.dieId)
+    .select("id");
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldDieFaces", error) };
   if (!data?.length) return { ok: false as const, error: ERR_INTROUVABLE };
   return { ok: true as const };
 }

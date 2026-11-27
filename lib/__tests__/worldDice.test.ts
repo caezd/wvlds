@@ -9,7 +9,14 @@ import {
   MAX_ROLL_COUNT,
   MAX_WORLD_DICE,
   DIE_VALUE_LIMIT,
+  MAX_DIE_FACES,
   STANDARD_DICE_FACES,
+  dieFaceValues,
+  dieFacesSchema,
+  faceOf,
+  removeFace,
+  rollHidesNumbers,
+  setFace,
   diceBlockFromRoll,
   diceRollErrorKey,
   diceRollOutcome,
@@ -188,5 +195,61 @@ describe("migration 270", () => {
     expect(sql).not.toMatch(/GRANT (INSERT|UPDATE|DELETE)[^;]*ON public\.dice_rolls/);
     expect(sql).toMatch(/RAISE EXCEPTION 'dice_predefined_only'/);
     expect(sql).toMatch(/RAISE EXCEPTION 'dice_roll_locked'/);
+  });
+});
+
+describe("faces d'un dé (migration 272)", () => {
+  const IMG = "https://x.supabase.co/storage/v1/object/public/worlds/world-1/dice/a.webp";
+
+  it("une face par valeur de la plage, jusqu'à 100 faces ; au-delà, pas d'images", () => {
+    expect(dieFaceValues({ min_value: 1, max_value: 6 })).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(dieFaceValues({ min_value: -1, max_value: 1 })).toEqual([-1, 0, 1]);
+    expect(dieFaceValues({ min_value: 1, max_value: MAX_DIE_FACES })).toHaveLength(MAX_DIE_FACES);
+    expect(dieFaceValues({ min_value: 1, max_value: MAX_DIE_FACES + 1 })).toBeNull();
+  });
+
+  it("dieFacesSchema : une image http(s) par valeur, sans doublon", () => {
+    expect(dieFacesSchema.safeParse([{ value: 1, image: IMG }, { value: 2, image: IMG, hide_value: true }]).success).toBe(true);
+    expect(dieFacesSchema.safeParse([{ value: 1, image: IMG }, { value: 1, image: IMG }]).success).toBe(false);
+    expect(dieFacesSchema.safeParse([{ value: 1, image: "javascript:alert(1)" }]).success).toBe(false);
+    expect(dieFacesSchema.safeParse([{ value: 1.5, image: IMG }]).success).toBe(false);
+    expect(dieFacesSchema.safeParse([{ value: 1, image: IMG, extra: 1 }]).success).toBe(false);
+    const trop = Array.from({ length: MAX_DIE_FACES + 1 }, (_, i) => ({ value: i, image: IMG }));
+    expect(dieFacesSchema.safeParse(trop).success).toBe(false);
+  });
+
+  it("setFace remplace ou ajoute, dans l'ordre des valeurs ; removeFace retire", () => {
+    const faces = setFace(setFace([], { value: 3, image: IMG }), { value: 1, image: IMG });
+    expect(faces.map((f) => f.value)).toEqual([1, 3]);
+    expect(setFace(faces, { value: 3, image: IMG, hide_value: true })).toEqual([
+      { value: 1, image: IMG },
+      { value: 3, image: IMG, hide_value: true },
+    ]);
+    expect(removeFace(faces, 1)).toEqual([{ value: 3, image: IMG }]);
+    expect(faceOf(faces, 3)?.image).toBe(IMG);
+    expect(faceOf(faces, 2)).toBeUndefined();
+    expect(faceOf(undefined, 2)).toBeUndefined();
+  });
+
+  it("un lancer cache ses nombres dès qu'une face tirée cache le sien", () => {
+    const roll = { results: [1, 3], faces: [{ value: 1, image: IMG }, { value: 3, image: IMG, hide_value: true }] };
+    expect(rollHidesNumbers(roll)).toBe(true);
+    expect(rollHidesNumbers({ results: [1], faces: roll.faces })).toBe(false);
+    expect(rollHidesNumbers({ results: [1], faces: undefined })).toBe(false);
+  });
+});
+
+describe("migration 272", () => {
+  const sql = readFileSync(path.join(process.cwd(), "migrations/272_world_dice_faces.sql"), "utf8");
+
+  it("les faces sont contrôlées par la base, aux mêmes bornes que le code", () => {
+    expect(sql).toMatch(new RegExp(`jsonb_array_length\\(p_faces\\) > ${MAX_DIE_FACES}`));
+    expect(sql).toMatch(/is_http_url\(/);
+    expect(sql).toMatch(/GRANT UPDATE \(faces\) ON public\.world_dice TO authenticated;/);
+  });
+
+  it("le lancer copie les faces tirées ; le dossier dice/ du bucket s'ouvre avec world.settings", () => {
+    expect(sql).toMatch(/INSERT INTO public\.dice_rolls \([^)]*faces/);
+    expect(sql).toMatch(/\/dice\/'[\s\S]*?'world\.settings'/);
   });
 });

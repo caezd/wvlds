@@ -4,14 +4,20 @@ import { test, expect, type Page } from "@playwright/test";
 // Les dés d'un monde (migration 270), de bout en bout : la page Jeu › Dés,
 // le tirage par la base (`roll_dice`), le message qui désigne le lancer.
 //
-// Le compte de test possède « Monde E2E ». On y crée un d20, on le masque et
-// on le retrouve au rechargement, on passe le monde en « dés du monde
+// Le compte de test possède « Monde E2E ». On y crée un d20, on le masque, on
+// le ramène à deux faces habillées d'une image au nombre caché (migration
+// 272), on le retrouve au rechargement, on passe le monde en « dés du monde
 // seulement », puis on lance ce d20 dans un salon du monde. Le `finally`
 // remet le monde en formules libres et supprime le dé et le message, même
 // quand une étape échoue.
 // ──────────────────────────────────────────────────────────────────────────
 
 const MONDE = "Monde E2E";
+/** Une image PNG d'un pixel : de quoi passer par la conversion et le stockage. */
+const PIXEL = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 async function ouvrirMonde(page: Page) {
   await page.context().addCookies([{ name: "NEXT_LOCALE", value: "fr", url: test.info().project.use.baseURL! }]);
@@ -88,6 +94,21 @@ test("Dés du monde : créer, masquer, imposer, lancer par la base", async ({ pa
     await enregistrer(page, () => page.getByRole("button", { name: `Masquer ${nom}` }).click());
     await expect(page.getByRole("button", { name: `Masquer ${nom}` })).toHaveAttribute("aria-pressed", "true");
 
+    // Deux faces, chacune en image, nombre caché : le lancer montrera l'image seule.
+    const maximum = page.getByRole("spinbutton", { name: `Maximum du dé ${(await indiceDe(page, nom)) + 1}` });
+    await maximum.fill("2");
+    await enregistrer(page, () => maximum.blur());
+    await page.getByRole("button", { name: `Faces de ${nom}` }).click();
+    const faces = page.getByRole("dialog", { name: `Faces de « ${nom} »` });
+    for (const v of [1, 2]) {
+      await enregistrer(page, () =>
+        faces.getByLabel(`Image de la face ${v}`).setInputFiles({ name: `face-${v}.png`, mimeType: "image/png", buffer: PIXEL }),
+      );
+      await expect(faces.getByRole("img", { name: `Face ${v}` })).toBeVisible({ timeout: 20_000 });
+      await enregistrer(page, () => faces.getByRole("button", { name: `Masquer le nombre de la face ${v}` }).click());
+    }
+    await page.keyboard.press("Escape");
+
     // Les dés du monde seulement.
     await choisirMode(page, /Dés du monde seulement/);
 
@@ -96,6 +117,9 @@ test("Dés du monde : créer, masquer, imposer, lancer par la base", async ({ pa
     expect(await indiceDe(page, nom)).toBeGreaterThanOrEqual(0);
     await expect(page.getByRole("button", { name: `Masquer ${nom}` })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("radio", { name: /Dés du monde seulement/ })).toHaveAttribute("aria-checked", "true");
+    await page.getByRole("button", { name: `Faces de ${nom}` }).click();
+    await expect(page.getByRole("button", { name: "Masquer le nombre de la face 2" })).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Escape");
 
     // Un salon du monde : pas de formule libre, le dé masqué proposé à l'équipe.
     await page.goto(chemin);
@@ -115,6 +139,9 @@ test("Dés du monde : créer, masquer, imposer, lancer par la base", async ({ pa
     const message = page.locator("[data-message-id]").filter({ hasText: etiquette }).last();
     await expect(message).toContainText(nom, { timeout: 20_000 });
     await expect(message).not.toContainText("Non vérifié");
+    // La face tirée, en image ; son nombre caché tait aussi le total.
+    await expect(message.getByRole("img", { name: /^Face [12]$/ })).toBeVisible();
+    await expect(message).not.toContainText("et obtenu");
     // Un lancer ne se modifie pas : le monde ne le permet pas.
     await message.hover();
     await expect(message.getByRole("button", { name: "Modifier la description" })).toHaveCount(0);
@@ -134,7 +161,15 @@ test("Dés du monde : créer, masquer, imposer, lancer par la base", async ({ pa
     await choisirMode(page, /Formules libres/);
     if ((await indiceDe(page, nom)) >= 0) {
       await page.getByRole("button", { name: `Supprimer ${nom}` }).click();
-      await page.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click();
+      // Le dé quitte la liste avant la réponse de la base : attendre la
+      // suppression, puis celle de ses images, sans quoi la fin du test
+      // coupe les requêtes et laisse le dé en base.
+      const images = page.waitForResponse(
+        (r) => r.request().method() === "DELETE" && r.url().includes("/storage/v1/object/worlds"),
+        { timeout: 20_000 },
+      );
+      await enregistrer(page, () => page.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click());
+      await images.catch(() => undefined);
       await expect.poll(() => indiceDe(page, nom)).toBe(-1);
     }
   }

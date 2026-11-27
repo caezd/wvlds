@@ -1355,7 +1355,14 @@
         "removeConfirm": "El dado «{name}» se eliminará. Las tiradas ya publicadas se conservan.",
         "invalidName": "Dé un nombre al dado.",
         "invalidRange": "El mínimo debe ser inferior al máximo.",
-        "limit": "Como máximo {max} dados por mundo."
+        "limit": "Como máximo {max} dados por mundo.",
+        "faces": "Caras de {name}",
+        "facesTitle": "Caras de «{name}»",
+        "facesHelp": "Una imagen por cara. El número obtenido sigue siendo el del dado; puede ocultarlo bajo la imagen.",
+        "faceImage": "Imagen de la cara {value}",
+        "faceHideValue": "Ocultar el número de la cara {value}",
+        "faceRemove": "Quitar la imagen de la cara {value}",
+        "facesTooMany": "Las imágenes de caras se reservan a los dados de {max} caras como máximo."
       }
     },
     "timelinePicker": {
@@ -2470,6 +2477,7 @@
     "diceNoWorldDice": "Todavía no hay dados definidos en este mundo.",
     "diceUnverified": "No verificado",
     "diceUnverifiedHint": "Esta tirada no la sacó la base: su resultado no está garantizado.",
+    "diceFace": "Cara {value}",
     "diceErrors": {
       "predefinedOnly": "Este mundo solo admite sus propios dados.",
       "hidden": "Este dado está reservado al equipo del mundo.",
