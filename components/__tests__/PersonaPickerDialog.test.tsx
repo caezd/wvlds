@@ -306,4 +306,17 @@ describe("PersonaPickerDialog — en tiroir", () => {
 
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: "p-corry" }));
   });
+
+  it("le déclencheur par défaut montre le persona choisi (composeur ouvert sur mobile)", () => {
+    render(
+      <PersonaPickerDialog
+        selected={personas[1]}
+        onSelect={() => {}}
+        userId="u1"
+        variant="drawer"
+      />,
+    );
+    // Les initiales de Corry, faute d'avatar.
+    expect(screen.getByRole("button", { name: "Corry" })).toHaveTextContent("C");
+  });
 });

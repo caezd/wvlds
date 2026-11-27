@@ -52,6 +52,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
+    text: "Composeur ouvert sur mobile : le persona choisi s’affiche de nouveau en bas, au lieu d’un bouton vide.",
+  },
+  {
+    date: "2026-11-27",
+    category: "Correctif",
+    area: "Salons",
     text: "Ellipse en dernier message : plus de seconde barre de défilement ni de grand vide sous le fil.",
   },
   {

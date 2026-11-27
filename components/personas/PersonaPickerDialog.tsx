@@ -312,13 +312,12 @@ export function PersonaPickerDialog({
   );
 
   /**
-   * Le bouton hôte.
-   *
-   * Base UI (`render`) veut un élément SANS enfants — il place les siens
-   * lui-même ; Radix (`asChild`) veut au contraire l'élément complet. D'où le
-   * paramètre plutôt que deux déclarations.
+   * Le bouton hôte, complet avec son contenu, pour Radix (`asChild`) comme
+   * pour Base UI (`render`). Base UI garde les enfants de l'élément rendu :
+   * un `<button>{undefined}</button>` passé en `render` écrasait ceux du
+   * déclencheur, et le bouton du tiroir restait vide.
    */
-  const boutonParDefaut = (enfants?: React.ReactNode) => (
+  const boutonParDefaut = (enfants: React.ReactNode) => (
     <button
       type="button"
       aria-label={selected ? selected.name : t("pick")}
@@ -402,7 +401,7 @@ export function PersonaPickerDialog({
           // qui les portait déjà — et la console le disait à chaque rendu.
           <DrawerTrigger render={trigger} />
         ) : (
-          avecAnneau(<DrawerTrigger render={boutonParDefaut()}>{contenuDuBouton}</DrawerTrigger>)
+          avecAnneau(<DrawerTrigger render={boutonParDefaut(contenuDuBouton)} />)
         )}
         <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">
           <DrawerHeader>
