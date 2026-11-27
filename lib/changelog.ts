@@ -44,6 +44,12 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
+    date: "2026-11-27",
+    category: "Interface",
+    area: "Personas",
+    text: "Sélecteur de persona : la raison du cadenas s’affiche sous le nom.\n- fiche incomplète\n- fiche non validée\n- hors quota du plan gratuit\n- persona non invité dans le salon",
+  },
+  {
     date: "2026-11-26",
     category: "Interface",
     area: "Salons",

@@ -33,7 +33,7 @@ import { useTranslations } from "next-intl";
 import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason } from "@/lib/personaEligibility";
+import { LOCK_REASON_KEYS, LOCK_REASON_LABEL_KEYS, getUsablePersonaIds, personaLockReason } from "@/lib/personaEligibility";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "./PersonaNpcBadge";
@@ -54,6 +54,7 @@ function PersonaRow({
   favorite,
   locked,
   lockedHint,
+  lockedLabel,
   onSelect,
   onToggleFavorite,
   favoriteLabel,
@@ -64,6 +65,8 @@ function PersonaRow({
   favorite: boolean;
   locked: boolean;
   lockedHint: string;
+  /** La raison du verrou en quelques mots, visible sous le nom. */
+  lockedLabel: string;
   onSelect: () => void;
   onToggleFavorite: () => void;
   favoriteLabel: string;
@@ -78,7 +81,7 @@ function PersonaRow({
     <div
       className={cn(
         "group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-colors",
-        locked ? "opacity-50" : selected ? "bg-muted" : "hover:bg-muted/60",
+        !locked && (selected ? "bg-muted" : "hover:bg-muted/60"),
       )}
     >
       <button
@@ -88,7 +91,8 @@ function PersonaRow({
         className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none disabled:cursor-not-allowed"
         aria-pressed={selected}
       >
-        <span className="relative shrink-0 overflow-hidden bg-muted size-9 rounded-md">
+        {/* Seuls l'avatar et le nom s'estompent : la raison du verrou reste lisible. */}
+        <span className={cn("relative shrink-0 overflow-hidden bg-muted size-9 rounded-md", locked && "opacity-50")}>
           {persona.avatar_url ? (
             <PersonaAvatarThumb url={persona.avatar_url} name={persona.name} size={36} />
           ) : (
@@ -97,7 +101,10 @@ function PersonaRow({
             </span>
           )}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">{persona.name}</span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className={cn("truncate text-sm font-medium", locked && "opacity-50")}>{persona.name}</span>
+          {locked && <span className="text-xs text-muted-foreground">{lockedLabel}</span>}
+        </span>
         <PersonaNpcBadge isNpc={persona.is_npc} compact />
         {selected && !locked && (
           <span className="grid size-5 shrink-0 place-items-center bg-primary text-primary-foreground rounded-full">
@@ -321,7 +328,10 @@ export function PersonaPickerDialog({
     </span>
   );
 
-  const rows = sortedPersonas.map((p) => (
+  const rows = sortedPersonas.map((p) => {
+    const reason = lockReasonById.get(p.id) ?? "quota";
+    const uninvited = !!allowedIds && !allowedIds.has(p.id) && !!notAllowedHint;
+    return (
     <PersonaRow
       key={p.id}
       groupLabel={p.id === firstNpcId ? t("npc.pickerGroup") : undefined}
@@ -329,16 +339,14 @@ export function PersonaPickerDialog({
       selected={value === p.id}
       favorite={favorites.has(p.id)}
       locked={!usableIds.has(p.id) || (!!allowedIds && !allowedIds.has(p.id))}
-      lockedHint={
-        allowedIds && !allowedIds.has(p.id) && notAllowedHint
-          ? notAllowedHint
-          : t(LOCK_REASON_KEYS[lockReasonById.get(p.id) ?? "quota"])
-      }
+      lockedHint={uninvited ? notAllowedHint! : t(LOCK_REASON_KEYS[reason])}
+      lockedLabel={uninvited ? notAllowedHint! : t(LOCK_REASON_LABEL_KEYS[reason])}
       onSelect={() => setValue(p.id)}
       onToggleFavorite={() => toggleFavorite(p.id)}
       favoriteLabel={t("toggleFavorite")}
     />
-  ));
+    );
+  });
 
   const emptyOrLoading = loading ? (
     <div className="flex flex-col gap-2">

@@ -72,6 +72,13 @@ export const LOCK_REASON_KEYS = {
   npc: "npc.lockedNoPlay",
 } as const;
 
+/** Le même verrou en deux ou trois mots, affiché sous le nom du persona. */
+export const LOCK_REASON_LABEL_KEYS = {
+  quota: "quotaLocked",
+  incomplete: "sheet.incomplete",
+  unreviewed: "sheet.unreviewed",
+} as const;
+
 /**
  * Pourquoi un persona n'est pas sélectionnable : sa fiche (incomplète, non
  * validée) avant le quota — c'est ce que le joueur peut corriger.

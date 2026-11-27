@@ -1764,6 +1764,7 @@
     "pickerEmpty": "Aucun persona. Créez-en un d'abord.",
     "toggleFavorite": "Marquer/retirer des favoris",
     "lockedHint": "Ce persona n'est plus jouable avec le plan gratuit — passez à un plan supérieur pour le réutiliser.",
+    "quotaLocked": "Hors quota du plan gratuit",
     "profileSheetDescription": "Profil détaillé du persona.",
     "viewByWorld": "Par monde",
     "viewAlphabetical": "Alphabétique",
@@ -1905,7 +1906,8 @@
       "submittedHint": "Cette fiche attend la relecture d'un administrateur.",
       "approvedHint": "Cette fiche a été validée.",
       "lockedIncomplete": "Ce persona ne peut pas jouer : sa fiche est incomplète.",
-      "lockedUnreviewed": "Ce persona ne peut pas jouer : sa fiche n'est pas encore validée."
+      "lockedUnreviewed": "Ce persona ne peut pas jouer : sa fiche n'est pas encore validée.",
+      "unreviewed": "Fiche non validée"
     },
     "review": {
       "tab": "Relecture",

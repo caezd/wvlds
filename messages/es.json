@@ -1764,6 +1764,7 @@
     "pickerEmpty": "Sin personajes. Cree uno primero.",
     "toggleFavorite": "Marcar/quitar de favoritos",
     "lockedHint": "Este personaje ya no se puede usar con el plan gratuito — mejore su plan para volver a usarlo.",
+    "quotaLocked": "Fuera de la cuota del plan gratuito",
     "viewByWorld": "Por mundo",
     "viewAlphabetical": "Alfabético",
     "dropHere": "Suelte un personaje aquí",
@@ -1905,7 +1906,8 @@
       "submittedHint": "Esta ficha espera la revisión de un administrador.",
       "approvedHint": "Esta ficha ha sido validada.",
       "lockedIncomplete": "Este persona no puede jugar: su ficha está incompleta.",
-      "lockedUnreviewed": "Este persona no puede jugar: su ficha aún no ha sido validada."
+      "lockedUnreviewed": "Este persona no puede jugar: su ficha aún no ha sido validada.",
+      "unreviewed": "Ficha no validada"
     },
     "review": {
       "tab": "Revisión",

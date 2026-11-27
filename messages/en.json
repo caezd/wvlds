@@ -1764,6 +1764,7 @@
     "pickerEmpty": "No personas yet. Create one first.",
     "toggleFavorite": "Toggle favorite",
     "lockedHint": "This persona can no longer be used on the free plan — upgrade to use it again.",
+    "quotaLocked": "Over the free plan limit",
     "profileSheetDescription": "Detailed profile of the persona.",
     "viewByWorld": "By world",
     "viewAlphabetical": "Alphabetical",
@@ -1905,7 +1906,8 @@
       "submittedHint": "This sheet is waiting for an administrator's review.",
       "approvedHint": "This sheet has been approved.",
       "lockedIncomplete": "This persona cannot play: its sheet is incomplete.",
-      "lockedUnreviewed": "This persona cannot play: its sheet has not been approved yet."
+      "lockedUnreviewed": "This persona cannot play: its sheet has not been approved yet.",
+      "unreviewed": "Sheet not approved"
     },
     "review": {
       "tab": "Review",

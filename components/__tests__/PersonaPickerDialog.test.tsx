@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,7 @@ vi.mock("@/components/providers/WorldMembershipProvider", () => ({
 }));
 
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
+import { resetWorldReviewActiveCache, setWorldReviewActiveCache } from "@/hooks/useWorldReviewActive";
 
 const personas: Persona[] = [
   { id: "p-caelan", user_id: "u1", name: "Caelan Voss", avatar_url: null, created_at: "2026-01-01T00:00:00Z" },
@@ -52,6 +53,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const k of Object.keys(_store)) delete _store[k];
+  resetWorldReviewActiveCache();
 });
 
 async function openDialog(worldId?: string) {
@@ -154,6 +156,34 @@ describe("PersonaPickerDialog — éligibilité (plan gratuit)", () => {
 
     const alphaRow = screen.getByText("Alpha").closest("div")!;
     expect(alphaRow.querySelector("button")).not.toBeDisabled();
+  });
+
+  it("dit, sous le nom, pourquoi le persona hors quota est verrouillé", async () => {
+    setup(sixPersonas);
+    await openDialog();
+    await screen.findByText("Zeta");
+
+    expect(within(screen.getByText("Zeta").closest("div")!).getByText("Hors quota du plan gratuit")).toBeVisible();
+    expect(within(screen.getByText("Alpha").closest("div")!).queryByText("Hors quota du plan gratuit")).toBeNull();
+  });
+
+  it("dit, sous le nom, qu'une fiche est incomplète ou pas encore validée", async () => {
+    currentUserMock.plan = "subscribed";
+    setup([
+      { id: "p1", user_id: "u1", name: "Jesse", avatar_url: null, created_at: "2026-01-01T00:00:00Z", review_status: "submitted", sheet_complete: true },
+      { id: "p2", user_id: "u1", name: "Mira", avatar_url: null, created_at: "2026-01-02T00:00:00Z", review_status: "draft", sheet_complete: false },
+      { id: "p3", user_id: "u1", name: "Odo", avatar_url: null, created_at: "2026-01-03T00:00:00Z", review_status: "approved", sheet_complete: true },
+    ]);
+    // Un monde qui relit ses fiches (migration 184) : sans lui, seule la complétude verrouille.
+    setWorldReviewActiveCache("w1", true);
+    await openDialog("w1");
+    await screen.findByText("Jesse");
+
+    const row = (name: string) => within(screen.getByText(name).closest("div")!);
+    expect(row("Jesse").getByText("Fiche non validée")).toBeVisible();
+    // La fiche avant la validation : c'est ce que le joueur corrige d'abord.
+    expect(row("Mira").getByText("Fiche incomplète")).toBeVisible();
+    expect(row("Odo").queryByText(/Fiche/)).toBeNull();
   });
 
   it("ne verrouille aucun persona pour un compte abonné", async () => {
