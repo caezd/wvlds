@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, insertMessageById } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, insertMessageById, computeThreadFlow } from "@/lib/chatroomMessageGrouping";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessageWithPersona {
@@ -180,5 +180,76 @@ describe("insertMessageById — messages insérés (migration 216)", () => {
   it("ignore un doublon, même placé ailleurs", () => {
     const fil = [m(1, "2026-11-17T10:00:00Z"), m(9, "2026-11-17T10:04:58Z")];
     expect(insertMessageById(fil, m(9, "2026-11-17T10:04:58Z"))).toBe(fil);
+  });
+});
+
+describe("computeThreadFlow — messages consécutifs d'un même persona", () => {
+  const DE = '{"_type":"dice","formula":"1d20","results":[12],"modifier":0,"total":12}';
+  const aria = { id: "p-aria", name: "Aria" } as ChatMessageWithPersona["persona"];
+  const brom = { id: "p-brom", name: "Brom" } as ChatMessageWithPersona["persona"];
+  const flow = (messages: ChatMessageWithPersona[]) => computeThreadFlow(groupMessagesForRender(messages));
+
+  it("la suite d'un même persona n'a pas d'en-tête ; le message d'avant se lie à elle", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: aria }),
+      makeMessage({ id: 3, persona: aria }),
+    ]);
+    expect(f.get(1)).toEqual({ continued: false, joinsNext: true });
+    expect(f.get(2)).toEqual({ continued: true, joinsNext: true });
+    expect(f.get(3)).toEqual({ continued: true, joinsNext: false });
+  });
+
+  it("un autre persona, ou le même persona joué par un autre joueur, recommence une série", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: brom }),
+      makeMessage({ id: 3, persona: brom, author_id: "user-2" }),
+    ]);
+    expect(f.get(2)?.continued).toBe(false);
+    expect(f.get(3)?.continued).toBe(false);
+    expect(f.get(1)?.joinsNext).toBe(false);
+  });
+
+  it("le jet de dé qui suit la réponse s'y rattache, et la réponse suivante du même persona aussi", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: aria, content: DE }),
+      makeMessage({ id: 3, persona: aria }),
+    ]);
+    expect(f.get(1)).toEqual({ continued: false, joinsNext: true });
+    expect(f.get(2)).toEqual({ continued: true, joinsNext: true });
+    expect(f.get(3)).toEqual({ continued: true, joinsNext: false });
+  });
+
+  it("un jet de dé sans réponse du même persona au-dessus reste seul, et ne démarre pas de série", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: brom }),
+      makeMessage({ id: 2, persona: aria, content: DE }),
+      makeMessage({ id: 3, persona: aria }),
+    ]);
+    expect(f.get(2)?.continued).toBe(false);
+    expect(f.get(3)?.continued).toBe(false);
+    expect(f.get(1)?.joinsNext).toBe(false);
+    expect(f.get(2)?.joinsNext).toBe(false);
+  });
+
+  it("une note privée, un SMS ou un autre bloc coupe la série", () => {
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: aria, visible_to: ["user-2"] }),
+      makeMessage({ id: 3, persona: aria }),
+      makeMessage({ id: 4, persona: aria, metadata: { sms: true } }),
+      makeMessage({ id: 5, persona: aria }),
+      makeMessage({ id: 6, persona: aria, content: '{"_type":"callout","title":"Titre","text":"…"}' }),
+      makeMessage({ id: 7, persona: aria }),
+    ]);
+    for (const id of [2, 3, 5, 7]) expect(f.get(id)?.continued, `message ${id}`).toBe(false);
+    for (const id of [1, 3, 5]) expect(f.get(id)?.joinsNext, `message ${id}`).toBe(false);
+  });
+
+  it("sans persona, les messages d'un même joueur se suivent aussi", () => {
+    const f = flow([makeMessage({ id: 1 }), makeMessage({ id: 2 })]);
+    expect(f.get(2)?.continued).toBe(true);
   });
 });

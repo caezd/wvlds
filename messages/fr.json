@@ -165,6 +165,13 @@
       "left": "Ferré à gauche",
       "justify": "Justifié"
     },
+    "headerMode": "Messages qui se suivent",
+    "headerModeDescription": "Quand un même persona poste plusieurs messages à la suite, seul le premier garde son en-tête. Pour les suivants :",
+    "headerModeSaved": "Affichage des messages mis à jour",
+    "headerModeOptions": {
+      "subtle": "Petit avatar dans la marge",
+      "hidden": "Aucun en-tête"
+    },
     "subscription": {
       "title": "Abonnement",
       "description": "Connectez votre compte Patreon pour activer automatiquement vos avantages d'abonné",

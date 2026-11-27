@@ -42,6 +42,7 @@ export function GameBlockRenderer({
   onAnchorEdited,
   votes,
   onVotesUpdated,
+  attached,
 }: {
   block: ChatBlock;
   mine: boolean;
@@ -65,6 +66,8 @@ export function GameBlockRenderer({
   /** Résumé des votes du bloc "choice" (ignoré pour les autres types de bloc). */
   votes?: ChoiceVoteSummary[];
   onVotesUpdated?: (messageId: number, votes: ChoiceVoteSummary[]) => void;
+  /** Rattaché à la réponse du même persona, juste au-dessus (jet de dé) : centré dessous. */
+  attached?: boolean;
 }) {
   const tCommon = useTranslations("common");
   const tChatrooms = useTranslations("chatrooms");
@@ -184,6 +187,7 @@ export function GameBlockRenderer({
           roll={message.dice_roll}
           label={label}
           mine={mine}
+          attached={attached}
           onEditLabel={(newLabel) =>
             editBlock(JSON.stringify({ ...block, label: newLabel || undefined }))
           }

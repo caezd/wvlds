@@ -165,6 +165,13 @@
       "left": "Alineado a la izquierda",
       "justify": "Justificado"
     },
+    "headerMode": "Mensajes consecutivos",
+    "headerModeDescription": "Cuando un mismo persona publica varios mensajes seguidos, solo el primero conserva su encabezado. Para los siguientes:",
+    "headerModeSaved": "Visualización de los mensajes actualizada",
+    "headerModeOptions": {
+      "subtle": "Avatar pequeño en el margen",
+      "hidden": "Sin encabezado"
+    },
     "subscription": {
       "title": "Suscripción",
       "description": "Conecte su cuenta de Patreon para activar automáticamente sus ventajas de suscriptor",

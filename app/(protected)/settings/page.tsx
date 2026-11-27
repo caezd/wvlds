@@ -5,6 +5,7 @@ import { LocaleSelector } from "./LocaleSelector";
 import { MessageFontSelector } from "./MessageFontSelector";
 import { MessageTextSizeSelector } from "./MessageTextSizeSelector";
 import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
+import { MessageHeaderModeSelector } from "./MessageHeaderModeSelector";
 import { PatreonSection } from "./PatreonSection";
 import { isPatreonEnabled, getPatreonMinCents } from "@/lib/patreon/config";
 
@@ -31,6 +32,7 @@ export default async function SettingsPage() {
   const messageFont = profile?.message_font ?? "sans";
   const messageTextSize = profile?.message_text_size ?? "base";
   const messageTextAlign = profile?.message_text_align ?? "left";
+  const messageHeaderMode = profile?.message_header_mode ?? "subtle";
   const patreonEnabled = isPatreonEnabled();
 
   // Bio et pronoms se règlent dans « Mon profil » (barre latérale) ; la page
@@ -112,6 +114,14 @@ export default async function SettingsPage() {
             <p className="text-xs text-muted-foreground">{t("textAlignDescription")}</p>
           </div>
           <MessageTextAlignSelector currentAlign={messageTextAlign} />
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-medium">{t("headerMode")}</h3>
+            <p className="text-xs text-muted-foreground">{t("headerModeDescription")}</p>
+          </div>
+          <MessageHeaderModeSelector currentMode={messageHeaderMode} />
         </div>
       </section>
     </div>

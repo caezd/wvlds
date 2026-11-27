@@ -134,6 +134,29 @@ export async function updateMessageTextAlign(align: string) {
   return { success: true };
 }
 
+const MESSAGE_HEADER_MODES = ["subtle", "hidden"] as const;
+
+/** L'en-tête des messages qui suivent celui d'un même persona (migration 278). */
+export async function updateMessageHeaderMode(mode: string) {
+  if (!(MESSAGE_HEADER_MODES as readonly string[]).includes(mode)) return { error: ERR_VALEUR_NON_SUPPORTEE };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: ERR_NON_AUTHENTIFIE };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ message_header_mode: mode })
+    .eq("id", user.id);
+
+  if (error) return { error: ERR_ENREGISTREMENT };
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
 const PROFILE_BIO_MAX_LENGTH = 500;
 
 // La biographie est COUPÉE à 500, pas refusée : c'est la borne de la base

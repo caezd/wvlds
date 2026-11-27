@@ -20,11 +20,51 @@ import { ReactionEmoji } from "../reactions/ReactionEmoji";
 import { MessageActionsDropdown } from "./MessageActionsDropdown";
 import { cn } from "@/lib/utils";
 
+/** Les réactions d'un message : un bouton par emoji, pour ajouter ou retirer la sienne. */
+export function MessageReactions({
+  reactions,
+  toggleReaction,
+  className,
+}: {
+  reactions: ReactionSummary[];
+  toggleReaction: (emoteKey: string) => void | Promise<void>;
+  className?: string;
+}) {
+  if (reactions.length === 0) return null;
+  return (
+    <div className={cn("flex flex-wrap gap-1 items-center justify-end", className)}>
+      {reactions.map((r) => (
+        <button
+          key={r.emoji}
+          type="button"
+          onClick={() => void toggleReaction(r.emoji)}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs",
+            "bg-secondary hover:bg-muted",
+            r.me && "border-primary/30",
+          )}
+          aria-label={`Réaction ${r.emoji}`}
+          title={r.me ? "Retirer ma réaction" : "Ajouter ma réaction"}
+        >
+          <ReactionEmoji value={r.emoji} size={16} />
+          <span className="tabular-nums">{r.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Avatar + nom + actions (réagir / éditer-supprimer / annuler-enregistrer) et
  * date + badge défi + réactions d'un message normal (hors bloc/SMS).
+ *
+ * La suite d'un message du même persona (`variant` « subtle » ou « hidden »)
+ * perd cet en-tête : il n'en reste que les actions, au survol, en haut à
+ * droite, et — « subtle » — un petit avatar dans la marge, à gauche. Ses
+ * réactions passent sous le message (cf. ChatroomMessage).
  */
 export function ChatroomMessageHeader({
+  variant = "full",
   message,
   mine,
   editing,
@@ -55,6 +95,7 @@ export function ChatroomMessageHeader({
   onInsertBefore,
   onReport,
 }: {
+  variant?: "full" | "subtle" | "hidden";
   message: ChatMessageWithPersona;
   mine: boolean;
   editing: boolean;
@@ -87,6 +128,116 @@ export function ChatroomMessageHeader({
 }) {
   const t = useTranslations("chatrooms");
   const tPersonaNpc = useTranslations("personas.npc");
+
+  const actions = (
+    <div className="flex items-center gap-1">
+      {!editing && !isMobile && emojiReactions && (
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity"
+              aria-label={t("addReaction")}
+              title={t("addReaction")}
+            >
+              <SmilePlus className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-auto p-0 border-0 bg-transparent shadow-none"
+          >
+            <ChatReactionPicker
+              onSelect={(emoji) => {
+                void toggleReaction(emoji);
+                setPickerOpen(false);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {!editing && !isMobile && (mine || onPin || onReply || onInsertBefore || onReport) && (
+        <MessageActionsDropdown
+          mine={mine}
+          isPinned={!!pinId}
+          content={message.content}
+          onEdit={startEdit}
+          onPin={onPin ? () => onPin(message.id) : undefined}
+          onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
+          onRequestDelete={onRequestDelete}
+          onReply={onReply}
+          onInsertBefore={onInsertBefore}
+          onReport={onReport}
+        />
+      )}
+
+      {/* Sur mobile, ces boutons se retrouvent en en-tête sticky du
+          composer d'édition (cf. ChatroomMessage) — plus accessibles
+          une fois qu'on a scrollé dans un message long. */}
+      {mine && editing && !isMobile && (
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={cancelEdit}
+            disabled={saving}
+            aria-label={t("cancelEdit")}
+            title={t("cancelEdit")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => void save()}
+            disabled={saving}
+            aria-label={t("saveEdit")}
+            title={t("saveEdit")}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  if (variant !== "full") {
+    return (
+      <>
+        {variant === "subtle" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* Dans la marge, sans en sortir : 16 px de gouttière sur mobile, 24 px au-delà. */}
+              <span
+                data-testid="message-subtle-avatar"
+                role="img"
+                aria-label={label}
+                className="absolute top-1 right-full mr-0.5 lg:mr-1"
+              >
+                <Avatar className="size-3.5 rounded-full lg:size-5">
+                  {(message.persona?.avatar_url ?? avatarSrc) && (
+                    <AvatarImage src={message.persona?.avatar_url ?? avatarSrc} className="rounded-full" />
+                  )}
+                  <AvatarFallback className="rounded-full text-2xs">{label[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <span className="font-medium">{label}</span> · <DateDisplay value={date} />
+            </TooltipContent>
+          </Tooltip>
+        )}
+        <div className="absolute -top-3 right-0 z-10 rounded-md bg-background">{actions}</div>
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-1 gap-4">
@@ -146,82 +297,7 @@ export function ChatroomMessageHeader({
               </span>
             </UserProfileSheetTrigger>
           </div>
-          <div className="flex items-center gap-1">
-            {!editing && !isMobile && emojiReactions && (
-              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity"
-                    aria-label={t("addReaction")}
-                    title={t("addReaction")}
-                  >
-                    <SmilePlus className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  className="w-auto p-0 border-0 bg-transparent shadow-none"
-                >
-                  <ChatReactionPicker
-                    onSelect={(emoji) => {
-                      void toggleReaction(emoji);
-                      setPickerOpen(false);
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {!editing && !isMobile && (mine || onPin || onReply || onInsertBefore || onReport) && (
-              <MessageActionsDropdown
-                mine={mine}
-                isPinned={!!pinId}
-                content={message.content}
-                onEdit={startEdit}
-                onPin={onPin ? () => onPin(message.id) : undefined}
-                onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
-                onRequestDelete={onRequestDelete}
-                onReply={onReply}
-                onInsertBefore={onInsertBefore}
-                onReport={onReport}
-              />
-            )}
-
-            {/* Sur mobile, ces boutons se retrouvent en en-tête sticky du
-                composer d'édition (cf. ChatroomMessage) — plus accessibles
-                une fois qu'on a scrollé dans un message long. */}
-            {mine && editing && !isMobile && (
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={cancelEdit}
-                  disabled={saving}
-                  aria-label={t("cancelEdit")}
-                  title={t("cancelEdit")}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => void save()}
-                  disabled={saving}
-                  aria-label={t("saveEdit")}
-                  title={t("saveEdit")}
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                </Button>
-              </div>
-            )}
-          </div>
+          {actions}
         </div>
 
         {/* Ligne 2 : date + badge défi + réactions */}
@@ -273,27 +349,7 @@ export function ChatroomMessageHeader({
               </Tooltip>
             )}
           </div>
-          {!editing && emojiReactions && reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1 items-center justify-end">
-              {reactions.map((r) => (
-                <button
-                  key={r.emoji}
-                  type="button"
-                  onClick={() => void toggleReaction(r.emoji)}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs",
-                    "bg-secondary hover:bg-muted",
-                    r.me && "border-primary/30",
-                  )}
-                  aria-label={`Réaction ${r.emoji}`}
-                  title={r.me ? "Retirer ma réaction" : "Ajouter ma réaction"}
-                >
-                  <ReactionEmoji value={r.emoji} size={16} />
-                  <span className="tabular-nums">{r.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
+          {!editing && emojiReactions && <MessageReactions reactions={reactions} toggleReaction={toggleReaction} />}
         </div>
       </div>
     </div>

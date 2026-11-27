@@ -69,6 +69,52 @@ export function computeSmsRunFlags(messages: ChatMessageWithPersona[]): SmsRunFl
   });
 }
 
+/** Place d'un message dans le fil, vis-à-vis de ses voisins du même persona. */
+export type ThreadFlow = {
+  /** Suite d'une réponse du même persona, par le même joueur : sans en-tête (ou un en-tête discret). */
+  continued: boolean;
+  /** Le message suivant en est la suite : pas de séparateur entre eux. */
+  joinsNext: boolean;
+};
+
+/** Un message texte, un jet de dé, ou autre chose (bloc, note privée), qui coupe la série. */
+function flowKind(m: ChatMessageWithPersona): "text" | "dice" | null {
+  if (m.visible_to) return null;
+  const block = parseChatBlock(m.content ?? "");
+  if (block === null) return "text";
+  return block._type === "dice" ? "dice" : null;
+}
+
+/**
+ * Les messages consécutifs d'un même persona (joué par le même joueur) :
+ * la réponse ouvre une série, les réponses suivantes en sont la suite, sans
+ * en-tête ni séparateur. Un jet de dé du même persona s'y rattache, sous la
+ * réponse ; seul, il ne démarre pas de série. Un SMS, une note privée ou un
+ * autre bloc la coupe.
+ */
+export function computeThreadFlow(groups: RenderGroup[]): Map<number, ThreadFlow> {
+  const flows = new Map<number, ThreadFlow>();
+  let run: { key: string; last: number } | null = null;
+  for (const g of groups) {
+    if (g.kind === "sms") {
+      run = null;
+      continue;
+    }
+    const m = g.message;
+    const kind = flowKind(m);
+    const key = `${m.author_id ?? ""}:${m.persona?.id ?? ""}`;
+    const continued = kind !== null && run !== null && run.key === key;
+    flows.set(m.id, { continued, joinsNext: false });
+    if (continued && run) {
+      flows.get(run.last)!.joinsNext = true;
+      run.last = m.id;
+    } else {
+      run = kind === "text" ? { key, last: m.id } : null;
+    }
+  }
+  return flows;
+}
+
 /**
  * Union dédupliquée (insensible à la casse, ordre de première apparition)
  * des avertissements de contenu portés par les messages d'un bloc SMS —

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import type { ReactionSummary } from "@/types/db";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import { ChatroomMessageSms } from "./ChatroomMessageSms";
-import { ChatroomMessageHeader } from "./ChatroomMessageHeader";
+import { ChatroomMessageHeader, MessageReactions } from "./ChatroomMessageHeader";
 import { MessageReplyQuote } from "./MessageReplyQuote";
 import { ChatroomMessageMobileDrawers } from "./ChatroomMessageMobileDrawers";
 import { useChatroomMessageEdit } from "../composer/useChatroomMessageEdit";
@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { useUserPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLongPress } from "@/hooks/useLongPress";
+import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
 
 /**
  * IMPORTANT:
@@ -110,6 +111,8 @@ function ChatroomMessage({
   onInsertBefore,
   onJumpToMessage,
   onReport,
+  continued,
+  joinsNext,
 }: {
   message: import("@/types/db").ChatMessageWithPersona;
   online: Record<string, { avatar_url?: string | null; username?: string | null }>;
@@ -149,6 +152,10 @@ function ChatroomMessage({
   onJumpToMessage?: (id: number) => void;
   /** Signaler ce message (reçoit son id). */
   onReport?: (id: number) => void;
+  /** Suite d'une réponse du même persona (cf. computeThreadFlow) : sans en-tête ; un jet de dé s'y rattache, centré. */
+  continued?: boolean;
+  /** Le message suivant en est la suite : le fil retire le séparateur entre eux. */
+  joinsNext?: boolean;
 }) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -180,6 +187,7 @@ function ChatroomMessage({
   const [editColorPickerOpen, setEditColorPickerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
+  const { messageHeaderMode } = useCurrentUser();
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -276,6 +284,7 @@ function ChatroomMessage({
         <div
           data-message-id={message.id}
           data-ellipse={block._type === "ellipse" ? "" : undefined}
+          data-joins-next={joinsNext ? "" : undefined}
           {...(isMobile && blockHasActions ? longPressHandlers : {})}
         >
           <GameBlockRenderer
@@ -288,6 +297,7 @@ function ChatroomMessage({
             onAnchorEdited={onAnchorEdited}
             votes={message.votes}
             onVotesUpdated={onVotesUpdated}
+            attached={continued}
           />
         </div>
         {isMobile && blockHasActions && (
@@ -340,7 +350,13 @@ function ChatroomMessage({
     <>
       <article
         data-message-id={message.id}
-        className={cn("w-full py-8 group/turn-messages px-2", message.visible_to && "bg-card/40 px-4")}
+        data-joins-next={joinsNext ? "" : undefined}
+        className={cn(
+          "w-full py-8 group/turn-messages px-2",
+          continued && "pt-3",
+          joinsNext && "pb-3",
+          message.visible_to && "bg-card/40 px-4",
+        )}
         {...(isMobile && hasActions ? longPressHandlers : {})}
       >
         {pinId && (
@@ -361,8 +377,9 @@ function ChatroomMessage({
           </div>
         )}
         <ContentWarningBanner tags={message.metadata?.content_warnings ?? []} className="mb-3" />
-        <div className="flex w-full flex-col justify-between gap-8 ">
+        <div className="relative flex w-full flex-col justify-between gap-8 ">
           <ChatroomMessageHeader
+            variant={continued ? messageHeaderMode : "full"}
             message={message}
             mine={mine}
             editing={editing}
@@ -530,6 +547,10 @@ function ChatroomMessage({
                     isMine={mine}
                     isMobile={isMobile}
                   />
+                  {/* Sans en-tête, les réactions passent sous le message. */}
+                  {continued && emoji_reactions && (
+                    <MessageReactions reactions={reactions} toggleReaction={toggleReaction} />
+                  )}
                 </div>
               )}
             </div>

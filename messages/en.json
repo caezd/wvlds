@@ -165,6 +165,13 @@
       "left": "Left-aligned",
       "justify": "Justified"
     },
+    "headerMode": "Consecutive messages",
+    "headerModeDescription": "When the same persona posts several messages in a row, only the first keeps its header. For the next ones:",
+    "headerModeSaved": "Message display updated",
+    "headerModeOptions": {
+      "subtle": "Small avatar in the margin",
+      "hidden": "No header"
+    },
     "subscription": {
       "title": "Subscription",
       "description": "Link your Patreon account to unlock your subscriber perks automatically",

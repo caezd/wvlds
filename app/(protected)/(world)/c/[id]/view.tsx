@@ -37,7 +37,7 @@ import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBot
 import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
-import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, insertMessageById, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeThreadFlow, computeSmsRunFlags, aggregateContentWarnings, insertMessageById, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
 import { applyRemoteVoteChange } from "@/lib/choiceVotes";
 import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWarningBanner";
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
@@ -941,6 +941,8 @@ export default function ChatRoomView({
 
   // Messages "SMS" consécutifs regroupés dans un même bloc visuel (cf. lib/chatroomMessageGrouping.ts).
   const renderGroups = useMemo(() => groupMessagesForRender(messages), [messages]);
+  // Les messages qui se suivent d'un même persona : sans en-tête ni séparateur.
+  const threadFlow = useMemo(() => computeThreadFlow(renderGroups), [renderGroups]);
 
   // Callbacks indépendants du message rendu — identité stable pour que le
   // `React.memo` de ChatroomMessage évite un re-render de tous les messages
@@ -1069,6 +1071,8 @@ export default function ChatRoomView({
       onInsertBefore={canReply ? handleInsertBefore : undefined}
       onJumpToMessage={handleJumpToMessage}
       onReport={userId ? handleReport : undefined}
+      continued={threadFlow.get(m.id)?.continued}
+      joinsNext={threadFlow.get(m.id)?.joinsNext}
     />
   );
 
@@ -1263,8 +1267,9 @@ export default function ChatRoomView({
               className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
             >
               {/* Une ellipse n'est pas encadrée par les séparateurs entre messages :
-                  ni le sien, ni celui du message qui la précède. */}
-              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border [&>[data-ellipse]]:border-b-0 [&>*:has(+[data-ellipse])]:border-b-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
+                  ni le sien, ni celui du message qui la précède. Pas de séparateur
+                  non plus avant la suite d'une réponse du même persona. */}
+              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border [&>[data-ellipse]]:border-b-0 [&>*:has(+[data-ellipse])]:border-b-0 [&>[data-joins-next]]:border-b-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
                 {loadingOlder && (
                   <div className="py-3 text-center text-xs text-muted-foreground">
                     Chargement de l’historique…

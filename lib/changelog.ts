@@ -47,6 +47,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Interface",
     area: "Salons",
+    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- plus d’en-tête ni de séparateur entre les réponses d’un même persona, joué par le même joueur\n- jet de dé rattaché à la réponse au-dessus, centré dessous\n- réglage du compte « Messages qui se suivent » : petit avatar dans la marge, ou aucun en-tête\n- actions de la suite au survol, réactions sous le message",
+  },
+  {
+    date: "2026-11-27",
+    category: "Interface",
+    area: "Salons",
     text: "Menu « Insérer un bloc » plus large : l’aperçu respire, titres et exemples tiennent sur une ligne.",
   },
   {
