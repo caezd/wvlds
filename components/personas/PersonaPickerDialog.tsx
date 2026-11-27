@@ -107,7 +107,7 @@ function PersonaRow({
           <span className={cn("truncate text-sm font-medium", locked && "opacity-50")}>{persona.name}</span>
           {locked && <span className="text-xs text-muted-foreground">{lockedLabel}</span>}
         </span>
-        <PersonaNpcBadge isNpc={persona.is_npc} compact />
+        <PersonaNpcBadge isNpc={persona.is_npc} />
         {selected && !locked && (
           <span className="grid size-5 shrink-0 place-items-center bg-primary text-primary-foreground rounded-full">
             <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current">

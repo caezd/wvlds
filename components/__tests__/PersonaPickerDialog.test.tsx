@@ -93,6 +93,16 @@ describe("PersonaPickerDialog — PNJ du monde (migration 182)", () => {
     expect(npcRow.querySelector("[data-npc]")).not.toBeNull();
   });
 
+  it("marque un PNJ d'un badge « PNJ » écrit en toutes lettres", async () => {
+    membership.canPlayNpc = true;
+    setup(withNpc);
+    await openDialog("w1");
+    await screen.findByText("Aubergiste");
+
+    expect(within(screen.getByText("Aubergiste").closest("div")!).getByText("PNJ")).toBeVisible();
+    expect(within(screen.getByText("Jett").closest("div")!).queryByText("PNJ")).toBeNull();
+  });
+
   it("sans la permission, ne demande que les siens", async () => {
     const mock = setup(personas);
     await openDialog("w1");
