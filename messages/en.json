@@ -2223,13 +2223,8 @@
     "bubblesHint": "Paragraphs starting with \"…\" or French quotation marks will be displayed as dialogue bubbles.",
     "smsMode": "SMS",
     "smsHint": "Sent messages are displayed as SMS-style bubbles, grouped together as long as this option stays active.",
-    "headerMode": "Follow-up header",
-    "headerModes": {
-      "hidden": "Hidden",
-      "subtle": "Small avatar",
-      "full": "Full"
-    },
-    "headerModeHint": "When you post right after your persona: header hidden, a small avatar in the margin, or the full header.",
+    "showHeader": "Show header",
+    "showHeaderHint": "When you post right after your persona, its header is hidden. Check to show it on this message.",
     "colorLabel": "Color",
     "colorChoose": "Choose a color",
     "dialogColorTitle": "Dialogue color",

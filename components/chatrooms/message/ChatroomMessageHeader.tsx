@@ -58,9 +58,8 @@ export function MessageReactions({
  * Avatar + nom + actions (réagir / éditer-supprimer / annuler-enregistrer) et
  * date + badge défi + réactions d'un message normal (hors bloc/SMS).
  *
- * La suite d'un message du même persona (`variant` « subtle » ou « hidden »)
- * perd cet en-tête : il n'en reste que les actions, au survol, en haut à
- * droite, et — « subtle » — un petit avatar dans la marge, à gauche. Ses
+ * La suite d'un message du même persona (`variant` « hidden ») perd cet
+ * en-tête : il n'en reste que les actions, au survol, en haut à droite. Ses
  * réactions passent sous le message (cf. ChatroomMessage).
  */
 export function ChatroomMessageHeader({
@@ -95,7 +94,7 @@ export function ChatroomMessageHeader({
   onInsertBefore,
   onReport,
 }: {
-  variant?: "full" | "subtle" | "hidden";
+  variant?: "full" | "hidden";
   message: ChatMessageWithPersona;
   mine: boolean;
   editing: boolean;
@@ -209,34 +208,7 @@ export function ChatroomMessageHeader({
   );
 
   if (variant !== "full") {
-    return (
-      <>
-        {variant === "subtle" && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {/* Dans la marge, sans en sortir : 16 px de gouttière sur mobile, 24 px au-delà. */}
-              <span
-                data-testid="message-subtle-avatar"
-                role="img"
-                aria-label={label}
-                className="absolute top-1 right-full mr-0.5 lg:mr-1"
-              >
-                <Avatar className="size-3.5 rounded-full lg:size-5">
-                  {(message.persona?.avatar_url ?? avatarSrc) && (
-                    <AvatarImage src={message.persona?.avatar_url ?? avatarSrc} className="rounded-full" />
-                  )}
-                  <AvatarFallback className="rounded-full text-2xs">{label[0]?.toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <span className="font-medium">{label}</span> · <DateDisplay value={date} />
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <div className="absolute -top-3 right-0 z-10 rounded-md bg-background">{actions}</div>
-      </>
-    );
+    return <div className="absolute -top-3 right-0 z-10 rounded-md bg-background">{actions}</div>;
   }
 
   return (

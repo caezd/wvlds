@@ -77,19 +77,22 @@ export type ThreadFlow = {
   joinsNext: boolean;
 };
 
-/** Un message texte, un jet de dé, ou autre chose (bloc, note privée), qui coupe la série. */
-function flowKind(m: ChatMessageWithPersona): "text" | "dice" | null {
+/**
+ * Un message texte ; un jet de dé ou une bannière, qui se rattachent à la
+ * réponse au-dessus ; ou autre chose (autre bloc, note privée), qui coupe la série.
+ */
+function flowKind(m: ChatMessageWithPersona): "text" | "attached" | null {
   if (m.visible_to) return null;
   const block = parseChatBlock(m.content ?? "");
   if (block === null) return "text";
-  return block._type === "dice" ? "dice" : null;
+  return block._type === "dice" || block._type === "banner" ? "attached" : null;
 }
 
 /**
  * Les messages consécutifs d'un même persona (joué par le même joueur) :
  * la réponse ouvre une série, les réponses suivantes en sont la suite, sans
- * en-tête ni séparateur. Un jet de dé du même persona s'y rattache, sous la
- * réponse ; seul, il ne démarre pas de série. Un SMS, une note privée ou un
+ * en-tête ni séparateur. Un jet de dé ou une bannière du même persona s'y
+ * rattache, sous la réponse ; seul, il ne démarre pas de série. Un SMS, une note privée ou un
  * autre bloc la coupe ; une réponse à l'en-tête complet (`metadata.header`)
  * en ouvre une nouvelle.
  */

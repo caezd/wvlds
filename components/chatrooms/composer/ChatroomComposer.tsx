@@ -38,8 +38,6 @@ import {
     buildVisibleToLabels,
     buildMessageMetadata,
     shouldApplyContentWarnings,
-    messageHeaderMode,
-    type MessageHeaderMode,
 } from "@/lib/composerMessage";
 import {
     Dialog,
@@ -414,14 +412,14 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
 
     // L'en-tête du message quand il suit une réponse du même persona :
     // masqué par défaut ; le choix reste, salon par salon, comme le mode SMS.
-    const HEADER_KEY = `headerMode:${chatId ?? "new"}`;
-    const [headerMode, setHeaderModeRaw] = useState<MessageHeaderMode>("hidden");
+    const HEADER_KEY = `showHeader:${chatId ?? "new"}`;
+    const [showHeader, setShowHeaderRaw] = useState(false);
     useEffect(() => {
-        try { setHeaderModeRaw(messageHeaderMode({ header: localStorage.getItem(HEADER_KEY) ?? undefined })); } catch { }
+        try { setShowHeaderRaw(localStorage.getItem(HEADER_KEY) === "1"); } catch { }
     }, [HEADER_KEY]);
-    function setHeaderMode(v: MessageHeaderMode) {
-        setHeaderModeRaw(v);
-        try { if (v !== "hidden") localStorage.setItem(HEADER_KEY, v); else localStorage.removeItem(HEADER_KEY); } catch { }
+    function setShowHeader(v: boolean) {
+        setShowHeaderRaw(v);
+        try { if (v) localStorage.setItem(HEADER_KEY, "1"); else localStorage.removeItem(HEADER_KEY); } catch { }
     }
 
     /**
@@ -441,7 +439,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             ecrire(`bubbleMode:${nouveauChatId}`, bubbleMode ? "1" : null);
             ecrire(`bubbleColor:${nouveauChatId}`, bubbleColor);
             ecrire(`smsMode:${nouveauChatId}`, smsMode ? "1" : null);
-            ecrire(`headerMode:${nouveauChatId}`, headerMode !== "hidden" ? headerMode : null);
+            ecrire(`showHeader:${nouveauChatId}`, showHeader ? "1" : null);
         } catch { /* stockage indisponible (navigation privée) : rien à reporter */ }
     }
 
@@ -620,7 +618,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 bubbleMode,
                 bubbleColor,
                 smsMode,
-                headerMode,
+                showHeader,
                 media: allMedia,
                 visibleToLabels: buildVisibleToLabels(visibleTo, participants),
                 contentWarnings: applyContentWarnings ? contentWarningsChips.tags : null,
@@ -1023,8 +1021,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         onBubbleColorChange={handleBubbleColorChange}
                         smsMode={smsMode}
                         onSmsModeChange={setSmsMode}
-                        headerMode={headerMode}
-                        onHeaderModeChange={setHeaderMode}
+                        showHeader={showHeader}
+                        onShowHeaderChange={setShowHeader}
                         chatId={chatId}
                         onBannerSelect={chatId ? () => setBannerPickerOpen(true) : undefined}
                         visibleTo={visibleTo}

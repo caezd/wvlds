@@ -43,13 +43,12 @@ export function buildVisibleToLabels(
     .filter((l): l is string => l !== null);
 }
 
-/** L'en-tête de la suite d'une réponse du même persona. */
-export type MessageHeaderMode = "hidden" | "subtle" | "full";
-export const MESSAGE_HEADER_MODES: readonly MessageHeaderMode[] = ["hidden", "subtle", "full"];
-
-/** Le mode noté dans les métadonnées d'un message (absent : masqué). */
-export function messageHeaderMode(metadata: { header?: string } | null | undefined): MessageHeaderMode {
-  return metadata?.header === "subtle" || metadata?.header === "full" ? metadata.header : "hidden";
+/**
+ * La suite d'une réponse du même persona garde-t-elle son en-tête ? Masqué
+ * par défaut ; affiché seulement si l'auteur l'a choisi (`header: "full"`).
+ */
+export function messageShowsHeader(metadata: { header?: string } | null | undefined): boolean {
+  return metadata?.header === "full";
 }
 
 export type MessageMetadata = {
@@ -57,7 +56,7 @@ export type MessageMetadata = {
   bubbles?: true;
   bubbleColor?: string;
   sms?: true;
-  header?: "subtle" | "full";
+  header?: "full";
   media?: MediaRef[];
   visible_to_labels?: string[];
   content_warnings?: string[];
@@ -72,18 +71,18 @@ export function buildMessageMetadata(opts: {
   bubbleMode: boolean;
   bubbleColor: string | null;
   smsMode: boolean;
-  /** En-tête de la suite : masqué par défaut, seule l'exception est notée. */
-  headerMode?: MessageHeaderMode;
+  /** En-tête de la suite : masqué par défaut, noté seulement quand il est affiché. */
+  showHeader?: boolean;
   media: MediaRef[];
   visibleToLabels: string[] | null;
   contentWarnings?: string[] | null;
 }): MessageMetadata | null {
-  const { wordCount, bubbleMode, bubbleColor, smsMode, headerMode, media, visibleToLabels, contentWarnings } = opts;
+  const { wordCount, bubbleMode, bubbleColor, smsMode, showHeader, media, visibleToLabels, contentWarnings } = opts;
   const metadata: MessageMetadata = {
     ...(wordCount > 0 ? { word_count: wordCount } : {}),
     ...(bubbleMode ? { bubbles: true as const, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
     ...(smsMode ? { sms: true as const } : {}),
-    ...(headerMode && headerMode !== "hidden" ? { header: headerMode } : {}),
+    ...(showHeader ? { header: "full" as const } : {}),
     ...(media.length > 0 ? { media } : {}),
     ...(visibleToLabels?.length ? { visible_to_labels: visibleToLabels } : {}),
     ...(contentWarnings?.length ? { content_warnings: contentWarnings } : {}),

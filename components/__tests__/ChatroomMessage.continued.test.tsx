@@ -6,8 +6,7 @@ import type { ChatMessageWithPersona } from "@/types/db";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 // Les messages qui se suivent (même persona, même joueur) : la suite perd son
-// en-tête — par défaut tout entier ; son auteur peut lui laisser un petit
-// avatar, ou l'en-tête complet ;
+// en-tête, sauf si son auteur choisit de l'afficher ;
 // ses actions et ses réactions restent. Set-up repris de
 // ChatroomMessage.header.test.tsx.
 
@@ -156,20 +155,6 @@ describe("ChatroomMessage — messages qui se suivent", () => {
     // Le message lui-même : le tiroir mobile, rendu à côté, porte aussi le nom.
     expect(within(container.querySelector("article")!).queryAllByText("Aria")).toHaveLength(0);
     expect(screen.queryByTestId("avatar")).toBeNull();
-    expect(screen.queryByTestId("message-subtle-avatar")).toBeNull();
-    expect(screen.getByRole("button", { name: "actions" })).toBeInTheDocument();
-  });
-
-  it("le premier message d'une série garde son en-tête", () => {
-    renderMessage({ message: makeMessage({ metadata: { header: "subtle" } }) });
-    expect(screen.getByTestId("avatar")).toBeInTheDocument();
-  });
-
-  it("« Petit avatar » : la suite garde un petit avatar, nommé, sans le grand en-tête", () => {
-    renderMessage({ continued: true, message: makeMessage({ metadata: { header: "subtle" } }) });
-    expect(screen.queryByTestId("avatar")).toBeNull();
-    const pastille = screen.getByTestId("message-subtle-avatar");
-    expect(pastille).toHaveAccessibleName("Aria");
     expect(screen.getByRole("button", { name: "actions" })).toBeInTheDocument();
   });
 
@@ -183,15 +168,15 @@ describe("ChatroomMessage — messages qui se suivent", () => {
     expect(container.querySelector("article")).toHaveAttribute("data-joins-next");
   });
 
-  it("la modification choisit l'en-tête de la suite : masqué, petit avatar ou complet", async () => {
+  it("la modification affiche ou masque l'en-tête de la suite", async () => {
     const onUpdated = vi.fn();
     const { container } = renderMessage({ continued: true, onUpdated });
     // Le menu du message (le tiroir mobile, rendu à côté, a aussi le sien).
     fireEvent.click(within(container.querySelector("article")!).getByRole("button", { name: "edit" }));
-    const choix = screen.getByRole("radiogroup", { name: "headerMode" });
-    expect(within(choix).getByRole("radio", { name: "headerModes.hidden" })).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(within(choix).getByRole("radio", { name: "headerModes.full" }));
-    expect(within(choix).getByRole("radio", { name: "headerModes.full" })).toHaveAttribute("aria-checked", "true");
+    const option = screen.getByRole("button", { name: "showHeader" });
+    expect(option).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(option);
+    expect(option).toHaveAttribute("aria-pressed", "true");
     fireEvent.keyDown(document.querySelector("[contenteditable]")!, { key: "Enter" });
     await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
     expect(onUpdated.mock.calls[0][2]).toEqual(expect.objectContaining({ header: "full" }));

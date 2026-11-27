@@ -53,7 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Interface",
     area: "Salons",
-    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- en-tête masqué et pas de séparateur quand on poste à la suite de son persona\n- en-tête au choix, message par message : masqué, petit avatar dans la marge ou complet ; dans les options du composeur et à la modification\n- jet de dé rattaché à la réponse au-dessus, centré dessous\n- actions de la suite au survol, réactions sous le message",
+    text: "Messages qui se suivent : la suite d’un même persona se lit d’un bloc.\n- en-tête masqué et pas de séparateur quand on poste à la suite de son persona\n- option « Afficher l’en-tête », message par message : dans les options du composeur et à la modification\n- jet de dé rattaché à la réponse au-dessus, centré dessous\n- bannière rattachée à la suite, sans ligne de séparation\n- actions de la suite au survol, réactions sous le message",
   },
   {
     date: "2026-11-27",

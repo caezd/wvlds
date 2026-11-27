@@ -99,8 +99,8 @@ describe("ChatroomComposer — création d'un salon depuis le monde", () => {
 });
 
 describe("ChatroomComposer — en-tête de la suite", () => {
-  it("l'en-tête choisi dans le salon (petit avatar) part avec le message", async () => {
-    stockage["headerMode:c1"] = "subtle";
+  it("« Afficher l'en-tête » coché dans le salon part avec le message", async () => {
+    stockage["showHeader:c1"] = "1";
     const mock = createSupabaseMock({
       user: { id: "u1" },
       results: [
@@ -121,7 +121,7 @@ describe("ChatroomComposer — en-tête de la suite", () => {
 
     await waitFor(() => expect(mock.buildersFor("chat_messages")[0]?.insert).toHaveBeenCalled());
     expect(mock.buildersFor("chat_messages")[0].insert).toHaveBeenCalledWith(
-      expect.objectContaining({ metadata: expect.objectContaining({ header: "subtle" }) }),
+      expect.objectContaining({ metadata: expect.objectContaining({ header: "full" }) }),
     );
   });
 });

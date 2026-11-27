@@ -222,6 +222,18 @@ describe("computeThreadFlow — messages consécutifs d'un même persona", () =>
     expect(f.get(3)).toEqual({ continued: true, joinsNext: false });
   });
 
+  it("une bannière du même persona se rattache comme un jet de dé, et la réponse suivante aussi", () => {
+    const BANNIERE = '{"_type":"banner","url":"https://exemple.test/b.png"}';
+    const f = flow([
+      makeMessage({ id: 1, persona: aria }),
+      makeMessage({ id: 2, persona: aria, content: BANNIERE }),
+      makeMessage({ id: 3, persona: aria }),
+    ]);
+    expect(f.get(1)).toEqual({ continued: false, joinsNext: true });
+    expect(f.get(2)).toEqual({ continued: true, joinsNext: true });
+    expect(f.get(3)).toEqual({ continued: true, joinsNext: false });
+  });
+
   it("un jet de dé sans réponse du même persona au-dessus reste seul, et ne démarre pas de série", () => {
     const f = flow([
       makeMessage({ id: 1, persona: brom }),

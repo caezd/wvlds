@@ -2223,13 +2223,8 @@
     "bubblesHint": "Los párrafos que comiencen con \"…\" o comillas francesas se mostrarán como burbujas de diálogo.",
     "smsMode": "SMS",
     "smsHint": "Los mensajes enviados se muestran en burbujas estilo SMS, agrupados mientras la opción permanezca activa.",
-    "headerMode": "Encabezado de la continuación",
-    "headerModes": {
-      "hidden": "Oculto",
-      "subtle": "Avatar pequeño",
-      "full": "Completo"
-    },
-    "headerModeHint": "Cuando publica justo después de su persona: encabezado oculto, avatar pequeño en el margen o encabezado completo.",
+    "showHeader": "Mostrar el encabezado",
+    "showHeaderHint": "Cuando publica justo después de su persona, su encabezado se oculta. Marque para mostrarlo en este mensaje.",
     "colorLabel": "Color",
     "colorChoose": "Elegir un color",
     "dialogColorTitle": "Color de diálogos",

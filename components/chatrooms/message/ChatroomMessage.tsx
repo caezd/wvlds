@@ -12,7 +12,6 @@ import { useChatroomMessageEdit } from "../composer/useChatroomMessageEdit";
 import { ContentWarningChipInput } from "../composer/ContentWarningChipInput";
 import { ContentWarningBanner } from "../composer/ContentWarningBanner";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
-import { MESSAGE_HEADER_MODES, messageHeaderMode } from "@/lib/composerMessage";
 import { GameBlockRenderer } from "../blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
 import { ParagraphBlockEditor } from "../composer/ParagraphBlockEditor";
@@ -30,7 +29,7 @@ import { DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 
-import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle, Check, X, Loader2, EyeOff } from "lucide-react";
+import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle, Check, X, Loader2, PanelTop } from "lucide-react";
 import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
@@ -212,8 +211,8 @@ function ChatroomMessage({
     setEditBubbleColor,
     editSms,
     setEditSms,
-    editHeaderMode,
-    setEditHeaderMode,
+    editShowHeader,
+    setEditShowHeader,
     contentWarningsChips,
     startEdit,
     cancelEdit,
@@ -280,11 +279,11 @@ function ChatroomMessage({
   if (block) {
     return (
       <>
-        {/* `data-ellipse` : le fil retire les séparateurs autour de l'ellipse.
+        {/* `data-bare` : le fil retire les séparateurs autour d'une ellipse ou d'une bannière.
             Sur mobile, l'appui long ouvre les options, comme pour un message. */}
         <div
           data-message-id={message.id}
-          data-ellipse={block._type === "ellipse" ? "" : undefined}
+          data-bare={block._type === "ellipse" || block._type === "banner" ? "" : undefined}
           data-joins-next={joinsNext ? "" : undefined}
           {...(isMobile && blockHasActions ? longPressHandlers : {})}
         >
@@ -380,7 +379,7 @@ function ChatroomMessage({
         <ContentWarningBanner tags={message.metadata?.content_warnings ?? []} className="mb-3" />
         <div className="relative flex w-full flex-col justify-between gap-8 ">
           <ChatroomMessageHeader
-            variant={continued ? messageHeaderMode(message.metadata) : "full"}
+            variant={continued ? "hidden" : "full"}
             message={message}
             mine={mine}
             editing={editing}
@@ -511,28 +510,17 @@ function ChatroomMessage({
                           {t("smsMode")}
                         </Button>
                         {/* L'en-tête quand ce message suit une réponse du même persona. */}
-                        <div
-                          role="radiogroup"
-                          aria-label={t("headerMode")}
-                          className="inline-flex h-7 items-center rounded-md border border-border p-0.5 text-xs"
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-pressed={editShowHeader}
+                          className="h-7 gap-1.5 px-2.5 text-xs"
+                          onClick={() => setEditShowHeader((v) => !v)}
                         >
-                          <EyeOff aria-hidden className="mx-1.5 h-3 w-3 text-muted-foreground" />
-                          {MESSAGE_HEADER_MODES.map((mode) => (
-                            <button
-                              key={mode}
-                              type="button"
-                              role="radio"
-                              aria-checked={editHeaderMode === mode}
-                              onClick={() => setEditHeaderMode(mode)}
-                              className={cn(
-                                "h-full rounded-sm px-2 transition-colors",
-                                editHeaderMode === mode ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-                              )}
-                            >
-                              {t(`headerModes.${mode}`)}
-                            </button>
-                          ))}
-                        </div>
+                          <PanelTop className="h-3 w-3" />
+                          {t("showHeader")}
+                        </Button>
                         {/* Activé, il garde la teinte d'avertissement plutôt que le fond neutre des autres bascules. */}
                         <Button
                           type="button"

@@ -6,9 +6,8 @@ import { useTranslations } from "next-intl";
 import {
   Component, Dices, Pipette, ImagePlus, Eye, Lock, Sword, Heart,
   Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check,
-  AlertTriangle, Vote, ArrowRightLeft, Ellipsis, EyeOff, type LucideIcon,
+  AlertTriangle, Vote, ArrowRightLeft, Ellipsis, PanelTop, type LucideIcon,
 } from "lucide-react";
-import { MESSAGE_HEADER_MODES, type MessageHeaderMode } from "@/lib/composerMessage";
 
 import { cn } from "@/lib/utils";
 import { ChatroomDayStrip } from "@/components/chatrooms/day/ChatroomDayStrip";
@@ -203,8 +202,8 @@ export function BlocksDropdown({
     onBubbleColorChange,
     smsMode,
     onSmsModeChange,
-    headerMode = "hidden",
-    onHeaderModeChange,
+    showHeader = false,
+    onShowHeaderChange,
     chatId,
     onBannerSelect,
     visibleTo,
@@ -237,8 +236,8 @@ export function BlocksDropdown({
     smsMode: boolean;
     onSmsModeChange: (v: boolean) => void;
     /** En-tête du message quand il suit une réponse du même persona (masqué par défaut). */
-    headerMode?: MessageHeaderMode;
-    onHeaderModeChange?: (mode: MessageHeaderMode) => void;
+    showHeader?: boolean;
+    onShowHeaderChange?: (v: boolean) => void;
     chatId?: string;
     onBannerSelect?: () => void;
     visibleTo: string[] | null;
@@ -268,7 +267,7 @@ export function BlocksDropdown({
     const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
     const [draftPinId, setDraftPinId] = useState<string | null>(null);
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
-    const activeOptionsCount = [bubbleMode, smsMode, headerMode !== "hidden", visibleTo !== null, contentWarningsActive, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
+    const activeOptionsCount = [bubbleMode, smsMode, showHeader, visibleTo !== null, contentWarningsActive, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
 
     useEffect(() => {
         // Desktop : le premier item est prévisualisé par défaut (mime le
@@ -313,14 +312,13 @@ export function BlocksDropdown({
         }] : []),
         { id: "bubbles", icon: MessageCircle, title: t("bubblesMode"), description: t("bubblesHint"), checked: bubbleMode, onActivate: () => onBubbleModeChange(!bubbleMode) },
         { id: "sms", icon: MessageSquareText, title: t("smsMode"), description: t("smsHint"), checked: smsMode, onActivate: () => onSmsModeChange(!smsMode) },
-        ...(onHeaderModeChange ? [{
+        ...(onShowHeaderChange ? [{
             id: "header",
-            icon: EyeOff,
-            title: `${t("headerMode")} : ${t(`headerModes.${headerMode}`)}`,
-            description: t("headerModeHint"),
-            checked: headerMode !== "hidden",
-            // Un clic passe au choix suivant ; l'aperçu les propose tous les trois.
-            onActivate: () => onHeaderModeChange(MESSAGE_HEADER_MODES[(MESSAGE_HEADER_MODES.indexOf(headerMode) + 1) % MESSAGE_HEADER_MODES.length]),
+            icon: PanelTop,
+            title: t("showHeader"),
+            description: t("showHeaderHint"),
+            checked: showHeader,
+            onActivate: () => onShowHeaderChange(!showHeader),
         }] : []),
         { id: "privateNote", icon: Lock, title: t("privateNote"), description: t("privateNoteHint"), checked: visibleTo !== null, disabled: !chatId, onActivate: () => onPrivateNoteToggle() },
         { id: "contentWarning", icon: AlertTriangle, title: t("contentWarning"), description: t("contentWarningHint"), checked: contentWarningsActive, onActivate: () => onContentWarningsToggle() },
@@ -491,30 +489,19 @@ export function BlocksDropdown({
                 );
             case "header":
                 return (
-                    <div role="radiogroup" aria-label={t("headerMode")} className="flex w-full flex-col gap-1.5">
-                        {MESSAGE_HEADER_MODES.map((mode) => (
-                            <button
-                                key={mode}
-                                type="button"
-                                role="radio"
-                                aria-checked={headerMode === mode}
-                                onClick={() => onHeaderModeChange?.(mode)}
-                                className={cn(
-                                    "flex items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                    headerMode === mode ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/60",
-                                )}
-                            >
-                                {/* La suite d'une réponse : rien, un petit avatar, ou l'en-tête complet. */}
-                                <span aria-hidden className="flex w-10 shrink-0 flex-col gap-1">
-                                    {mode === "full" && <span className="h-1.5 w-6 rounded-full bg-foreground/70" />}
-                                    <span className="flex items-center gap-1">
-                                        {mode !== "hidden" && <span className="size-2 shrink-0 rounded-full bg-muted-foreground/60" />}
-                                        <span className="h-1 flex-1 rounded-full bg-muted-foreground/40" />
+                    // Deux réponses du même persona : la seconde garde son en-tête, ou non.
+                    <div aria-hidden className="flex w-full flex-col gap-1.5">
+                        {[0, 1].map((i) => (
+                            <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5">
+                                {(i === 0 || showHeader) && (
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="size-3.5 rounded-full bg-muted-foreground/60" />
+                                        <span className="h-1.5 w-12 rounded-full bg-foreground/70" />
                                     </span>
-                                    <span className="h-1 w-4/5 rounded-full bg-muted-foreground/40" />
-                                </span>
-                                {t(`headerModes.${mode}`)}
-                            </button>
+                                )}
+                                <span className="h-1.5 w-full rounded-full bg-muted-foreground/30" />
+                                <span className="h-1.5 w-3/5 rounded-full bg-muted-foreground/30" />
+                            </div>
                         ))}
                     </div>
                 );
