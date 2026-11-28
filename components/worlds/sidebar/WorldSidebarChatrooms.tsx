@@ -194,10 +194,7 @@ function RoomItem({
         )}
       </div>
       {turnWait && (
-        <span className="flex shrink-0 items-center gap-1 text-2xs tabular-nums text-foreground">
-          <ListOrdered className="size-3" aria-hidden />
-          {turnWait}
-        </span>
+        <span className="shrink-0 text-2xs tabular-nums text-foreground">{turnWait}</span>
       )}
       <CountPip count={unread} className="shrink-0" />
     </ChatroomLink>
