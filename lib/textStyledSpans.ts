@@ -74,8 +74,8 @@ export function createFenceTracker() {
 // Une emphase dont le marqueur fermant suit une espace (`**gras **`) :
 // Markdown ne la ferme pas. On sort l'espace du marqueur (`**gras** `).
 // D'abord les marqueurs doubles, puis `*`/`_` seuls, sans toucher aux doubles.
-const DOUBLE_EMPHASIS_TRAILING_SPACE_RE = /(\*\*|__|~~)(?=\S)((?:(?!\1)[^\n])*?\S)([ \t]+)\1/g;
-const SINGLE_EMPHASIS_TRAILING_SPACE_RE = /(?<![*_\w])([*_])(?=[^\s*_])([^\n*_]*?[^\s*_])([ \t]+)\1(?![*_])/g;
+const DOUBLE_EMPHASIS_TRAILING_SPACE_RE = /(\*\*|__|~~)(?=\S)((?:(?!\1)[^\n])*?\S)([^\S\n]+)\1/g;
+const SINGLE_EMPHASIS_TRAILING_SPACE_RE = /(?<![*_\w])([*_])(?=[^\s*_])([^\n*_]*?[^\s*_])([^\S\n]+)\1(?![*_])/g;
 
 function closeEmphasisTightly(segment: string): string {
   return segment
@@ -154,7 +154,7 @@ function openAtStart(paragraph: string, marker: string): string {
 }
 
 function closeAtEnd(paragraph: string, marker: string): string {
-  return paragraph.replace(/[ \t]*$/, marker);
+  return paragraph.replace(/[^\S\n]*$/, marker);
 }
 
 /** Une mise en forme qui peut s'étendre d'un morceau de texte au suivant. */

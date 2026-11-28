@@ -146,6 +146,14 @@ describe("transformStyledSpans", () => {
       expect(transformStyledSpans("[#f00]a\n\nb")).toBe("[#f00]a\n\nb");
     });
 
+    // L'éditeur du composeur laisse des espaces insécables (U+00A0) en fin de
+    // paragraphe : Markdown ne ferme pas une emphase qui les suit.
+    it("espace insécable en fin de paragraphe ou avant le marqueur fermant", () => {
+      const nbsp = " ";
+      expect(transformStyledSpans(`*Un.${nbsp}\n\nDeux.*`)).toBe("*Un.*\n\n*Deux.*");
+      expect(transformStyledSpans(`en **gras${nbsp}**ici`)).toBe(`en **gras**${nbsp}ici`);
+    });
+
     it("un paragraphe sur plusieurs lignes reste entier", () => {
       expect(transformStyledSpans("*Un\nsuite\n\nDeux*")).toBe("*Un\nsuite*\n\n*Deux*");
     });
