@@ -36,7 +36,6 @@ import type {
   Gauge,
 } from "@/lib/chat-blocks";
 import {
-  CALLOUT_BG_INTENSITIES,
   CALLOUT_IMAGE_VEILS,
   CALLOUT_SIDES,
   bordersFromSides,
@@ -181,6 +180,51 @@ function ColorChip({ label, value, fallback, onChange, chooseLabel, noneLabel }:
         <ColorSwatchRow value={value} onChange={onChange} chooseLabel={chooseLabel} noneLabel={noneLabel} />
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * L'intensité du fond, au pour cent près : un curseur dont la piste va du
+ * transparent à la couleur du fond. Le vrai `<input type="range">` est posé,
+ * invisible, par-dessus la piste dessinée : clavier, souris et lecteurs
+ * d'écran le manipulent comme d'habitude.
+ */
+function IntensitySlider({ label, value, tint, onChange }: {
+  label: string;
+  value: number;
+  tint: string;
+  onChange: (v: number) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
+        <span className="text-xs tabular-nums text-muted-foreground">{value} %</span>
+      </div>
+      <div className="group relative h-6">
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full border border-border"
+          style={{ backgroundImage: `linear-gradient(to right, transparent, ${tint})` }}
+        />
+        <span
+          aria-hidden
+          className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-sm group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-ring"
+          style={{ left: `calc(0.5rem + (100% - 1rem) * ${value / 100})` }}
+        />
+        <input
+          id={id}
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="absolute inset-0 w-full cursor-pointer opacity-0"
+        />
+      </div>
+    </div>
   );
 }
 
@@ -941,20 +985,11 @@ export function CalloutDialog({
                 {!separator && (
                   <section className="space-y-4">
                     <SectionLabel>{t("callout.bgColorLabel")}</SectionLabel>
-                    <ChoiceGroup<number>
+                    <IntensitySlider
                       label={t("callout.bgIntensityLabel")}
                       value={resolved.bgIntensity}
+                      tint={tint}
                       onChange={(v) => set("bgIntensity", v)}
-                      options={CALLOUT_BG_INTENSITIES.map((v, i) => ({
-                        value: v,
-                        label: t(`callout.${(["levelNone", "levelLight", "levelMedium", "levelMarked", "levelStrong"] as const)[i]}`),
-                        preview: (
-                          <span
-                            className="block h-5 w-8 rounded-xs border border-border"
-                            style={{ backgroundColor: `color-mix(in srgb, ${tint} ${v}%, transparent)` }}
-                          />
-                        ),
-                      }))}
                     />
 
                     {/* Image de fond ou bandeau */}

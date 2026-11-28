@@ -55,6 +55,18 @@ describe("CalloutDialog — réglages", () => {
     });
   });
 
+  it("le curseur règle l'intensité du fond, au pour cent près", () => {
+    const onSend = vi.fn();
+    render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
+    fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.tabStyle" }));
+    const slider = screen.getByRole("slider", { name: "callout.bgIntensityLabel" });
+    expect(slider).toHaveValue("8");
+    fireEvent.change(slider, { target: { value: "35" } });
+    fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
+    expect(sent(onSend).bgIntensity).toBe(35);
+  });
+
   it("un encadré qui garde tous les réglages par défaut n'en écrit aucun", () => {
     const onSend = vi.fn();
     render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);

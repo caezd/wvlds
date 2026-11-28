@@ -53,8 +53,7 @@ export const CALLOUT_ICON_SIZES: CalloutIconSize[] = ["small", "medium", "large"
 export const CALLOUT_FONTS: CalloutFont[] = ["inherit", "serif", "mono", "hand"];
 export const CALLOUT_IMAGE_MODES: CalloutImageMode[] = ["background", "banner"];
 
-/** Paliers proposés par la fenêtre (en %). */
-export const CALLOUT_BG_INTENSITIES = [0, 8, 16, 30, 50] as const;
+/** Paliers du voile proposés par la fenêtre (en %). */
 export const CALLOUT_IMAGE_VEILS = [0, 25, 50, 75] as const;
 
 /** Épaisseur et arrondi en pixels, pour le rendu. */
