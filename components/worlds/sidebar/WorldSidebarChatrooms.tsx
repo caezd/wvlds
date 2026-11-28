@@ -13,10 +13,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SectionLabel } from "@/components/ui/section-label";
 import { CountPip } from "@/components/ui/count-pip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star, ChevronRight, ArrowLeft, MessagesSquare, Hash } from "lucide-react";
+import { Star, ChevronRight, ArrowLeft, MessagesSquare, Hash, ListOrdered } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useTranslations } from "next-intl";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { compactTime } from "@/lib/notifHelpers";
 
 // Forme partagée avec le store : une seule définition pour les deux.
 type Room = WorldRoom;
@@ -51,11 +53,14 @@ function RoomItem({
   isActive,
   unread,
   categoryName,
+  turnWait,
 }: {
   room: Room | ParticipatedRoom;
   isActive: boolean;
   unread: number;
   categoryName?: string;
+  /** C'est votre tour ici (ordre de passage) : depuis combien de temps. */
+  turnWait?: string;
 }) {
   const { getUserPresence } = useGlobalPresence();
   const label = (room.title ?? room.name ?? "Chatroom").trim();
@@ -125,7 +130,7 @@ function RoomItem({
       <div className="flex-1 min-w-0">
         <p className={cn(
           "truncate leading-tight text-sm",
-          hasUnread || isActive ? "font-semibold text-foreground" : "text-foreground",
+          hasUnread || isActive || turnWait ? "font-semibold text-foreground" : "text-foreground",
         )}>
           {label}
         </p>
@@ -136,6 +141,12 @@ function RoomItem({
           </p>
         )}
       </div>
+      {turnWait && (
+        <span className="flex shrink-0 items-center gap-1 text-2xs tabular-nums text-foreground">
+          <ListOrdered className="size-3" aria-hidden />
+          {turnWait}
+        </span>
+      )}
       <CountPip count={unread} className="shrink-0" />
     </ChatroomLink>
   );
@@ -155,6 +166,8 @@ export function WorldSidebarChatrooms({
   categories: Category[];
 }) {
   const t = useTranslations("worlds");
+  const tNotif = useTranslations("notifications");
+  const { userId } = useCurrentUser();
   const { roomUnread } = useNotifications();
   const pathname = usePathname();
   // Liste partagée : les deux instances de ce composant (aside desktop et
@@ -185,11 +198,22 @@ export function WorldSidebarChatrooms({
   const participatedIds = new Set(initialParticipated.map((p) => p.id));
   const followedSet = new Set(initialFollowedIds);
 
+  // À VOUS DE JOUER : salons où c'est votre tour (migration 280), celui qui
+  // attend depuis le plus longtemps en tête. Ils ne se répètent pas plus bas.
+  const aVous = userId
+    ? allRooms
+      .filter((r) => r.turn_user_id === userId)
+      .sort((a, b) => (a.turn_started_at ?? "").localeCompare(b.turn_started_at ?? ""))
+    : [];
+  const aVousIds = new Set(aVous.map((r) => r.id));
+
   // ACTIF: top 5 rooms participées, triées par last_message_at (allRooms est déjà trié)
-  const actif = allRooms.filter((r) => participatedIds.has(r.id) || createdHere.has(r.id)).slice(0, 5);
+  const actif = allRooms
+    .filter((r) => !aVousIds.has(r.id) && (participatedIds.has(r.id) || createdHere.has(r.id)))
+    .slice(0, 5);
 
   // SUIVI: rooms suivies, triées par last_message_at
-  const suivi = allRooms.filter((r) => followedSet.has(r.id));
+  const suivi = allRooms.filter((r) => !aVousIds.has(r.id) && followedSet.has(r.id));
 
   // TOUS: rooms grouped by category
   const byCategory = new Map<string, Room[]>();
@@ -251,6 +275,25 @@ export function WorldSidebarChatrooms({
   return (
     <ScrollArea className="flex-1 min-h-0 min-w-0">
       <div className="p-2 space-y-4 min-w-0">
+
+        {/* À VOUS DE JOUER */}
+        {aVous.length > 0 && (
+          <section>
+            <SidebarSectionLabel><ListOrdered size={12} /> {t("sidebar.yourTurn")}</SidebarSectionLabel>
+            <div className="space-y-0.5 min-w-0">
+              {aVous.map((room) => (
+                <RoomItem
+                  key={room.id}
+                  room={room}
+                  isActive={room.id === activeChatroomId}
+                  unread={roomUnread[room.id] ?? 0}
+                  categoryName={room.category_id ? categoryById.get(room.category_id)?.title : undefined}
+                  turnWait={room.turn_started_at ? compactTime(room.turn_started_at, tNotif("text.dayAbbr")) : ""}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ACTIF */}
         {actif.length > 0 && (

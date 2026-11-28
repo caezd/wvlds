@@ -26,12 +26,16 @@ vi.mock("next-intl", () => ({
       "sidebar.noChatrooms": "Aucune chatroom",
       "sidebar.noChatroomsInCategory": "Aucune chatroom dans cette catégorie",
       "sidebar.subjects": `${opts?.count ?? 0} sujet(s)`,
+      "sidebar.yourTurn": "À vous de jouer",
+      "text.dayAbbr": "j",
     };
     return map[key] ?? key;
   },
 }));
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/c/room-1" }));
+
+vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ userId: "me" }) }));
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -68,6 +72,8 @@ type Room = {
   last_poster_id: string | null;
   participant_count: number;
   second_poster_avatar_url: string | null;
+  turn_user_id?: string | null;
+  turn_started_at?: string | null;
 };
 
 function makeRoom(overrides: Partial<Room> = {}): Room {
@@ -326,5 +332,33 @@ describe("WorldSidebarChatrooms — salons récents", () => {
 
     const section = screen.getByText("Actif").closest("section")!;
     expect(section.textContent).toContain("Salon tout neuf");
+  });
+});
+
+describe("WorldSidebarChatrooms — à vous de jouer", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetWorldRoomsStore();
+  });
+
+  it("regroupe les salons où c'est votre tour, le plus ancien en tête, avec l'attente", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
+    try {
+      const mock = createSupabaseMock({ user: { id: "me" } });
+      renderSidebar([
+        makeRoom({ id: "room-1", title: "La taverne", turn_user_id: "me", turn_started_at: "2026-03-03T09:00:00Z" }),
+        makeRoom({ id: "room-2", title: "Le col", turn_user_id: "me", turn_started_at: "2026-03-01T12:00:00Z" }),
+        makeRoom({ id: "room-3", title: "La forêt", turn_user_id: "bob", turn_started_at: "2026-03-01T12:00:00Z" }),
+      ], mock);
+
+      const section = screen.getByText("À vous de jouer").closest("section")!;
+      const titres = [...section.querySelectorAll("a")].map((a) => a.querySelector("p")?.textContent);
+      expect(titres).toEqual(["Le col", "La taverne"]);
+      expect(section.textContent).toContain("2j");
+      expect(section.textContent).toContain("3h");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

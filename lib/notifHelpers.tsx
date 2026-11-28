@@ -103,6 +103,11 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                     ?? (n.metadata?.test && n.metadata.kind === "message" ? t("announcement.testMessageTitle") : t("announcement.fallbackTitle")),
                 ...r,
             });
+        // Ordre de passage (migration 280) : le tour d'un salon vous revient.
+        case "turn_yours":
+            return n.content
+                ? t.rich("text.turnYours", { chatroom: n.content, ...r })
+                : t.rich("text.turnYoursNoName", r);
         case "relation_request": {
             const target = n.content ?? t("text.someone");
             if (n.metadata?.marital_status === "married") return t.rich("text.maritalRequestMarried", { actor, target, ...r });

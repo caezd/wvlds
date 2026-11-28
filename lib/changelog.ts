@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Fonctionnalité",
+    area: "Salons",
+    text: "Ordre de passage : le tour peut changer quand le joueur passe la main.\n- au choix par salon : au premier message ou à la main\n- « Passer la main » dans la barre du tour\n- « Envoyer et passer la main » au composeur (Ctrl+Maj+Entrée)\n- section « À vous de jouer » dans la liste des salons, avec le temps d’attente\n- notification « À vous de jouer »",
+  },
+  {
+    date: "2026-11-27",
     category: "Interface",
     area: "Salons",
     text: "Réglages du salon : plus de choix d’icône ni de bannière.",

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft, AtSign, Bell, CheckCheck, ClipboardCheck, Globe, Hash, Heart, Loader2,
-    Megaphone, MessageSquare, Settings, Smile, UserPlus, X, Spline
+    ListOrdered, Megaphone, MessageSquare, Settings, Smile, UserPlus, X, Spline
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -48,10 +48,11 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     persona_reviewed: <ClipboardCheck size={13} />,
     sequel_request: <Spline size={13} />,
     world_announcement: <Megaphone size={13} />,
+    turn_yours: <ListOrdered size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request", "world_announcement"];
+const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request", "turn_yours"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed", "sequel_request", "world_announcement", "turn_yours"];
 const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
 const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request", "sequel_request"];
 
@@ -532,6 +533,7 @@ export function NotificationInlinePanelContent() {
         persona_reviewed: t("prefs.persona_reviewed"),
         sequel_request: t("prefs.sequel_request"),
         world_announcement: t("prefs.world_announcement"),
+        turn_yours: t("prefs.turn_yours"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

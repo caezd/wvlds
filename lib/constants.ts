@@ -56,6 +56,7 @@ export const RPC = {
   GET_LINKABLE_CHATROOMS: "get_linkable_chatrooms",
   GET_CHATROOM_POST_ACCESS: "get_chatroom_post_access",
   LIST_CHATROOM_PLAYER_IDS: "list_chatroom_player_ids",
+  PASS_CHATROOM_TURN: "pass_chatroom_turn",
   MARK_CHATROOM_READ: "mark_chatroom_read",
   MARK_WORLD_READ: "mark_world_read",
   AWARD_EVENT: "award_event",

@@ -3,6 +3,8 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import {
   currentPlayerId,
   fetchChatroomPlayerIds,
+  passTurn,
+  turnAdvanceMode,
   isTurnActive,
   moveInOrder,
   removeTurn,
@@ -34,6 +36,12 @@ describe("ordre de passage — calculs", () => {
     expect(upcomingPlayerIds(turn({ enabled: false }))).toEqual([]);
   });
 
+  it("mode de passage : au premier message par défaut", () => {
+    expect(turnAdvanceMode(turn())).toBe("message");
+    expect(turnAdvanceMode(turn({ advance_mode: "manual" }))).toBe("manual");
+    expect(turnAdvanceMode(null)).toBe("message");
+  });
+
   it("moveInOrder déplace sans muter, bornes respectées", () => {
     const l = ["a", "b", "c"];
     expect(moveInOrder(l, 0, 1)).toEqual(["b", "a", "c"]);
@@ -58,6 +66,29 @@ describe("ordre de passage — base", () => {
     const mock = createSupabaseMock({ results: [{ data: turn({ current_index: 2 }) }] });
     await skipTurn(mock.client as never, turn());
     expect(mock.builders[0].builder.update).toHaveBeenCalledWith({ current_index: 2 });
+  });
+
+  it("saveTurn : enregistre le mode de passage", async () => {
+    const mock = createSupabaseMock({ results: [{ data: turn({ advance_mode: "manual" }) }] });
+    await saveTurn(mock.client as never, "c1", { enabled: true, advance_mode: "manual", order_user_ids: ["a"], current_index: 0 });
+    expect(mock.builders[0].builder.upsert).toHaveBeenCalledWith(
+      { chat_id: "c1", enabled: true, advance_mode: "manual", order_user_ids: ["a"], current_index: 0 },
+      { onConflict: "chat_id" },
+    );
+  });
+
+  it("passTurn : le joueur courant passe la main par la base", async () => {
+    const mock = createSupabaseMock();
+    mock.client.rpc.mockResolvedValue({ data: turn({ current_index: 2 }), error: null });
+    const res = await passTurn(mock.client as never, "c1");
+    expect(mock.client.rpc).toHaveBeenCalledWith("pass_chatroom_turn", { p_chat_id: "c1" });
+    expect(res.turn?.current_index).toBe(2);
+  });
+
+  it("passTurn : rend l'erreur de la base", async () => {
+    const mock = createSupabaseMock();
+    mock.client.rpc.mockResolvedValue({ data: null, error: { message: "ce n'est pas votre tour" } });
+    expect(await passTurn(mock.client as never, "c1")).toEqual({ turn: null, error: "ce n'est pas votre tour" });
   });
 
   it("removeTurn : désactive et vide au lieu de supprimer (UPDATE filtrable en temps réel)", async () => {

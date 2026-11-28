@@ -62,7 +62,7 @@ describe("ChatroomTurnDialog", () => {
     fireEvent.click(screen.getByText("turnSave"));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
-    expect(saveTurn).toHaveBeenCalledWith(expect.anything(), "c1", { enabled: true, order_user_ids: ["b", "a"], current_index: 0 });
+    expect(saveTurn).toHaveBeenCalledWith(expect.anything(), "c1", { enabled: true, advance_mode: "message", order_user_ids: ["b", "a"], current_index: 0 });
   });
 
   it("garde le tour du joueur courant quand on réordonne", async () => {
@@ -76,6 +76,24 @@ describe("ChatroomTurnDialog", () => {
 
     await waitFor(() => expect(saveTurn).toHaveBeenCalled());
     expect(saveTurn.mock.calls[0][2]).toMatchObject({ order_user_ids: ["b", "a"], current_index: 0 });
+  });
+
+  it("enregistre le mode choisi : quand le joueur passe la main", async () => {
+    saveTurn.mockResolvedValue({ turn: { chat_id: "c1", enabled: true, advance_mode: "manual", order_user_ids: ["a"], current_index: 0 } });
+    const turn = { chat_id: "c1", enabled: true, order_user_ids: ["a"], current_index: 0 };
+    render(<ChatroomTurnDialog open onOpenChange={vi.fn()} chatId="c1" worldId="w1" ownerId={null} turn={turn} onSaved={vi.fn()} />);
+    await screen.findByText("Bob");
+    fireEvent.click(screen.getByRole("radio", { name: /turnModeManual/ }));
+    fireEvent.click(screen.getByText("turnSave"));
+    await waitFor(() => expect(saveTurn).toHaveBeenCalled());
+    expect(saveTurn.mock.calls[0][2]).toMatchObject({ advance_mode: "manual" });
+  });
+
+  it("montre le mode enregistré", async () => {
+    const turn = { chat_id: "c1", enabled: true, advance_mode: "manual" as const, order_user_ids: ["a"], current_index: 0 };
+    render(<ChatroomTurnDialog open onOpenChange={vi.fn()} chatId="c1" worldId="w1" ownerId={null} turn={turn} onSaved={vi.fn()} />);
+    await screen.findByText("Bob");
+    expect(screen.getByRole("radio", { name: /turnModeManual/ })).toHaveAttribute("aria-checked", "true");
   });
 
   it("retire l'ordre", async () => {

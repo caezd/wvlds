@@ -4,7 +4,7 @@
 // l'équivalent riche côté client. Toute évolution des libellés doit être
 // répercutée ICI aussi (un test de non-régression liste les 9 types, voir
 // __tests__/pushText.test.ts, pour limiter le risque de dérive silencieuse).
-// 15 types depuis la migration 227 (annonces d'un monde).
+// 16 types depuis la migration 280 (ordre de passage : à vous de jouer).
 
 export type PushLocale = "fr" | "en" | "es";
 
@@ -13,7 +13,7 @@ export type PushNotifPayload = {
     | "mention" | "reaction" | "new_member" | "new_chatroom" | "world_invite"
     | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request"
     | "role_mention" | "everyone_mention" | "persona_submitted" | "persona_reviewed" | "sequel_request"
-    | "world_announcement";
+    | "world_announcement" | "turn_yours";
   world_id: string | null;
   chat_id: string | null;
   actor_id: string | null;
@@ -109,6 +109,11 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
       const prec = typeof n.metadata?.previous_title === "string" ? n.metadata.previous_title : T(locale, "votre salon", "your chatroom", "su sala");
       return { title, body: T(locale, `${actor} propose que « ${suite} » fasse suite à « ${prec} »`, `${actor} proposes “${suite}” as a sequel to “${prec}”`, `${actor} propone que «${suite}» continúe «${prec}»`) };
     }
+    // Ordre de passage (migration 280) : le tour d'un salon vous revient.
+    case "turn_yours":
+      return { title, body: n.content
+        ? T(locale, `À vous de jouer dans ${n.content}`, `Your turn in ${n.content}`, `Le toca en ${n.content}`)
+        : T(locale, "À vous de jouer", "Your turn", "Le toca") };
     // Une annonce de l'équipe d'un monde (migration 227) : le monde en titre,
     // puis le titre de l'annonce et le début de son texte.
     case "world_announcement": {

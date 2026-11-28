@@ -2,20 +2,34 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { RPC, TABLE } from "@/lib/constants";
 
 /**
- * Ordre de passage d'un salon (migration 211). Une ligne par salon ; le tour
- * avance en base quand le joueur courant poste un message public. Réglé par
- * le créateur du salon ou qui a « Gérer les salons » (policies).
+ * Ordre de passage d'un salon (migrations 211 et 280). Une ligne par salon ;
+ * le tour avance en base quand le joueur courant poste un message public
+ * (mode « message ») ou quand il passe la main (mode « manual », ou dans les
+ * deux modes par `passTurn`). Réglé par le créateur du salon ou qui a
+ * « Gérer les salons » (policies).
  */
+export const TURN_ADVANCE_MODES = ["message", "manual"] as const;
+export type TurnAdvanceMode = (typeof TURN_ADVANCE_MODES)[number];
+
 export type ChatroomTurn = {
   chat_id: string;
   enabled: boolean;
+  /** Absent des lignes d'avant la migration 280 : « message ». */
+  advance_mode?: TurnAdvanceMode;
+  /** Début du tour du joueur courant, tenu par la base (migration 280). */
+  turn_started_at?: string;
   /** Joueurs (comptes) dans l'ordre de passage. */
   order_user_ids: string[];
   /** Index (0-based) du joueur dont c'est le tour. */
   current_index: number;
 };
 
-const COLUMNS = "chat_id, enabled, order_user_ids, current_index";
+const COLUMNS = "chat_id, enabled, advance_mode, order_user_ids, current_index, turn_started_at";
+
+/** Comment le tour passe au suivant. */
+export function turnAdvanceMode(turn: ChatroomTurn | null | undefined): TurnAdvanceMode {
+  return turn?.advance_mode === "manual" ? "manual" : "message";
+}
 
 /** L'ordre est-il en vigueur (activé, au moins un joueur) ? */
 export function isTurnActive(turn: ChatroomTurn | null | undefined): turn is ChatroomTurn {
@@ -72,7 +86,7 @@ export async function fetchChatroomPlayerIds(supabase: Pick<SupabaseClient, "rpc
 export async function saveTurn(
   supabase: Pick<SupabaseClient, "from">,
   chatId: string,
-  value: Pick<ChatroomTurn, "enabled" | "order_user_ids" | "current_index">,
+  value: Pick<ChatroomTurn, "enabled" | "advance_mode" | "order_user_ids" | "current_index">,
 ): Promise<{ turn: ChatroomTurn | null; error?: string }> {
   const { data, error } = await supabase
     .from(TABLE.CHATROOM_TURNS)
@@ -80,6 +94,15 @@ export async function saveTurn(
     .select(COLUMNS)
     .single();
   return error ? { turn: null, error: error.message } : { turn: data as ChatroomTurn };
+}
+
+/** Le joueur dont c'est le tour passe la main au suivant (migration 280). */
+export async function passTurn(
+  supabase: Pick<SupabaseClient, "rpc">,
+  chatId: string,
+): Promise<{ turn: ChatroomTurn | null; error?: string }> {
+  const { data, error } = await supabase.rpc(RPC.PASS_CHATROOM_TURN, { p_chat_id: chatId });
+  return error ? { turn: null, error: error.message } : { turn: (data as ChatroomTurn | null) ?? null };
 }
 
 /** Passe au joueur suivant (la base ramène l'index dans les bornes). */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ListOrdered, SkipForward } from "lucide-react";
+import { ArrowRightLeft, ListOrdered, SkipForward } from "lucide-react";
 import { currentPlayerId, isTurnActive, upcomingPlayerIds, type ChatroomTurn } from "@/lib/chatroomTurns";
 import { cn } from "@/lib/utils";
 import { useProfileNames } from "./useProfileNames";
@@ -9,8 +9,9 @@ import { useProfileNames } from "./useProfileNames";
 /**
  * Ordre de passage, en languette accrochée au haut du composeur (même style
  * que « … est en train d'écrire ») : « À vous de jouer » ou « Au tour de X »,
- * puis les suivants. Informatif — poster hors tour reste possible. Qui règle
- * l'ordre peut passer au joueur suivant.
+ * puis les suivants. Informatif — poster hors tour reste possible. Le joueur
+ * dont c'est le tour passe la main ; qui règle l'ordre peut passer le tour
+ * d'un autre.
  *
  * Le composeur la place (prop `topTab`) : -mb-2.5 sous sa carte, d'où le
  * pb-4 ici pour que le texte reste visible au-dessus.
@@ -20,11 +21,13 @@ export function ChatroomTurnBar({
   selfId,
   canManage,
   onSkip,
+  onPass,
 }: {
   turn: ChatroomTurn | null;
   selfId: string | null;
   canManage: boolean;
   onSkip: () => void;
+  onPass: () => void;
 }) {
   const t = useTranslations("chatrooms");
   const names = useProfileNames(turn?.order_user_ids ?? []);
@@ -33,6 +36,7 @@ export function ChatroomTurnBar({
   const courant = currentPlayerId(turn);
   const aMoi = !!selfId && courant === selfId;
   const suivants = upcomingPlayerIds(turn, 2).map((id) => names[id] ?? "…");
+  const prochain = upcomingPlayerIds(turn, 1)[0];
 
   return (
     <div
@@ -49,7 +53,16 @@ export function ChatroomTurnBar({
           · {t("turnNext", { names: suivants.join(", ") })}
         </span>
       )}
-      {canManage && (
+      {aMoi ? (
+        <button
+          type="button"
+          onClick={onPass}
+          className="ml-auto inline-flex shrink-0 items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-foreground hover:bg-muted/70"
+        >
+          <ArrowRightLeft className="h-3 w-3" />
+          {prochain ? t("turnPassTo", { name: names[prochain] ?? "…" }) : t("turnPass")}
+        </button>
+      ) : canManage && (
         <button
           type="button"
           onClick={onSkip}

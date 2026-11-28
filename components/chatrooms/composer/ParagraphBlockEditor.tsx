@@ -130,6 +130,7 @@ export function ParagraphBlockEditor({
   wrapperClassName,
   submitOnEnter = true,
   invertEnter = false,
+  onSubmitAlt,
   formatting = false,
   autoFocus = false,
   disabled = false,
@@ -150,6 +151,9 @@ export function ParagraphBlockEditor({
       nouveau bloc, Maj+Entrée ou Ctrl+Entrée envoie. Utilisé sur mobile où
       Maj+Entrée n'est pas accessible sur un clavier virtuel. */
   invertEnter?: boolean;
+  /** Second envoi, par Ctrl+Maj+Entrée (Cmd+Maj+Entrée sur Mac) — ex.
+   *  « Envoyer et passer la main ». Absent : la combinaison reste un saut. */
+  onSubmitAlt?: () => void;
   /** Affiche une barre de mise en forme (gras/italique/…) au-dessus de la
    *  zone de saisie tant qu'elle est active. Désactivé par défaut : les
    *  autres usages de ce composant (WorldMap, WorldWiki) restent inchangés. */
@@ -526,6 +530,11 @@ export function ParagraphBlockEditor({
 
     const shift = e.shiftKey;
     const ctrl  = e.ctrlKey;
+    if (onSubmitAlt && shift && (ctrl || e.metaKey)) {
+      e.preventDefault();
+      if (!e.repeat) onSubmitAlt();
+      return;
+    }
     const modifierHeld = shift || ctrl;
 
     // Touche qui déclenche l'envoi : Entrée seule normalement, ou Maj/Ctrl+Entrée

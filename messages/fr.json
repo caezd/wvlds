@@ -275,6 +275,7 @@
       "persona_submitted": "Fiches soumises à validation",
       "persona_reviewed": "Relecture de mes fiches",
       "sequel_request": "Demandes de suite entre salons",
+      "turn_yours": "Mon tour dans un ordre de passage",
       "world_announcement": "Annonces des mondes"
     },
     "text": {
@@ -312,7 +313,9 @@
       "personaFallback": "un persona",
       "sequelRequest": "<b>{actor}</b> propose que <b>{chatroom}</b> fasse suite à <b>{previous}</b>",
       "worldAnnouncement": "<b>{actor}</b> a publié une annonce : <b>{title}</b>",
-      "worldWelcome": "<b>{actor}</b> vous souhaite la bienvenue : <b>{title}</b>"
+      "worldWelcome": "<b>{actor}</b> vous souhaite la bienvenue : <b>{title}</b>",
+      "turnYours": "À vous de jouer dans <b>{chatroom}</b>",
+      "turnYoursNoName": "À vous de jouer"
     },
     "sequelRequest": {
       "accept": "Accepter",
@@ -487,6 +490,7 @@
     "sidebar": {
       "active": "Récents",
       "followed": "Suivis",
+      "yourTurn": "À vous de jouer",
       "all": "Tous",
       "back": "Retour",
       "noChatroomsInCategory": "Aucune chatroom dans cette catégorie",
@@ -2472,7 +2476,7 @@
     "reportDuplicate": "Vous avez déjà signalé ce message",
     "reportFailed": "Le signalement n’a pas abouti",
     "turnTitle": "Ordre de passage",
-    "turnDescription": "Rangez les joueurs : le tour passe au suivant dès que le joueur dont c’est le tour poste un message. Poster hors tour reste possible.",
+    "turnDescription": "Rangez les joueurs. Poster hors tour reste possible.",
     "turnEnabled": "Ordre de passage actif",
     "turnEmpty": "Aucun joueur dans l’ordre. Ajoutez-en ci-dessous.",
     "turnMoveUp": "Monter",
@@ -2485,6 +2489,18 @@
     "turnOf": "Au tour de {name}",
     "turnNext": "ensuite : {names}",
     "turnSkip": "Passer",
+    "turnPass": "Passer la main",
+    "turnPassTo": "Passer la main à {name}",
+    "turnPassFailed": "La main n’a pas été passée",
+    "turnSendOptions": "Plus d’options d’envoi",
+    "turnSendShortcut": "Entrée",
+    "turnSendAndPass": "Envoyer et passer la main",
+    "turnSendAndPassShortcut": "Ctrl+Maj+Entrée",
+    "turnModeLabel": "Le tour passe",
+    "turnModeMessageTitle": "Au premier message",
+    "turnModeMessageDescription": "Le tour passe dès que le joueur poste.",
+    "turnModeManualTitle": "Quand le joueur passe la main",
+    "turnModeManualDescription": "Plusieurs messages et blocs possibles avant de passer.",
     "settingsStatus": "Statut",
     "access": {
       "visibility": "Visibilité",

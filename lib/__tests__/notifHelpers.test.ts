@@ -37,6 +37,30 @@ describe("notifHref", () => {
   });
 });
 
+describe("notifText — à vous de jouer", () => {
+  const calls: { key: string; values?: Record<string, unknown> }[] = [];
+  const t = Object.assign((key: string) => key, {
+    rich: (key: string, values?: Record<string, unknown>) => {
+      calls.push({ key, values });
+      return key;
+    },
+  }) as unknown as NotifT;
+
+  it("nomme le salon où c'est votre tour, et y mène", () => {
+    calls.length = 0;
+    const n = makeNotif({ type: "turn_yours", chat_id: "c1", world_id: "w1", content: "La taverne" });
+    notifText(n, t);
+    expect(calls[0]).toMatchObject({ key: "text.turnYours", values: { chatroom: "La taverne" } });
+    expect(notifHref(n)).toBe("/c/c1");
+  });
+
+  it("sans nom de salon : la phrase courte", () => {
+    calls.length = 0;
+    notifText(makeNotif({ type: "turn_yours", chat_id: "c1", content: null }), t);
+    expect(calls[0].key).toBe("text.turnYoursNoName");
+  });
+});
+
 describe("notifText — annonce d'un monde", () => {
   // Un `t` minimal : la clé et ses valeurs, pour voir ce qui est demandé.
   const calls: { key: string; values?: Record<string, unknown> }[] = [];

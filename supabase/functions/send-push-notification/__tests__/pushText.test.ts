@@ -5,7 +5,7 @@ const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
   "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request",
   "role_mention", "everyone_mention", "persona_submitted", "persona_reviewed",
-  "sequel_request", "world_announcement",
+  "sequel_request", "world_announcement", "turn_yours",
 ];
 
 const base: PushNotifPayload = {
@@ -19,6 +19,15 @@ describe("buildPushText", () => {
     expect(title).toBeTruthy();
     expect(body).toBeTruthy();
     expect(body).not.toMatch(/<b>|<\/b>/);
+  });
+
+  it("à vous de jouer : le salon, dans les trois langues", () => {
+    const n = { ...base, type: "turn_yours" as const, content: "La taverne" };
+    expect(buildPushText(n, "fr").body).toBe("À vous de jouer dans La taverne");
+    expect(buildPushText(n, "en").body).toBe("Your turn in La taverne");
+    expect(buildPushText(n, "es").body).toBe("Le toca en La taverne");
+    expect(buildPushText({ ...n, content: null }, "fr").body).toBe("À vous de jouer");
+    expect(pushHref(n)).toBe("/c/c1");
   });
 
   it("une demande de suite nomme les deux salons et ouvre la chronologie", () => {

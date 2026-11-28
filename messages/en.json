@@ -274,6 +274,7 @@
       "persona_submitted": "Sheets submitted for review",
       "persona_reviewed": "Reviews of my sheets",
       "sequel_request": "Sequel requests between chatrooms",
+      "turn_yours": "My turn in a turn order",
       "world_announcement": "World announcements"
     },
     "text": {
@@ -311,7 +312,9 @@
       "personaFallback": "a persona",
       "sequelRequest": "<b>{actor}</b> proposes <b>{chatroom}</b> as a sequel to <b>{previous}</b>",
       "worldAnnouncement": "<b>{actor}</b> posted an announcement: <b>{title}</b>",
-      "worldWelcome": "<b>{actor}</b> welcomes you: <b>{title}</b>"
+      "worldWelcome": "<b>{actor}</b> welcomes you: <b>{title}</b>",
+      "turnYours": "Your turn in <b>{chatroom}</b>",
+      "turnYoursNoName": "Your turn"
     },
     "back": "Back",
     "sequelRequest": {
@@ -487,6 +490,7 @@
     "sidebar": {
       "active": "Latest",
       "followed": "Following",
+      "yourTurn": "Your turn",
       "all": "All",
       "back": "Back",
       "noChatroomsInCategory": "No chatrooms in this category",
@@ -2472,7 +2476,7 @@
     "reportDuplicate": "You already reported this message",
     "reportFailed": "The report failed",
     "turnTitle": "Turn order",
-    "turnDescription": "Order the players: the turn passes to the next one as soon as the current player posts. Posting out of turn is still possible.",
+    "turnDescription": "Order the players. Posting out of turn is still possible.",
     "turnEnabled": "Turn order active",
     "turnEmpty": "No players in the order yet. Add some below.",
     "turnMoveUp": "Move up",
@@ -2485,6 +2489,18 @@
     "turnOf": "{name}’s turn",
     "turnNext": "then: {names}",
     "turnSkip": "Skip",
+    "turnPass": "Pass the turn",
+    "turnPassTo": "Pass to {name}",
+    "turnPassFailed": "The turn was not passed",
+    "turnSendOptions": "More send options",
+    "turnSendShortcut": "Enter",
+    "turnSendAndPass": "Send and pass the turn",
+    "turnSendAndPassShortcut": "Ctrl+Shift+Enter",
+    "turnModeLabel": "The turn passes",
+    "turnModeMessageTitle": "On the first message",
+    "turnModeMessageDescription": "The turn passes as soon as the player posts.",
+    "turnModeManualTitle": "When the player passes",
+    "turnModeManualDescription": "Several messages and blocks before passing.",
     "settingsStatus": "Status",
     "access": {
       "visibility": "Visibility",

@@ -20,7 +20,7 @@ import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { ContentWarningChipInput } from "@/components/chatrooms/composer/ContentWarningChipInput";
 import { Button } from "../../ui/button";
-import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft, BetweenHorizontalStart } from "lucide-react";
+import { SendHorizontal, X, Lock, UserPlus, CornerUpLeft, BetweenHorizontalStart, ChevronUp, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -52,6 +52,12 @@ import {
     DrawerDescription,
     DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 
@@ -105,6 +111,12 @@ type ChatroomComposerProps = {
      * recouvre le bas) — ex. l'ordre de passage du salon. Rien si null.
      */
     topTab?: React.ReactNode;
+    /**
+     * Ordre de passage (migration 280) : c'est le tour de l'utilisateur. Le
+     * bouton d'envoi gagne « Envoyer et passer la main » (Ctrl+Maj+Entrée),
+     * appelé une fois le message enregistré.
+     */
+    onSendAndPass?: () => void | Promise<void>;
     worldTimelineConfig?: WorldTimelineConfig | null;
     timelineDate?: WorldTimelineDate | null;
     onTimelineDateChange?: (d: WorldTimelineDate | null) => void;
@@ -149,6 +161,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     insertBefore = null,
     onCancelInsertBefore,
     topTab = null,
+    onSendAndPass,
     worldTimelineConfig,
     timelineDate,
     onTimelineDateChange,
@@ -704,9 +717,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         }
     }
 
-    async function send() {
+    async function send(): Promise<boolean> {
         const text = value.trim();
-        if (!text && pendingMedia.length === 0) return;
+        if (!text && pendingMedia.length === 0) return false;
         const sent = await sendRaw(text);
         // Ne clear que si l'envoi a vraiment eu lieu (pas d'erreur, pas d'annulation,
         // pas de persona manquant) et qu'on n'est pas en mode création (navigation
@@ -722,6 +735,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             }
             if (useMobileDrawer) setDrawerOpen(false);
         }
+        return sent;
+    }
+
+    async function sendAndPass() {
+        if (await send()) await onSendAndPass?.();
     }
 
     function onKeyDown(e: React.KeyboardEvent<HTMLElement>) {
@@ -958,6 +976,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             // en interne (au lieu du plafond par défaut, plus petit).
                             wrapperClassName={stretchCard ? "flex-1 min-h-0 max-h-none" : "max-h-[50vh]"}
                             invertEnter={isMobile}
+                            onSubmitAlt={onSendAndPass ? () => void sendAndPass() : undefined}
                             autoFocus={stretchCard}
                             formatting
                         />
@@ -1047,8 +1066,30 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         "min-w-9 transition-transform",
                         value.trim() ? "visible scale-100" : "invisible scale-80",
                         selectedPersona ? "ml-2" : "ml-0",
+                        onSendAndPass && !useMobileDrawer && "flex items-center gap-1",
                     )}
                 >
+                    {onSendAndPass && !useMobileDrawer && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="secondary" size="icon-sm" disabled={!canSend} aria-label={tChatrooms("turnSendOptions")}>
+                                    <ChevronUp />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="top" align="end" className="w-80">
+                                <DropdownMenuItem onSelect={() => void send()}>
+                                    <SendHorizontal />
+                                    <span className="flex-1">{tDms("send")}</span>
+                                    <span className="text-xs text-muted-foreground">{tChatrooms("turnSendShortcut")}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => void sendAndPass()}>
+                                    <ArrowRightLeft />
+                                    <span className="flex-1 whitespace-nowrap">{tChatrooms("turnSendAndPass")}</span>
+                                    <span className="text-xs text-muted-foreground">{tChatrooms("turnSendAndPassShortcut")}</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                     <Button
                         size="icon"
                         onClick={() => void send()}

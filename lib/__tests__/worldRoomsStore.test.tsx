@@ -329,6 +329,25 @@ describe("useWorldRooms — avis du canal du monde", () => {
                          last_message_author_id: "u2", last_message_persona_avatar_url: null });
     expect(result.current.map((r) => r.id)).toEqual(["c", "a"]);
   });
+  it("le tour qui change dans un salon : à qui, depuis quand", () => {
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
+    emettre("turn", { chat_id: "b", turn_user_id: "u2", turn_started_at: "2026-03-01T00:00:00Z" });
+    const b = result.current.find((r) => r.id === "b")!;
+    expect(b.turn_user_id).toBe("u2");
+    expect(b.turn_started_at).toBe("2026-03-01T00:00:00Z");
+    expect(result.current.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("le tour d'un salon privé : la liste se relit", async () => {
+    serveur.salons = [A, { ...B, turn_user_id: "u2", turn_started_at: "2026-03-01T00:00:00Z" }];
+    const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
+    await act(async () => {
+      emettre("turn", { chat_id: "b", private: true });
+    });
+    expect(serveur.rpc).toHaveBeenCalledWith("list_chatrooms_nav", { p_world_id: "w1" });
+    expect(result.current.find((r) => r.id === "b")!.turn_user_id).toBe("u2");
+  });
+
   it("relit la liste quand le canal est rejoint après une coupure, pas à la première jonction", async () => {
     const { result } = renderHook(() => useWorldRooms("w1", [A, B]));
     expect(serveur.rpc).not.toHaveBeenCalled();

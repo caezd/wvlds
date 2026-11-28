@@ -274,6 +274,7 @@
       "persona_submitted": "Fichas enviadas a validación",
       "persona_reviewed": "Revisión de mis fichas",
       "sequel_request": "Solicitudes de continuación entre salas",
+      "turn_yours": "Mi turno en un orden de turnos",
       "world_announcement": "Anuncios de los mundos"
     },
     "text": {
@@ -311,7 +312,9 @@
       "personaFallback": "un persona",
       "sequelRequest": "<b>{actor}</b> propone que <b>{chatroom}</b> continúe <b>{previous}</b>",
       "worldAnnouncement": "<b>{actor}</b> publicó un anuncio: <b>{title}</b>",
-      "worldWelcome": "<b>{actor}</b> le da la bienvenida: <b>{title}</b>"
+      "worldWelcome": "<b>{actor}</b> le da la bienvenida: <b>{title}</b>",
+      "turnYours": "Le toca en <b>{chatroom}</b>",
+      "turnYoursNoName": "Le toca"
     },
     "back": "Volver",
     "sequelRequest": {
@@ -487,6 +490,7 @@
     "sidebar": {
       "active": "Últimos",
       "followed": "Seguidos",
+      "yourTurn": "Le toca",
       "all": "Todos",
       "back": "Volver",
       "noChatroomsInCategory": "Sin salas en esta categoría",
@@ -2472,7 +2476,7 @@
     "reportDuplicate": "Ya denunciaste este mensaje",
     "reportFailed": "La denuncia no se completó",
     "turnTitle": "Orden de turnos",
-    "turnDescription": "Ordena a los jugadores: el turno pasa al siguiente en cuanto el jugador de turno publica. Publicar fuera de turno sigue siendo posible.",
+    "turnDescription": "Ordene a los jugadores. Publicar fuera de turno sigue siendo posible.",
     "turnEnabled": "Orden de turnos activo",
     "turnEmpty": "Aún no hay jugadores en el orden. Añádelos abajo.",
     "turnMoveUp": "Subir",
@@ -2485,6 +2489,18 @@
     "turnOf": "Turno de {name}",
     "turnNext": "luego: {names}",
     "turnSkip": "Pasar",
+    "turnPass": "Ceder el turno",
+    "turnPassTo": "Ceder el turno a {name}",
+    "turnPassFailed": "No se cedió el turno",
+    "turnSendOptions": "Más opciones de envío",
+    "turnSendShortcut": "Intro",
+    "turnSendAndPass": "Enviar y ceder el turno",
+    "turnSendAndPassShortcut": "Ctrl+Mayús+Intro",
+    "turnModeLabel": "El turno pasa",
+    "turnModeMessageTitle": "Con el primer mensaje",
+    "turnModeMessageDescription": "El turno pasa en cuanto el jugador publica.",
+    "turnModeManualTitle": "Cuando el jugador cede el turno",
+    "turnModeManualDescription": "Varios mensajes y bloques posibles antes de ceder.",
     "settingsStatus": "Estado",
     "access": {
       "visibility": "Visibilidad",

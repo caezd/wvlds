@@ -48,6 +48,12 @@ export type WorldRoom = {
    * (migration 274). Absent des réponses d'avant la migration.
    */
   created_at?: string | null;
+  /**
+   * Ordre de passage (migration 280) : joueur dont c'est le tour, ou null
+   * hors ordre actif, et début de son tour. Absents d'avant la migration.
+   */
+  turn_user_id?: string | null;
+  turn_started_at?: string | null;
 };
 
 type Entree = {
@@ -173,12 +179,14 @@ export function patchWorldRoom(
  *
  * `chatroom` : salon créé, renommé (titre, icône, catégorie) ou supprimé.
  * `summary`  : dernier message d'un salon (tri et avatar du dernier auteur).
+ * `turn`     : le tour change de joueur dans un salon (migration 280).
  */
 function ouvrirCanal(worldId: string): () => void {
   return subscribeTopic(topic.world(worldId), {
     onEvent: ({ event, payload }) => {
       if (event === "chatroom") surSalon(worldId, payload);
       else if (event === "summary") surResume(worldId, payload);
+      else if (event === "turn") surTour(worldId, payload);
     },
     // Chaque jonction après la première est un retour de coupure : on relit.
     onSubscribed: () => {
@@ -263,6 +271,25 @@ export function addCreatedWorldRoom(
   if (e.participated.has(room.id)) return;
   e.participated = new Set([...e.participated, room.id]);
   notifier(e);
+}
+
+/** Le tour change de joueur : la liste sait où c'est à l'utilisateur de jouer. */
+function surTour(worldId: string, avis: Record<string, unknown>): void {
+  const t = avis as { chat_id?: string; turn_user_id?: string | null; turn_started_at?: string | null; private?: boolean };
+  const chatId = t.chat_id;
+  if (!chatId) return;
+  // Salon privé : l'avis ne dit rien de lui, seule la liste le sait.
+  if (t.private) {
+    void relire(worldId);
+    return;
+  }
+  majRooms(worldId, (prev) => {
+    const i = prev.findIndex((r) => r.id === chatId);
+    if (i < 0) return prev;
+    const next = prev.slice();
+    next[i] = { ...prev[i], turn_user_id: t.turn_user_id ?? null, turn_started_at: t.turn_started_at ?? null };
+    return next;
+  });
 }
 
 function surResume(worldId: string, avis: Record<string, unknown>): void {

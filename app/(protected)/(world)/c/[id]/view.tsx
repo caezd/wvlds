@@ -18,7 +18,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { ReportMessageDialog } from "@/components/chatrooms/moderation/ReportMessageDialog";
 import { ChatroomTurnBar } from "@/components/chatrooms/turns/ChatroomTurnBar";
 import { ChatroomTurnDialog } from "@/components/chatrooms/turns/ChatroomTurnDialog";
-import { isTurnActive, skipTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
+import { currentPlayerId, isTurnActive, passTurn, skipTurn, turnAdvanceMode, type ChatroomTurn } from "@/lib/chatroomTurns";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -1036,6 +1036,15 @@ export default function ChatRoomView({
     if (res.turn) setTurn(res.turn);
     else toast.error(t("turnSaveFailed"), { description: res.error });
   }, [turn, supabase, t]);
+  // Le joueur dont c'est le tour passe la main (migration 280).
+  const handlePassTurn = useCallback(async () => {
+    const res = await passTurn(supabase, chatId);
+    if (res.turn) setTurn(res.turn);
+    else toast.error(t("turnPassFailed"), { description: res.error });
+  }, [supabase, chatId, t]);
+  // « Envoyer et passer la main » : seulement quand le tour ne passe pas tout
+  // seul au premier message — sinon l'envoi l'a déjà passé.
+  const myManualTurn = !!userId && currentPlayerId(turn) === userId && turnAdvanceMode(turn) === "manual";
 
   // Signalement : une seule fenêtre pour tout le salon.
   const [reportMessageId, setReportMessageId] = useState<number | null>(null);
@@ -1334,8 +1343,10 @@ export default function ChatRoomView({
                       selfId={userId}
                       canManage={canEdit}
                       onSkip={() => void handleSkipTurn()}
+                      onPass={() => void handlePassTurn()}
                     />
                   ) : null}
+                  onSendAndPass={myManualTurn ? handlePassTurn : undefined}
                 />}
               </div>
             </div>
