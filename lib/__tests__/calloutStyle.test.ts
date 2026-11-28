@@ -45,7 +45,7 @@ describe("resolveCalloutStyle — encadrés existants", () => {
     const s = resolveCalloutStyle(callout({}));
     expect(s).toMatchObject({
       separator: false, align: "left", width: "full", iconPosition: "inline", iconSize: "small",
-      titleFont: "inherit", titleSmallCaps: false, bodyItalic: false, collapsible: false,
+      font: "inherit", titleSmallCaps: false, bodyItalic: false, collapsible: false,
     });
   });
 });
@@ -80,9 +80,15 @@ describe("resolveCalloutStyle — nouveaux réglages", () => {
   });
 
   it("une valeur inconnue retombe sur la valeur par défaut", () => {
-    const s = resolveCalloutStyle(callout({ width: "géante" as never, titleFont: "comic" as never }));
+    const s = resolveCalloutStyle(callout({ width: "géante" as never, font: "comic" as never }));
     expect(s.width).toBe("full");
-    expect(s.titleFont).toBe("inherit");
+    expect(s.font).toBe("inherit");
+  });
+
+  it("la police vaut pour tout l'encadré ; « titleFont », son premier nom, se lit encore", () => {
+    expect(resolveCalloutStyle(callout({ font: "serif" })).font).toBe("serif");
+    expect(resolveCalloutStyle(callout({ titleFont: "hand" })).font).toBe("hand");
+    expect(resolveCalloutStyle(callout({ font: "mono", titleFont: "hand" })).font).toBe("mono");
   });
 });
 

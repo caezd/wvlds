@@ -365,7 +365,7 @@ function stateFrom(block: CalloutBlock | undefined) {
     width: block?.width,
     iconPosition: block?.iconPosition,
     iconSize: block?.iconSize,
-    titleFont: block?.titleFont,
+    font: block?.font ?? block?.titleFont,
     titleSmallCaps: block?.titleSmallCaps === true,
     bodyItalic: block?.bodyItalic === true,
     collapsible: block?.collapsible === true,
@@ -524,7 +524,7 @@ export function CalloutDialog({
     if (state.width) block.width = state.width;
     if (state.iconPosition) block.iconPosition = state.iconPosition;
     if (state.iconSize) block.iconSize = state.iconSize;
-    if (state.titleFont) block.titleFont = state.titleFont;
+    if (state.font) block.font = state.font;
     if (state.titleSmallCaps) block.titleSmallCaps = true;
     if (state.bodyItalic) block.bodyItalic = true;
     if (state.collapsible) block.collapsible = true;
@@ -1183,9 +1183,9 @@ export function CalloutDialog({
                 <section className="space-y-4">
                   <SectionLabel>{t("callout.typographyLabel")}</SectionLabel>
                   <ChoiceGroup<CalloutFont>
-                    label={t("callout.titleFontLabel")}
-                    value={resolved.titleFont}
-                    onChange={(v) => set("titleFont", v)}
+                    label={t("callout.fontLabel")}
+                    value={resolved.font}
+                    onChange={(v) => set("font", v)}
                     options={[
                       { value: "inherit", label: t("callout.fontInherit"), preview: <span className="text-base font-semibold">Aa</span> },
                       { value: "serif", label: t("callout.fontSerif"), preview: <span className="font-message-serif text-base font-semibold">Aa</span> },

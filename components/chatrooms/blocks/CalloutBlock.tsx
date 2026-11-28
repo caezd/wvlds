@@ -157,12 +157,12 @@ const ICON_SIZE: Record<CalloutIconSize, { className: string; px: number }> = {
   large: { className: "h-10 w-10", px: 40 },
 };
 
-const TITLE_FONT_CLASS: Record<CalloutFont, string> = {
+/** La police, posée sur la racine : titre, texte, champs et jauges en héritent. */
+const FONT_CLASS: Record<CalloutFont, string> = {
   inherit: "",
   serif: "font-message-serif",
   mono: "font-mono",
-  // Caveat est petite à taille égale : un cran au-dessus.
-  hand: "font-message-hand text-lg leading-tight",
+  hand: "font-message-hand",
 };
 
 const WIDTH_CLASS: Record<CalloutWidth, string> = {
@@ -265,7 +265,9 @@ export function CalloutBlockView({
     />
   );
 
-  const titleClass = cn(TITLE_FONT_CLASS[style.titleFont], style.titleSmallCaps && "[font-variant-caps:small-caps]");
+  // Caveat est petite à taille égale : titre et texte montent d'un cran.
+  const hand = style.font === "hand";
+  const titleClass = cn(hand && "text-lg leading-tight", style.titleSmallCaps && "[font-variant-caps:small-caps]");
   const titleStyle = style.titleColor ? { color: style.titleColor } : undefined;
 
   const toggle = style.collapsible && hasBody && (
@@ -287,7 +289,7 @@ export function CalloutBlockView({
   const body = (afterHeader: boolean) => !collapsed && hasBody && (
     <>
       {block.text && (
-        <CalloutMarkdown className={cn(afterHeader && "mt-1", style.bodyItalic && "italic", "w-full", TEXT_ALIGN_CLASS[align])}>
+        <CalloutMarkdown className={cn(afterHeader && "mt-1", style.bodyItalic && "italic", hand && "text-base", "w-full", TEXT_ALIGN_CLASS[align])}>
           {block.text}
         </CalloutMarkdown>
       )}
@@ -316,7 +318,7 @@ export function CalloutBlockView({
       ...(style.borderColor && { borderTopColor: style.borderColor }),
     };
     return (
-      <div className={cn("group/gblock relative w-full", placement)}>
+      <div className={cn("group/gblock relative w-full", FONT_CLASS[style.font], placement)}>
         {toolbar("absolute -top-3 right-0 z-10 rounded-md bg-card/90 shadow-sm p-0.5")}
         <div className="flex items-center gap-3">
           <div className="flex-1 border-t border-border" style={lineStyle} />
@@ -364,7 +366,7 @@ export function CalloutBlockView({
   const hasHeader = !!(inlineIcon || block.title);
 
   const content = (
-    <div className={cn("flex min-w-0 flex-1 flex-col", TEXT_ALIGN_CLASS[align])}>
+    <div className={cn("flex min-w-0 flex-1 flex-col", FONT_CLASS[style.font], TEXT_ALIGN_CLASS[align])}>
       {style.iconPosition === "top" && icon && <div className="mb-2 flex">{icon}</div>}
       {hasHeader && (
         <div className={cn("flex items-center gap-1.5", JUSTIFY_CLASS[align])}>

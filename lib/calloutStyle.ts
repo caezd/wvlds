@@ -36,7 +36,8 @@ export type ResolvedCalloutStyle = {
   width: CalloutWidth;
   iconPosition: CalloutIconPosition;
   iconSize: CalloutIconSize;
-  titleFont: CalloutFont;
+  /** Police de tout l'encadré : titre, texte, champs et jauges. */
+  font: CalloutFont;
   titleSmallCaps: boolean;
   bodyItalic: boolean;
   collapsible: boolean;
@@ -110,7 +111,7 @@ export function resolveCalloutStyle(block: CalloutBlock): ResolvedCalloutStyle {
     width: oneOf(block.width, CALLOUT_WIDTHS, "full"),
     iconPosition,
     iconSize: oneOf(block.iconSize, CALLOUT_ICON_SIZES, iconPosition === "inline" ? "small" : "large"),
-    titleFont: oneOf(block.titleFont, CALLOUT_FONTS, "inherit"),
+    font: oneOf(block.font ?? block.titleFont, CALLOUT_FONTS, "inherit"),
     titleSmallCaps: block.titleSmallCaps === true,
     bodyItalic: block.bodyItalic === true,
     collapsible: block.collapsible === true,
@@ -121,7 +122,7 @@ export function resolveCalloutStyle(block: CalloutBlock): ResolvedCalloutStyle {
 const STYLE_KEYS = [
   "sides", "borderWidth", "borderStyle", "rounded", "radius",
   "titleColor", "borderColor", "bgColor", "bgIntensity", "imageMode", "imageVeil",
-  "width", "iconPosition", "iconSize", "titleFont", "titleSmallCaps", "bodyItalic", "collapsible",
+  "width", "iconPosition", "iconSize", "font", "titleFont", "titleSmallCaps", "bodyItalic", "collapsible",
 ] as const;
 
 /**

@@ -90,7 +90,8 @@ export type CalloutBlock = {
   iconPosition?: CalloutIconPosition;
   iconSize?: CalloutIconSize;
   /* Typographie */
-  titleFont?: CalloutFont;
+  font?: CalloutFont;        // police du titre et du texte
+  titleFont?: CalloutFont;   // premier nom de `font` (titre seul), lu en repli
   titleSmallCaps?: boolean;
   bodyItalic?: boolean;
   /* Contenu */

@@ -108,6 +108,25 @@ describe("CalloutDialog — réglages", () => {
     expect(sent(onSend).sides).toBeUndefined();
   });
 
+  it("la police choisie part sous « font » ; rouvert, un ancien « titleFont » devient « font »", () => {
+    const onSend = vi.fn();
+    render(
+      <CalloutDialog
+        open
+        onOpenChange={() => {}}
+        onSend={onSend}
+        initialBlock={{ _type: "callout", title: "Scène", titleFont: "hand" }}
+      />,
+    );
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.layoutLabel" }));
+    const fonts = within(screen.getByRole("group", { name: "callout.fontLabel" }));
+    expect(fonts.getByRole("button", { name: "callout.fontHand" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(fonts.getByRole("button", { name: "callout.fontSerif" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.save" }));
+    expect(sent(onSend).font).toBe("serif");
+    expect(sent(onSend).titleFont).toBeUndefined();
+  });
+
   it("un encadré qui garde tous les réglages par défaut n'en écrit aucun", () => {
     const onSend = vi.fn();
     render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
