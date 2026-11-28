@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-28",
+    category: "Interface",
+    area: "Salons",
+    text: "Réponse à un message : citation en ligne discrète, sans encadré, reliée au message par un coude ; auteur souligné au survol.",
+  },
+  {
+    date: "2026-11-28",
     category: "Correctif",
     text: "Titres d’un message ou d’une page du wiki : plus d’erreur d’affichage au chargement, ancre du sommaire toujours juste.",
   },
