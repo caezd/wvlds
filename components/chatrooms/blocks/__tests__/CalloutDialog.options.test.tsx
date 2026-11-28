@@ -67,6 +67,47 @@ describe("CalloutDialog — réglages", () => {
     expect(sent(onSend).bgIntensity).toBe(35);
   });
 
+  it("le curseur règle le voile de l'image", () => {
+    const onSend = vi.fn();
+    render(
+      <CalloutDialog
+        open
+        onOpenChange={() => {}}
+        onSend={onSend}
+        initialBlock={{ _type: "callout", title: "Scène", image: "https://exemple.test/port.png" }}
+      />,
+    );
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.tabStyle" }));
+    const slider = screen.getByRole("slider", { name: "callout.imageVeilLabel" });
+    expect(slider).toHaveValue("50");
+    fireEvent.change(slider, { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "callout.save" }));
+    expect(sent(onSend).imageVeil).toBe(20);
+  });
+
+  it("la forme « Séparateur » se choisit à côté du cadre", () => {
+    const onSend = vi.fn();
+    render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
+    fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.tabStyle" }));
+    const shape = within(screen.getByRole("group", { name: "callout.borderShapeLabel" }));
+    fireEvent.click(shape.getByRole("button", { name: "callout.borderSeparator" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
+    expect(sent(onSend).border).toBe("separator");
+  });
+
+  it("« Gauche » ne garde que le côté gauche, « Tous » les rend tous", () => {
+    const onSend = vi.fn();
+    render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
+    fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.tabStyle" }));
+    const quick = within(screen.getByRole("group", { name: "callout.sidesQuick" }));
+    fireEvent.click(quick.getByRole("button", { name: "callout.alignLeft" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
+    expect(sent(onSend).border).toBe("left");
+    expect(sent(onSend).sides).toBeUndefined();
+  });
+
   it("un encadré qui garde tous les réglages par défaut n'en écrit aucun", () => {
     const onSend = vi.fn();
     render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);

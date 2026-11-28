@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-28",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Encadré : fenêtre en trois onglets (Contenu, Style, Mise en page), chaque choix illustré ; nouveaux réglages.\n- bordure : côtés à cliquer sur un cadre, épaisseur, trait (plein, tirets, points, double), arrondi aucun, léger ou fort\n- couleurs du titre, de la bordure et du fond séparées ; intensité du fond au curseur, de 0 à 100 %\n- image en fond ou en bandeau, avec voile\n- largeur (pleine, moyenne, étroite), alignement à droite\n- icône à côté du titre, à gauche du bloc ou au-dessus ; trois tailles\n- police du titre (empattements, machine à écrire, manuscrite), petites capitales, texte en italique\n- champs « clé : valeur » (Lieu, Heure, Météo…), lus par la recherche\n- encadré repliable : « Afficher la suite »",
+    text: "Encadré : fenêtre en trois onglets (Contenu, Style, Mise en page), chaque choix illustré ; nouveaux réglages.\n- bordure : cadre ou séparateur ; côtés cliqués sur un cadre dessiné avec la vraie bordure, raccourcis Tous, Gauche, Aucun ; trait, épaisseur et arrondi en choix compacts\n- couleurs du titre, de la bordure et du fond séparées ; intensité du fond au curseur, de 0 à 100 %\n- image en fond ou en bandeau, voile au curseur\n- largeur (pleine, moyenne, étroite), alignement à droite\n- icône à côté du titre, à gauche du bloc ou au-dessus ; trois tailles\n- police du titre (empattements, machine à écrire, manuscrite), petites capitales, texte en italique\n- champs « clé : valeur » (Lieu, Heure, Météo…), lus par la recherche\n- encadré repliable : « Afficher la suite »",
   },
   {
     date: "2026-11-28",

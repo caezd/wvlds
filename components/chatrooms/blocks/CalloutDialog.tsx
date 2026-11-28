@@ -21,7 +21,6 @@ import { Square, AlignLeft, AlignCenter, AlignRight, ImagePlus, X, Plus, Loader2
 import type {
   CalloutAlign,
   CalloutBlock,
-  CalloutBorder,
   CalloutBorderStyle,
   CalloutBorderWidth,
   CalloutField,
@@ -36,7 +35,8 @@ import type {
   Gauge,
 } from "@/lib/chat-blocks";
 import {
-  CALLOUT_IMAGE_VEILS,
+  CALLOUT_BORDER_WIDTH_PX,
+  CALLOUT_RADIUS_PX,
   CALLOUT_SIDES,
   bordersFromSides,
   compactCallout,
@@ -184,15 +184,15 @@ function ColorChip({ label, value, fallback, onChange, chooseLabel, noneLabel }:
 }
 
 /**
- * L'intensité du fond, au pour cent près : un curseur dont la piste va du
- * transparent à la couleur du fond. Le vrai `<input type="range">` est posé,
- * invisible, par-dessus la piste dessinée : clavier, souris et lecteurs
- * d'écran le manipulent comme d'habitude.
+ * Un pourcentage au curseur (intensité du fond, voile de l'image). La piste
+ * dessine ce que la valeur fait ; le vrai `<input type="range">` est posé,
+ * invisible, par-dessus : clavier, souris et lecteurs d'écran le manipulent
+ * comme d'habitude.
  */
-function IntensitySlider({ label, value, tint, onChange }: {
+function PercentSlider({ label, value, track, onChange }: {
   label: string;
   value: number;
-  tint: string;
+  track: React.ReactNode;
   onChange: (v: number) => void;
 }) {
   const id = useId();
@@ -203,11 +203,9 @@ function IntensitySlider({ label, value, tint, onChange }: {
         <span className="text-xs tabular-nums text-muted-foreground">{value} %</span>
       </div>
       <div className="group relative h-6">
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full border border-border"
-          style={{ backgroundImage: `linear-gradient(to right, transparent, ${tint})` }}
-        />
+        <span aria-hidden className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 overflow-hidden rounded-full border border-border">
+          {track}
+        </span>
         <span
           aria-hidden
           className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-sm group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-ring"
@@ -228,38 +226,51 @@ function IntensitySlider({ label, value, tint, onChange }: {
   );
 }
 
-/* Dessins des tuiles : de simples rectangles tracés avec le réglage lui-même. */
-
-function BorderPresetPreview({ border }: { border: CalloutBorder }) {
-  if (border === "separator") {
-    return (
-      <span className="flex w-9 items-center gap-1">
-        <span className="h-px flex-1 bg-current" />
-        <span className="h-1 w-1 rounded-full bg-current" />
-        <span className="h-px flex-1 bg-current" />
-      </span>
-    );
-  }
+/**
+ * Des choix compacts côte à côte, le choisi rempli (comme un onglet). Avec un
+ * `preview`, le dessin remplace le nom, qui reste en infobulle et pour les
+ * lecteurs d'écran.
+ */
+function Segmented<T extends string>({ label, value, options, onChange }: {
+  label: string;
+  value: T;
+  options: ChoiceOption<T>[];
+  onChange: (value: T) => void;
+}) {
+  const id = useId();
   return (
-    <span
-      className={cn(
-        "flex h-5 w-8 flex-col justify-center gap-1 rounded-xs px-1.5 border-current",
-        border === "full" && "border",
-        border === "left" && "rounded-none border-l-[3px]",
-      )}
-    >
-      <span className="h-px w-full bg-current opacity-60" />
-      <span className="h-px w-2/3 bg-current opacity-60" />
-    </span>
+    <div role="group" aria-labelledby={id} className="flex items-center justify-between gap-3">
+      <Label id={id} className="text-xs text-muted-foreground">{label}</Label>
+      <div className="inline-flex shrink-0 rounded-lg border border-border p-0.5">
+        {options.map(({ value: v, label: optionLabel, preview }) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={value === v}
+            aria-label={preview ? optionLabel : undefined}
+            title={preview ? optionLabel : undefined}
+            onClick={() => onChange(v)}
+            className={cn(
+              "flex h-7 min-w-10 items-center justify-center rounded-md px-2.5 text-xs transition-colors",
+              value === v ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {preview ?? optionLabel}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
+/* Dessins des tuiles : de simples rectangles tracés avec le réglage lui-même. */
+
 const lineSample = (style: React.CSSProperties) => (
-  <span className="block w-9 border-current" style={{ borderTopStyle: "solid", ...style }} />
+  <span className="block w-6 border-current" style={{ borderTopStyle: "solid", ...style }} />
 );
 
 function cornerSample(radius: number) {
-  return <span className="block h-4 w-6 border-t-2 border-l-2 border-current" style={{ borderTopLeftRadius: radius }} />;
+  return <span className="mt-1 ml-1 block h-3.5 w-4 border-t-2 border-l-2 border-current" style={{ borderTopLeftRadius: radius }} />;
 }
 
 function widthSample(pct: number) {
@@ -286,7 +297,11 @@ function iconPositionSample(position: CalloutIconPosition) {
   return <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-xs bg-current" /><span className="h-px w-6 bg-current" /></span>;
 }
 
-/** Le côté d'un cadre, cliquable : un trait plein s'il est coché. */
+/**
+ * Un côté du cadre, cliquable : la zone est centrée sur le bord. Un côté
+ * affiché se voit avec le vrai trait de la bordure ; un côté masqué laisse
+ * un pointillé discret, pour qu'on sache qu'il peut s'ajouter.
+ */
 function SideToggle({ side, label, on, onToggle }: { side: CalloutSide; label: string; on: boolean; onToggle: () => void }) {
   const horizontal = side === "top" || side === "bottom";
   return (
@@ -297,32 +312,27 @@ function SideToggle({ side, label, on, onToggle }: { side: CalloutSide; label: s
       title={label}
       onClick={onToggle}
       className={cn(
-        "group absolute flex items-center justify-center",
-        side === "top" && "inset-x-4 top-0 h-4",
-        side === "bottom" && "inset-x-4 bottom-0 h-4",
-        side === "left" && "inset-y-4 left-0 w-4",
-        side === "right" && "inset-y-4 right-0 w-4",
+        "absolute flex items-center justify-center rounded-md transition-colors hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        side === "top" && "inset-x-6 top-3 h-6",
+        side === "bottom" && "inset-x-6 bottom-3 h-6",
+        side === "left" && "inset-y-6 left-3 w-6",
+        side === "right" && "inset-y-6 right-3 w-6",
       )}
     >
-      <span
-        className={cn(
-          "rounded-full transition-colors",
-          horizontal ? "h-[3px] w-full" : "h-full w-[3px]",
-          on ? "bg-foreground" : "bg-border group-hover:bg-muted-foreground",
-        )}
-      />
+      {!on && (
+        <span
+          aria-hidden
+          className={cn(
+            "border-dashed border-muted-foreground/50",
+            horizontal ? "w-full border-t" : "h-full border-l",
+          )}
+        />
+      )}
     </button>
   );
 }
 
 /* ─── Dialog (création + édition) ────────────────────────────────────────── */
-
-const BORDER_PRESETS: { value: CalloutBorder; labelKey: string }[] = [
-  { value: "full", labelKey: "callout.borderFull" },
-  { value: "left", labelKey: "callout.borderLeft" },
-  { value: "separator", labelKey: "callout.borderSeparator" },
-  { value: "none", labelKey: "callout.borderNone" },
-];
 
 type Tab = "content" | "style" | "layout";
 
@@ -430,14 +440,19 @@ export function CalloutDialog({
     }));
   }
 
-  function applyBorder(border: CalloutBorder) {
+  /** Cadre ou séparateur : l'épaisseur repart de celle de la forme. */
+  function applyShape(shape: "frame" | "separator") {
     setState((s) => ({
       ...s,
-      separator: border === "separator",
-      sides: border === "separator" ? s.sides : resolveCalloutStyle({ _type: "callout", border }).sides,
-      // L'épaisseur repart de celle du style : fine pour une carte, épaisse à gauche.
+      separator: shape === "separator",
+      sides: shape === "frame" && s.sides.length === 0 ? [...CALLOUT_SIDES] : s.sides,
       borderWidth: undefined,
     }));
+  }
+
+  /** Raccourcis : tous les côtés, le seul côté gauche (filet épais), aucun. */
+  function applySides(next: CalloutSide[]) {
+    setState((s) => ({ ...s, sides: next, borderWidth: undefined }));
   }
 
   function toggleSide(side: CalloutSide) {
@@ -525,13 +540,6 @@ export function CalloutDialog({
   const previewBlock = draftBlock();
   // Ce que chaque réglage vaut à l'écran, défaut compris : la tuile choisie.
   const resolved = resolveCalloutStyle(previewBlock);
-  const borderPreset: CalloutBorder | null = separator
-    ? "separator"
-    : sides.length === CALLOUT_SIDES.length ? "full"
-      : sides.length === 0 ? "none"
-        : sides.length === 1 && sides[0] === "left" ? "left"
-          : null;
-
   const sideLabels: Record<CalloutSide, string> = {
     top: t("callout.sideTop"),
     right: t("callout.alignRight"),
@@ -539,7 +547,34 @@ export function CalloutDialog({
     left: t("callout.alignLeft"),
   };
   const tint = resolved.bgColor ?? "var(--color-foreground)";
-  const sidesGroupId = useId();
+  // Le cadre de l'éditeur de bordure se dessine avec la vraie bordure.
+  const framePx = resolved.borderStyle === "double"
+    ? Math.max(CALLOUT_BORDER_WIDTH_PX[resolved.borderWidth], 3)
+    : CALLOUT_BORDER_WIDTH_PX[resolved.borderWidth];
+  const frameColor = resolved.borderColor ?? "var(--color-muted-foreground)";
+  const frameStyle: React.CSSProperties = {
+    borderStyle: resolved.borderStyle,
+    borderColor: frameColor,
+    borderRadius: CALLOUT_RADIUS_PX[resolved.radius],
+    borderTopWidth: sides.includes("top") ? framePx : 0,
+    borderRightWidth: sides.includes("right") ? framePx : 0,
+    borderBottomWidth: sides.includes("bottom") ? framePx : 0,
+    borderLeftWidth: sides.includes("left") ? framePx : 0,
+    ...(resolved.bgColor && resolved.bgIntensity > 0 && {
+      backgroundColor: `color-mix(in srgb, ${resolved.bgColor} ${resolved.bgIntensity}%, transparent)`,
+    }),
+  };
+  const separatorLine: React.CSSProperties = {
+    borderTopWidth: framePx,
+    borderTopStyle: resolved.borderStyle,
+    borderTopColor: frameColor,
+  };
+  const sameSides = (a: CalloutSide[], b: CalloutSide[]) => a.length === b.length && a.every((x) => b.includes(x));
+  const quickSides: { key: string; label: string; sides: CalloutSide[] }[] = [
+    { key: "all", label: t("callout.sidesAll"), sides: [...CALLOUT_SIDES] },
+    { key: "left", label: t("callout.alignLeft"), sides: ["left"] },
+    { key: "none", label: t("callout.levelNone"), sides: [] },
+  ];
 
   async function upload(
     e: React.ChangeEvent<HTMLInputElement>,
@@ -914,82 +949,107 @@ export function CalloutDialog({
 
                 <section className="space-y-4">
                   <SectionLabel>{t("callout.borderLabel")}</SectionLabel>
-                  <ChoiceGroup<CalloutBorder>
+                  <Segmented<"frame" | "separator">
                     label={t("callout.borderShapeLabel")}
-                    value={borderPreset ?? ("custom" as CalloutBorder)}
-                    onChange={applyBorder}
-                    options={BORDER_PRESETS.map(({ value, labelKey }) => ({
-                      value,
-                      label: t(labelKey),
-                      preview: <BorderPresetPreview border={value} />,
-                    }))}
+                    value={separator ? "separator" : "frame"}
+                    onChange={applyShape}
+                    options={[
+                      { value: "frame", label: t("callout.borderFrame") },
+                      { value: "separator", label: t("callout.borderSeparator") },
+                    ]}
                   />
-                  {separator ? (
-                    <p className="text-xs text-muted-foreground">{t("callout.separatorHint")}</p>
-                  ) : (
-                    <div role="group" aria-labelledby={sidesGroupId} className="flex items-center gap-4">
-                      <div className="relative h-20 w-28 shrink-0">
-                        <span aria-hidden className="absolute inset-4 rounded-sm bg-muted/50" />
-                        {CALLOUT_SIDES.map((side) => (
-                          <SideToggle
-                            key={side}
-                            side={side}
-                            label={sideLabels[side]}
-                            on={sides.includes(side)}
-                            onToggle={() => toggleSide(side)}
-                          />
-                        ))}
-                      </div>
-                      <div className="space-y-1">
-                        <Label id={sidesGroupId} className="text-xs text-muted-foreground">{t("callout.sidesLabel")}</Label>
-                        <p className="text-xs text-muted-foreground">{t("callout.sidesHint")}</p>
-                      </div>
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                    {/* Le cadre, dessiné avec la bordure choisie ; ses côtés se cliquent. */}
+                    <div className="flex shrink-0 flex-col items-center gap-2">
+                      {separator ? (
+                        <div aria-hidden className="flex h-32 w-48 items-center gap-2 rounded-lg bg-muted/30 px-4">
+                          <span className="flex-1" style={separatorLine} />
+                          <span className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("callout.titleColorLabel")}</span>
+                          <span className="flex-1" style={separatorLine} />
+                        </div>
+                      ) : (
+                        <>
+                          <div role="group" aria-label={t("callout.sidesLabel")} className="relative h-32 w-48 rounded-lg bg-muted/30">
+                            <span aria-hidden className="absolute inset-6" style={frameStyle} />
+                            {CALLOUT_SIDES.map((side) => (
+                              <SideToggle
+                                key={side}
+                                side={side}
+                                label={sideLabels[side]}
+                                on={sides.includes(side)}
+                                onToggle={() => toggleSide(side)}
+                              />
+                            ))}
+                          </div>
+                          <div role="group" aria-label={t("callout.sidesQuick")} className="flex gap-1">
+                            {quickSides.map((q) => (
+                              <button
+                                key={q.key}
+                                type="button"
+                                aria-pressed={sameSides(sides, q.sides)}
+                                onClick={() => applySides(q.sides)}
+                                className={cn(
+                                  "rounded-md px-2 py-0.5 text-xs transition-colors",
+                                  sameSides(sides, q.sides) ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                                )}
+                              >
+                                {q.label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      <p className="max-w-48 text-center text-2xs text-muted-foreground">
+                        {separator ? t("callout.separatorHint") : t("callout.sidesHint")}
+                      </p>
                     </div>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <ChoiceGroup<CalloutBorderWidth>
-                      label={t("callout.borderWidthLabel")}
-                      value={resolved.borderWidth}
-                      onChange={(v) => set("borderWidth", v)}
-                      options={[
-                        { value: "thin", label: t("callout.borderThin"), preview: lineSample({ borderTopWidth: 1 }) },
-                        { value: "medium", label: t("callout.sizeMedium"), preview: lineSample({ borderTopWidth: 2 }) },
-                        { value: "thick", label: t("callout.borderThick"), preview: lineSample({ borderTopWidth: 4 }) },
-                      ]}
-                    />
-                    {!separator && (
-                      <ChoiceGroup<CalloutRadius>
-                        label={t("callout.borderRound")}
-                        value={resolved.radius}
-                        onChange={(v) => set("radius", v)}
+
+                    {/* Le trait */}
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <Segmented<CalloutBorderStyle>
+                        label={t("callout.borderStyleLabel")}
+                        value={resolved.borderStyle}
+                        onChange={(v) => set("borderStyle", v)}
+                        options={(["solid", "dashed", "dotted", "double"] as const).map((v) => ({
+                          value: v,
+                          label: t(`callout.style${v[0].toUpperCase()}${v.slice(1)}`),
+                          preview: lineSample({ borderTopWidth: v === "double" ? 4 : 2, borderTopStyle: v }),
+                        }))}
+                      />
+                      <Segmented<CalloutBorderWidth>
+                        label={t("callout.borderWidthLabel")}
+                        value={resolved.borderWidth}
+                        onChange={(v) => set("borderWidth", v)}
                         options={[
-                          { value: "none", label: t("callout.levelNone"), preview: cornerSample(0) },
-                          { value: "soft", label: t("callout.levelLight"), preview: cornerSample(4) },
-                          { value: "round", label: t("callout.levelStrong"), preview: cornerSample(10) },
+                          { value: "thin", label: t("callout.borderThin"), preview: lineSample({ borderTopWidth: 1 }) },
+                          { value: "medium", label: t("callout.sizeMedium"), preview: lineSample({ borderTopWidth: 2 }) },
+                          { value: "thick", label: t("callout.borderThick"), preview: lineSample({ borderTopWidth: 4 }) },
                         ]}
                       />
-                    )}
+                      {!separator && (
+                        <Segmented<CalloutRadius>
+                          label={t("callout.borderRound")}
+                          value={resolved.radius}
+                          onChange={(v) => set("radius", v)}
+                          options={[
+                            { value: "none", label: t("callout.levelNone"), preview: cornerSample(0) },
+                            { value: "soft", label: t("callout.levelLight"), preview: cornerSample(4) },
+                            { value: "round", label: t("callout.levelStrong"), preview: cornerSample(10) },
+                          ]}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <ChoiceGroup<CalloutBorderStyle>
-                    label={t("callout.borderStyleLabel")}
-                    value={resolved.borderStyle}
-                    onChange={(v) => set("borderStyle", v)}
-                    options={(["solid", "dashed", "dotted", "double"] as const).map((v) => ({
-                      value: v,
-                      label: t(`callout.style${v[0].toUpperCase()}${v.slice(1)}`),
-                      preview: lineSample({ borderTopWidth: v === "double" ? 4 : 2, borderTopStyle: v }),
-                    }))}
-                  />
                 </section>
 
                 {!separator && (
                   <section className="space-y-4">
                     <SectionLabel>{t("callout.bgColorLabel")}</SectionLabel>
-                    <IntensitySlider
+                    <PercentSlider
                       label={t("callout.bgIntensityLabel")}
                       value={resolved.bgIntensity}
-                      tint={tint}
                       onChange={(v) => set("bgIntensity", v)}
+                      track={<span className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to right, transparent, ${tint})` }} />}
                     />
 
                     {/* Image de fond ou bandeau */}
@@ -1039,7 +1099,7 @@ export function CalloutDialog({
                       />
                     </div>
                     {state.image && (
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid items-end gap-4 sm:grid-cols-2">
                         <ChoiceGroup<CalloutImageMode>
                           label={t("callout.imageModeLabel")}
                           value={resolved.imageMode}
@@ -1049,14 +1109,17 @@ export function CalloutDialog({
                             { value: "banner", label: t("callout.imageModeBanner") },
                           ]}
                         />
-                        <ChoiceGroup<number>
+                        {/* La piste montre l'image, de plus en plus voilée vers la droite. */}
+                        <PercentSlider
                           label={t("callout.imageVeilLabel")}
                           value={resolved.imageVeil}
                           onChange={(v) => set("imageVeil", v)}
-                          options={CALLOUT_IMAGE_VEILS.map((v, i) => ({
-                            value: v,
-                            label: t(`callout.${(["levelNone", "levelLight", "levelMedium", "levelStrong"] as const)[i]}`),
-                          }))}
+                          track={
+                            <>
+                              <StoredImage url={state.image} width={480} height={36} resize="cover" className="object-cover" />
+                              <span className="absolute inset-0 bg-linear-to-r from-transparent to-background" />
+                            </>
+                          }
                         />
                         <p className="text-xs text-muted-foreground sm:col-span-2">{t("callout.imageVeilHint")}</p>
                       </div>
