@@ -43,28 +43,11 @@ vi.mock("@/components/ui/delete-confirm-dialog", () => ({
     </>
   ),
 }));
-vi.mock("@/lib/imageUtils", () => ({
-  toWebP: vi.fn(async (file: File) => file),
-}));
-
-// Stub minimal : un bouton qui simule la confirmation d'un recadrage, sans
-// dépendre de canvas/Image (non fiables sous jsdom) ni du flux réel de
-// sélection de fichier — seul le câblage onConfirm → upload est testé ici.
-vi.mock("@/components/ui/image-crop-picker", () => ({
-  ImagePickerCropField: ({ onConfirm, changeLabel }: { onConfirm: (b: Blob) => void; changeLabel?: string }) => (
-    <button type="button" onClick={() => onConfirm(new Blob(["x"], { type: "image/jpeg" }))}>
-      {changeLabel ?? "Choisir une image"}
-    </button>
-  ),
-}));
-
 import ChatroomSettingsSheet from "@/components/chatrooms/settings/ChatroomSettingsSheet";
 
 const CHATROOM = {
   id: "c1",
   title: "Salle de test",
-  banner_url: null,
-  icon_url: null,
 };
 
 /**
@@ -95,53 +78,6 @@ describe("ChatroomSettingsSheet — accès sans condition de nombre de messages"
     setup();
     render(<ChatroomSettingsSheet canEdit={false} chatroom={CHATROOM} />);
     expect(screen.queryByLabelText("Paramètres")).not.toBeInTheDocument();
-  });
-});
-
-describe("ChatroomSettingsSheet — icône via le sélecteur avec recadrage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("téléverse l'icône sous un nom neuf, et ne l'enregistre qu'avec « Enregistrer »", async () => {
-    const mock = setup([{ data: [{ id: "c1" }], error: null }]); // update chatrooms
-    const user = userEvent.setup();
-    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
-
-    await user.click(screen.getByText("Choisir une image"));
-
-    await waitFor(() => {
-      expect(mock.storageUpload).toHaveBeenCalledWith(
-        expect.stringMatching(/^chatroom-c1\/icon-\d+\.webp$/),
-        expect.anything(),
-        expect.anything(),
-      );
-    });
-    // Envoyée, mais pas encore enregistrée.
-    expect(mock.buildersFor("chatrooms")).toHaveLength(0);
-
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => {
-      const builders = mock.buildersFor("chatrooms");
-      expect(builders).toHaveLength(1);
-      expect(builders[0].update).toHaveBeenCalledWith({ icon_url: expect.stringMatching(/chatroom-c1\/icon-\d+\.webp$/) });
-    });
-  });
-
-  it("téléverse sans consulter la session au préalable", async () => {
-    // Sous Firefox, `auth.getUser()` attend le verrou de session de
-    // supabase-js (navigator.locks) qu'un autre onglet peut retenir : l'envoi
-    // qui le précédait ne partait alors jamais. Le jeton du client suffit —
-    // le bucket refuse de lui-même un appelant sans droit.
-    const mock = setup([{ data: null, error: null }]);
-    mock.client.auth.getUser.mockReturnValue(new Promise(() => {}));
-    const user = userEvent.setup();
-    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
-
-    await user.click(screen.getByText("Choisir une image"));
-
-    await waitFor(() => expect(mock.storageUpload).toHaveBeenCalledTimes(1));
-    expect(mock.client.auth.getUser).not.toHaveBeenCalled();
   });
 });
 

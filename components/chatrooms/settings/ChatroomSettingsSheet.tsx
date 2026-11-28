@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
-import { httpUrlSchema } from "@/lib/inputSchemas";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -11,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
 import { ChatroomTimelineLinks } from "@/components/chatrooms/settings/ChatroomTimelineLinks";
 import { clampTimelineDate } from "@/lib/worldTimeline";
-import { toWebP } from "@/lib/imageUtils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +31,6 @@ import {
 } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { Loader2, Save, Settings } from "lucide-react";
 import {
   AlertDialog,
@@ -51,7 +48,6 @@ import { Switch } from "@/components/ui/switch";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
-import { STORAGE_CACHE_CONTROL } from "@/lib/storagePaths";
 import { Textarea } from "@/components/ui/textarea";
 import { HelpHint } from "@/components/ui/help-hint";
 import { ChatroomVisibilityField } from "@/components/chatrooms/access/ChatroomVisibilityField";
@@ -81,22 +77,13 @@ type CategoryOption = { id: string; title: string; banner_url: string | null; ic
 
 const schema = z.object({
   title: z.string().trim().min(1, "Nom requis").max(80),
-  icon_url: httpUrlSchema.optional().or(z.literal("")),
-  banner_url: httpUrlSchema.optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-function truthyOrNull(v: string | undefined | null): string | null {
-  const s = (v ?? "").trim();
-  return s.length ? s : null;
-}
-
 /** Les réglages enregistrables d'une salle, sous leur forme en base. */
 type Reglages = {
   title: string | null;
-  icon_url: string | null;
-  banner_url: string | null;
   timeline_date: WorldTimelineDate | null;
   map_pin_id: string | null;
   category_id: string | null;
@@ -114,8 +101,6 @@ function memesInvites(a: ChatroomInvitee[], b: ChatroomInvitee[]): boolean {
 function reglagesDe(c: Props["chatroom"]): Reglages {
   return {
     title: c.title?.trim() || null,
-    icon_url: truthyOrNull(c.icon_url),
-    banner_url: truthyOrNull(c.banner_url),
     timeline_date: c.timeline_date ?? null,
     map_pin_id: c.map_pin_id ?? null,
     category_id: c.category_id ?? null,
@@ -135,21 +120,11 @@ function ecart(avant: Reglages, apres: Reglages): Partial<Reglages> {
   return patch;
 }
 
-/** Chemin dans le bucket `chatrooms` d'une URL publique, sinon nul. */
-function cheminDe(url: string | null): string | null {
-  if (!url) return null;
-  const i = url.indexOf("/object/public/chatrooms/");
-  if (i < 0) return null;
-  return decodeURIComponent(url.slice(i + "/object/public/chatrooms/".length).split("?")[0]);
-}
-
 type Props = {
   canEdit?: boolean;
   chatroom: {
     id: string;
     title: string | null;
-    banner_url: string | null;
-    icon_url: string | null;
     timeline_date?: WorldTimelineDate | null;
     map_pin_id?: string | null;
     category_id?: string | null;
@@ -186,7 +161,6 @@ export default function ChatroomSettingsSheet({
     if (controlledOpen === undefined) setInternalOpen(v);
     onOpenChange?.(v);
   }
-  const [uploading, setUploading] = React.useState<"icon" | "banner" | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [timelineDate, setTimelineDate] = React.useState<WorldTimelineDate | null>(chatroom.timeline_date ?? null);
   const { world_map } = useFeatureFlags();
@@ -206,8 +180,6 @@ export default function ChatroomSettingsSheet({
   // Rien ne part en base avant « Enregistrer » : `base` est l'état enregistré,
   // l'écart avec les valeurs affichées dit quoi écrire — en UNE requête.
   const [base, setBase] = React.useState<Reglages>(() => reglagesDe(chatroom));
-  // Images envoyées pendant la séance : effacées si l'on abandonne.
-  const [envoyees, setEnvoyees] = React.useState<string[]>([]);
   const [saving, setSaving] = React.useState(false);
   const [confirmClose, setConfirmClose] = React.useState(false);
 
@@ -215,20 +187,13 @@ export default function ChatroomSettingsSheet({
     resolver: zodResolver(schema),
     defaultValues: {
       title: chatroom.title ?? "",
-      icon_url: chatroom.icon_url ?? "",
-      banner_url: chatroom.banner_url ?? "",
     },
   });
 
   React.useEffect(() => {
     if (open) {
       setBase(reglagesDe(chatroom));
-      setEnvoyees([]);
-      form.reset({
-        title: chatroom.title ?? "",
-        icon_url: chatroom.icon_url ?? "",
-        banner_url: chatroom.banner_url ?? "",
-      });
+      form.reset({ title: chatroom.title ?? "" });
       setTimelineDate(chatroom.timeline_date ?? null);
       setMapPinId(chatroom.map_pin_id ?? null);
       setCategoryId(chatroom.category_id ?? null);
@@ -265,14 +230,10 @@ export default function ChatroomSettingsSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, chatroom.id]);
 
-  const iconUrl = form.watch("icon_url");
-  const bannerUrl = form.watch("banner_url");
   const titre = form.watch("title");
 
   const courants: Reglages = {
     title: titre?.trim() || null,
-    icon_url: truthyOrNull(iconUrl),
-    banner_url: truthyOrNull(bannerUrl),
     timeline_date: timelineDate,
     map_pin_id: mapPinId,
     category_id: categoryId,
@@ -285,52 +246,6 @@ export default function ChatroomSettingsSheet({
   const invitesModifies = visibilityHasInvitees(visibility) && !memesInvites(baseInvitees, invitees);
   const tempsModifie = !memeTemps(baseDay, day);
   const dirty = Object.keys(patch).length > 0 || invitesModifies || tempsModifie;
-
-  // ---------- upload ----------
-
-  async function uploadToChatrooms(file: File, kind: "icon" | "banner") {
-    // Pas de `auth.getUser()` préalable : l'envoi est déjà authentifié par le
-    // jeton du client, et le bucket refuse de lui-même un appelant sans droit.
-    // Cet appel passait par le verrou de session de supabase-js
-    // (navigator.locks), qu'un autre onglet peut retenir sous Firefox —
-    // l'envoi n'en partait alors jamais.
-    if (file.size > 5 * 1024 * 1024) throw new Error(t("settingsErrorTooLarge"));
-
-    const converted = await toWebP(file);
-    // Un nom neuf à chaque envoi : l'image en place reste intacte tant que
-    // « Enregistrer » n'a pas été cliqué, et un abandon n'efface que la neuve.
-    const path = `chatroom-${chatroom.id}/${kind}-${Date.now()}.webp`;
-
-    const { error } = await supabase.storage
-      .from("chatrooms")
-      .upload(path, converted, { cacheControl: STORAGE_CACHE_CONTROL, upsert: true, contentType: converted.type });
-    if (error) throw error;
-    setEnvoyees((prev) => [...prev, path]);
-    return supabase.storage.from("chatrooms").getPublicUrl(path).data.publicUrl;
-  }
-
-  async function uploadFile(file: File, kind: "icon" | "banner") {
-    setUploading(kind);
-    try {
-      const url = await uploadToChatrooms(file, kind);
-      const field = kind === "icon" ? "icon_url" : "banner_url";
-      form.setValue(field, url, { shouldDirty: true, shouldValidate: true });
-    } catch (e: unknown) {
-      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
-      console.error("[ChatroomSettingsSheet] envoi d'image", e);
-      toast.error(tCommon("uploadError"));
-    } finally {
-      setUploading(null);
-    }
-  }
-
-  async function onIconConfirm(blob: Blob) {
-    await uploadFile(new File([blob], "icon.png", { type: blob.type || "image/png" }), "icon");
-  }
-
-  async function onBannerConfirm(blob: Blob) {
-    await uploadFile(new File([blob], "banner.png", { type: blob.type || "image/png" }), "banner");
-  }
 
   // ---------- enregistrer ----------
 
@@ -377,25 +292,14 @@ export default function ChatroomSettingsSheet({
       setBaseDay(day);
     }
     setSaving(false);
-    // Les images remplacées ou retirées ne servent plus : on les efface, comme
-    // les envois de la séance qui n'ont pas été retenus.
-    const gardees = new Set([courants.icon_url, courants.banner_url].map(cheminDe).filter(Boolean));
-    const inutiles = [
-      ...[base.icon_url, base.banner_url].map(cheminDe),
-      ...envoyees,
-    ].filter((c): c is string => !!c && c.startsWith(`chatroom-${chatroom.id}/`) && !gardees.has(c));
-    if (inutiles.length > 0) await supabase.storage.from("chatrooms").remove([...new Set(inutiles)]);
-    setEnvoyees([]);
     toast.success(tCommon("changesSaved"));
     router.refresh();
     return true;
   }
 
-  /** Abandonne : retour à l'état enregistré, sans garder les images envoyées. */
-  async function discard() {
-    if (envoyees.length > 0) await supabase.storage.from("chatrooms").remove(envoyees);
-    setEnvoyees([]);
-    form.reset({ title: base.title ?? "", icon_url: base.icon_url ?? "", banner_url: base.banner_url ?? "" });
+  /** Abandonne : retour à l'état enregistré. */
+  function discard() {
+    form.reset({ title: base.title ?? "" });
     setTimelineDate(base.timeline_date);
     setMapPinId(base.map_pin_id);
     setCategoryId(base.category_id);
@@ -465,45 +369,6 @@ export default function ChatroomSettingsSheet({
         <Form {...form}>
           <form onSubmit={(e) => e.preventDefault()} className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-6 sm:p-6">
-
-              {/* Icône */}
-              <FormField
-                control={form.control}
-                name="icon_url"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>{t("settingsIcon")}</FormLabel>
-                    {iconUrl ? (
-                      <div className="flex items-center gap-2">
-                        <ImagePickerCropField
-                          aspect={1}
-                          uploading={uploading === "icon"}
-                          previewSrc={iconUrl}
-                          previewClassName="h-12 w-12 shrink-0 rounded-full"
-                          changeLabel="Changer"
-                          onConfirm={onIconConfirm}
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          disabled={uploading === "icon"}
-                          onClick={() => form.setValue("icon_url", "", { shouldDirty: true })}
-                        >
-                          Retirer
-                        </Button>
-                      </div>
-                    ) : (
-                      <ImagePickerCropField
-                        aspect={1}
-                        uploading={uploading === "icon"}
-                        onConfirm={onIconConfirm}
-                      />
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               {/* Nom */}
               <FormField
@@ -713,36 +578,6 @@ export default function ChatroomSettingsSheet({
                 </div>
               )}
 
-              {/* Bannière */}
-              <FormField
-                control={form.control}
-                name="banner_url"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>{t("settingsBanner")}</FormLabel>
-                    <ImagePickerCropField
-                      aspect={16 / 7}
-                      uploading={uploading === "banner"}
-                      previewSrc={bannerUrl || null}
-                      previewClassName="aspect-[16/7] w-full rounded-2xl"
-                      changeLabel={t("settingsBannerHint")}
-                      onConfirm={onBannerConfirm}
-                    />
-                    {bannerUrl && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="w-fit"
-                        onClick={() => form.setValue("banner_url", "", { shouldDirty: true })}
-                      >
-                        Retirer la bannière
-                      </Button>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <DrawerFooter className="border-t border-border px-4 py-3 sm:px-6 flex-row justify-start">
@@ -765,7 +600,7 @@ export default function ChatroomSettingsSheet({
               <Button
                 type="button"
                 className="ml-auto"
-                disabled={!dirty || saving || uploading !== null}
+                disabled={!dirty || saving}
                 onClick={() => void save()}
               >
                 {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
@@ -789,7 +624,7 @@ export default function ChatroomSettingsSheet({
           <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
           <Button
             variant="destructive"
-            onClick={() => { setConfirmClose(false); void discard().then(() => setOpen(false)); }}
+            onClick={() => { setConfirmClose(false); discard(); setOpen(false); }}
           >
             {t("settingsUnsavedDiscard")}
           </Button>

@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Interface",
+    area: "Salons",
+    text: "Réglages du salon : plus de choix d’icône ni de bannière.",
+  },
+  {
+    date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
     text: "Ordre de passage : seuls les joueurs du salon sont proposés.\n- invités, directement ou par un groupe\n- joueurs ayant déjà posté",

@@ -1226,8 +1226,6 @@ export default function ChatRoomView({
                 chatroom={{
                   id: chat.id,
                   title: chat.title,
-                  banner_url: chat.banner_url ?? null,
-                  icon_url: chat.icon_url ?? null,
                   timeline_date: chat.timeline_date ?? null,
                   map_pin_id: chat.map_pin_id ?? null,
                   category_id: chat.category_id ?? null,
