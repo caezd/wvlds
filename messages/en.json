@@ -2319,7 +2319,7 @@
     "selectPersonaFirst": "Select a persona before sending.",
     "search": {
       "title": "Search",
-      "needFilter": "Add at least one filter (de: dans: contient: mentions: or \"Filters\") before running a search.",
+      "needFilter": "To search messages, add at least one filter (de: dans: contient: mentions: or \"Filters\").",
       "placeholder": "Search…",
       "filtersTitle": "Filters",
       "noResults": "No results.",

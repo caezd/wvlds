@@ -106,3 +106,30 @@ export function parseChatBlock(content: string): ChatBlock | null {
     return null;
   }
 }
+
+/** Ce qui se lit d'un bloc, morceau par morceau (sans ses réglages ni identifiants). */
+function chatBlockTextParts(block: ChatBlock): (string | undefined)[] {
+  switch (block._type) {
+    case "choice": return [block.question, ...(block.options ?? []).map((o) => o.label)];
+    case "callout": return [block.title, block.text, ...(block.gauges ?? []).map((g) => g.name)];
+    case "dice": return [block.label, block.formula];
+    case "npc": return [block.name, block.role, block.stats];
+    case "hp": return [block.name];
+    case "anchor": return [block.label];
+    case "banner": return [block.alt];
+    // Le texte caché ne s'affiche qu'une fois révélé : seul l'indice se lit.
+    case "reveal": return [block.hint];
+    case "transfer":
+    case "ellipse": return [];
+  }
+}
+
+/**
+ * Le texte qu'un lecteur voit d'un message : un message ordinaire tel quel,
+ * un bloc par ce qui s'y lit (jamais son JSON). Sert à la recherche.
+ */
+export function readableMessageText(content: string): string {
+  const block = parseChatBlock(content);
+  if (!block) return content;
+  return chatBlockTextParts(block).map((part) => part?.trim()).filter(Boolean).join(" · ");
+}

@@ -5,6 +5,8 @@ import {
   matchesLink,
   hasActiveFilter,
   searchChatMessages,
+  searchSnippet,
+  searchesWorldPages,
 } from "@/lib/chatSearch";
 
 describe("hasActiveFilter", () => {
@@ -198,5 +200,58 @@ describe("searchChatMessages — scan progressif (texte libre)", () => {
     // la fin du 1er lot) pour retrouver les correspondances des index 30-34.
     expect(secondCallParams.p_cursor_id).toBe(724);
     expect(secondPage.results).toHaveLength(5);
+  });
+});
+
+// Un bloc se cherche par ce qui s'y lit, pas par son JSON.
+describe("recherche dans les blocs", () => {
+  const choix = JSON.stringify({ _type: "choice", question: "Que cuisiner ?", options: [{ id: "947526b9", label: "Des pâtes" }] });
+
+  it("trouve le texte du bloc, pas ses clés ni ses identifiants", () => {
+    expect(matchesFreeText(choix, "cuisiner")).toBe(true);
+    expect(matchesFreeText(choix, "pâtes")).toBe(true);
+    expect(matchesFreeText(choix, "options")).toBe(false);
+    expect(matchesFreeText(choix, "947526b9")).toBe(false);
+  });
+
+  it("l'image d'une bannière n'est pas un lien", () => {
+    expect(matchesLink(JSON.stringify({ _type: "banner", url: "https://x.test/a.png" }))).toBe(false);
+  });
+});
+
+describe("searchSnippet", () => {
+  it("un texte court reste entier", () => {
+    expect(searchSnippet("Que cuisiner ?", "cuisiner")).toBe("Que cuisiner ?");
+  });
+
+  it("un texte long est coupé autour du mot trouvé", () => {
+    const texte = "a".repeat(300) + " cuisine " + "b".repeat(300);
+    const extrait = searchSnippet(texte, "cuisine", 100);
+    expect(extrait).toContain("cuisine");
+    expect(extrait.startsWith("…")).toBe(true);
+    expect(extrait.endsWith("…")).toBe(true);
+    expect(extrait.length).toBeLessThanOrEqual(102);
+  });
+
+  it("sans mot trouvé, le début du texte", () => {
+    expect(searchSnippet("a".repeat(300), "", 100)).toBe("a".repeat(100) + "…");
+  });
+});
+
+// Le wiki et la carte ne connaissent ni salon, ni auteur, ni date : ils ne
+// répondent qu'au texte seul. Un filtre de messages les écarte.
+describe("searchesWorldPages", () => {
+  it("le texte seul cherche dans le wiki et la carte", () => {
+    expect(searchesWorldPages({ freeText: "cuisine" })).toBe(true);
+  });
+
+  it("un filtre de messages les écarte", () => {
+    expect(searchesWorldPages({ freeText: "cuisine", chatIds: ["c1"] })).toBe(false);
+    expect(searchesWorldPages({ freeText: "cuisine", authorIds: ["u1"] })).toBe(false);
+    expect(searchesWorldPages({ freeText: "cuisine", dateFrom: "2026-01-01" })).toBe(false);
+  });
+
+  it("sans texte, rien à chercher", () => {
+    expect(searchesWorldPages({ freeText: "  " })).toBe(false);
   });
 });

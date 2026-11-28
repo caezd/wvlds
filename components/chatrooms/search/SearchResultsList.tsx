@@ -6,7 +6,8 @@ import { Pin, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import DateDisplay from "@/components/date-display";
-import { excerpt } from "@/components/chatrooms/message/PinBar";
+import { readableMessageText } from "@/lib/chat-blocks";
+import { searchSnippet } from "@/lib/chatSearch";
 import type { SearchResultMessage } from "@/lib/chatSearch";
 import type { SearchAuthorOption, SearchChatroomOption } from "@/lib/chatSearchDirectory";
 
@@ -23,8 +24,9 @@ function resolveAuthor(
   return { name: "?", avatarUrl: null };
 }
 
+/** Le texte lisible du message (un bloc par ce qui s'y lit), coupé autour du mot cherché. */
 function highlight(content: string, query: string) {
-  const text = excerpt(content, 160) || content;
+  const text = searchSnippet(readableMessageText(content), query);
   if (!query.trim()) return text;
   const idx = text.toLowerCase().indexOf(query.trim().toLowerCase());
   if (idx === -1) return text;

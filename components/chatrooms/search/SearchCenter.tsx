@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   hasActiveFilter,
   searchChatMessages,
+  searchesWorldPages,
   type SearchCursor,
   type SearchFilters,
   type SearchResultMessage,
@@ -158,14 +159,6 @@ export function SearchCenter({
       const page = await searchChatMessages(getSupabase(), worldId, nextFilters, cursor);
       if (searchRequestIdRef.current !== requestId) return;
       setResults(page.results);
-      // Pas de curseur ni d'aller-retour pour le wiki : il tient en mémoire,
-      // ses résultats se posent avec ceux des messages.
-      // `nextFilters.freeText`, et non l'état : la recherche part dans le même
-      // tour que la saisie, l'état porte encore le texte d'avant.
-      const wiki = wikiRef.current;
-      setWikiHits(wiki ? searchWiki(wiki.index, nextFilters.freeText ?? "") : []);
-      setPinHits(wiki ? searchPins(wiki.index, nextFilters.freeText ?? "") : []);
-      setWikiPages(wiki?.pagesById ?? new Map());
       setHistory((h) => (pushHistory ? [...h, cursorForCurrentPage] : h));
       setCursorForCurrentPage(cursor);
       setNextCursor(page.nextCursor);
@@ -179,6 +172,16 @@ export function SearchCenter({
   // un filtre structuré (salon, auteur, mentions, contenu, date, épinglé,
   // type d'auteur) pour éviter de scanner tout l'historique sans restriction.
   function attemptSearch(next: SearchFilters) {
+    // Le wiki et la carte tiennent en mémoire : pas de curseur ni
+    // d'aller-retour. Ils répondent au texte seul ; un filtre de messages les
+    // écarte (cf. searchesWorldPages). `next.freeText`, et non l'état : la
+    // recherche part dans le même tour que la saisie.
+    const wiki = wikiRef.current;
+    const worldPages = searchesWorldPages(next) && wiki;
+    setWikiHits(worldPages ? searchWiki(wiki.index, next.freeText ?? "") : []);
+    setPinHits(worldPages ? searchPins(wiki.index, next.freeText ?? "") : []);
+    setWikiPages(wiki?.pagesById ?? new Map());
+
     if (!hasActiveFilter(next)) {
       setNeedFilterWarning(Boolean(next.freeText?.trim()));
       setHasSearched(false);
@@ -285,10 +288,10 @@ export function SearchCenter({
           </DrawerHeader>
 
           <div className="flex-1 overflow-y-auto p-4">
+            <SearchWikiResults hits={wikiHits} pagesById={wikiPages} onSelect={selectWikiPage} />
+            <SearchMapResults hits={pinHits} onSelect={selectPin} />
             {hasSearched && (
               <>
-              <SearchWikiResults hits={wikiHits} pagesById={wikiPages} onSelect={selectWikiPage} />
-              <SearchMapResults hits={pinHits} onSelect={selectPin} />
               <SearchResultsList
                 results={results}
                 authors={authors}

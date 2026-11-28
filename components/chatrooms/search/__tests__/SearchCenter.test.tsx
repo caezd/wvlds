@@ -92,13 +92,13 @@ describe("SearchCenter", () => {
     expect(searchMock).not.toHaveBeenCalled();
   });
 
-  it("ne lance aucune recherche pour du texte libre seul, sans filtre", async () => {
+  it("ne cherche pas dans les messages pour du texte libre seul, sans filtre", async () => {
     render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
 
     const input = await screen.findByPlaceholderText("Rechercher…");
     await userEvent.type(input, "recherché{Enter}");
 
-    expect(await screen.findByText(/Ajoutez au moins un filtre/)).toBeInTheDocument();
+    expect(await screen.findByText(/Pour chercher dans les messages, ajoutez au moins un filtre/)).toBeInTheDocument();
     expect(searchMock).not.toHaveBeenCalled();
   });
 
@@ -124,9 +124,9 @@ describe("SearchCenter", () => {
     expect(screen.getByText("kael")).toBeInTheDocument();
   });
 
-  it("montre les pages du wiki qui répondent, avant les messages", async () => {
-    // Le centre ne fouillait que les messages : depuis un salon, le wiki était
-    // invisible.
+  it("le texte seul, sans filtre, cherche dans le wiki", async () => {
+    // Le wiki ne connaît ni salon ni auteur : il répond au texte seul, sans
+    // parcourir les messages.
     const { buildSearchIndex } = await vi.importActual<typeof import("@/lib/wikiSearch")>("@/lib/wikiSearch");
     wikiLoadMock.mockResolvedValue({
       index: buildSearchIndex(
@@ -138,8 +138,6 @@ describe("SearchCenter", () => {
     render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
 
     const input = await screen.findByPlaceholderText("Rechercher…");
-    await userEvent.type(input, "dans:gén");
-    await userEvent.click(await screen.findByText("# général"));
     await userEvent.type(input, "recherché{Enter}");
 
     await screen.findByText("Dans le wiki");
@@ -218,7 +216,7 @@ describe("SearchCenter", () => {
 });
 
 describe("SearchCenter — les lieux de la carte", () => {
-  it("montre les lieux qui répondent, et ouvre la carte dessus", async () => {
+  it("le texte seul montre les lieux qui répondent, et ouvre la carte dessus", async () => {
     const { buildSearchIndex } = await vi.importActual<typeof import("@/lib/wikiSearch")>("@/lib/wikiSearch");
     wikiLoadMock.mockResolvedValue({
       index: buildSearchIndex([], [], [
@@ -229,8 +227,6 @@ describe("SearchCenter — les lieux de la carte", () => {
     render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
 
     const input = await screen.findByPlaceholderText("Rechercher…");
-    await userEvent.type(input, "dans:gén");
-    await userEvent.click(await screen.findByText("# général"));
     await userEvent.type(input, "recherché{Enter}");
 
     await screen.findByText("Sur la carte");

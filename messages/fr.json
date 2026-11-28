@@ -2319,7 +2319,7 @@
     "selectPersonaFirst": "Sélectionnez un persona avant d'envoyer.",
     "search": {
       "title": "Rechercher",
-      "needFilter": "Ajoutez au moins un filtre (de: dans: contient: mentions: ou « Filtres ») avant de lancer une recherche.",
+      "needFilter": "Pour chercher dans les messages, ajoutez au moins un filtre (de: dans: contient: mentions: ou « Filtres »).",
       "placeholder": "Rechercher…",
       "filtersTitle": "Filtres",
       "noResults": "Aucun résultat.",

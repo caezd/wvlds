@@ -12,6 +12,7 @@ import { RPC } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
 import { getChatroomKeys } from "@/lib/chatroomKeys";
 import type { ChatMessageMeta } from "@/types/db";
+import { readableMessageText } from "@/lib/chat-blocks";
 
 export type AuthorMode = "persona" | "direct" | null;
 
@@ -67,19 +68,21 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Les filtres de texte portent sur ce qui se lit du message : un bloc par
+// son texte, jamais par son JSON (ses clés, identifiants, URL d'image).
 export function matchesFreeText(content: string, query: string): boolean {
   if (!query.trim()) return true;
-  return content.toLowerCase().includes(query.trim().toLowerCase());
+  return readableMessageText(content).toLowerCase().includes(query.trim().toLowerCase());
 }
 
 export function matchesMention(content: string, username: string): boolean {
   if (!username.trim()) return true;
   const re = new RegExp(`@${escapeRegExp(username.trim())}\\b`, "i");
-  return re.test(content);
+  return re.test(readableMessageText(content));
 }
 
 export function matchesLink(content: string): boolean {
-  return /https?:\/\/\S+/i.test(content);
+  return /https?:\/\/\S+/i.test(readableMessageText(content));
 }
 
 function needsClientScan(filters: SearchFilters): boolean {
@@ -104,6 +107,15 @@ export function hasActiveFilter(filters: SearchFilters): boolean {
       filters.dateTo ||
       filters.mentionsUsername?.trim(),
   );
+}
+
+/**
+ * Le wiki et la carte ne connaissent ni salon, ni auteur, ni date : ils ne
+ * répondent qu'au texte seul. Un filtre de messages (« dans: un salon »…)
+ * les écarte, pour ne montrer que ce qui le respecte.
+ */
+export function searchesWorldPages(filters: SearchFilters): boolean {
+  return !hasActiveFilter(filters) && Boolean(filters.freeText?.trim());
 }
 
 type RawSearchRow = {
@@ -258,4 +270,19 @@ export async function searchChatMessages(
     hasMore: !exhausted,
     scannedThisCall,
   };
+}
+
+/**
+ * L'extrait d'un résultat : le texte lisible du message, coupé à `max`
+ * caractères autour du mot cherché (ou depuis le début), « … » aux coupures.
+ */
+export function searchSnippet(text: string, query: string, max = 160): string {
+  if (text.length <= max) return text;
+  const q = query.trim().toLowerCase();
+  const idx = q ? text.toLowerCase().indexOf(q) : -1;
+  if (idx === -1) return text.slice(0, max).trimEnd() + "…";
+  // Un peu de contexte avant le mot, le reste après.
+  const start = Math.max(0, Math.min(idx - Math.floor((max - q.length) / 3), text.length - max));
+  const end = start + max;
+  return (start > 0 ? "…" : "") + text.slice(start, end).trim() + (end < text.length ? "…" : "");
 }
