@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Loader2, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchWorldMembers, type WorldMemberRow } from "@/lib/worldMembers";
-import { currentPlayerId, moveInOrder, removeTurn, saveTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
+import { currentPlayerId, fetchChatroomPlayerIds, moveInOrder, removeTurn, saveTurn, type ChatroomTurn } from "@/lib/chatroomTurns";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -20,7 +20,7 @@ import {
 
 /**
  * Réglage de l'ordre de passage d'un salon : l'activer, ranger les joueurs
- * (membres du monde), le retirer. Réservé au créateur du salon et à qui gère
+ * (invités ou participants du salon), le retirer. Réservé au créateur du salon et à qui gère
  * les salons — la base le vérifie (policies de `chatroom_turns`).
  */
 export function ChatroomTurnDialog({
@@ -43,26 +43,32 @@ export function ChatroomTurnDialog({
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
   const [members, setMembers] = useState<WorldMemberRow[] | null>(null);
+  const [playerIds, setPlayerIds] = useState<Set<string>>(new Set());
   const [enabled, setEnabled] = useState(true);
   const [order, setOrder] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // À chaque ouverture : l'état enregistré, et la liste des membres.
+  // À chaque ouverture : l'état enregistré, les membres (pour les noms) et
+  // les joueurs du salon (seuls proposés à l'ajout).
   useEffect(() => {
     if (!open) return;
     setEnabled(turn?.enabled ?? true);
     setOrder(turn?.order_user_ids ?? []);
     let annule = false;
-    void fetchWorldMembers(supabase, worldId, ownerId).then((rows) => {
-      if (!annule) setMembers(rows);
-    });
+    void Promise.all([fetchWorldMembers(supabase, worldId, ownerId), fetchChatroomPlayerIds(supabase, chatId)]).then(
+      ([rows, ids]) => {
+        if (annule) return;
+        setPlayerIds(new Set(ids));
+        setMembers(rows);
+      },
+    );
     return () => {
       annule = true;
     };
-  }, [open, turn, supabase, worldId, ownerId]);
+  }, [open, turn, supabase, worldId, ownerId, chatId]);
 
   const nom = (id: string) => members?.find((m) => m.user_id === id)?.username ?? "…";
-  const disponibles = (members ?? []).filter((m) => !order.includes(m.user_id));
+  const disponibles = (members ?? []).filter((m) => playerIds.has(m.user_id) && !order.includes(m.user_id));
 
   async function enregistrer() {
     setSaving(true);
@@ -137,6 +143,7 @@ export function ChatroomTurnDialog({
                   <button
                     key={m.user_id}
                     type="button"
+                    data-testid="turn-candidate"
                     onClick={() => setOrder((o) => [...o, m.user_id])}
                     className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                   >

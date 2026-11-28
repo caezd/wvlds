@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import {
   currentPlayerId,
+  fetchChatroomPlayerIds,
   isTurnActive,
   moveInOrder,
   removeTurn,
@@ -64,5 +65,27 @@ describe("ordre de passage — base", () => {
     await removeTurn(mock.client as never, "c1");
     expect(mock.builders[0].builder.update).toHaveBeenCalledWith({ enabled: false, order_user_ids: [], current_index: 0 });
     expect(mock.builders[0].builder.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("ordre de passage — joueurs du salon", () => {
+  it("fetchChatroomPlayerIds : les invités et participants rendus par la base", async () => {
+    const mock = createSupabaseMock();
+    mock.client.rpc.mockResolvedValue({ data: ["a", "b"], error: null });
+    const ids = await fetchChatroomPlayerIds(mock.client as never, "c1");
+    expect(mock.client.rpc).toHaveBeenCalledWith("list_chatroom_player_ids", { p_chat_id: "c1" });
+    expect(ids).toEqual(["a", "b"]);
+  });
+
+  it("fetchChatroomPlayerIds : une erreur ne propose personne", async () => {
+    const mock = createSupabaseMock();
+    mock.client.rpc.mockResolvedValue({ data: null, error: { message: "refusé" } });
+    const error = console.error;
+    console.error = () => {};
+    try {
+      expect(await fetchChatroomPlayerIds(mock.client as never, "c1")).toEqual([]);
+    } finally {
+      console.error = error;
+    }
   });
 });

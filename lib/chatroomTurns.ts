@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TABLE } from "@/lib/constants";
+import { RPC, TABLE } from "@/lib/constants";
 
 /**
  * Ordre de passage d'un salon (migration 211). Une ligne par salon ; le tour
@@ -52,6 +52,20 @@ export function moveInOrder<T>(list: readonly T[], index: number, delta: number)
 export async function fetchTurn(supabase: Pick<SupabaseClient, "from">, chatId: string): Promise<ChatroomTurn | null> {
   const { data } = await supabase.from(TABLE.CHATROOM_TURNS).select(COLUMNS).eq("chat_id", chatId).maybeSingle();
   return (data as ChatroomTurn | null) ?? null;
+}
+
+/**
+ * Joueurs qu'on peut ranger dans l'ordre (migration 279) : invités du salon
+ * (personas ou groupes) et auteurs d'au moins un message. Une erreur ne
+ * propose personne plutôt que tout le monde.
+ */
+export async function fetchChatroomPlayerIds(supabase: Pick<SupabaseClient, "rpc">, chatId: string): Promise<string[]> {
+  const { data, error } = await supabase.rpc(RPC.LIST_CHATROOM_PLAYER_IDS, { p_chat_id: chatId });
+  if (error) {
+    console.error("[chatroomTurns] joueurs du salon", error);
+    return [];
+  }
+  return Array.isArray(data) ? data.filter((x): x is string => typeof x === "string") : [];
 }
 
 /** Crée ou remplace l'ordre d'un salon ; rend la ligne enregistrée. */

@@ -8,14 +8,18 @@ vi.mock("@/lib/worldMembers", () => ({
   fetchWorldMembers: vi.fn(async () => [
     { user_id: "a", username: "Alice" },
     { user_id: "b", username: "Bob" },
+    { user_id: "c", username: "Carole" },
   ]),
 }));
 const saveTurn = vi.fn();
 const removeTurn = vi.fn();
+// Joueurs du salon (invités ou participants) : Carole est membre du monde sans en être.
+const fetchChatroomPlayerIds = vi.fn();
 vi.mock("@/lib/chatroomTurns", async (orig) => ({
   ...(await orig<typeof import("@/lib/chatroomTurns")>()),
   saveTurn: (...a: unknown[]) => saveTurn(...a),
   removeTurn: (...a: unknown[]) => removeTurn(...a),
+  fetchChatroomPlayerIds: (...a: unknown[]) => fetchChatroomPlayerIds(...a),
 }));
 
 import { ChatroomTurnDialog } from "../ChatroomTurnDialog";
@@ -23,9 +27,30 @@ import { ChatroomTurnDialog } from "../ChatroomTurnDialog";
 beforeEach(() => {
   saveTurn.mockReset();
   removeTurn.mockReset();
+  fetchChatroomPlayerIds.mockReset();
+  fetchChatroomPlayerIds.mockResolvedValue(["a", "b"]);
 });
 
+/** Les joueurs proposés à l'ajout, dans l'ordre affiché. */
+function proposes(): string[] {
+  return screen.queryAllByTestId("turn-candidate").map((b) => b.textContent ?? "");
+}
+
 describe("ChatroomTurnDialog", () => {
+  it("ne propose que les joueurs du salon, invités ou participants", async () => {
+    render(<ChatroomTurnDialog open onOpenChange={vi.fn()} chatId="c1" worldId="w1" ownerId={null} turn={null} onSaved={vi.fn()} />);
+    await screen.findByText("Bob");
+    expect(fetchChatroomPlayerIds).toHaveBeenCalledWith(expect.anything(), "c1");
+    expect(proposes()).toEqual(["Alice", "Bob"]);
+  });
+
+  it("nomme un joueur déjà dans l'ordre même s'il n'est plus du salon", async () => {
+    const turn = { chat_id: "c1", enabled: true, order_user_ids: ["c"], current_index: 0 };
+    render(<ChatroomTurnDialog open onOpenChange={vi.fn()} chatId="c1" worldId="w1" ownerId={null} turn={turn} onSaved={vi.fn()} />);
+    expect(await screen.findByText("Carole")).toBeInTheDocument();
+    expect(proposes()).toEqual(["Alice", "Bob"]);
+  });
+
   it("compose l'ordre à partir des membres et l'enregistre", async () => {
     const saved = { chat_id: "c1", enabled: true, order_user_ids: ["b", "a"], current_index: 0 };
     saveTurn.mockResolvedValue({ turn: saved });
