@@ -38,13 +38,14 @@ describe("CalloutDialog — réglages", () => {
     const onSend = vi.fn();
     render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
     fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
-    fireEvent.click(screen.getByRole("button", { name: "callout.moreOptions" }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.tabStyle" }));
     const sides = within(screen.getByRole("group", { name: "callout.sidesLabel" }));
     fireEvent.click(sides.getByRole("button", { name: "callout.alignRight" }));
     fireEvent.click(screen.getByRole("button", { name: "callout.styleDotted" }));
     const radius = within(screen.getByRole("group", { name: "callout.borderRound" }));
     fireEvent.click(radius.getByRole("button", { name: "callout.levelStrong" }));
-    fireEvent.click(screen.getByRole("switch", { name: "callout.bodyItalic" }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.layoutLabel" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.bodyItalic" }));
     fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
     expect(sent(onSend)).toMatchObject({
       sides: ["top", "bottom", "left"],
@@ -62,7 +63,7 @@ describe("CalloutDialog — réglages", () => {
     expect(sent(onSend)).toEqual({ _type: "callout", border: "full", align: "left", title: "Scène" });
   });
 
-  it("ouvert sur un encadré aux options avancées, il les affiche déjà", () => {
+  it("rouvert sur un encadré, l'onglet Style montre ses réglages", () => {
     render(
       <CalloutDialog
         open
@@ -71,6 +72,7 @@ describe("CalloutDialog — réglages", () => {
         initialBlock={{ _type: "callout", title: "Scène", borderStyle: "dashed" }}
       />,
     );
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "callout.tabStyle" }));
     expect(screen.getByRole("button", { name: "callout.styleDashed" })).toHaveAttribute("aria-pressed", "true");
   });
 });

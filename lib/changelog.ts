@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-28",
     category: "Fonctionnalité",
     area: "Salons",
-    text: "Encadré : nouveaux réglages, rangés sous « Plus d’options ».\n- bordure : côtés au choix, épaisseur, trait (plein, tirets, points, double), arrondi aucun, léger ou fort\n- couleurs du titre, de la bordure et du fond séparées ; intensité du fond réglable\n- image en fond ou en bandeau, avec voile\n- largeur (pleine, moyenne, étroite), alignement à droite\n- icône à côté du titre, à gauche du bloc ou au-dessus ; trois tailles\n- police du titre (empattements, machine à écrire, manuscrite), petites capitales, texte en italique\n- champs « clé : valeur » (Lieu, Heure, Météo…), lus par la recherche\n- encadré repliable : « Afficher la suite »",
+    text: "Encadré : fenêtre en trois onglets (Contenu, Style, Mise en page), chaque choix illustré ; nouveaux réglages.\n- bordure : côtés à cliquer sur un cadre, épaisseur, trait (plein, tirets, points, double), arrondi aucun, léger ou fort\n- couleurs du titre, de la bordure et du fond séparées ; intensité du fond réglable\n- image en fond ou en bandeau, avec voile\n- largeur (pleine, moyenne, étroite), alignement à droite\n- icône à côté du titre, à gauche du bloc ou au-dessus ; trois tailles\n- police du titre (empattements, machine à écrire, manuscrite), petites capitales, texte en italique\n- champs « clé : valeur » (Lieu, Heure, Météo…), lus par la recherche\n- encadré repliable : « Afficher la suite »",
   },
   {
     date: "2026-11-28",
