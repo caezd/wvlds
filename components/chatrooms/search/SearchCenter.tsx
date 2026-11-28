@@ -42,6 +42,7 @@ import {
   type WikiSearchPage,
 } from "@/lib/wikiSearch";
 import type { SearchToken } from "./types";
+import { syncTokensWithFilters } from "./searchTokens";
 
 // Seule source de vérité pour le passage token <-> filtre (utilisée par
 // addToken/removeToken) — évite de dupliquer le mapping type -> clé de
@@ -138,9 +139,21 @@ export function SearchCenter({
     void loadWorldWikiForSearch(supabase, worldId).then(wiki => { wikiRef.current = wiki; });
   }, [open, worldId, t]);
 
+  // Le salon d'où la recherche a été ouverte la dernière fois : ouverte depuis
+  // un autre salon, sa puce « dans: » remplace l'ancienne au lieu de s'y
+  // ajouter (le centre reste monté d'un salon à l'autre).
+  const prefilledChatIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
+    const previous = prefilledChatIdRef.current;
+    if (previous && previous !== initialChatId) {
+      prefilledChatIdRef.current = null;
+      setTokens((prev) => prev.filter((tk) => tk.id !== `channel:${previous}`));
+      setFilters((f) => ({ ...f, chatIds: (f.chatIds ?? []).filter((id) => id !== previous) }));
+    }
     if (initialChatId && chatrooms.some((c) => c.id === initialChatId)) {
+      prefilledChatIdRef.current = initialChatId;
       const label = chatrooms.find((c) => c.id === initialChatId)?.label ?? "";
       setTokens((prev) =>
         prev.some((tk) => tk.type === "channel" && tk.value === initialChatId)
@@ -218,8 +231,18 @@ export function SearchCenter({
     attemptSearch(next);
   }
 
-  function applyAdvancedFilters(next: SearchFilters) {
+  // Le panneau « Filtres » remplace les filtres d'un bloc : les puces suivent,
+  // pour toujours dire sur quoi porte la recherche, et le texte tapé reste.
+  function applyAdvancedFilters(fromPanel: SearchFilters) {
+    const next = { ...fromPanel, freeText: filters.freeText };
     setFilters(next);
+    setTokens((prev) =>
+      syncTokensWithFilters(prev, next, {
+        authors,
+        chatrooms,
+        containsLabels: { media: t("search.tokenContainsMedia"), link: t("search.tokenContainsLink") },
+      }),
+    );
     attemptSearch(next);
   }
 

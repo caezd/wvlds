@@ -16,6 +16,7 @@ import {
 } from "@/lib/chatSearchDirectory";
 import { addSearchHistoryEntry, clearSearchHistory, loadSearchHistory } from "@/lib/searchHistory";
 import type { SearchToken, SearchTokenType } from "./types";
+import { authorToToken } from "./searchTokens";
 
 // Préfixes reconnus dans la barre (français uniquement pour l'instant — la
 // recherche façon Discord est un outil de "power user", pas une chaîne à
@@ -39,18 +40,6 @@ const SELECTED_ITEM_CLASS = "data-[selected=true]:bg-muted data-[selected=true]:
 
 function prefixLabel(type: SearchTokenType): string {
   return TOKEN_PREFIXES.find((p) => p.type === type)?.prefix ?? type;
-}
-
-function authorToToken(option: SearchAuthorOption, type: "author" | "mentions"): SearchToken {
-  const mentionUsername = option.kind === "profile" ? option.label : option.sublabel ?? undefined;
-  return {
-    id: `${type}:${option.kind}:${option.id}`,
-    type,
-    label: option.label,
-    value: option.id,
-    kind: option.kind,
-    mentionUsername,
-  };
 }
 
 export function SearchInput({

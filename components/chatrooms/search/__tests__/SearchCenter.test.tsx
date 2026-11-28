@@ -14,8 +14,12 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }));
 // même temps que celui de SearchCenter reproduit le bug de focus infini de
 // jsdom déjà rencontré avec des Dialog imbriqués (cf. mémoire projet) — on le
 // stub, ce fichier ne teste pas ce panneau.
+// Une doublure sans Drawer : un bouton applique les filtres que le test a
+// choisis (`drawerApply.next`), comme le ferait le vrai panneau.
+const drawerApply = vi.hoisted(() => ({ next: {} as import("@/lib/chatSearch").SearchFilters }));
 vi.mock("@/components/chatrooms/search/SearchFiltersDrawer", () => ({
-  SearchFiltersDrawer: () => null,
+  SearchFiltersDrawer: ({ open, onApply }: { open: boolean; onApply: (f: import("@/lib/chatSearch").SearchFilters) => void }) =>
+    open ? <button type="button" onClick={() => onApply(drawerApply.next)}>appliquer les filtres</button> : null,
 }));
 
 const authorsFixture: SearchAuthorOption[] = [
@@ -234,5 +238,49 @@ describe("SearchCenter — les lieux de la carte", () => {
 
     // La carte ET l'épingle : l'adresse sait ouvrir un lieu précis.
     expect(pushMock).toHaveBeenCalledWith("/w/w1?view=map&map=m1&pin=pin1");
+  });
+});
+
+// Les puces de la barre disent sur quoi porte la recherche : elles ne doivent
+// jamais montrer un salon pendant que la recherche en parcourt d'autres.
+describe("SearchCenter — puces et filtres restent d'accord", () => {
+  it("les salons cochés dans le panneau Filtres apparaissent en puces", async () => {
+    render(<SearchCenter worldId="w1" initialChatId="c1" open onOpenChange={() => {}} />);
+    await screen.findByText("dans: général");
+
+    drawerApply.next = { chatIds: ["c1", "c2"] };
+    await userEvent.click(screen.getByRole("button", { name: "Filtres" }));
+    await userEvent.click(screen.getByText("appliquer les filtres"));
+
+    expect(await screen.findByText("dans: photos")).toBeInTheDocument();
+    expect(searchMock).toHaveBeenLastCalledWith(expect.anything(), "w1", expect.objectContaining({ chatIds: ["c1", "c2"] }), null);
+  });
+
+  it("le panneau garde le texte déjà tapé", async () => {
+    render(<SearchCenter worldId="w1" initialChatId="c1" open onOpenChange={() => {}} />);
+    await screen.findByText("dans: général");
+    await userEvent.type(screen.getByRole("textbox"), "recherché{Enter}");
+
+    drawerApply.next = { chatIds: ["c2"] };
+    await userEvent.click(screen.getByRole("button", { name: "Filtres" }));
+    await userEvent.click(screen.getByText("appliquer les filtres"));
+
+    expect(searchMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "w1",
+      expect.objectContaining({ chatIds: ["c2"], freeText: "recherché" }),
+      null,
+    );
+  });
+
+  it("ouvert depuis un autre salon, la recherche porte sur ce salon seul", async () => {
+    const { rerender } = render(<SearchCenter worldId="w1" initialChatId="c1" open onOpenChange={() => {}} />);
+    await screen.findByText("dans: général");
+    rerender(<SearchCenter worldId="w1" initialChatId="c2" open={false} onOpenChange={() => {}} />);
+    rerender(<SearchCenter worldId="w1" initialChatId="c2" open onOpenChange={() => {}} />);
+    await screen.findByText("dans: photos");
+
+    await userEvent.type(screen.getByRole("textbox"), "recherché{Enter}");
+    expect(searchMock).toHaveBeenLastCalledWith(expect.anything(), "w1", expect.objectContaining({ chatIds: ["c2"] }), null);
   });
 });
