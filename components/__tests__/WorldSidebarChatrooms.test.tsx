@@ -5,6 +5,16 @@ import { createClient } from "@/lib/supabase/client";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+// jsdom fournit un localStorage partiel (pas de .clear()) : une implémentation
+// complète, comme dans CatalogueList.test.tsx.
+const _store: Record<string, string> = {};
+vi.stubGlobal("localStorage", {
+  getItem: (key: string) => _store[key] ?? null,
+  setItem: (key: string, value: string) => { _store[key] = value; },
+  removeItem: (key: string) => { delete _store[key]; },
+  clear: () => { for (const k of Object.keys(_store)) delete _store[k]; },
+});
+
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 vi.mock("@/components/providers/NotificationsProvider", () => ({
@@ -360,5 +370,39 @@ describe("WorldSidebarChatrooms — à vous de jouer", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("WorldSidebarChatrooms — sections repliables", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetWorldRoomsStore();
+    localStorage.clear();
+  });
+
+  it.each(["À vous de jouer", "Actif", "Suivi", "Tous"])("la section « %s » se replie, et le reste au retour", (name) => {
+    const rooms = [makeRoom({ id: "room-1", title: "La taverne", turn_user_id: "me", turn_started_at: "2026-03-03T09:00:00Z" }), makeRoom({ id: "room-2", title: "Le col" })];
+    const mock = createSupabaseMock({ user: { id: "me" } });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
+    const props = {
+      worldId: "world-1",
+      initialAll: rooms,
+      initialParticipated: [{ id: "room-2", title: "Le col", name: null, icon_url: null, last_message_at: null, has_unread: false }],
+      initialFollowedIds: ["room-2"],
+      categories: [],
+    };
+    const { unmount } = render(<WorldSidebarChatrooms {...props} />);
+
+    const toggle = screen.getByRole("button", { name });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+    unmount();
+    render(<WorldSidebarChatrooms {...props} />);
+    const again = screen.getByRole("button", { name });
+    expect(again.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(again);
+    expect(again.getAttribute("aria-expanded")).toBe("true");
   });
 });

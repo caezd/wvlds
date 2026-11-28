@@ -45,6 +45,17 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-27",
+    category: "Interface",
+    text: "Cartes de choix : seule la bordure marque l’option choisie, le fond ne change plus.",
+  },
+  {
+    date: "2026-11-27",
+    category: "Interface",
+    area: "Salons",
+    text: "Liste des salons : sections repliables (À vous de jouer, Récents, Suivis, Tous), état retenu sur l’appareil.",
+  },
+  {
+    date: "2026-11-27",
     category: "Fonctionnalité",
     area: "Salons",
     text: "Ordre de passage : le tour peut changer quand le joueur passe la main.\n- au choix par salon : au premier message ou à la main\n- « Passer la main » dans la barre du tour\n- « Envoyer et passer la main » au composeur (Ctrl+Maj+Entrée)\n- section « À vous de jouer » dans la liste des salons, avec le temps d’attente\n- notification « À vous de jouer »",

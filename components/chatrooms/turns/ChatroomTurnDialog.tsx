@@ -145,7 +145,7 @@ export function ChatroomTurnDialog({
                   onClick={() => setAdvanceMode(mode)}
                   className={cn(
                     "flex items-start gap-3 p-3 sm:flex-col sm:items-center sm:gap-2 sm:px-3 sm:py-4 sm:text-center",
-                    active && "border-foreground bg-background",
+                    active && "border-foreground",
                   )}
                 >
                   <span

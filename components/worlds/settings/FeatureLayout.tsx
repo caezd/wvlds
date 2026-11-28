@@ -342,7 +342,7 @@ export function SettingsChoiceCards<T extends string>({
             onClick={() => { if (multiple || !on) onToggle(o.value); }}
             className={cn(
               "flex items-start gap-3 p-3 disabled:opacity-60",
-              on && "border-foreground bg-background",
+              on && "border-foreground",
             )}
           >
             <span

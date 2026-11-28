@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatroomLink } from "@/components/chatrooms/ChatroomLink";
 import { usePathname } from "next/navigation";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SectionLabel } from "@/components/ui/section-label";
 import { CountPip } from "@/components/ui/count-pip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star, ChevronRight, ArrowLeft, MessagesSquare, Hash, ListOrdered } from "lucide-react";
+import { Star, ChevronRight, ChevronDown, ArrowLeft, MessagesSquare, Hash, ListOrdered } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useTranslations } from "next-intl";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
@@ -40,11 +40,63 @@ type Category = {
   position: number;
 };
 
-function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
+type SectionId = "yourTurn" | "active" | "followed" | "all";
+
+// Sections repliées de la liste des salons : une préférence de lecture,
+// propre à l'appareil et commune à tous les mondes (cf. lib/catalogueCollapse.ts).
+const COLLAPSED_KEY = "sidebar-collapsed-sections";
+
+function loadCollapsedSections(): Set<string> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]");
+    return new Set(Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsedSections(ids: Set<string>): void {
+  try {
+    if (ids.size === 0) localStorage.removeItem(COLLAPSED_KEY);
+    else localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+  } catch {
+    // ignore (mode privé, quota…)
+  }
+}
+
+/** Une section de la liste, repliable par son intitulé. */
+function SidebarSection({
+  label,
+  icon,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  collapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <SectionLabel as="p" className="px-2 mb-1 flex gap-1 items-center">
-      {children}
-    </SectionLabel>
+    <section>
+      <button
+        type="button"
+        aria-expanded={!collapsed}
+        onClick={onToggle}
+        className="group/section mb-1 flex w-full items-center rounded px-2 text-left hover:text-foreground"
+      >
+        <SectionLabel as="span" className="flex flex-1 items-center gap-1 group-hover/section:text-foreground">
+          {icon} {label}
+        </SectionLabel>
+        <ChevronDown
+          size={12}
+          aria-hidden
+          className={cn("shrink-0 text-muted-foreground opacity-0 transition group-hover/section:opacity-100 group-focus-visible/section:opacity-100", collapsed && "-rotate-90 opacity-100")}
+        />
+      </button>
+      {!collapsed && children}
+    </section>
   );
 }
 
@@ -178,6 +230,15 @@ export function WorldSidebarChatrooms({
   const createdHere = useParticipatedRoomIds(worldId);
 
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  useEffect(() => { setCollapsed(loadCollapsedSections()); }, []);
+  const toggleSection = (id: SectionId) => {
+    const next = new Set(collapsed);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setCollapsed(next);
+    saveCollapsedSections(next);
+  };
 
   // Passer d'un monde à l'autre ne remonte pas ce composant : sans ce
   // resemis, la liste affichée reste celle du monde quitté, les props du
@@ -278,8 +339,7 @@ export function WorldSidebarChatrooms({
 
         {/* À VOUS DE JOUER */}
         {aVous.length > 0 && (
-          <section>
-            <SidebarSectionLabel><ListOrdered size={12} /> {t("sidebar.yourTurn")}</SidebarSectionLabel>
+          <SidebarSection label={t("sidebar.yourTurn")} icon={<ListOrdered size={12} />} collapsed={collapsed.has("yourTurn")} onToggle={() => toggleSection("yourTurn")}>
             <div className="space-y-0.5 min-w-0">
               {aVous.map((room) => (
                 <RoomItem
@@ -292,13 +352,12 @@ export function WorldSidebarChatrooms({
                 />
               ))}
             </div>
-          </section>
+          </SidebarSection>
         )}
 
         {/* ACTIF */}
         {actif.length > 0 && (
-          <section>
-            <SidebarSectionLabel><Hash size={12} /> {t("sidebar.active")}</SidebarSectionLabel>
+          <SidebarSection label={t("sidebar.active")} icon={<Hash size={12} />} collapsed={collapsed.has("active")} onToggle={() => toggleSection("active")}>
             <div className="space-y-0.5 min-w-0">
               {actif.map((room) => (
                 <RoomItem
@@ -310,13 +369,12 @@ export function WorldSidebarChatrooms({
                 />
               ))}
             </div>
-          </section>
+          </SidebarSection>
         )}
 
         {/* SUIVI */}
         {suivi.length > 0 && (
-          <section>
-            <SidebarSectionLabel><Star size={12} /> {t("sidebar.followed")}</SidebarSectionLabel>
+          <SidebarSection label={t("sidebar.followed")} icon={<Star size={12} />} collapsed={collapsed.has("followed")} onToggle={() => toggleSection("followed")}>
             <div className="space-y-0.5 min-w-0">
               {suivi.map((room) => (
                 <RoomItem
@@ -328,12 +386,11 @@ export function WorldSidebarChatrooms({
                 />
               ))}
             </div>
-          </section>
+          </SidebarSection>
         )}
 
         {/* TOUS — cartes catégories uniquement */}
-        <section>
-          <SidebarSectionLabel>{t("sidebar.all")}</SidebarSectionLabel>
+        <SidebarSection label={t("sidebar.all")} collapsed={collapsed.has("all")} onToggle={() => toggleSection("all")}>
           <div className="space-y-1">
             {categories.map((cat) => {
               const rooms = byCategory.get(cat.id) ?? [];
@@ -389,7 +446,7 @@ export function WorldSidebarChatrooms({
               <p className="px-2 py-1 text-xs text-muted-foreground">{t("sidebar.noChatrooms")}</p>
             )}
           </div>
-        </section>
+        </SidebarSection>
 
       </div>
     </ScrollArea>

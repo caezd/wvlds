@@ -210,7 +210,7 @@ function KindCard({
       aria-checked={active}
       data-testid={testId}
       onClick={onClick}
-      className={cn("flex items-start gap-3 p-3", active && "border-foreground bg-background")}
+      className={cn("flex items-start gap-3 p-3", active && "border-foreground")}
     >
       <span
         className={cn(
