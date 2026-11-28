@@ -1,4 +1,6 @@
-const OPENING_QUOTES = ['"', '«', '“'] as const; // " « "
+import { spreadEmphasisAcrossParagraphs } from "./textStyledSpans";
+
+const OPENING_QUOTES =['"', '«', '“'] as const; // " « "
 const CLOSING_QUOTE_MAP: Record<string, string> = {
   '"': '"',
   '«': '»',
@@ -13,10 +15,19 @@ export type DialoguePart =
 // ex: "Bonjour !"{#ff0000}
 const COLOR_OVERRIDE_RE = /^\s*\{#([0-9a-fA-F]{3,8})\}/;
 
+/** Un paragraphe qui s'affiche en bulle : il s'ouvre sur un guillemet refermé plus loin. */
+function isDialogueParagraph(paragraph: string): boolean {
+  const t = paragraph.trim();
+  const close = CLOSING_QUOTE_MAP[t[0]];
+  return !!close && t.indexOf(close, 1) !== -1;
+}
+
 export function parseDialogue(content: string): DialoguePart[] {
   const result: DialoguePart[] = [];
 
-  for (const para of content.split(/\n{2,}/)) {
+  // Chaque paragraphe est rendu seul : une emphase qui en couvre plusieurs
+  // est refermée et rouverte avant le découpage ; les répliques restent intactes.
+  for (const para of spreadEmphasisAcrossParagraphs(content, isDialogueParagraph).split(/\n{2,}/)) {
     const t = para.trim();
     if (!t) continue;
 

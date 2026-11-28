@@ -94,3 +94,13 @@ describe("parseDialogue", () => {
     ]);
   });
 });
+
+// Chaque paragraphe est rendu seul : une emphase ouverte dans l'un et fermée
+// dans un suivant est refermée et rouverte avant le découpage. Une réplique
+// entre les deux reste une bulle, sans la mise en forme de la narration.
+describe("parseDialogue — emphase sur plusieurs paragraphes", () => {
+  it("chaque paragraphe de narration garde l'italique", () => {
+    expect(parseDialogue("*Un.\n\nDeux.*")).toEqual([prose("*Un.*"), prose("*Deux.*")]);
+    expect(parseDialogue("*Un.\n\n« Bonjour »\n\nDeux.*")).toEqual([prose("*Un.*"), dialogue("Bonjour"), prose("*Deux.*")]);
+  });
+});

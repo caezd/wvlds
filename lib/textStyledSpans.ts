@@ -205,9 +205,9 @@ const COLOR_KIND: SpreadKind = {
  * `parts` : morceaux de texte (index pairs) et leurs séparateurs (impairs).
  * Une mise en forme ouverte dans un morceau et fermée dans un suivant est
  * refermée en fin de chaque morceau couvert et rouverte au début du suivant.
- * Les morceaux vides sont laissés tels quels.
+ * Les morceaux vides, et ceux de `untouched`, sont traversés sans être touchés.
  */
-function spreadAcross(parts: string[], blocked: boolean[], kind: SpreadKind): void {
+function spreadAcross(parts: string[], blocked: boolean[], kind: SpreadKind, untouched: boolean[] = []): void {
   for (let i = 0; i < parts.length; i += 2) {
     if (blocked[i]) continue;
     const open = kind.openLeft(parts[i]);
@@ -218,7 +218,7 @@ function spreadAcross(parts: string[], blocked: boolean[], kind: SpreadKind): vo
     const close = kind.close(open);
     parts[i] = closeAtEnd(parts[i], close);
     for (let k = i + 2; k < j; k += 2) {
-      if (parts[k].trim()) parts[k] = closeAtEnd(openAtStart(parts[k], open), close);
+      if (parts[k].trim() && !untouched[k]) parts[k] = closeAtEnd(openAtStart(parts[k], open), close);
     }
     parts[j] = openAtStart(parts[j], open);
     i = j - 2;
@@ -233,17 +233,38 @@ function splitUnits(input: string, separator: RegExp): { parts: string[]; inCode
   return { parts, inCode };
 }
 
-function spreadEmphasisAcrossParagraphs(input: string): string {
+/**
+ * Referme et rouvre à chaque paragraphe (ou ligne, pour le souligné et la
+ * couleur) une mise en forme qui en couvre plusieurs. Exporté pour qui
+ * découpe le texte en paragraphes avant le rendu (cf. parseDialogue) ; les
+ * paragraphes `untouched` (une réplique en bulle) sont traversés sans être
+ * touchés.
+ */
+export function spreadEmphasisAcrossParagraphs(input: string, untouched?: (paragraph: string) => boolean): string {
   // Gras, italique, barré : Markdown les lit sur tout un paragraphe.
   const paragraphs = splitUnits(input, PARAGRAPH_SPLIT_RE);
   const blocked = paragraphs.parts.map((p, i) => paragraphs.inCode[i] || (i % 2 === 0 && isMultiBlock(p)));
-  for (const marker of SPREAD_MARKERS) spreadAcross(paragraphs.parts, blocked, symmetricKind(marker));
+  const keep = paragraphs.parts.map((p, i) => i % 2 === 0 && !!untouched?.(p));
+  for (const marker of SPREAD_MARKERS) spreadAcross(paragraphs.parts, blocked, symmetricKind(marker), keep);
 
   // Souligné et couleur ne se lisent que sur une ligne (cf. STYLED_SPAN_RE) :
   // ils se referment et se rouvrent à chaque ligne.
   const lines = splitUnits(paragraphs.parts.join(""), /(\n)/);
-  spreadAcross(lines.parts, lines.inCode, symmetricKind("++"));
-  spreadAcross(lines.parts, lines.inCode, COLOR_KIND);
+  // Une ligne d'un paragraphe `untouched` le reste.
+  const keptRanges: [number, number][] = [];
+  let offset = 0;
+  paragraphs.parts.forEach((p, i) => {
+    if (keep[i]) keptRanges.push([offset, offset + p.length]);
+    offset += p.length;
+  });
+  offset = 0;
+  const keepLine = lines.parts.map((l) => {
+    const start = offset;
+    offset += l.length;
+    return keptRanges.some(([a, b]) => start >= a && start < b);
+  });
+  spreadAcross(lines.parts, lines.inCode, symmetricKind("++"), keepLine);
+  spreadAcross(lines.parts, lines.inCode, COLOR_KIND, keepLine);
   return lines.parts.join("");
 }
 

@@ -47,7 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-27",
     category: "Correctif",
     area: "Salons",
-    text: "Mise en forme mieux reconnue, messages déjà envoyés compris.\n- gras, italique et barré suivis d’une espace, insécable comprise (après un double-clic sur un mot)\n- gras, italique, barré, souligné et couleur ouverts dans un paragraphe et fermés dans un suivant : chaque paragraphe couvert est mis en forme\n- souligné et couleur sur plusieurs lignes d’un même paragraphe",
+    text: "Mise en forme mieux reconnue, messages déjà envoyés compris.\n- gras, italique et barré suivis d’une espace, insécable comprise (après un double-clic sur un mot)\n- gras, italique, barré, souligné et couleur ouverts dans un paragraphe et fermés dans un suivant : chaque paragraphe couvert est mis en forme, bulles de dialogue activées comprises (les répliques restent en bulle)\n- souligné et couleur sur plusieurs lignes d’un même paragraphe",
   },
   {
     date: "2026-11-27",
