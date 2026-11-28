@@ -64,7 +64,7 @@ const BORDER_OPTION_DEFS: BorderOption[] = [
   { value: "full", labelKey: "callout.borderFull", Icon: Square },
   { value: "left", labelKey: "callout.borderLeft", Icon: PanelLeft },
   { value: "separator", labelKey: "callout.borderSeparator", Icon: Minus },
-  { value: "none", labelKey: "callout.borderTop", Icon: Ban },
+  { value: "none", labelKey: "callout.borderNone", Icon: Ban },
 ];
 
 export function CalloutDialog({

@@ -2382,7 +2382,7 @@
       "borderFull": "Full",
       "borderLeft": "Left",
       "borderSeparator": "Separator",
-      "borderTop": "Top",
+      "borderNone": "None",
       "alignLabel": "Alignment",
       "alignLeft": "Left",
       "alignCenter": "Centered",

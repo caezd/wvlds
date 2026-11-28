@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-11 ──────────────────────────────────────────────────────────────
   {
     date: "2026-11-28",
+    category: "Correctif",
+    area: "Salons",
+    text: "Encadré : bordures « Séparateur » et « Aucune » correctement nommées.",
+  },
+  {
+    date: "2026-11-28",
     category: "Interface",
     area: "Salons",
     text: "Réponse à un message : citation en ligne discrète, sans encadré, reliée au message par un coude ; auteur souligné au survol.",
