@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
@@ -277,6 +277,24 @@ export function transformAngleCallouts(input: string): string {
  * plusieurs segments doivent partager un seul `div.prose` parent
  * (ex: ChatroomMessageBubble, qui mélange prose et bulles non-prose).
  */
+type HastNode = { type: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
+const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
+
+/** Pose `ids[i]` sur le i-ème titre de l'arbre HTML, dans l'ordre du document. */
+function rehypeHeadingIds(ids: string[]) {
+  return (tree: HastNode) => {
+    let index = 0;
+    const walk = (node: HastNode) => {
+      if (node.type === "element" && node.tagName && HEADING_TAGS.has(node.tagName)) {
+        const id = ids[index++];
+        if (id) node.properties = { ...node.properties, id };
+      }
+      node.children?.forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
 export function MarkdownContent({
   content,
   allowImages = false,
@@ -330,13 +348,12 @@ export function MarkdownContent({
   // Ids d'ancre posés sur les titres (h1-h6), pour le sommaire du wiki
   // (lib/wikiToc.ts::extractHeadings, appelé côté appelant sur ce même
   // `content` brut — même algorithme de slug, consommé ici par position dans
-  // le document plutôt que par texte : les transforms ci-dessus (callouts,
-  // spans stylés) ne changent jamais le nombre ni l'ordre des lignes de
-  // titre, seulement leur contenu inline).
-  const headingsRef = useRef(extractHeadings(content));
-  headingsRef.current = useMemo(() => extractHeadings(content), [content]);
-  const headingIndexRef = useRef(0);
-  headingIndexRef.current = 0;
+  // le document : les transforms ci-dessus (callouts, spans stylés) ne
+  // changent jamais le nombre ni l'ordre des lignes de titre). Posés sur
+  // l'arbre HTML par un plugin, jamais par un compteur pendant le rendu : en
+  // mode strict, React rend deux fois et le compteur décalait les ids
+  // (hydratation qui ne retrouvait pas ceux du serveur).
+  const headingIds = useMemo(() => extractHeadings(content).map((h) => h.id), [content]);
 
   const lexiconById = useMemo(() => {
     const map = new Map<string, WorldLexiconTerm>();
@@ -344,21 +361,7 @@ export function MarkdownContent({
     return map;
   }, [lexiconTerms]);
 
-  function headingComponent(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
-    return function Heading({ children }: { children?: React.ReactNode }) {
-      const heading = headingsRef.current[headingIndexRef.current];
-      headingIndexRef.current += 1;
-      return <Tag id={heading?.id}>{children}</Tag>;
-    };
-  }
-
   const components: Components = {
-    h1: headingComponent("h1"),
-    h2: headingComponent("h2"),
-    h3: headingComponent("h3"),
-    h4: headingComponent("h4"),
-    h5: headingComponent("h5"),
-    h6: headingComponent("h6"),
     // Tous les blockquotes sont rendus comme "callout" (div)
     blockquote({ children }) {
       return (
@@ -613,6 +616,8 @@ export function MarkdownContent({
         // (lowlight) dans le chunk de chaque message et fragmentait le code en
         // spans vides. Voir MarkdownRenderer.codeBlocks.test.tsx.
         [rehypeSanitize, schema],
+        // Après l'assainissement, qui préfixerait ou retirerait ces id.
+        [rehypeHeadingIds, headingIds],
       ]}
       components={components}
     >

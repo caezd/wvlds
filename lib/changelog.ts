@@ -46,6 +46,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-11-28",
     category: "Correctif",
+    text: "Titres d’un message ou d’une page du wiki : plus d’erreur d’affichage au chargement, ancre du sommaire toujours juste.",
+  },
+  {
+    date: "2026-11-28",
+    category: "Correctif",
     area: "Salons",
     text: "Recherche : les filtres sont respectés.\n- blocs (choix, encadré, dé…) cherchés et affichés par leur texte, plus par leur code\n- extrait centré sur le mot trouvé\n- avec un filtre (salon, auteur, date…), ni wiki ni carte dans les résultats\n- texte seul, sans filtre : recherche dans le wiki et la carte\n- plus de messages d’autres salons : les salons cochés dans « Filtres » apparaissent dans la barre, et la recherche ouverte depuis un autre salon ne garde plus l’ancien",
   },
