@@ -1,0 +1,76 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+
+// Les nouveaux réglages de l'encadré partent bien dans le bloc envoyé.
+
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
+  ParagraphBlockEditor: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <textarea aria-label="contenu" value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
+vi.mock("../CalloutBlock", () => ({ CalloutBlockView: () => null }));
+vi.mock("@/components/chatrooms/reactions/EmojiPickerButton", () => ({ EmojiPickerButton: () => null }));
+vi.mock("@/components/ui/LucideIconPicker", () => ({ LucideIconPicker: () => null }));
+
+import { CalloutDialog } from "../CalloutDialog";
+
+function sent(onSend: ReturnType<typeof vi.fn>) {
+  return JSON.parse(onSend.mock.calls[0][0] as string);
+}
+
+describe("CalloutDialog — réglages", () => {
+  it("les champs « clé : valeur » remplis partent avec l'encadré, les vides non", () => {
+    const onSend = vi.fn();
+    render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
+    fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
+    fireEvent.click(screen.getByRole("button", { name: "callout.fieldsAdd" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.fieldsAdd" }));
+    const keys = screen.getAllByPlaceholderText("callout.fieldKeyPlaceholder");
+    const values = screen.getAllByPlaceholderText("callout.fieldValuePlaceholder");
+    fireEvent.change(keys[0], { target: { value: "Lieu" } });
+    fireEvent.change(values[0], { target: { value: "Port de Sel" } });
+    fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
+    expect(sent(onSend).fields).toEqual([{ key: "Lieu", value: "Port de Sel" }]);
+  });
+
+  it("les options avancées (côtés, trait, arrondi, italique) partent avec l'encadré", () => {
+    const onSend = vi.fn();
+    render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
+    fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
+    fireEvent.click(screen.getByRole("button", { name: "callout.moreOptions" }));
+    const sides = within(screen.getByRole("group", { name: "callout.sidesLabel" }));
+    fireEvent.click(sides.getByRole("button", { name: "callout.alignRight" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.styleDotted" }));
+    const radius = within(screen.getByRole("group", { name: "callout.borderRound" }));
+    fireEvent.click(radius.getByRole("button", { name: "callout.levelStrong" }));
+    fireEvent.click(screen.getByRole("switch", { name: "callout.bodyItalic" }));
+    fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
+    expect(sent(onSend)).toMatchObject({
+      sides: ["top", "bottom", "left"],
+      borderStyle: "dotted",
+      radius: "round",
+      bodyItalic: true,
+    });
+  });
+
+  it("un encadré qui garde tous les réglages par défaut n'en écrit aucun", () => {
+    const onSend = vi.fn();
+    render(<CalloutDialog open onOpenChange={() => {}} onSend={onSend} />);
+    fireEvent.change(screen.getByPlaceholderText("callout.titlePlaceholder"), { target: { value: "Scène" } });
+    fireEvent.click(screen.getByRole("button", { name: "callout.insert" }));
+    expect(sent(onSend)).toEqual({ _type: "callout", border: "full", align: "left", title: "Scène" });
+  });
+
+  it("ouvert sur un encadré aux options avancées, il les affiche déjà", () => {
+    render(
+      <CalloutDialog
+        open
+        onOpenChange={() => {}}
+        onSend={() => {}}
+        initialBlock={{ _type: "callout", title: "Scène", borderStyle: "dashed" }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "callout.styleDashed" })).toHaveAttribute("aria-pressed", "true");
+  });
+});

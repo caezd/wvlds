@@ -7,12 +7,43 @@
  * l'affichage pour CHAQUE message de salon, et la fenêtre — sélecteur
  * d'icônes et son catalogue, couleurs, emoji, éditeur — entrait avec lui dans
  * le JavaScript de tous les salons. Elle se charge maintenant à la demande.
+ *
+ * Les réglages fins (côtés, trait, couleurs séparées, image, mise en page,
+ * typographie, repli) attendent derrière « Plus d'options ». Chacun reste
+ * absent du bloc tant qu'il n'est pas choisi : sa valeur par défaut se lit
+ * alors dans lib/calloutStyle.ts.
  */
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, ImagePlus, X, Plus, Loader2 } from "lucide-react";
-import type { CalloutBlock, CalloutBorder, CalloutAlign, CalloutIconKind, Gauge } from "@/lib/chat-blocks";
+import {
+  Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, AlignRight, ImagePlus, X, Plus, Loader2, ChevronDown,
+} from "lucide-react";
+import type {
+  CalloutAlign,
+  CalloutBlock,
+  CalloutBorder,
+  CalloutBorderStyle,
+  CalloutBorderWidth,
+  CalloutField,
+  CalloutFont,
+  CalloutIconKind,
+  CalloutIconPosition,
+  CalloutIconSize,
+  CalloutImageMode,
+  CalloutRadius,
+  CalloutSide,
+  CalloutWidth,
+  Gauge,
+} from "@/lib/chat-blocks";
+import {
+  CALLOUT_BG_INTENSITIES,
+  CALLOUT_IMAGE_VEILS,
+  CALLOUT_SIDES,
+  bordersFromSides,
+  compactCallout,
+  resolveCalloutStyle,
+} from "@/lib/calloutStyle";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +57,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ColorSwatchRow } from "@/components/ui/color-swatch-row";
 import { PLAYER_COLORS, DEFAULT_PLAYER_COLOR } from "@/lib/playerColors";
@@ -56,16 +88,132 @@ const PRESET_BLOCKS: Record<PresetKey, Omit<CalloutBlock, "_type" | "text">> = {
   atmosphere: { icon: "☀️", iconKind: "emoji", title: "", accent: "#60A5FA", border: "full", align: "left" },
 };
 
+/* ─── Contrôles ──────────────────────────────────────────────────────────── */
+
+type IconType = React.ComponentType<{ className?: string }>;
+
+const choiceClass = (selected: boolean) => cn(
+  "flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs transition-colors",
+  // Choisie : la bordure seule change, le fond reste.
+  selected ? "border-foreground text-foreground" : "border-border text-muted-foreground hover:text-foreground",
+);
+
+/** Une rangée de choix exclusifs, avec son intitulé. */
+function ChoiceGroup<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string; Icon?: IconType }[];
+  onChange: (value: T) => void;
+  hint?: string;
+}) {
+  const id = useId();
+  return (
+    <div role="group" aria-labelledby={id} className="space-y-1.5">
+      <Label id={id} className="text-xs text-muted-foreground">{label}</Label>
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+        {options.map(({ value: v, label: optionLabel, Icon }) => (
+          <button key={String(v)} type="button" aria-pressed={value === v} onClick={() => onChange(v)} className={choiceClass(value === v)}>
+            {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+            <span className="truncate">{optionLabel}</span>
+          </button>
+        ))}
+      </div>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+/** Un réglage tout ou rien : intitulé à gauche, interrupteur à droite. */
+function SwitchRow({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm">{label}</span>
+        <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
+      </div>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+/** Une couleur facultative : vide = celle de l'accent. */
+function ColorRow({ label, value, onChange, chooseLabel, noneLabel }: {
+  label: string; value: string; onChange: (v: string) => void; chooseLabel: string; noneLabel: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="w-16 shrink-0 text-xs text-muted-foreground">{label}</span>
+      <ColorSwatchRow className="contents" value={value} onChange={onChange} chooseLabel={chooseLabel} noneLabel={noneLabel} />
+    </div>
+  );
+}
 
 /* ─── Dialog (création + édition) ────────────────────────────────────────── */
 
-type BorderOption = { value: CalloutBorder; labelKey: string; Icon: React.ComponentType<{ className?: string }> };
+type BorderPreset = CalloutBorder;
+type BorderOption = { value: BorderPreset; labelKey: string; Icon: IconType };
 const BORDER_OPTION_DEFS: BorderOption[] = [
   { value: "full", labelKey: "callout.borderFull", Icon: Square },
   { value: "left", labelKey: "callout.borderLeft", Icon: PanelLeft },
   { value: "separator", labelKey: "callout.borderSeparator", Icon: Minus },
   { value: "none", labelKey: "callout.borderNone", Icon: Ban },
 ];
+
+/** Les réglages qui ouvrent d'emblée « Plus d'options » quand l'encadré en porte un. */
+const ADVANCED_KEYS = [
+  "sides", "borderWidth", "borderStyle", "radius", "rounded", "titleColor", "borderColor", "bgColor",
+  "bgIntensity", "image", "width", "iconPosition", "iconSize", "titleFont", "titleSmallCaps", "bodyItalic", "collapsible",
+] as const;
+
+function hasAdvanced(block: CalloutBlock | undefined) {
+  if (!block) return false;
+  const compact = compactCallout(block);
+  return ADVANCED_KEYS.some((key) => compact[key] !== undefined);
+}
+
+/** L'état de la fenêtre, tiré d'un encadré (vide pour un nouveau). */
+function stateFrom(block: CalloutBlock | undefined) {
+  const border = block?.border ?? "full";
+  return {
+    title: block?.title ?? "",
+    text: block?.text ?? "",
+    icon: block?.icon ?? "",
+    iconKind: block?.iconKind ?? ("lucide" as CalloutIconKind),
+    iconImageUrl: block?.iconImage ?? "",
+    accent: block?.accent ?? "",
+    separator: border === "separator",
+    sides: block ? resolveCalloutStyle(block).sides : [...CALLOUT_SIDES],
+    align: block?.align ?? ("left" as CalloutAlign),
+    gauges: block?.gauges ?? [],
+    fields: block?.fields ?? [],
+    borderWidth: block?.borderWidth,
+    borderStyle: block?.borderStyle,
+    radius: block?.radius ?? (block?.rounded === false ? ("none" as CalloutRadius) : undefined),
+    titleColor: block?.titleColor ?? "",
+    borderColor: block?.borderColor ?? "",
+    bgColor: block?.bgColor ?? "",
+    bgIntensity: block?.bgIntensity,
+    image: block?.image ?? "",
+    imageMode: block?.imageMode,
+    imageVeil: block?.imageVeil,
+    width: block?.width,
+    iconPosition: block?.iconPosition,
+    iconSize: block?.iconSize,
+    titleFont: block?.titleFont,
+    titleSmallCaps: block?.titleSmallCaps === true,
+    bodyItalic: block?.bodyItalic === true,
+    collapsible: block?.collapsible === true,
+    showAdvanced: hasAdvanced(block),
+  };
+}
+
+type DialogState = ReturnType<typeof stateFrom>;
 
 export function CalloutDialog({
   onSend,
@@ -98,32 +246,12 @@ export function CalloutDialog({
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
 
-  const [title, setTitle] = useState(initialBlock?.title ?? "");
-  const [text, setText] = useState(initialBlock?.text ?? "");
-  const [icon, setIcon] = useState(initialBlock?.icon ?? "");
-  const [iconKind, setIconKind] = useState<CalloutIconKind>(initialBlock?.iconKind ?? "lucide");
-  const [iconImageUrl, setIconImageUrl] = useState(initialBlock?.iconImage ?? "");
+  const [state, setState] = useState<DialogState>(() => stateFrom(initialBlock));
+  const set = <K extends keyof DialogState>(key: K, value: DialogState[K]) => setState((s) => ({ ...s, [key]: value }));
   const [iconImageUploading, setIconImageUploading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const iconFileInputRef = useRef<HTMLInputElement>(null);
-  // "" = aucun accent (fond transparent)
-  const [accent, setAccent] = useState(initialBlock?.accent ?? "");
-  const [border, setBorder] = useState<CalloutBorder>(initialBlock?.border ?? "full");
-  const [align, setAlign] = useState<CalloutAlign>(initialBlock?.align ?? "left");
-  const [rounded, setRounded] = useState(initialBlock?.rounded !== false);
-  const [gauges, setGauges] = useState<Gauge[]>(initialBlock?.gauges ?? []);
-
-  function reset() {
-    setTitle(initialBlock?.title ?? "");
-    setText(initialBlock?.text ?? "");
-    setIcon(initialBlock?.icon ?? "");
-    setIconKind(initialBlock?.iconKind ?? "lucide");
-    setIconImageUrl(initialBlock?.iconImage ?? "");
-    setAccent(initialBlock?.accent ?? "");
-    setBorder(initialBlock?.border ?? "full");
-    setAlign(initialBlock?.align ?? "left");
-    setRounded(initialBlock?.rounded !== false);
-    setGauges(initialBlock?.gauges ?? []);
-  }
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
 
   // Chaque ouverture repart de `initialBlock` (vide pour un nouvel encadré),
   // y compris quand le parent ouvre la fenêtre lui-même (`open` contrôlé) :
@@ -131,42 +259,79 @@ export function CalloutDialog({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) reset();
+    if (open) setState(stateFrom(initialBlock));
   }
 
-  function handleOpen(v: boolean) {
-    setOpen(v);
-  }
+  const { title, text, icon, iconKind, iconImageUrl, accent, separator, sides, align, gauges, fields } = state;
 
   function applyPreset(p: Preset) {
-    setTitle(p.block.title ?? "");
-    setIcon(p.block.icon ?? "");
-    setIconKind(p.block.iconKind ?? "lucide");
-    setIconImageUrl("");
-    setAccent(p.block.accent ?? "");
-    setBorder(p.block.border ?? "full");
-    setAlign(p.block.align ?? "left");
-    setRounded(p.block.rounded !== false);
-    setGauges([]);
+    const border = p.block.border ?? "full";
+    setState((s) => ({
+      ...s,
+      title: p.block.title ?? "",
+      icon: p.block.icon ?? "",
+      iconKind: p.block.iconKind ?? "lucide",
+      iconImageUrl: "",
+      accent: p.block.accent ?? "",
+      separator: border === "separator",
+      sides: resolveCalloutStyle({ _type: "callout", border }).sides,
+      borderWidth: undefined,
+      align: p.block.align ?? "left",
+      gauges: [],
+    }));
+  }
+
+  function applyBorder(border: BorderPreset) {
+    setState((s) => ({
+      ...s,
+      separator: border === "separator",
+      sides: border === "separator" ? s.sides : resolveCalloutStyle({ _type: "callout", border }).sides,
+      // L'épaisseur repart de celle du style : fine pour une carte, épaisse à gauche.
+      borderWidth: undefined,
+    }));
+  }
+
+  function toggleSide(side: CalloutSide) {
+    setState((s) => ({
+      ...s,
+      sides: s.sides.includes(side) ? s.sides.filter((x) => x !== side) : CALLOUT_SIDES.filter((x) => x === side || s.sides.includes(x)),
+    }));
   }
 
   function addGauge() {
-    setGauges((prev) => [...prev, { name: "", current: 0, max: 10, color: DEFAULT_PLAYER_COLOR }]);
+    set("gauges", [...gauges, { name: "", current: 0, max: 10, color: DEFAULT_PLAYER_COLOR }]);
   }
   function updateGauge(i: number, patch: Partial<Gauge>) {
-    setGauges((prev) => prev.map((g, j) => (j === i ? { ...g, ...patch } : g)));
+    set("gauges", gauges.map((g, j) => (j === i ? { ...g, ...patch } : g)));
   }
   function removeGauge(i: number) {
-    setGauges((prev) => prev.filter((_, j) => j !== i));
+    set("gauges", gauges.filter((_, j) => j !== i));
+  }
+
+  function addField() {
+    set("fields", [...fields, { key: "", value: "" }]);
+  }
+  function updateField(i: number, patch: Partial<CalloutField>) {
+    set("fields", fields.map((f, j) => (j === i ? { ...f, ...patch } : f)));
+  }
+  function removeField(i: number) {
+    set("fields", fields.filter((_, j) => j !== i));
   }
 
   const hasIconImage = iconKind === "image" && !!iconImageUrl;
   const hasIcon = iconKind === "image" ? hasIconImage : !!icon;
-  const isValid = !!(title.trim() || text.trim() || hasIcon || gauges.length > 0);
+  const filledFields = fields
+    .map((f) => ({ key: f.key.trim(), value: f.value.trim() }))
+    .filter((f) => f.key || f.value);
+  const isValid = !!(title.trim() || text.trim() || hasIcon || gauges.length > 0 || filledFields.length > 0);
 
-  function handleSend() {
-    if (!isValid) return;
-    const block: CalloutBlock = { _type: "callout", border, align, rounded };
+  /** Le bloc tel que la fenêtre le décrit, réglages par défaut compris. */
+  function draftBlock(): CalloutBlock {
+    const block: CalloutBlock = {
+      _type: "callout",
+      border: separator ? "separator" : bordersFromSides(sides),
+      align,
+    };
     if (title.trim()) block.title = title.trim();
     if (text.trim()) block.text = text.trim();
     if (iconKind === "image") {
@@ -178,26 +343,69 @@ export function CalloutDialog({
     }
     if (accent) block.accent = accent;
     if (gauges.length > 0) block.gauges = gauges;
-    onSend(JSON.stringify(block));
+    if (filledFields.length > 0) block.fields = filledFields;
+    if (!separator) block.sides = sides;
+    if (state.borderWidth) block.borderWidth = state.borderWidth;
+    if (state.borderStyle) block.borderStyle = state.borderStyle;
+    if (state.radius) block.radius = state.radius;
+    if (state.titleColor) block.titleColor = state.titleColor;
+    if (state.borderColor) block.borderColor = state.borderColor;
+    if (state.bgColor) block.bgColor = state.bgColor;
+    if (state.bgIntensity !== undefined) block.bgIntensity = state.bgIntensity;
+    if (state.image) {
+      block.image = state.image;
+      if (state.imageMode) block.imageMode = state.imageMode;
+      if (state.imageVeil !== undefined) block.imageVeil = state.imageVeil;
+    }
+    if (state.width) block.width = state.width;
+    if (state.iconPosition) block.iconPosition = state.iconPosition;
+    if (state.iconSize) block.iconSize = state.iconSize;
+    if (state.titleFont) block.titleFont = state.titleFont;
+    if (state.titleSmallCaps) block.titleSmallCaps = true;
+    if (state.bodyItalic) block.bodyItalic = true;
+    if (state.collapsible) block.collapsible = true;
+    return block;
+  }
+
+  function handleSend() {
+    if (!isValid) return;
+    onSend(JSON.stringify(compactCallout(draftBlock())));
     setOpen(false);
   }
 
-  const previewBlock: CalloutBlock = {
-    _type: "callout",
-    title: title.trim() || undefined,
-    text: text.trim() || undefined,
-    ...(iconKind === "image"
-      ? { iconKind: "image", iconImage: iconImageUrl || undefined }
-      : icon ? { icon, iconKind } : {}),
-    accent: accent || undefined,
-    border,
-    align,
-    rounded,
-    gauges: gauges.length > 0 ? gauges : undefined,
+  const previewBlock = draftBlock();
+  // Ce que chaque réglage vaut à l'écran, défaut compris : la carte choisie.
+  const resolved = resolveCalloutStyle(previewBlock);
+  const borderPreset: BorderPreset | null = separator
+    ? "separator"
+    : sides.length === CALLOUT_SIDES.length ? "full"
+      : sides.length === 0 ? "none"
+        : sides.length === 1 && sides[0] === "left" ? "left"
+          : null;
+
+  const sideLabels: Record<CalloutSide, string> = {
+    top: t("callout.sideTop"),
+    right: t("callout.alignRight"),
+    bottom: t("callout.sideBottom"),
+    left: t("callout.alignLeft"),
   };
 
+  async function upload(
+    e: React.ChangeEvent<HTMLInputElement>,
+    setUploading: (v: boolean) => void,
+    done: (url: string) => void,
+  ) {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadIconImage) return;
+    setUploading(true);
+    const url = await onUploadIconImage(file);
+    setUploading(false);
+    if (url) done(url);
+    e.target.value = "";
+  }
+
   return (
-    <Dialog open={open} onOpenChange={handleOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       {!onOpenChange && trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="flex h-[100dvh] max-h-[100dvh] flex-col gap-0 overflow-hidden p-0 sm:h-auto sm:max-w-[75vw]">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
@@ -256,7 +464,7 @@ export function CalloutDialog({
                 <Label className="text-xs text-muted-foreground">{t("callout.titleLabel")}</Label>
                 <Input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => set("title", e.target.value)}
                   placeholder={t("callout.titlePlaceholder")}
                 />
               </div>
@@ -292,7 +500,7 @@ export function CalloutDialog({
                 >
                   <ParagraphBlockEditor
                     value={text}
-                    onChange={setText}
+                    onChange={(v) => set("text", v)}
                     placeholder={t("callout.contentPlaceholder")}
                     submitOnEnter={false}
                     formatting
@@ -312,7 +520,7 @@ export function CalloutDialog({
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-xs"
-                      onClick={() => { setIcon(""); setIconKind("lucide"); setIconImageUrl(""); }}
+                      onClick={() => setState((s) => ({ ...s, icon: "", iconKind: "lucide", iconImageUrl: "" }))}
                     >
                       {t("callout.iconNone")}
                     </Button>
@@ -323,13 +531,13 @@ export function CalloutDialog({
                   <LucideIconPicker
                     value={iconKind === "lucide" ? icon : ""}
                     accent={accent || undefined}
-                    onChange={(name) => { setIcon(name); setIconKind("lucide"); setIconImageUrl(""); }}
+                    onChange={(name) => setState((s) => ({ ...s, icon: name, iconKind: "lucide", iconImageUrl: "" }))}
                   />
                   <EmojiPickerButton
                     emojiStyle="twitter"
                     className="w-full"
                     value={iconKind === "emoji" ? icon : ""}
-                    onChange={(v) => { setIcon(v); setIconKind("emoji"); setIconImageUrl(""); }}
+                    onChange={(v) => setState((s) => ({ ...s, icon: v, iconKind: "emoji", iconImageUrl: "" }))}
                   />
                   {/* Bouton image */}
                   <Button
@@ -365,15 +573,8 @@ export function CalloutDialog({
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file || !onUploadIconImage) return;
-                      setIconImageUploading(true);
-                      const url = await onUploadIconImage(file);
-                      setIconImageUploading(false);
-                      if (url) { setIconImageUrl(url); setIconKind("image"); setIcon(""); }
-                      e.target.value = "";
-                    }}
+                    onChange={(e) => upload(e, setIconImageUploading, (url) =>
+                      setState((s) => ({ ...s, iconImageUrl: url, iconKind: "image", icon: "" })))}
                   />
                 </div>
               </div>
@@ -385,7 +586,7 @@ export function CalloutDialog({
                 <ColorSwatchRow
                   className="contents"
                   value={accent}
-                  onChange={setAccent}
+                  onChange={(v) => set("accent", v)}
                   chooseLabel={t("callout.accentChoose")}
                   noneLabel={t("callout.accentNone")}
                 />
@@ -393,33 +594,15 @@ export function CalloutDialog({
 
               {/* Bordure */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">{t("callout.borderLabel")}</Label>
-                  {border !== "separator" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      aria-pressed={rounded}
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setRounded((r) => !r)}
-                    >
-                      {t("callout.borderRound")}
-                    </Button>
-                  )}
-                </div>
+                <Label className="text-xs text-muted-foreground">{t("callout.borderLabel")}</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {BORDER_OPTION_DEFS.map(({ value, labelKey, Icon }) => (
                     <button
                       key={value}
                       type="button"
-                      onClick={() => setBorder(value)}
-                      className={cn(
-                        "flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-xs-plus transition-all",
-                        border === value
-                          ? "border-primary/50 bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground",
-                      )}
+                      aria-pressed={borderPreset === value}
+                      onClick={() => applyBorder(value)}
+                      className={cn(choiceClass(borderPreset === value), "flex-col gap-1 py-2 text-xs-plus")}
                     >
                       <Icon className="h-4 w-4" />
                       {t(labelKey)}
@@ -429,29 +612,56 @@ export function CalloutDialog({
               </div>
 
               {/* Alignement */}
+              <ChoiceGroup
+                label={t("callout.alignLabel")}
+                value={align}
+                onChange={(v) => set("align", v)}
+                options={[
+                  { value: "left", label: t("callout.alignLeft"), Icon: AlignLeft },
+                  { value: "center", label: t("callout.alignCenter"), Icon: AlignCenter },
+                  { value: "right", label: t("callout.alignRight"), Icon: AlignRight },
+                ]}
+              />
+
+              {/* Champs « clé : valeur » */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">{t("callout.alignLabel")}</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { value: "left" as const, labelKey: "callout.alignLeft", Icon: AlignLeft },
-                    { value: "center" as const, labelKey: "callout.alignCenter", Icon: AlignCenter },
-                  ]).map(({ value, labelKey, Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setAlign(value)}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs transition-all",
-                        align === value
-                          ? "border-primary/50 bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {t(labelKey)}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">{t("callout.fieldsLabel")}</Label>
+                  <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2.5 text-xs" onClick={addField}>
+                    <Plus className="h-3 w-3" />
+                    {t("callout.fieldsAdd")}
+                  </Button>
                 </div>
+                {fields.length > 0 && (
+                  <div className="space-y-2">
+                    {fields.map((field, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          value={field.key}
+                          onChange={(e) => updateField(i, { key: e.target.value })}
+                          placeholder={t("callout.fieldKeyPlaceholder")}
+                          className="h-7 w-32 shrink-0 text-xs"
+                        />
+                        <Input
+                          value={field.value}
+                          onChange={(e) => updateField(i, { value: e.target.value })}
+                          placeholder={t("callout.fieldValuePlaceholder")}
+                          className="h-7 min-w-0 flex-1 text-xs"
+                        />
+                        <Button
+                          aria-label={tCommon("remove")}
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="size-7 hover:text-destructive"
+                          onClick={() => removeField(i)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Jauges */}
@@ -536,6 +746,243 @@ export function CalloutDialog({
                   </div>
                 )}
               </div>
+
+              {/* Plus d'options */}
+              <button
+                type="button"
+                aria-expanded={state.showAdvanced}
+                onClick={() => set("showAdvanced", !state.showAdvanced)}
+                className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", state.showAdvanced && "rotate-180")} />
+                {state.showAdvanced ? t("callout.fewerOptions") : t("callout.moreOptions")}
+              </button>
+
+              {state.showAdvanced && (
+                <div className="space-y-6 border-t border-border pt-4">
+                  {/* Bordure en détail */}
+                  <section className="space-y-3">
+                    <SectionLabel>{t("callout.borderLabel")}</SectionLabel>
+                    {!separator && (
+                      <div role="group" aria-label={t("callout.sidesLabel")} className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">{t("callout.sidesLabel")}</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {CALLOUT_SIDES.map((side) => (
+                            <button
+                              key={side}
+                              type="button"
+                              aria-pressed={sides.includes(side)}
+                              onClick={() => toggleSide(side)}
+                              className={choiceClass(sides.includes(side))}
+                            >
+                              {sideLabels[side]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <ChoiceGroup<CalloutBorderWidth>
+                      label={t("callout.borderWidthLabel")}
+                      value={resolved.borderWidth}
+                      onChange={(v) => set("borderWidth", v)}
+                      options={[
+                        { value: "thin", label: t("callout.borderThin") },
+                        { value: "medium", label: t("callout.sizeMedium") },
+                        { value: "thick", label: t("callout.borderThick") },
+                      ]}
+                    />
+                    <ChoiceGroup<CalloutBorderStyle>
+                      label={t("callout.borderStyleLabel")}
+                      value={resolved.borderStyle}
+                      onChange={(v) => set("borderStyle", v)}
+                      options={[
+                        { value: "solid", label: t("callout.styleSolid") },
+                        { value: "dashed", label: t("callout.styleDashed") },
+                        { value: "dotted", label: t("callout.styleDotted") },
+                        { value: "double", label: t("callout.styleDouble") },
+                      ]}
+                    />
+                    {!separator && (
+                      <ChoiceGroup<CalloutRadius>
+                        label={t("callout.borderRound")}
+                        value={resolved.radius}
+                        onChange={(v) => set("radius", v)}
+                        options={[
+                          { value: "none", label: t("callout.levelNone") },
+                          { value: "soft", label: t("callout.levelLight") },
+                          { value: "round", label: t("callout.levelStrong") },
+                        ]}
+                      />
+                    )}
+                  </section>
+
+                  {/* Couleurs, fond et image */}
+                  <section className="space-y-3">
+                    <SectionLabel>{t("callout.colorsLabel")}</SectionLabel>
+                    <ColorRow
+                      label={t("callout.titleColorLabel")}
+                      value={state.titleColor}
+                      onChange={(v) => set("titleColor", v)}
+                      chooseLabel={t("callout.accentChoose")}
+                      noneLabel={t("callout.colorAsAccent")}
+                    />
+                    <ColorRow
+                      label={t("callout.borderLabel")}
+                      value={state.borderColor}
+                      onChange={(v) => set("borderColor", v)}
+                      chooseLabel={t("callout.accentChoose")}
+                      noneLabel={t("callout.colorAsAccent")}
+                    />
+                    {!separator && (
+                      <>
+                        <ColorRow
+                          label={t("callout.bgColorLabel")}
+                          value={state.bgColor}
+                          onChange={(v) => set("bgColor", v)}
+                          chooseLabel={t("callout.accentChoose")}
+                          noneLabel={t("callout.colorAsAccent")}
+                        />
+                        <ChoiceGroup<number>
+                          label={t("callout.bgIntensityLabel")}
+                          value={resolved.bgIntensity}
+                          onChange={(v) => set("bgIntensity", v)}
+                          options={CALLOUT_BG_INTENSITIES.map((v, i) => ({
+                            value: v,
+                            label: t(`callout.${(["levelNone", "levelLight", "levelMedium", "levelMarked", "levelStrong"] as const)[i]}`),
+                          }))}
+                        />
+
+                        {/* Image de fond ou bandeau */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-muted-foreground">{t("callout.backgroundImageLabel")}</Label>
+                            {state.image && (
+                              <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => set("image", "")}>
+                                {tCommon("remove")}
+                              </Button>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={imageUploading || !onUploadIconImage}
+                            onClick={() => onUploadIconImage && imageFileInputRef.current?.click()}
+                            title={!onUploadIconImage ? t("callout.imageDisabled") : undefined}
+                            className="w-full justify-start px-3 has-[>svg]:px-3 disabled:pointer-events-auto disabled:cursor-not-allowed"
+                          >
+                            {imageUploading ? (
+                              <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />
+                            ) : state.image ? (
+                              <span className="relative h-5 w-8 shrink-0 overflow-hidden rounded-sm">
+                                <StoredImage url={state.image} width={AVATAR_THUMB_SMALL * 2} resize="cover" className="object-cover" />
+                              </span>
+                            ) : (
+                              <ImagePlus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            )}
+                            <span className={cn("flex-1 truncate text-left text-sm", !state.image && "text-muted-foreground")}>
+                              {state.image ? t("callout.imageChange") : t("callout.imageLabel")}
+                            </span>
+                          </Button>
+                          <input
+                            ref={imageFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => upload(e, setImageUploading, (url) => set("image", url))}
+                          />
+                        </div>
+                        {state.image && (
+                          <>
+                            <ChoiceGroup<CalloutImageMode>
+                              label={t("callout.imageLabel")}
+                              value={resolved.imageMode}
+                              onChange={(v) => setState((s) => ({ ...s, imageMode: v, imageVeil: undefined }))}
+                              options={[
+                                { value: "background", label: t("callout.imageModeBackground") },
+                                { value: "banner", label: t("callout.imageModeBanner") },
+                              ]}
+                            />
+                            <ChoiceGroup<number>
+                              label={t("callout.imageVeilLabel")}
+                              value={resolved.imageVeil}
+                              onChange={(v) => set("imageVeil", v)}
+                              hint={t("callout.imageVeilHint")}
+                              options={CALLOUT_IMAGE_VEILS.map((v, i) => ({
+                                value: v,
+                                label: t(`callout.${(["levelNone", "levelLight", "levelMedium", "levelStrong"] as const)[i]}`),
+                              }))}
+                            />
+                          </>
+                        )}
+                      </>
+                    )}
+                  </section>
+
+                  {/* Mise en page */}
+                  <section className="space-y-3">
+                    <SectionLabel>{t("callout.layoutLabel")}</SectionLabel>
+                    <ChoiceGroup<CalloutWidth>
+                      label={t("callout.widthLabel")}
+                      value={resolved.width}
+                      onChange={(v) => set("width", v)}
+                      options={[
+                        { value: "full", label: t("callout.widthFull") },
+                        { value: "medium", label: t("callout.sizeMedium") },
+                        { value: "narrow", label: t("callout.widthNarrow") },
+                      ]}
+                    />
+                    {!separator && (
+                      <>
+                        <ChoiceGroup<CalloutIconPosition>
+                          label={t("callout.iconPositionLabel")}
+                          value={resolved.iconPosition}
+                          onChange={(v) => setState((s) => ({ ...s, iconPosition: v, iconSize: undefined }))}
+                          options={[
+                            { value: "inline", label: t("callout.iconInline") },
+                            { value: "side", label: t("callout.iconSide") },
+                            { value: "top", label: t("callout.iconTop") },
+                          ]}
+                        />
+                        <ChoiceGroup<CalloutIconSize>
+                          label={t("callout.iconSizeLabel")}
+                          value={resolved.iconSize}
+                          onChange={(v) => set("iconSize", v)}
+                          options={[
+                            { value: "small", label: t("callout.sizeSmall") },
+                            { value: "medium", label: t("callout.sizeMedium") },
+                            { value: "large", label: t("callout.sizeLarge") },
+                          ]}
+                        />
+                      </>
+                    )}
+                  </section>
+
+                  {/* Typographie */}
+                  <section className="space-y-3">
+                    <SectionLabel>{t("callout.typographyLabel")}</SectionLabel>
+                    <ChoiceGroup<CalloutFont>
+                      label={t("callout.titleFontLabel")}
+                      value={resolved.titleFont}
+                      onChange={(v) => set("titleFont", v)}
+                      options={[
+                        { value: "inherit", label: t("callout.fontInherit") },
+                        { value: "serif", label: t("callout.fontSerif") },
+                        { value: "mono", label: t("callout.fontMono") },
+                        { value: "hand", label: t("callout.fontHand") },
+                      ]}
+                    />
+                    <SwitchRow label={t("callout.titleSmallCaps")} checked={state.titleSmallCaps} onChange={(v) => set("titleSmallCaps", v)} />
+                    <SwitchRow label={t("callout.bodyItalic")} checked={state.bodyItalic} onChange={(v) => set("bodyItalic", v)} />
+                  </section>
+
+                  <SwitchRow
+                    label={t("callout.collapsible")}
+                    checked={state.collapsible}
+                    onChange={(v) => set("collapsible", v)}
+                    hint={t("callout.collapsibleHint")}
+                  />
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>

@@ -1,32 +1,48 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { CalloutBlockView } from "@/components/chatrooms/blocks/CalloutBlock";
 import type { CalloutBlock } from "@/lib/chat-blocks";
 
-function surface(block: Partial<CalloutBlock>) {
-  render(<CalloutBlockView block={{ _type: "callout", text: "Il pleut sur la ville.", ...block } as CalloutBlock} mine={false} />);
-  return screen.getByText("Il pleut sur la ville.").closest('[class~="group/gblock"]') as HTMLElement;
+function show(block: Partial<CalloutBlock>) {
+  return render(<CalloutBlockView block={{ _type: "callout", ...block } as CalloutBlock} mine={false} />);
 }
 
-describe("CalloutBlockView — bordure", () => {
-  it("« complète » trace une bordure, teintée par l'accent", () => {
-    const el = surface({ border: "full", accent: "#C084FC" });
-    expect(el.className.split(" ")).toContain("border");
-    expect(el.style.borderColor).toContain("color-mix");
+describe("CalloutBlockView — champs « clé : valeur »", () => {
+  it("affiche chaque champ avec sa clé et sa valeur", () => {
+    show({ title: "Scène", fields: [{ key: "Lieu", value: "Port de Sel" }, { key: "Météo", value: "Bruine" }] });
+    expect(screen.getByText("Lieu")).toBeInTheDocument();
+    expect(screen.getByText("Port de Sel")).toBeInTheDocument();
+    expect(screen.getByText("Météo")).toBeInTheDocument();
+    expect(screen.getByText("Bruine")).toBeInTheDocument();
   });
 
-  it("« complète » sans accent garde une bordure neutre", () => {
-    expect(surface({ border: "full" }).className.split(" ")).toContain("border");
+  it("en style séparateur aussi", () => {
+    show({ border: "separator", title: "Scène", fields: [{ key: "Heure", value: "minuit" }] });
+    expect(screen.getByText("Heure")).toBeInTheDocument();
+    expect(screen.getByText("minuit")).toBeInTheDocument();
+  });
+});
+
+describe("CalloutBlockView — encadré repliable", () => {
+  it("replié, le titre se lit et le corps attend « Afficher la suite »", async () => {
+    const user = userEvent.setup();
+    show({ title: "Souvenir", text: "Une odeur de cire.", fields: [{ key: "Lieu", value: "Chapelle" }], collapsible: true });
+    expect(screen.getByText("Souvenir")).toBeInTheDocument();
+    expect(screen.queryByText("Une odeur de cire.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Chapelle")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Afficher la suite" }));
+    expect(screen.getByText("Une odeur de cire.")).toBeInTheDocument();
+    expect(screen.getByText("Chapelle")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Replier" }));
+    expect(screen.queryByText("Une odeur de cire.")).not.toBeInTheDocument();
   });
 
-  it("« à gauche » ne trace que le filet de gauche", () => {
-    const left = surface({ border: "left", accent: "#C084FC" });
-    expect(left.className).toContain("border-l-4");
-    expect(left.className.split(" ")).not.toContain("border");
-  });
-
-  it("l'arrondi ne dépasse pas rounded-lg", () => {
-    expect(surface({ border: "full" }).className).toContain("rounded-lg");
+  it("non repliable, le corps se lit d'emblée", () => {
+    show({ title: "Souvenir", text: "Une odeur de cire." });
+    expect(screen.getByText("Une odeur de cire.")).toBeInTheDocument();
   });
 });

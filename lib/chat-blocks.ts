@@ -41,12 +41,24 @@ export type HpBlock = {
 
 // Bloc « Encadré » universel : fusionne les anciens blocs narratifs
 // (scène, flashback, ellipse, météo/ambiance, aparté) en un seul bloc
-// entièrement personnalisable (icône, couleur d'accent, bordure, alignement).
+// entièrement personnalisable. Tous les réglages sont facultatifs : un champ
+// absent prend sa valeur par défaut (lib/calloutStyle.ts), si bien qu'un
+// encadré écrit avant l'arrivée d'un réglage se lit comme avant.
 export type CalloutBorder = "full" | "left" | "separator" | "none";
-export type CalloutAlign = "left" | "center";
+export type CalloutAlign = "left" | "center" | "right";
 export type CalloutIconKind = "emoji" | "lucide" | "image";
+export type CalloutSide = "top" | "right" | "bottom" | "left";
+export type CalloutBorderWidth = "thin" | "medium" | "thick";
+export type CalloutBorderStyle = "solid" | "dashed" | "dotted" | "double";
+export type CalloutRadius = "none" | "soft" | "round";
+export type CalloutWidth = "full" | "medium" | "narrow";
+export type CalloutIconPosition = "inline" | "side" | "top";
+export type CalloutIconSize = "small" | "medium" | "large";
+export type CalloutFont = "inherit" | "serif" | "mono" | "hand";
+export type CalloutImageMode = "background" | "banner";
 
 export type Gauge = { name: string; current: number; max: number; color: string };
+export type CalloutField = { key: string; value: string };
 
 export type CalloutBlock = {
   _type: "callout";
@@ -56,10 +68,34 @@ export type CalloutBlock = {
   iconKind?: CalloutIconKind;
   iconImage?: string;        // URL image quand iconKind === "image"
   accent?: string;           // couleur d'accent (hex), ex. "#f59e0b"
-  border?: CalloutBorder;    // défaut "full"
+  border?: CalloutBorder;    // défaut "full" ; "separator" = titre entre deux filets
   align?: CalloutAlign;      // défaut "left"
-  rounded?: boolean;         // défaut true
+  rounded?: boolean;         // ancien format de l'arrondi : false = aucun
   gauges?: Gauge[];          // jauges nommées (nom, actuel, max, couleur)
+  /* Bordure en détail (défauts tirés de `border`) */
+  sides?: CalloutSide[];
+  borderWidth?: CalloutBorderWidth;
+  borderStyle?: CalloutBorderStyle;
+  radius?: CalloutRadius;
+  /* Couleurs (défaut : l'accent) */
+  titleColor?: string;
+  borderColor?: string;
+  bgColor?: string;
+  bgIntensity?: number;      // 0 à 100, en % de la couleur de fond
+  image?: string;            // image de fond ou de bandeau
+  imageMode?: CalloutImageMode;
+  imageVeil?: number;        // 0 à 100 : voile posé sur l'image
+  /* Mise en page */
+  width?: CalloutWidth;
+  iconPosition?: CalloutIconPosition;
+  iconSize?: CalloutIconSize;
+  /* Typographie */
+  titleFont?: CalloutFont;
+  titleSmallCaps?: boolean;
+  bodyItalic?: boolean;
+  /* Contenu */
+  fields?: CalloutField[];   // « clé : valeur » (Lieu, Heure, Météo…)
+  collapsible?: boolean;     // corps replié derrière « Afficher la suite »
 };
 
 export type AnchorBlock = {
@@ -111,7 +147,12 @@ export function parseChatBlock(content: string): ChatBlock | null {
 function chatBlockTextParts(block: ChatBlock): (string | undefined)[] {
   switch (block._type) {
     case "choice": return [block.question, ...(block.options ?? []).map((o) => o.label)];
-    case "callout": return [block.title, block.text, ...(block.gauges ?? []).map((g) => g.name)];
+    case "callout": return [
+      block.title,
+      block.text,
+      ...(block.fields ?? []).map((f) => [f.key?.trim(), f.value?.trim()].filter(Boolean).join(" : ")),
+      ...(block.gauges ?? []).map((g) => g.name),
+    ];
     case "dice": return [block.label, block.formula];
     case "npc": return [block.name, block.role, block.stats];
     case "hp": return [block.name];

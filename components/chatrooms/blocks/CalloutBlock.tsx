@@ -1,12 +1,31 @@
 "use client";
 
+import { Fragment, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import { ChevronDown } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import type { CalloutBlock, CalloutBorder, CalloutAlign, CalloutIconKind, Gauge } from "@/lib/chat-blocks";
+import type {
+  CalloutAlign,
+  CalloutBlock,
+  CalloutField,
+  CalloutFont,
+  CalloutIconKind,
+  CalloutIconSize,
+  CalloutSide,
+  CalloutWidth,
+  Gauge,
+} from "@/lib/chat-blocks";
+import {
+  CALLOUT_BORDER_WIDTH_PX,
+  CALLOUT_RADIUS_PX,
+  CALLOUT_SIDES,
+  resolveCalloutStyle,
+  type ResolvedCalloutStyle,
+} from "@/lib/calloutStyle";
 import { VALID_LUCIDE_ICONS as VALID_ICON_SET } from "@/lib/lucideIconNames";
 import { cn } from "@/lib/utils";
 import { StoredImage } from "@/components/ui/stored-image";
@@ -130,6 +149,78 @@ function CalloutMarkdown({ children, className }: { children: string; className?
   );
 }
 
+/* ─── Classes des réglages ───────────────────────────────────────────────── */
+
+const ICON_SIZE: Record<CalloutIconSize, { className: string; px: number }> = {
+  small: { className: "h-4 w-4", px: 16 },
+  medium: { className: "h-6 w-6", px: 24 },
+  large: { className: "h-10 w-10", px: 40 },
+};
+
+const TITLE_FONT_CLASS: Record<CalloutFont, string> = {
+  inherit: "",
+  serif: "font-message-serif",
+  mono: "font-mono",
+  // Caveat est petite à taille égale : un cran au-dessus.
+  hand: "font-message-hand text-lg leading-tight",
+};
+
+const WIDTH_CLASS: Record<CalloutWidth, string> = {
+  full: "",
+  medium: "max-w-xl",
+  narrow: "max-w-sm",
+};
+
+/** Un encadré plus étroit que le fil se place selon l'alignement. */
+const PLACEMENT_CLASS: Record<CalloutAlign, string> = {
+  left: "mr-auto",
+  center: "mx-auto",
+  right: "ml-auto",
+};
+
+const TEXT_ALIGN_CLASS: Record<CalloutAlign, string> = {
+  left: "",
+  center: "items-center text-center",
+  right: "items-end text-right",
+};
+
+const JUSTIFY_CLASS: Record<CalloutAlign, string> = {
+  left: "",
+  center: "justify-center",
+  right: "justify-end",
+};
+
+const SIDE_WIDTH_PROP: Record<CalloutSide, "borderTopWidth" | "borderRightWidth" | "borderBottomWidth" | "borderLeftWidth"> = {
+  top: "borderTopWidth",
+  right: "borderRightWidth",
+  bottom: "borderBottomWidth",
+  left: "borderLeftWidth",
+};
+
+/** Un trait double ne se voit qu'à partir de 3 px. */
+function borderPx(style: ResolvedCalloutStyle) {
+  const px = CALLOUT_BORDER_WIDTH_PX[style.borderWidth];
+  return style.borderStyle === "double" ? Math.max(px, 3) : px;
+}
+
+function CalloutFields({ fields, align }: { fields: CalloutField[]; align: CalloutAlign }) {
+  return (
+    <dl
+      className={cn(
+        "grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-left text-sm",
+        align !== "left" && "w-fit max-w-full",
+      )}
+    >
+      {fields.map((field, i) => (
+        <Fragment key={i}>
+          <dt className="font-medium text-muted-foreground">{field.key}</dt>
+          <dd className="min-w-0 break-words text-foreground">{field.value}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+
 /* ─── Vue ────────────────────────────────────────────────────────────────── */
 
 export function CalloutBlockView({
@@ -146,12 +237,14 @@ export function CalloutBlockView({
   onUploadIconImage?: (file: File) => Promise<string | null>;
 }) {
   const t = useTranslations("chatrooms");
-  const accent = block.accent;
-  const hasAccent = !!accent;
-  const border: CalloutBorder = block.border ?? "full";
-  const align: CalloutAlign = block.align ?? "left";
-  const rounded = block.rounded !== false;
+  const [expanded, setExpanded] = useState(false);
+  const style = resolveCalloutStyle(block);
+  const { align } = style;
+  const fields = (block.fields ?? []).filter((f) => f.key?.trim() || f.value?.trim());
+  const hasFields = fields.length > 0;
   const hasGauges = !!block.gauges && block.gauges.length > 0;
+  const hasBody = !!block.text || hasFields || hasGauges;
+  const collapsed = style.collapsible && hasBody && !expanded;
 
   const toolbar = (className?: string) => (
     <GameBlockToolbar
@@ -172,93 +265,156 @@ export function CalloutBlockView({
     />
   );
 
+  const titleClass = cn(TITLE_FONT_CLASS[style.titleFont], style.titleSmallCaps && "[font-variant-caps:small-caps]");
+  const titleStyle = style.titleColor ? { color: style.titleColor } : undefined;
+
+  const toggle = style.collapsible && hasBody && (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      onClick={() => setExpanded((v) => !v)}
+      className={cn(
+        "flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+        collapsed ? "mt-1" : "mt-2",
+      )}
+    >
+      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
+      {expanded ? t("callout.showLess") : t("callout.showMore")}
+    </button>
+  );
+
+  /** Texte, champs puis jauges : ce que le repli cache. */
+  const body = (afterHeader: boolean) => !collapsed && hasBody && (
+    <>
+      {block.text && (
+        <CalloutMarkdown className={cn(afterHeader && "mt-1", style.bodyItalic && "italic", "w-full", TEXT_ALIGN_CLASS[align])}>
+          {block.text}
+        </CalloutMarkdown>
+      )}
+      {hasFields && (
+        <div className={cn((afterHeader || block.text) && "mt-3")}>
+          <CalloutFields fields={fields} align={align} />
+        </div>
+      )}
+      {hasGauges && (
+        <div className={cn("w-full space-y-2 text-left", (afterHeader || block.text || hasFields) && "mt-3")}>
+          {renderGauges(block.gauges!, t("callout.gaugeDefault"))}
+        </div>
+      )}
+    </>
+  );
+
+  const placement = cn(WIDTH_CLASS[style.width], style.width !== "full" && PLACEMENT_CLASS[align]);
+
   /* Style séparateur : titre centré entre deux filets, corps en dessous.
-     Pas de marge à lui : GameBlockRenderer l'entoure déjà de son py-4. */
-  if (border === "separator") {
+     Pas de marge à lui : GameBlockRenderer l'entoure déjà de son py-4.
+     Les filets prennent l'épaisseur, le trait et la couleur de la bordure. */
+  if (style.separator) {
+    const lineStyle: React.CSSProperties = {
+      borderTopWidth: borderPx(style),
+      borderTopStyle: style.borderStyle,
+      ...(style.borderColor && { borderTopColor: style.borderColor }),
+    };
     return (
-      <div className="group/gblock relative w-full">
+      <div className={cn("group/gblock relative w-full", placement)}>
         {toolbar("absolute -top-3 right-0 z-10 rounded-md bg-card/90 shadow-sm p-0.5")}
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-border" />
+          <div className="flex-1 border-t border-border" style={lineStyle} />
           <span
             className={cn(
               "flex shrink-0 items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest",
-              !hasAccent && "text-muted-foreground",
+              !style.titleColor && "text-muted-foreground",
+              titleClass,
             )}
-            style={hasAccent ? { color: accent } : undefined}
+            style={titleStyle}
           >
-            {renderIcon(block.icon, block.iconKind, block.iconImage, accent, "h-3 w-3", 14, 12)}
+            {renderIcon(block.icon, block.iconKind, block.iconImage, block.accent, "h-3 w-3", 14, 12)}
             {block.title}
           </span>
-          <div className="h-px flex-1 bg-border" />
+          <div className="flex-1 border-t border-border" style={lineStyle} />
         </div>
-        {block.text && (
-          <CalloutMarkdown className={cn("mt-4", align === "center" && "text-center")}>
-            {block.text}
-          </CalloutMarkdown>
-        )}
-        {hasGauges && (
-          <div className={cn("space-y-2", (block.text) && "mt-3")}>
-            {renderGauges(block.gauges!, t("callout.gaugeDefault"))}
-          </div>
-        )}
+        <div className={cn("flex flex-col", TEXT_ALIGN_CLASS[align])}>
+          {!collapsed && hasBody && <div className={cn("mt-4 flex w-full flex-col", TEXT_ALIGN_CLASS[align])}>{body(false)}</div>}
+          {toggle && <div className={cn(collapsed && "mt-2")}>{toggle}</div>}
+        </div>
       </div>
     );
   }
 
-  /* Styles « carte » : full / left / none.
-     Sans accent → fond transparent + bordure neutre (classes par défaut). */
-  const surfaceStyle: React.CSSProperties = !hasAccent
-    ? {}
-    : border === "full"
-      ? {
-        backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)`,
-        borderColor: `color-mix(in srgb, ${accent} 28%, transparent)`,
-      }
-      : border === "left"
-        ? {
-          backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)`,
-          borderLeftColor: accent,
-        }
-        : {};
+  /* Styles « carte » : côtés, épaisseur, trait, arrondi et fond au choix.
+     Sans couleur → fond transparent et bordure neutre. */
+  const px = borderPx(style);
+  const tinted = !!style.bgColor && style.bgIntensity > 0;
+  const image = block.image || undefined;
+  const surfaceStyle: React.CSSProperties = {
+    borderStyle: style.borderStyle,
+    borderRadius: CALLOUT_RADIUS_PX[style.radius],
+    ...(style.borderColor && { borderColor: style.borderColor }),
+    ...(tinted && { backgroundColor: `color-mix(in srgb, ${style.bgColor} ${style.bgIntensity}%, transparent)` }),
+  };
+  for (const side of CALLOUT_SIDES) {
+    surfaceStyle[SIDE_WIDTH_PROP[side]] = style.sides.includes(side) ? px : 0;
+  }
+  // Sans bordure, sans fond ni image : le texte s'aligne sur celui des messages.
+  const bare = style.sides.length === 0 && !tinted && !image;
 
-  const surfaceClass = cn(
-    !hasAccent && "bg-transparent",
-    // L'épaisseur vient d'ici ; `surfaceStyle` ne fait que la teinter.
-    border === "full" && "border",
-    border === "left" && "border-l-4",
-    border === "none" && "border-0 bg-transparent px-0 py-1",
-    !rounded && "rounded-none",
-    "p-4"
+  const iconSize = ICON_SIZE[style.iconSize];
+  const icon = renderIcon(block.icon, block.iconKind, block.iconImage, style.titleColor, iconSize.className, iconSize.px + 2, iconSize.px);
+  const inlineIcon = style.iconPosition === "inline" ? icon : null;
+  const hasHeader = !!(inlineIcon || block.title);
+
+  const content = (
+    <div className={cn("flex min-w-0 flex-1 flex-col", TEXT_ALIGN_CLASS[align])}>
+      {style.iconPosition === "top" && icon && <div className="mb-2 flex">{icon}</div>}
+      {hasHeader && (
+        <div className={cn("flex items-center gap-1.5", JUSTIFY_CLASS[align])}>
+          {inlineIcon}
+          {block.title && (
+            <span className={cn("text-sm font-semibold", titleClass)} style={titleStyle}>
+              {block.title}
+            </span>
+          )}
+        </div>
+      )}
+      {body(hasHeader)}
+      {toggle}
+    </div>
   );
 
-  const hasHeader = !!(block.icon || block.title || (block.iconKind === "image" && block.iconImage));
-
   return (
-    <GameBlockSurface className={surfaceClass} style={surfaceStyle}>
+    <GameBlockSurface
+      className={cn(
+        "border-border",
+        bare ? "bg-transparent px-0 py-1" : "p-4",
+        !tinted && "bg-transparent",
+        image && style.imageMode === "background" && "isolate",
+        placement,
+      )}
+      style={surfaceStyle}
+    >
+      {image && style.imageMode === "background" && (
+        // Enveloppe arrondie à part : la barre d'outils dépasse de la carte,
+        // qui ne peut donc pas rogner ce qui déborde.
+        <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit]">
+          <StoredImage url={image} width={1200} resize="cover" className="object-cover" />
+          <span className="absolute inset-0 bg-background" style={{ opacity: style.imageVeil / 100 }} />
+        </span>
+      )}
       {toolbar("absolute -top-3 right-2 z-10 rounded-md bg-card/90 shadow-sm p-0.5")}
-      <div className={cn(align === "center" && "flex flex-col items-center text-center")}>
-        {hasHeader && (
-          <div className={cn("flex items-center gap-1.5", align === "center" && "justify-center")}>
-            {renderIcon(block.icon, block.iconKind, block.iconImage, accent)}
-            {block.title && (
-              <span className="text-sm font-semibold" style={hasAccent ? { color: accent } : undefined}>
-                {block.title}
-              </span>
-            )}
-          </div>
-        )}
-        {block.text && (
-          <CalloutMarkdown className={cn(hasHeader && "mt-1")}>
-            {block.text}
-          </CalloutMarkdown>
-        )}
-        {hasGauges && (
-          <div className={cn("w-full space-y-2", (hasHeader || block.text) && "mt-3")}>
-            {renderGauges(block.gauges!, t("callout.gaugeDefault"))}
-          </div>
-        )}
-      </div>
+      {image && style.imageMode === "banner" && (
+        <div className="relative -mx-4 -mt-4 mb-3 h-28 overflow-hidden rounded-t-[inherit]">
+          <StoredImage url={image} width={1200} height={336} resize="cover" className="object-cover" />
+          {style.imageVeil > 0 && (
+            <span aria-hidden className="absolute inset-0 bg-background" style={{ opacity: style.imageVeil / 100 }} />
+          )}
+        </div>
+      )}
+      {style.iconPosition === "side" && icon ? (
+        <div className="flex items-start gap-3">
+          {icon}
+          {content}
+        </div>
+      ) : content}
     </GameBlockSurface>
   );
 }

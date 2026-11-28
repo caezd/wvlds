@@ -285,6 +285,12 @@
         font-family: var(--font-dyslexic), sans-serif;
     }
 
+    /* Police manuscrite du titre des encadrés. Pas « .font-hand » : Tailwind v4
+       écarte une classe qui imite le nom de ses utilitaires `font-*`. */
+    .font-message-hand {
+        font-family: var(--font-hand), cursive;
+    }
+
     /* Taille du texte des messages de chatroom (préférence utilisateur, /settings).
        !important nécessaire : la taille par défaut vient des classes prose-sm/sm:prose-base
        du plugin Typography, non reconnues par tailwind-merge (donc jamais dédupliquées). */

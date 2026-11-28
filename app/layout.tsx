@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Noto_Serif } from "next/font/google";
+import { Caveat, Geist, Noto_Serif } from "next/font/google";
 import localFont from "next/font/local";
 
 import "./globals.css";
@@ -79,6 +79,15 @@ const notoSerif = Noto_Serif({
   preload: false,
 });
 
+// Police manuscrite, proposée pour le titre des encadrés. Non préchargée : le
+// navigateur ne la télécharge que si un encadré l'affiche.
+const caveat = Caveat({
+  variable: "--font-hand",
+  display: "swap",
+  subsets: ["latin"],
+  preload: false,
+});
+
 // Police adaptée dyslexie pour le texte des chatrooms (préférence utilisateur, voir /settings).
 const openDyslexic = localFont({
   src: [
@@ -124,7 +133,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <body
-        className={`${geistSans.className} ${notoSerif.variable} ${openDyslexic.variable} antialiased`}
+        className={`${geistSans.className} ${notoSerif.variable} ${caveat.variable} ${openDyslexic.variable} antialiased`}
         suppressHydrationWarning
       >
         <SerwistProvider
